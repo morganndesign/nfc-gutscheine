@@ -87,7 +87,8 @@ Start order on every deploy: `mysql` + `redis` healthy → `migrate` runs and ex
 10. **Automatic deploys:** resource → *Advanced* → *Auto Deploy* on (default with the GitHub App). Every push to
     `main` builds and deploys; migrations run automatically.
 
-Nothing in the repository has to be edited for any of these steps.
+Nothing in the repository has to be edited for any of these steps, and no `.env` file is needed: all configuration
+comes from the environment variables of the Coolify resource.
 
 ## Updates
 
@@ -152,6 +153,7 @@ branch). It has its own database, Redis and volumes. Staging is held to the same
 | `migrate` fails with "Access denied for user" after changing a password | The MySQL volume keeps the password of its first start. Put the old value back, or (only without data) delete the `mysql-data` volume. |
 | Certificate not issued / "not secure" | DNS does not point at the server yet, or ports 80/443 are closed. |
 | 419 / sign-in loops in the dashboard | The browser URL differs from the gateway domain (cookies are bound to it). Use exactly the configured domain. |
+| `env file /artifacts/<id>/.env not found` when you run `docker compose … config` by hand in Coolify's helper container | Not an error in the repository (it has no `env_file` and needs no `.env`). Coolify rewrites the compose file in `/artifacts/<id>/`, adds `env_file: .env` to every service, and writes that `.env` from the resource's *Environment Variables* only after the build, right before `docker compose up`. Validate the file from the repository instead: `docker compose -f docker-compose.coolify.yml config`. If a real deployment stops with this message, update Coolify (older 4.0.0-beta versions wrote the `.env` to a different directory, coollabsio/coolify#8953) and leave *Custom Start Command* empty. |
 | Build fails at `pecl install redis`, `composer install` or `npm ci` | Temporary outage of pecl.php.net, GitHub or npm. *Redeploy*. |
 
 ## Scaling out

@@ -12,10 +12,14 @@
 #   migrate (one-shot, every deploy) ─▶ then api · worker · scheduler
 #   mysql · redis · backup (internal only, never published)
 #
-# Values Coolify generates on the first deploy (magic variables, persisted by Coolify):
+# Configuration comes ONLY from environment variables (the `environment:` blocks below).
+# This file uses no env_file and the repository needs no .env file: every ${VAR} has a
+# default, except the magic variables Coolify generates on the first deploy:
 #   SERVICE_URL_GATEWAY / SERVICE_FQDN_GATEWAY  domain assigned to the gateway service
 #   SERVICE_PASSWORD_MYSQL, SERVICE_PASSWORD_MYSQLROOT, SERVICE_PASSWORD_REDIS
-# Everything else has a production default; optional settings: .env.production.example.
+# Optional settings (mail, keys, …): set them in Coolify → Environment Variables;
+# reference list: .env.production.example (documentation only, never read).
+# `docker compose -f docker-compose.coolify.yml config` works without any .env file.
 # =============================================================================
 
 x-laravel-build: &laravel-build
@@ -111,8 +115,7 @@ services:
   # ---------------------------------------------------------------- Laravel
   migrate:
     build: *laravel-build
-    restart: "no"
-    exclude_from_hc: true   # Coolify: one-shot job, does not count for the resource's health
+    restart: "no"           # one-shot job; Coolify excludes restart:"no" services from the resource health
     environment:
       <<: *laravel-env
       CONTAINER_ROLE: migrate
@@ -213,12 +216,18 @@ services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
+    # Flags read from the container environment at start (no compose-time interpolation).
     command:
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
-      - --transaction-isolation=READ-COMMITTED
-      - --innodb-buffer-pool-size=${MYSQL_INNODB_BUFFER_POOL_SIZE:-512M}
+      - sh
+      - -c
+      - >-
+        exec docker-entrypoint.sh mysqld
+        --character-set-server=utf8mb4
+        --collation-server=utf8mb4_unicode_ci
+        --transaction-isolation=READ-COMMITTED
+        --innodb-buffer-pool-size="$${MYSQL_INNODB_BUFFER_POOL_SIZE:-512M}"
     environment:
+      MYSQL_INNODB_BUFFER_POOL_SIZE: ${MYSQL_INNODB_BUFFER_POOL_SIZE:-512M}
       MYSQL_DATABASE: ${DB_DATABASE:-giftcard_pro}
       MYSQL_USER: ${DB_USERNAME:-giftcard}
       MYSQL_PASSWORD: ${SERVICE_PASSWORD_MYSQL}

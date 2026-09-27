@@ -24,6 +24,23 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Coolify: configuration from the environment only, 27 September 2026 (part of 1.4.2)
+
+`docker compose config` in Coolify's helper container reported `env file /artifacts/<id>/.env not found`. The
+repository had no `env_file`; Coolify adds `env_file: .env` to every service of its rewritten compose file and
+writes that file only after the build (checked in Coolify's `ApplicationDeploymentJob`). The deployment was audited
+and hardened so that nothing depends on any `.env` file.
+
+| Change | Why |
+|---|---|
+| `docker-compose.coolify.yml`: `exclude_from_hc` removed from `migrate` (Coolify already excludes `restart: "no"` services from health). | It was the only non-standard key: plain `docker compose -f docker-compose.coolify.yml config` rejected the file. Now it passes with no `.env` file and no extra flags. |
+| MySQL flags start through `sh -c "exec docker-entrypoint.sh mysqld …"` and read `MYSQL_INNODB_BUFFER_POOL_SIZE` from `environment:`. | The only `${…}` outside an `environment:` block; everything is now configured through `environment:` only. |
+| Header of the compose file states the rule: no `env_file`, every variable has a default except Coolify's generated `SERVICE_*` values. | |
+| `.dockerignore`: every `.env` / `.env.*` (except `*.env.example`) is excluded from all images. | A local development `.env` can never reach a production image. |
+| CI validates the unmodified compose file with no `.env` present and fails on any `env_file`. `scripts/verify-structure.sh` checks: no `env_file` / `--env-file`, only standard keys, `config` passes from an empty directory. | Keeps it that way. |
+| `docs/DEPLOYMENT.md`: troubleshooting entry for the message. | |
+| Tested: Coolify's flow reproduced (rewritten compose with `env_file: .env`, build with `--env-file /artifacts/build-time.env`, up with `--env-file <workdir>/.env`): all services healthy, `migrate` exited 0, MySQL runs with the configured flags, no `.env` inside any container. 168 PHPUnit tests pass. | |
+
 ## Coolify deployment, 27 September 2026 (part of 1.4.2)
 
 The previous production deployment pulled pre-built images from GitHub Container Registry, built by a GitHub

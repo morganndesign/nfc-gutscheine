@@ -111,10 +111,11 @@ jobs:
     needs: [backend, dashboard]
     steps:
       - uses: actions/checkout@v4
-      # exclude_from_hc is a Coolify extension that plain Docker Compose does not know.
-      - name: Validate docker-compose.coolify.yml
+      # Exactly what Coolify reads: no .env file, no --env-file, no env_file.
+      - name: Validate docker-compose.coolify.yml (no .env file present)
         run: |
-          sed '/exclude_from_hc/d' docker-compose.coolify.yml > /tmp/compose.yml
-          docker compose -f /tmp/compose.yml config --quiet
+          test ! -e .env
+          ! grep -nE '^\s*env_file:' docker-compose.coolify.yml
+          docker compose -f docker-compose.coolify.yml config --quiet
       - name: Build every service exactly as Coolify does
-        run: docker compose -f /tmp/compose.yml build
+        run: docker compose -f docker-compose.coolify.yml build

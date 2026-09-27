@@ -3,7 +3,10 @@ dashboard
 **/node_modules
 **/.next
 backend/vendor
-backend/.env
+# No environment file ever enters an image; configuration comes from the container environment.
+**/.env
+**/.env.*
+!**/.env.example
 backend/storage/logs/*
 backend/storage/framework/cache/*
 backend/storage/framework/sessions/*

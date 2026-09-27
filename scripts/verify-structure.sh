@@ -108,11 +108,16 @@ for svc in gateway migrate api worker scheduler web mysql redis backup; do
 done
 [[ $dep == 0 ]] && ok "all nine services defined"
 grep -q 'SERVICE_URL_GATEWAY_80' docker-compose.coolify.yml && ok "gateway gets its domain from Coolify (SERVICE_URL_GATEWAY_80)" || bad "gateway domain variable missing"
+if grep -nE '^\s*env_file:|--env-file' docker-compose.coolify.yml backend/Dockerfile dashboard/Dockerfile infra/docker/gateway/Dockerfile >/dev/null; then
+  bad "env_file / --env-file in the Coolify deployment (configuration must come from environment: only)"
+else ok "no env_file: the Coolify stack reads configuration from environment: only"; fi
+grep -Eq 'exclude_from_hc' docker-compose.coolify.yml && bad "exclude_from_hc makes plain docker compose reject the file" || ok "docker-compose.coolify.yml uses only standard Compose keys"
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
-  sed '/exclude_from_hc/d' docker-compose.coolify.yml > "${TMPDIR:-/tmp}/gcp-compose-check.yml"
-  docker compose -f "${TMPDIR:-/tmp}/gcp-compose-check.yml" --project-directory . config --quiet 2>/dev/null \
-    && ok "docker-compose.coolify.yml is valid Compose" || bad "docker compose config fails for docker-compose.coolify.yml"
-  rm -f "${TMPDIR:-/tmp}/gcp-compose-check.yml"
+  # Run from an empty directory so that no .env file can be picked up.
+  empty="$(mktemp -d)"
+  (cd "$empty" && docker compose -f "$ROOT/docker-compose.coolify.yml" --project-directory "$ROOT" config --quiet 2>/dev/null) \
+    && ok "docker compose config passes without any .env file" || bad "docker compose config fails for docker-compose.coolify.yml"
+  rmdir "$empty"
 fi
 
 echo "Links in documentation"
