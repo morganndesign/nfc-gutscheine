@@ -1,5 +1,7 @@
 # Umgebungsvariablen
 
+> **Hinweis (Coolify-Deployment):** Produktion läuft seit 1.4.2 auf **Coolify** mit `docker-compose.coolify.yml` (Build aus dem Quellcode, kein GHCR, keine Deploy-Skripte). Befehle mit `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` oder Caddy auf dem Host in diesem Dokument sind überholt. Maßgeblich sind [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (Deployment, Backups, Restore, Betrieb) und [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
+
 *Alle Konfigurationsvariablen von GiftCard Pro – API, Web-App, Docker Compose, Container und Abnahmetest – mit Standardwert, Beispiel, Beschreibung und Empfehlung für den Produktivbetrieb.*
 
 ---

@@ -115,18 +115,19 @@ php artisan schedule:work        # optional third terminal: nightly expiry and r
 To reach the API from a phone on the same Wi-Fi: `php artisan serve --host=0.0.0.0 --port=8000`.
 
 ### 1.7 Run the production server
-Production runs as Docker containers on the server (Caddy with HTTPS, web, api, queue, scheduler, MySQL, Redis),
-never with `php artisan serve`. On the server, in the project folder:
+Production runs on **Coolify** from this GitHub repository, never with `php artisan serve`. Coolify builds every
+image from source with `docker-compose.coolify.yml` (gateway, api, migrate, worker, scheduler, web, MySQL, Redis,
+backup) and provides HTTPS. Setup in short: create a *Docker Compose* resource from the repository, Compose file
+`/docker-compose.coolify.yml`, give the **gateway** service the domain `https://app.giftcardpro.at`, add the mail
+settings from `.env.production.example`, press *Deploy*. Migrations run automatically on every deploy. Then, in
+Coolify → *Terminal* → container **api**:
 ```bash
-cp .env.production.example .env.production                      # fill in (domain, passwords)
-cp backend/.env.production.example backend/.env.production      # fill in (APP_KEY, mail, keys)
-docker compose --env-file .env.production up -d                 # the api container migrates and seeds reference data itself
-docker compose --env-file .env.production exec api php artisan platform:create-admin you@company.com
+php artisan platform:create-admin you@company.com
 ```
-A staging server is set up the same way from `.env.staging.example` and `backend/.env.staging.example` (copied to the same
-file names). The API refuses to start in staging/production if `APP_URL`, `FRONTEND_URL` or `CARD_BASE_URL` is missing,
-not https or points at a development machine. All environment files: [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md).
-Server setup, TLS, CI/CD and backups: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), images: [docs/DOCKER.md](docs/DOCKER.md).
+Staging is a second Coolify resource with its own domain and `APP_ENV=staging`. The API refuses to start in
+staging/production if the public URL is missing, not https or points at a development machine. All environment
+variables: [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md). Step by step, backups and troubleshooting:
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), images: [docs/DOCKER.md](docs/DOCKER.md).
 
 ### 1.8 Run the tests
 ```bash
@@ -459,25 +460,28 @@ In production, do not roll back: fix forward with a new migration (rollbacks can
 only for real data loss.
 
 ### 7.3 Restore a backup
-Production backups are nightly dumps in `backups/giftcard_pro_<date>.sql.gz` on the server (plus the off-site copy),
-made by `infra/scripts/backup.sh` ([docs/DEPLOYMENT.md → Backups](docs/DEPLOYMENT.md#5-backups)).
+Production backups are daily dumps `giftcard_pro_<UTC timestamp>.sql.gz` in the `mysql-backups` volume, written by
+the `backup` service (plus your off-site copy) — [docs/DEPLOYMENT.md → Backups](docs/DEPLOYMENT.md#backups).
+All commands below run in Coolify → *Terminal*.
 
-**Test the backup first (safe, every month):** restore into a separate database.
+**Test the backup first (safe, every month):** container **backup**:
 ```bash
-docker compose --env-file .env.production exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE giftcard_pro_restore"'
-gunzip -c backups/giftcard_pro_<date>.sql.gz | docker compose --env-file .env.production exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" giftcard_pro_restore'
+ls -lh /backups
+mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE giftcard_pro_restore"
+gunzip -c /backups/giftcard_pro_<date>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" giftcard_pro_restore
+mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE giftcard_pro_restore"   # after checking
 ```
 
 **Real restore (replaces live data):**
-```bash
-docker compose --env-file .env.production stop web api queue scheduler      # no writes during the restore
-docker compose --env-file .env.production --profile backup run --rm backup  # dump of the current state first
-gunzip -c backups/giftcard_pro_<date>.sql.gz | docker compose --env-file .env.production exec -T mysql sh -c \
-  'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
-docker compose --env-file .env.production up -d                              # api runs pending migrations
-```
+1. Container **api**: `php artisan down`
+2. Container **backup**: take a dump of the current state first, then restore:
+   ```bash
+   mysqldump -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --no-tablespaces \
+     "$MYSQL_DATABASE" | gzip > /backups/before_restore_$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+   gunzip -c /backups/giftcard_pro_<date>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"
+   ```
+3. Coolify → *Redeploy* (runs migrations newer than the dump and brings the app back up).
+
 **Local MySQL (setup B):** `gunzip -c dump.sql.gz | docker compose -f docker-compose.dev.yml exec -T mysql mysql -uroot -proot giftcard_pro`.
 **Local SQLite:** copy the file back over `backend/database/database.sqlite`.
 
@@ -497,9 +501,9 @@ A release has one version number for everything (platform = backend + dashboard 
    (cd e2e && npm test && npm run test:waiter-api && npm run test:nfc)      # backend + dashboard running
    ```
    If NFC code changed: the real-tag test (section 6.3).
-3. **Server (backend + dashboard).** With the GitHub repository set up: `git tag v1.4.2 && git push --tags` →
-   `deploy.yml` builds both images and deploys ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#4-cicd-github-actions)).
-   Migrations run automatically when the new api container starts. Check `https://app.giftcardpro.at/up`.
+3. **Server (backend + dashboard).** Push to `main` (optionally tag it: `git tag v1.4.2 && git push --tags`) →
+   Coolify builds everything from source and deploys ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#updates)).
+   The `migrate` service runs the migrations before the new containers start. Check `https://app.giftcardpro.at/up`.
 4. **APK + AAB:** `cd waiter-app && tool/release.sh android production`
 5. **IPA / TestFlight (Mac):** `cd waiter-app && tool/release.sh ios production` → Xcode *Archive* → *Upload* (section 3.8),
    or `DEVELOPMENT_TEAM=<Team ID> tool/release.sh ios-ipa production` → `build/ios/ipa/*.ipa` → upload with Apple's
@@ -562,5 +566,5 @@ Details: [e2e/README.md](e2e/README.md).
 ## 11. Production (giftcardpro.at)
 
 Nothing in production exists yet: the domain `giftcardpro.at` is not registered (DNS answers NXDOMAIN), so
-production builds of the app show *Server not found*. The complete first deployment — domain, DNS, server, HTTPS,
-e-mail, backups, app links, store builds — is in [docs/DEPLOYMENT.md → Go-live](docs/DEPLOYMENT.md#go-live-first-deployment-of-giftcardproat).
+production builds of the app show *Server not found*. The complete first deployment on Coolify — domain, DNS, server, HTTPS,
+e-mail, backups, app links — is in [docs/DEPLOYMENT.md → First deployment](docs/DEPLOYMENT.md#first-deployment--step-by-step).

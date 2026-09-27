@@ -1,5 +1,7 @@
 # Logging-Leitfaden
 
+> **Hinweis (Coolify-Deployment):** Produktion läuft seit 1.4.2 auf **Coolify** mit `docker-compose.coolify.yml` (Build aus dem Quellcode, kein GHCR, keine Deploy-Skripte). Befehle mit `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` oder Caddy auf dem Host in diesem Dokument sind überholt. Maßgeblich sind [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (Deployment, Backups, Restore, Betrieb) und [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
+
 *Log-Quellen von GiftCard Pro, Log-Level, Abgrenzung zu Audit-Log und Scan-Protokoll, personenbezogene Daten, Korrelation über X-Request-Id, Suche, Aufbewahrung und DSGVO.*
 
 ---

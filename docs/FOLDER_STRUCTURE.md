@@ -47,11 +47,11 @@ GiftCardPro/
 │   └── Dockerfile
 ├── e2e/                             Browser acceptance test: the pilot restaurant's first day
 ├── infra/
-│   ├── caddy/Caddyfile              TLS + routing
-│   ├── docker/php/                  php.ini, FPM pool, entrypoint
-│   └── scripts/                     deploy.sh, backup.sh
-├── .github/workflows/               ci.yml, deploy.yml
-├── docker-compose.yml               Production stack
+│   ├── docker/gateway/              Caddyfile + Dockerfile: routes /api, /sanctum, /up → Laravel, rest → Next.js
+│   └── docker/php/                  php.ini, FPM pool, entrypoint (roles migrate/app/worker/scheduler)
+├── .github/workflows/               ci.yml
+├── docker-compose.coolify.yml       Production stack (Coolify, built from source)
+├── .env.production.example          Reference of the Coolify environment variables
 ├── docker-compose.dev.yml           Local MySQL / Redis / Mailpit
 └── docs/                          Guides; docs/screenshots/ holds the current UI
 ```

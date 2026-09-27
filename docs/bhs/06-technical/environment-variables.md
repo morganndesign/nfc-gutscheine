@@ -1,5 +1,7 @@
 # Varijable okruženja
 
+> **Napomena (Coolify deployment):** Produkcija od verzije 1.4.2 radi na **Coolify** sa `docker-compose.coolify.yml` (build iz izvornog koda, bez GHCR-a, bez deploy skripti). Komande sa `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` ili Caddy na hostu u ovom dokumentu su zastarjele. Mjerodavni su [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (deployment, backup, restore, rad) i [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
+
 *Sve konfiguracione varijable za GiftCard Pro – API, web aplikacija, Docker Compose, kontejneri i test prihvatanja – sa standardnom vrijednošću, primjerom, opisom i preporukom za produkciju.*
 
 ---

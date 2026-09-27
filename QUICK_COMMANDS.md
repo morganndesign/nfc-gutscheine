@@ -63,9 +63,7 @@ adb reverse tcp:3000 tcp:3000                           # then Chrome on the pho
 (cd backend && php artisan make:migration add_x_to_y_table)
 (cd backend && php artisan migrate:status)
 (cd backend && php artisan migrate:rollback --step=1)
-# restore (server): see RUNNING_THE_PROJECT.md §7.3
-gunzip -c backups/giftcard_pro_<date>.sql.gz | docker compose --env-file .env.production exec -T mysql \
-  sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"'
+# restore (server): RUNNING_THE_PROJECT.md §7.3 — Coolify → Terminal → container "backup"
 
 # ── Build Android ────────────────────────────────────────────────────────────
 (cd waiter-app && tool/release.sh android production)   # signed APK + AAB → waiter-app/build/dist/
@@ -81,7 +79,7 @@ adb install -r releases/latest/android/app-release.apk  # install the current re
 # ── Production release ───────────────────────────────────────────────────────
 # 1. version in waiter-app/pubspec.yaml (e.g. 1.4.2+2) + CHANGELOG.md section
 # 2. all tests above
-git tag v1.4.2 && git push --tags                       # 3. server deploy via GitHub Actions
+git push origin main                                    # 3. Coolify builds from source + deploys
 (cd waiter-app && tool/release.sh android production)   # 4. APK + AAB
 (cd waiter-app && tool/release.sh ios production)       # 5. TestFlight (Mac)
 scripts/collect-release.sh                              # 6. file into releases/<version>, latest → it
@@ -89,11 +87,13 @@ scripts/collect-release.sh                              # 6. file into releases/
 # 8. update CURRENT_VERSION.md
 scripts/verify-structure.sh                             # 9. check folders, versions, checksums, links
 
-# ── Server (production) ──────────────────────────────────────────────────────
-docker compose --env-file .env.production up -d
-docker compose --env-file .env.production ps
-docker compose --env-file .env.production logs -f api
-docker compose --env-file .env.production exec api php artisan migrate:status
-docker compose --env-file .env.production --profile backup run --rm backup   # backup now
+# ── Server (production, Coolify) ─────────────────────────────────────────────
+# Deploy: push to main (auto deploy) or Coolify → resource → Redeploy. Logs: resource → Logs.
+# Coolify → Terminal → container "api":
+php artisan migrate:status
+php artisan queue:failed
+# Coolify → Terminal → container "backup" (backup now):
+mysqldump -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --no-tablespaces "$MYSQL_DATABASE" | gzip > /backups/manual_$(date -u +%Y%m%dT%H%M%SZ).sql.gz
+docker compose -f docker-compose.coolify.yml build      # local: build exactly what Coolify builds
 curl -fsS https://app.giftcardpro.at/up                 # health check
 ```

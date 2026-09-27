@@ -1,4 +1,5 @@
 **/.git
+dashboard
 **/node_modules
 **/.next
 backend/vendor
@@ -14,3 +15,4 @@ signing
 assets
 waiter-app
 e2e
+backend/bootstrap/cache/*.php

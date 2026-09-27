@@ -1,5 +1,7 @@
 # Restore-Anleitung
 
+> **Hinweis (Coolify-Deployment):** Produktion läuft seit 1.4.2 auf **Coolify** mit `docker-compose.coolify.yml` (Build aus dem Quellcode, kein GHCR, keine Deploy-Skripte). Befehle mit `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` oder Caddy auf dem Host in diesem Dokument sind überholt. Maßgeblich sind [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (Deployment, Backups, Restore, Betrieb) und [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
+
 *Schritt-für-Schritt-Wiederherstellung von GiftCard Pro: Untersuchung einzelner Datensätze, vollständiger Datenbank-Restore, Totalverlust des Servers, Grenzen der Point-in-Time-Wiederherstellung, Prüfabfragen und Kommunikation mit den Restaurants.*
 
 ---

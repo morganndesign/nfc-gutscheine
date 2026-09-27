@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# GiftCard Pro gateway — the single public entry point behind Coolify's proxy.
+#
+#   Internet ──HTTPS──▶ Coolify proxy (Traefik/Caddy, TLS certificates, domain)
+#            ──HTTP───▶ gateway:80 (this file)
+#                         ├─ /api/* /sanctum/* /up /reset-password/*  ─FastCGI─▶ api:9000 (Laravel, php-fpm)
+#                         └─ everything else                           ─HTTP────▶ web:3000 (Next.js)
+#
+# One origin for the whole product, so session cookies, CSRF and the waiter app's
+# API calls work exactly as designed. TLS is terminated by Coolify, not here.
+# ---------------------------------------------------------------------------
+{
+	auto_https off
+	admin off
+	servers {
+		# Coolify's proxy is on the same Docker network: trust its X-Forwarded-* headers
+		# (scheme https, client IP) and pass them on to Laravel and Next.js.
+		trusted_proxies static private_ranges
+		client_ip_headers X-Forwarded-For X-Real-IP
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Container health check (docker-compose.coolify.yml). Answers without touching the apps.
+	handle /gateway-health {
+		respond "ok" 200
+	}
+
+	# Laravel: API, Sanctum CSRF cookie, health check (/up checks database + cache),
+	# password-reset redirect.
+	@laravel path /api/* /sanctum/* /up /reset-password/*
+	handle @laravel {
+		# The API has no static files: every request goes to Laravel's front controller.
+		# REQUEST_URI keeps the original path and query, so Laravel routing works unchanged.
+		rewrite * /index.php
+		reverse_proxy {$API_FASTCGI:api:9000} {
+			transport fastcgi {
+				root /var/www/html/public
+				split .php
+			}
+		}
+	}
+
+	handle {
+		reverse_proxy {$WEB_UPSTREAM:web:3000}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

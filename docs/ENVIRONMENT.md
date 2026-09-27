@@ -8,12 +8,13 @@ production with such a default.
 
 | | Development (your computer) | Staging | Production |
 |---|---|---|---|
-| **Backend** (`backend/`) | `backend/.env` from `.env.example` · `APP_ENV=local` | `backend/.env.production` on the staging server, from `backend/.env.staging.example` · `APP_ENV=staging` | `backend/.env.production` on the server, from `backend/.env.production.example` · `APP_ENV=production` |
-| **Server stack** (`docker-compose.yml`) | — (`docker-compose.dev.yml`, no variables) | `.env.production` on the staging server, from `.env.staging.example` | `.env.production` on the server, from `.env.production.example` |
-| **Dashboard** (`dashboard/`) | `dashboard/.env.local` from `.env.example` (`BACKEND_INTERNAL_URL`) | nothing — same origin, Caddy routes `/api` | nothing — same origin, Caddy routes `/api` |
+| **Backend** (`backend/`) | `backend/.env` from `.env.example` · `APP_ENV=local` | Coolify resource *Environment Variables* (`APP_ENV=staging`, own domain) — reference: `.env.production.example` | Coolify resource *Environment Variables* — reference: `.env.production.example` |
+| **Server stack** | `docker-compose.dev.yml` (MySQL, Redis, Mailpit; no variables) | `docker-compose.coolify.yml` (same file) | `docker-compose.coolify.yml` |
+| **Dashboard** (`dashboard/`) | `dashboard/.env.local` from `.env.example` (`BACKEND_INTERNAL_URL`) | nothing — same origin, the gateway routes `/api` | nothing — same origin, the gateway routes `/api` |
 | **Waiter app** (`waiter-app/`) | `config/development.json` (+ your `development.local.json`) · `APP_ENV=development` | `config/staging.json` · `APP_ENV=staging` | `config/production.json` · `APP_ENV=production` |
 
-Backend and dashboard read their file **at run time** on the machine they run on; the waiter app reads its file
+Backend and dashboard read their settings **at run time** (development: the files above; staging/production: the
+variables of the Coolify resource, passed to the containers by `docker-compose.coolify.yml`); the waiter app reads its file
 **at build time** (a phone has no server-side files) — so an app build belongs to exactly one environment.
 
 What keeps the environments apart:
@@ -111,19 +112,26 @@ app's `API_BASE_URL` = `APP_URL` + `/api/v1` (same origin in staging/production)
 
 | Variable | Description |
 |---|---|
-| `BACKEND_INTERNAL_URL` | Development only: where `next dev` proxies `/api` and `/sanctum`. In production Caddy routes these paths to Laravel before they reach Next.js. |
+| `BACKEND_INTERNAL_URL` | Development only: where `next dev` proxies `/api` and `/sanctum`. In production the gateway (Caddy, `infra/docker/gateway`) routes these paths to Laravel before they reach Next.js. |
 
 The web app has **no secrets**: it only talks to its own origin.
 
-## Compose (`.env.production` next to `docker-compose.yml`)
+## Production and staging (Coolify)
 
-| Variable | Description |
+The server stack is `docker-compose.coolify.yml`; its variables are set in Coolify (resource → *Environment
+Variables*). **Every variable has a working default** — the full, commented list is
+[`.env.production.example`](../.env.production.example). The Laravel variables above that are not listed there are
+fixed in the compose file (Redis sessions, secure cookies, `LOG_CHANNEL=stderr`, …).
+
+| Set by | Variables |
 |---|---|
-| `APP_DOMAIN` | Public host name; Caddy obtains the TLS certificate for it. |
-| `ACME_EMAIL` | Let's Encrypt account e-mail. |
-| `REGISTRY` / `IMAGE_TAG` | Container registry and tag to run (set by the deploy pipeline). |
-| `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` / `DB_ROOT_PASSWORD` | MySQL container bootstrap. |
-| `REDIS_PASSWORD` | Redis `requirepass`. |
+| Coolify, automatically | `SERVICE_URL_GATEWAY` / `SERVICE_FQDN_GATEWAY` (domain of the `gateway` service → `APP_URL`, `FRONTEND_URL`, `CARD_BASE_URL`, `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, default `MAIL_FROM_ADDRESS`), `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` |
+| The first deploy, automatically | `APP_KEY` (kept in the `laravel-storage` volume unless you set `APP_KEY` yourself) |
+| You (needed for real use) | `MAIL_*` (SMTP), later `WAITER_ANDROID_CERT_SHA256`, `WAITER_IOS_APP_IDS` |
+| You (optional) | `APP_ENV` (`staging`), `APP_URL`, `OPS_ALERT_EMAIL`, `NTAG424_*`, `SCHEDULE_TIMEZONE`, `LOG_LEVEL`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `MYSQL_INNODB_BUFFER_POOL_SIZE`, `DB_DATABASE`/`DB_USERNAME` (before the first deploy only) |
+
+| Variable (web service) | Description |
+|---|---|
 | `WAITER_IOS_APP_IDS` | Waiter app IDs for iPhone Universal Links, `TEAMID.bundle.id` (comma-separated). Served as `/.well-known/apple-app-site-association`. Empty = 404. |
 | `WAITER_ANDROID_PACKAGE` | Package name of the Android waiter app for App Links (`/.well-known/assetlinks.json`). |
 | `WAITER_ANDROID_CERT_SHA256` | SHA-256 signing certificate fingerprints (Play App Signing, plus the upload key for internal builds), comma-separated `AB:CD:…`. |

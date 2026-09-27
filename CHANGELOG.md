@@ -24,6 +24,25 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Coolify deployment, 27 September 2026 (part of 1.4.2)
+
+The previous production deployment pulled pre-built images from GitHub Container Registry, built by a GitHub
+Actions workflow and started by a shell script over SSH. It could not be deployed by Coolify. It was replaced by a
+new deployment designed for Coolify: connect the repository, press *Deploy*.
+
+| Change | Why |
+|---|---|
+| New `docker-compose.coolify.yml`: gateway, migrate, api, worker, scheduler, web, mysql, redis, backup. Every application image is **built from source** on the server; no registry, no GitHub Actions step, no published host ports. Health checks, `unless-stopped` restarts, named volumes (`mysql-data`, `redis-data`, `laravel-storage`, `mysql-backups`). | Coolify's Docker Compose build pack builds from the repository and routes one domain per service through its own proxy. |
+| New gateway service (`infra/docker/gateway/`, Caddy): `/api`, `/sanctum`, `/up`, `/reset-password` → Laravel over FastCGI, everything else → Next.js. TLS is done by Coolify. | The product needs one origin (Sanctum cookies, card links); one domain on one container needs no proxy-specific path rules. |
+| One-shot `migrate` service runs migrations (`--isolated`) and reference seeders on every deploy; api, worker and scheduler start only after it succeeded. | Migrations run automatically, exactly once, before new code serves requests. |
+| `infra/docker/php/entrypoint.sh` rewritten: roles migrate/app/worker/scheduler; the public URL, cookie domain and Sanctum domain are derived from the gateway domain Coolify assigns; APP_KEY is generated on the first deploy into the storage volume unless set; clear errors for a missing domain or missing passwords. | No manual `.env` editing on the server; database/Redis passwords come from Coolify's generated `SERVICE_PASSWORD_*`. |
+| Daily `mysqldump` by the `backup` service (time and retention configurable). | Replaces the host cron script. |
+| `backend/Dockerfile`: build-time artisan runs with `APP_ENV=build`; storage directories created explicitly; `CONTAINER_ROLE` default. Both Dockerfiles: `# syntax=` line removed. `.dockerignore`: excludes `dashboard/` and stale `bootstrap/cache/*.php` from the backend build. | The EnvironmentGuard stopped the image build in `package:discover`; the brace expansion did not work in `sh`; the syntax line forced an extra registry lookup; a local config cache could leak into the image. |
+| `.env.production.example` rewritten as the reference for Coolify's environment variables. | Only mail settings are required; everything else has production defaults. |
+| **Removed:** `docker-compose.yml` (GHCR), `.github/workflows/deploy.yml`, `infra/caddy/`, `infra/scripts/deploy.sh`, `infra/scripts/backup.sh`, `.env.staging.example`, `backend/.env.production.example`, `backend/.env.staging.example`. | Parts of the old deployment; unused with Coolify and could be run by mistake. |
+| CI: the docker job validates and builds the Coolify stack. `scripts/verify-structure.sh` checks for the Coolify files and that no GHCR file remains. Docs: `docs/DEPLOYMENT.md` rewritten (step by step for Coolify), `docs/DOCKER.md`, `docs/ENVIRONMENT.md`, `RUNNING_THE_PROJECT.md`, `QUICK_COMMANDS.md`, `PROJECT_STRUCTURE.md`, `docs/FOLDER_STRUCTURE.md`, `docs/SECURITY.md` updated; German/BHS technical guides carry a pointer to `docs/DEPLOYMENT.md`. | |
+| Tested: complete stack built from source and started with an https test domain — all services healthy, migrate exited 0, `/up`, API, dashboard, SPA sign-in with secure cookies, queue job processed, scheduler, APP_KEY and data kept across restarts, backup dump. 168 PHPUnit tests pass. | |
+
 ## Project reorganisation, 27 September 2026 (part of 1.4.2; no code changes)
 
 | Change | Why |

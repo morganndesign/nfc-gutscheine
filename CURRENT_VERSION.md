@@ -28,11 +28,11 @@
 
 | | |
 |---|---|
-| **Current production release** | **None live.** No production server exists (`giftcardpro.at` is not registered; DNS answers NXDOMAIN) and nothing is uploaded to a store. Go-live steps: [docs/DEPLOYMENT.md → Go-live](docs/DEPLOYMENT.md#go-live-first-deployment-of-giftcardproat). When it goes live, write the version, date and server here. |
-| Production server | none yet — planned `https://app.giftcardpro.at` (Hetzner) |
+| **Current production release** | **None live.** No production server exists (`giftcardpro.at` is not registered; DNS answers NXDOMAIN) and nothing is uploaded to a store. Go-live steps (Coolify): [docs/DEPLOYMENT.md → First deployment](docs/DEPLOYMENT.md#first-deployment--step-by-step). When it goes live, write the version, date and server here. |
+| Production server | none yet — planned `https://app.giftcardpro.at` (Coolify on Hetzner, `docker-compose.coolify.yml`) |
 | Google Play | not uploaded |
 | App Store / TestFlight | not uploaded (needs a Mac: `waiter-app/tool/release.sh ios production`) |
-| **Current development release** | **1.4.2** (in development, not released) — environments for the waiter app and the fix for the launch-screen hang. |
+| **Current development release** | **1.4.2** (in development, not released) — environments for the waiter app, the fix for the launch-screen hang and the new Coolify deployment (`docker-compose.coolify.yml`). |
 | Latest release | **1.4.1**, 27 September 2026 — `releases/1.4.1/` (= `releases/latest`) |
 
 ### Known defect of the 1.4.1 waiter app — do not distribute
@@ -74,7 +74,7 @@ Full history with reasons: [CHANGELOG.md](CHANGELOG.md).
 
 ## Open before the first production release
 
-- Register `giftcardpro.at`, deploy the server ([docs/DEPLOYMENT.md → Go-live](docs/DEPLOYMENT.md#go-live-first-deployment-of-giftcardproat)).
+- Register `giftcardpro.at`, deploy the server on Coolify ([docs/DEPLOYMENT.md → First deployment](docs/DEPLOYMENT.md#first-deployment--step-by-step)).
 - Build and file 1.4.2: `tool/release.sh android production` → `scripts/collect-release.sh`.
 - Real-tag NFC release test on two Android phones ([docs/NFC-RELEASE-TEST.md](docs/NFC-RELEASE-TEST.md)).
 - First iOS build on a Mac; waiter app checks on real phones.

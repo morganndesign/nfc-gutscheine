@@ -14,7 +14,8 @@ for d in backend dashboard waiter-app nfc docs e2e infra releases releases/previ
   [[ -d $d ]] && ok "$d/" || bad "$d/ missing"
 done
 for f in README.md PROJECT_STRUCTURE.md CURRENT_VERSION.md RUNNING_THE_PROJECT.md QUICK_COMMANDS.md CHANGELOG.md \
-         docker-compose.yml docker-compose.dev.yml backend/artisan dashboard/package.json waiter-app/pubspec.yaml \
+         docker-compose.coolify.yml docker-compose.dev.yml .env.production.example \
+         infra/docker/gateway/Caddyfile infra/docker/gateway/Dockerfile infra/docker/php/entrypoint.sh backend/artisan dashboard/package.json waiter-app/pubspec.yaml \
          waiter-app/tool/release.sh waiter-app/config/development.json waiter-app/config/staging.json \
          waiter-app/config/production.json scripts/collect-release.sh; do
   [[ -f $f ]] && ok "$f" || bad "$f missing"
@@ -65,11 +66,12 @@ for z in $(find releases -name '*-source.zip'); do
 done
 
 echo "Scripts"
-for s in scripts/*.sh waiter-app/tool/release.sh infra/scripts/*.sh; do bash -n "$s" && ok "syntax $s" || bad "syntax $s"; done
+for s in scripts/*.sh waiter-app/tool/release.sh; do bash -n "$s" && ok "syntax $s" || bad "syntax $s"; done
+sh -n infra/docker/php/entrypoint.sh && ok "syntax infra/docker/php/entrypoint.sh (POSIX sh)" || bad "syntax infra/docker/php/entrypoint.sh"
 
 echo "Configuration"
 legacy=0
-for f in waiter-app/tool/release.env backend/.env.staging waiter-app/config/.env; do
+for f in waiter-app/tool/release.env backend/.env.staging backend/.env.production .env.production waiter-app/config/.env; do
   if [[ -e $f ]]; then bad "legacy / stray configuration file: $f"; legacy=1; fi
 done
 [[ $legacy == 0 ]] && ok "no legacy configuration files (waiter-app/tool/release.env removed)"
@@ -89,9 +91,29 @@ done
 [[ $cfgbad == 0 ]] && ok "waiter-app/config: APP_ENV matches each file, staging/production https and no development addresses"
 lit=$(grep -rn "://" waiter-app/lib --include=*.dart | grep -v "^waiter-app/lib/l10n/\|pseudo_app_localizations" | grep -vE ":[0-9]+:\s*//" || true)
 [[ -z "$lit" ]] && ok "no URL literals in waiter-app/lib" || { bad "URL literals in waiter-app/lib:"; echo "$lit"; }
-for f in backend/.env.production.example backend/.env.staging.example .env.production.example .env.staging.example; do
-  [[ -f $f ]] || bad "$f missing"
+
+echo "Deployment (Coolify)"
+dep=0
+for f in docker-compose.yml .env.staging.example backend/.env.production.example backend/.env.staging.example \
+         .github/workflows/deploy.yml infra/caddy infra/scripts; do
+  if [[ -e $f ]]; then bad "old GHCR deployment file still exists: $f"; dep=1; fi
 done
+[[ $dep == 0 ]] && ok "no files of the old GHCR deployment"
+if grep -rqsE 'ghcr\.io|image: *\$\{' docker-compose.coolify.yml .github/workflows; then bad "registry images referenced (everything must build from source)"
+else ok "docker-compose.coolify.yml builds from source, no registry"; fi
+grep -Eq '^\s+ports:' docker-compose.coolify.yml && bad "docker-compose.coolify.yml publishes host ports (Coolify's proxy routes the domain)" \
+  || ok "no published host ports"
+for svc in gateway migrate api worker scheduler web mysql redis backup; do
+  grep -Eq "^  $svc:" docker-compose.coolify.yml || { bad "service $svc missing in docker-compose.coolify.yml"; dep=1; }
+done
+[[ $dep == 0 ]] && ok "all nine services defined"
+grep -q 'SERVICE_URL_GATEWAY_80' docker-compose.coolify.yml && ok "gateway gets its domain from Coolify (SERVICE_URL_GATEWAY_80)" || bad "gateway domain variable missing"
+if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
+  sed '/exclude_from_hc/d' docker-compose.coolify.yml > "${TMPDIR:-/tmp}/gcp-compose-check.yml"
+  docker compose -f "${TMPDIR:-/tmp}/gcp-compose-check.yml" --project-directory . config --quiet 2>/dev/null \
+    && ok "docker-compose.coolify.yml is valid Compose" || bad "docker compose config fails for docker-compose.coolify.yml"
+  rm -f "${TMPDIR:-/tmp}/gcp-compose-check.yml"
+fi
 
 echo "Links in documentation"
 python3 - <<'EOF' || fail=1

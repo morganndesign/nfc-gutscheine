@@ -1,214 +1,163 @@
-# Deployment (Hetzner Cloud)
+# Deployment (Coolify)
 
-The reference setup runs the whole product on **one Hetzner Cloud server** (CPX31: 4 vCPU / 8 GB is plenty for
-hundreds of restaurants) with Docker Compose. Scale-out paths are listed at the end.
+GiftCard Pro runs in production as **one Coolify resource** built from this repository with
+[`docker-compose.coolify.yml`](../docker-compose.coolify.yml). Coolify clones the repository, builds every image on
+your server, starts the stack and gives it HTTPS. There is no container registry, no pre-built image and no
+GitHub Actions step involved.
 
-## Go-live: first deployment of giftcardpro.at
+## Architecture
 
-The complete order for the first production deployment. Sections 1–7 below explain each part in more depth.
-Allow about two hours. Replace `app.giftcardpro.at` everywhere if you choose another host name — then also
-`waiter-app/config/production.json` (the iOS app-link host follows it automatically) and the three URLs in
-`backend/.env.production`, and build a new app.
+```
+Internet ──HTTPS──▶ Coolify proxy (TLS certificate for your domain)
+                      │
+                      ▼ HTTP, internal network
+                    gateway :80  (Caddy, infra/docker/gateway)
+                      ├─ /api/*  /sanctum/*  /up  /reset-password/*  ──FastCGI──▶ api :9000   (Laravel, php-fpm)
+                      └─ everything else  ──────────────────────────────HTTP────▶ web :3000   (Next.js dashboard)
 
-**You need:** the domain `giftcardpro.at`, a Hetzner Cloud account, an e-mail sending service (e.g. Postmark,
-Mailgun, Brevo — SMTP credentials), your SSH key, and the project folder on your Mac.
+  migrate   one-shot on every deploy: APP_KEY (first deploy), migrations, reference data → exits
+  worker    queue:work (e-mails, notifications)        ┐ start only after migrate
+  scheduler schedule:work (nightly expiry, reminders…)  ┘ finished successfully
+  mysql     MySQL 8.4            volume mysql-data
+  redis     Redis 7.4 (AOF)      volume redis-data     sessions, cache, locks, queues
+  backup    daily mysqldump      volume mysql-backups  (kept 14 days)
+```
 
-1. **Register the domain** `giftcardpro.at` with an `.at` registrar (e.g. Hetzner, INWX, World4You). Use the
-   registrar's DNS or Hetzner DNS.
-2. **Create the server** (section 1): Hetzner Cloud → *Add server* → Falkenstein or Nürnberg, **Ubuntu 24.04**,
-   **CPX31**, your SSH key, *Backups* on, a *Firewall* allowing 22 (your IP only), 80 and 443. Note the IPv4 and IPv6.
-3. **DNS records** at the domain:
-   | Type | Name | Value |
-   |---|---|---|
-   | A | `app` | server IPv4 |
-   | AAAA | `app` | server IPv6 |
-   | TXT / CNAME | as given by the mail service | SPF, DKIM (and `_dmarc` TXT `v=DMARC1; p=none; rua=mailto:you@…`) |
+| Service | Built from | Public | Health check | Restart | Volume |
+|---|---|---|---|---|---|
+| `gateway` | `infra/docker/gateway/` (Caddy) | **yes** — the only service with a domain | `GET /gateway-health` | unless-stopped | — |
+| `migrate` | `backend/Dockerfile` | no | none (one-shot, `exclude_from_hc`) | no | `laravel-storage` |
+| `api` | `backend/Dockerfile` | no (via gateway) | php-fpm ping | unless-stopped | `laravel-storage` |
+| `worker` | `backend/Dockerfile` | no | process check | unless-stopped | `laravel-storage` |
+| `scheduler` | `backend/Dockerfile` | no | process check | unless-stopped | `laravel-storage` |
+| `web` | `dashboard/Dockerfile` | no (via gateway) | `GET /login` | unless-stopped | — |
+| `mysql` | image `mysql:8.4` | no | `mysqladmin ping` | unless-stopped | `mysql-data` |
+| `redis` | image `redis:7.4-alpine` | no | `redis-cli ping` | unless-stopped | `redis-data` |
+| `backup` | image `mysql:8.4` | no | database reachable | unless-stopped | `mysql-backups` |
 
-   Wait until `dig +short app.giftcardpro.at` (on your Mac) returns the IPv4 — HTTPS certificates are only issued then.
-4. **Prepare the server** (as root, then as `deploy`):
+Why a gateway: the product is **one origin** — the dashboard, the API, the Sanctum cookies and the card links
+(`https://<domain>/c/<token>`) share one domain. The gateway does this path routing inside the stack, so Coolify only
+has to route one domain to one container, and nothing depends on proxy-specific path rules.
+
+Start order on every deploy: `mysql` + `redis` healthy → `migrate` runs and exits 0 → `api`, `worker`, `scheduler`
+→ `web` → `gateway`. If migrations fail, nothing new starts and the deployment is marked failed.
+
+## What you need
+
+- A server with **Coolify** installed (Ubuntu 24.04, ≥ 2 vCPU / 4 GB RAM; Hetzner CX32/CPX31 in Falkenstein or
+  Nürnberg for EU data residency). Coolify install: `curl -fsSL https://cdn.coollabs.io/coolify/install.sh | sudo bash`.
+- The domain, e.g. `app.giftcardpro.at`, with an **A record** (and AAAA if IPv6) pointing at that server.
+- This repository on GitHub (private is fine).
+- SMTP credentials of an e-mail service (Postmark, Mailgun, Brevo, …) — invitations and password links need it.
+
+## First deployment — step by step
+
+1. **DNS.** Create `A  app  →  <server IPv4>` (and `AAAA` for IPv6). Wait until `dig +short app.giftcardpro.at`
+   returns the IP. Coolify can only get the certificate after that.
+2. **Connect GitHub** (once per Coolify): *Sources* → *+ Add* → *GitHub App* → follow the wizard, install the app
+   on the repository.
+3. **Create the resource:** *Projects* → your project → *+ New* → *Private Repository (with GitHub App)* → choose
+   the repository and the branch (`main`).
+   - **Build Pack:** `Docker Compose`
+   - **Base Directory:** `/`
+   - **Docker Compose Location:** `/docker-compose.coolify.yml`
+   - *Continue*. Coolify reads the file and lists the services.
+4. **Domain:** in the resource's *General* page, *Domains for gateway* → `https://app.giftcardpro.at`.
+   Leave all other services without a domain. (Coolify routes it to the gateway's port 80.)
+5. **Environment Variables** (resource → *Environment Variables* → *Developer view*):
+   - check that `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT` and `SERVICE_PASSWORD_REDIS` have values
+     (Coolify generates them) and that `SERVICE_URL_GATEWAY` shows `https://app.giftcardpro.at`;
+   - add your e-mail settings from [`.env.production.example`](../.env.production.example):
+     `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+     (optional: `MAIL_FROM_ADDRESS`, `OPS_ALERT_EMAIL`). Everything else has production defaults.
+6. **Deploy.** The first build takes 5–10 minutes (PHP extensions, Composer, Next.js). Follow the log; at the end
+   all services except `migrate` are *healthy* and `migrate` shows *exited (0)*.
+7. **First administrator:** resource → *Terminal* → container **api** →
    ```bash
-   adduser deploy && usermod -aG sudo deploy && cp -r ~/.ssh /home/deploy/ && chown -R deploy: /home/deploy/.ssh
-   # /etc/ssh/sshd_config: PasswordAuthentication no, PermitRootLogin no → systemctl restart ssh
-   apt update && apt -y upgrade && apt -y install unattended-upgrades fail2ban rsync
-   curl -fsSL https://get.docker.com | sh && usermod -aG docker deploy
-   mkdir -p /opt/giftcard-pro && chown deploy: /opt/giftcard-pro
+   php artisan platform:create-admin you@giftcardpro.at --name="Your Name"
    ```
-5. **Copy the code** from your Mac (no Git repository needed; with one, `git clone` instead — then CI/CD in
-   section 4 deploys every later release):
-   ```bash
-   cd ~/Documents/Claude/Projects/Gutscheine/GiftCardPro
-   rsync -az --delete --exclude node_modules --exclude vendor --exclude .next --exclude waiter-app \
-     --exclude releases --exclude signing --exclude e2e --exclude 'backend/.env' --exclude '*.sqlite' \
-     --exclude 'backend/storage/logs/*' ./ deploy@app.giftcardpro.at:/opt/giftcard-pro/
-   ```
-6. **Build the images on the server** (no registry needed):
-   ```bash
-   cd /opt/giftcard-pro
-   docker build -f backend/Dockerfile -t local/giftcard-pro-api:latest .
-   docker build -t local/giftcard-pro-web:latest dashboard
-   ```
-7. **Configuration.** `cp .env.production.example .env.production` and
-   `cp backend/.env.production.example backend/.env.production`, then edit both:
-   - `.env.production`: `APP_DOMAIN=app.giftcardpro.at`, `ACME_EMAIL=<your e-mail>`, **`REGISTRY=local`**,
-     `IMAGE_TAG=latest`, `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `REDIS_PASSWORD` (each `openssl rand -base64 36`),
-     leave the three `WAITER_*` empty for now.
-   - `backend/.env.production`: the **same** `DB_PASSWORD` and `REDIS_PASSWORD`;
-     `APP_KEY=` the output of `echo "base64:$(openssl rand -base64 32)"`;
-     mail: `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS=no-reply@giftcardpro.at`;
-     URLs, session and Sanctum domains are already `app.giftcardpro.at`; `SEED_DEMO_DATA=false`.
-     Optional (NTAG 424 DNA cards): `docker run --rm --entrypoint php local/giftcard-pro-api:latest artisan giftcard:nfc-keys`
-     (`--entrypoint php` skips the container's start script, which would try to migrate a database that is not running yet).
-   - Store `APP_KEY`, the passwords and the NFC keys in your password manager.
-8. **Start:**
-   ```bash
-   docker compose --env-file .env.production up -d
-   docker compose --env-file .env.production ps               # all "healthy" / "running" after ~2 min
-   docker compose --env-file .env.production logs -f api caddy # migrations, certificate
-   ```
-   The api container runs the migrations and reference seeders itself. Caddy fetches the Let's Encrypt
-   certificate on the first HTTPS request.
-9. **First administrator:**
-   `docker compose --env-file .env.production exec api php artisan platform:create-admin you@giftcardpro.at --name="Your Name"`
-10. **Check:**
-    ```bash
-    curl -fsS https://app.giftcardpro.at/up
-    curl -fsS "https://app.giftcardpro.at/api/v1/app/config?platform=android&version=1.4.2"   # JSON
-    ```
-    Sign in at https://app.giftcardpro.at, onboard a test restaurant, and confirm the welcome e-mail arrives.
-11. **Backups** (section 5): add the two cron lines, set up the off-site copy, and **test one restore**
-    ([RUNNING_THE_PROJECT.md §7.3](../RUNNING_THE_PROJECT.md#73-restore-a-backup)).
-12. **Monitoring** (section 7): an uptime check on `https://app.giftcardpro.at/up`.
-13. **Waiter app on real phones:** `cd waiter-app && tool/release.sh android production` (`config/production.json`
-    already points at `https://app.giftcardpro.at/api/v1`), install
-    `build/dist/giftcard-waiter-production-<version>.apk`, sign in with a waiter of the test restaurant.
-14. **App links** (card links open the app): in `.env.production` set
-    `WAITER_ANDROID_PACKAGE=eu.tapredeem.waiter`,
-    `WAITER_ANDROID_CERT_SHA256=<upload key SHA-256>,<Play app signing key SHA-256>` (see `signing/ANDROID_SIGNING.md`),
-    `WAITER_IOS_APP_IDS=<Team ID>.eu.tapredeem.waiter`, then `docker compose --env-file .env.production up -d web`.
-    Check `https://app.giftcardpro.at/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association`.
-15. **Stores:** Play internal testing and TestFlight ([MOBILE_RELEASE.md](MOBILE_RELEASE.md)); before the first
-    restaurant: [PILOT_CHECKLIST.md](PILOT_CHECKLIST.md).
-16. **Record it** in `CURRENT_VERSION.md` → *Current production release* (version, date, server).
+   (asks for a password, min. 12 characters, upper/lower case and a digit).
+8. **Check:**
+   - `https://app.giftcardpro.at/up` → green page ("Application up"; checks database and cache)
+   - `https://app.giftcardpro.at/api/v1/app/config?platform=android&version=1.4.2` → JSON
+   - `https://app.giftcardpro.at` → sign-in page; sign in, onboard a test restaurant, confirm the welcome e-mail arrives.
+9. **Back up the APP_KEY** (generated on the first deploy): *Terminal* → container **api** →
+   `cat storage/app/.app-key`. Store it in your password manager, and ideally paste it as `APP_KEY` into the
+   Environment Variables (then the key no longer depends on the volume). Never change it on a running system.
+10. **Automatic deploys:** resource → *Advanced* → *Auto Deploy* on (default with the GitHub App). Every push to
+    `main` builds and deploys; migrations run automatically.
 
-**Later updates without CI:** repeat step 5 (rsync), step 6 (build), then
-`docker compose --env-file .env.production up -d` — new migrations run automatically.
+Nothing in the repository has to be edited for any of these steps.
 
-## 1. Server
+## Updates
 
-1. Create an Ubuntu 24.04 server in Falkenstein/Nürnberg (EU data residency), add your SSH key,
-   enable **backups** and attach a **Cloud Firewall** allowing only 22 (from your IPs), 80 and 443.
-2. Point `APP_DOMAIN` (e.g. `app.giftcardpro.at`) A/AAAA records at the server.
-3. Harden & install Docker:
+Push to `main` (or press *Redeploy*). Coolify builds the new images, then replaces the containers; `migrate` runs
+the new migrations before the new `api`/`worker`/`scheduler` start. Expect a few seconds of interruption while
+containers are replaced. Migrations are written to be backwards compatible with the previous release
+(expand → migrate → contract).
 
-```bash
-adduser deploy && usermod -aG sudo deploy
-# /etc/ssh/sshd_config: PasswordAuthentication no, PermitRootLogin no
-apt update && apt -y upgrade && apt -y install unattended-upgrades fail2ban git
-curl -fsSL https://get.docker.com | sh && usermod -aG docker deploy
-```
+**Rollback:** resource → *Deployments* → pick an earlier deployment → *Redeploy*. The database is not rolled back:
+migrations only go forward; restore a backup only for real data loss.
 
-## 2. Application directory
+## Backups
 
-```bash
-sudo mkdir -p /opt/giftcard-pro && sudo chown deploy: /opt/giftcard-pro
-cd /opt/giftcard-pro
-git clone git@github.com:your-org/giftcard-pro.git .
-cp .env.production.example .env.production           # compose variables
-cp backend/.env.production.example backend/.env.production
-```
+The `backup` service writes `giftcard_pro_<UTC timestamp>.sql.gz` into the volume `mysql-backups` every day at
+`BACKUP_TIME` (UTC, default 01:30) and deletes dumps older than `BACKUP_KEEP_DAYS` (default 14).
 
-Fill in both files. Generate secrets:
+- **Off-site copy (required for real data):** the volume lives on the same disk as the database. On the server,
+  find it with `docker volume ls | grep mysql-backups` and sync its `_data` directory off-site, e.g. a root cron job
+  `rclone sync /var/lib/docker/volumes/<name>/_data storagebox:giftcard-backups`. Also enable Hetzner server backups.
+- **Backup now:** *Terminal* → container **backup** →
+  `mysqldump -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --no-tablespaces "$MYSQL_DATABASE" | gzip > /backups/manual_$(date -u +%Y%m%dT%H%M%SZ).sql.gz`
+- **List:** `ls -lh /backups` in the backup container.
 
-```bash
-openssl rand -base64 36                               # DB / Redis passwords
-echo "base64:$(openssl rand -base64 32)"                                            # APP_KEY
-docker run --rm --entrypoint php ghcr.io/your-org/giftcard-pro-api:latest artisan giftcard:nfc-keys   # NTAG 424 keys (optional)
-```
+**Restore** (replaces all data — take a fresh dump first):
+1. *Terminal* → container **api** → `php artisan down` (the dashboard and app show maintenance).
+2. *Terminal* → container **backup** →
+   `gunzip -c /backups/<file>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"`
+3. Resource → *Redeploy* (runs migrations newer than the dump, brings the app back up).
 
-> Store `APP_KEY` and the NTAG 424 keys in your password manager. Losing `APP_KEY` logs everyone out;
-> losing the NFC keys makes secure tags unverifiable.
+Test a restore once a month into a scratch database: in the backup container
+`mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE restore_test"`, restore into `restore_test`,
+check it, `DROP DATABASE restore_test`.
 
-## 3. First start
+## Operations
 
-```bash
-docker login ghcr.io
-docker compose --env-file .env.production up -d
-docker compose --env-file .env.production exec api php artisan platform:create-admin you@company.com
-```
-
-Caddy requests the TLS certificate on the first HTTPS request. Check `https://APP_DOMAIN/up` → `200`.
-
-## 4. CI/CD (GitHub Actions)
-
-| Workflow | Trigger | What it does |
-|---|---|---|
-| `ci.yml` | every push / PR | Pint, Larastan, PHPUnit on SQLite **and MySQL 8.4**, `composer audit`; ESLint, `tsc`, `next build`, `npm audit`; Docker build. |
-| `deploy.yml` | tag `v*` or manual | Builds & pushes both images to GHCR tagged with the commit SHA, then SSHes into the server and runs `infra/scripts/deploy.sh`. |
-
-Repository configuration:
-
-| Name | Type | Value |
-|---|---|---|
-| `DEPLOY_HOST` | secret | server IP / host |
-| `DEPLOY_USER` | secret | `deploy` |
-| `DEPLOY_SSH_KEY` | secret | private key of a deploy key allowed on the server |
-| `DEPLOY_HOST_FINGERPRINT` | secret | `ssh-keyscan -t ed25519 host \| ssh-keygen -lf -` |
-| `GHCR_READ_TOKEN` | secret | PAT with `read:packages` |
-| `APP_DOMAIN` | variable | `app.giftcardpro.at` |
-| `production` | environment | add required reviewers for manual approval |
-
-Release: `git tag v1.4.0 && git push --tags`.
-
-`deploy.sh` pulls the new images, starts the API (which migrates), rolls workers/scheduler/web, restarts queue
-workers gracefully and health-checks `/up`. Migrations are written to be backwards compatible with the
-previous release (expand → migrate → contract), so the old web container keeps working during the rollout.
-
-## 5. Backups
-
-```cron
-# crontab -e (deploy user)
-30 2 * * * cd /opt/giftcard-pro && docker compose --env-file .env.production --profile backup run --rm backup >> /var/log/giftcard-backup.log 2>&1
-45 2 * * * rclone sync /opt/giftcard-pro/backups storagebox:giftcard-backups
-```
-
-- Logical dumps (`--single-transaction`, consistent without locking) are kept 14 days locally.
-- Sync them off-site (Hetzner Storage Box via rclone/borg).
-- Hetzner server backups add daily full-disk snapshots.
-- **Test restores** monthly: `gunzip -c dump.sql.gz | docker compose exec -T mysql mysql -u root -p giftcard_pro_restore`.
-
-## 6. Nightly jobs
-
-The `scheduler` container runs `schedule:work`; times are local (`SCHEDULE_TIMEZONE`, default Europe/Vienna):
-
-| Time | Job |
+| Task | Where |
 |---|---|
-| 00:15 | `giftcards:expire` — expires due cards (ledgered, audited; one failing card never stops the batch) |
-| 03:30 | `queue:prune-failed` (keeps 30 days) |
-| 10:00 | `giftcards:notify-expiring` — reminder e-mails for active restaurants only |
-| every 15 min | `auth:clear-resets` |
-| every 5 min | `queue:monitor` (Redis queues, alerts above 500 waiting jobs) |
+| Logs of a service | resource → *Logs* (all services log to stdout/stderr; Laravel uses `LOG_CHANNEL=stderr`) |
+| Artisan command | *Terminal* → **api** → `php artisan …` (e.g. `migrate:status`, `schedule:list`, `queue:failed`) |
+| NFC 424 keys | *Terminal* → **api** → `php artisan giftcard:nfc-keys` → add both to the Environment Variables → *Redeploy* |
+| Change a setting | *Environment Variables* → *Redeploy* (configuration is cached at container start) |
+| Waiter app links | set `WAITER_ANDROID_PACKAGE`, `WAITER_ANDROID_CERT_SHA256`, `WAITER_IOS_APP_IDS` → *Redeploy*; check `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` |
+| Monitoring | an uptime check on `https://<domain>/up` (Better Stack, UptimeRobot…); `OPS_ALERT_EMAIL` gets a mail when a queue exceeds 500 jobs |
 
-Check with `docker compose exec scheduler php artisan schedule:list`. Queue workers and the scheduler only start
-once the `api` container is healthy, i.e. after migrations finished; `migrate --isolated` guarantees that two app
-containers never migrate concurrently.
+Nightly jobs (scheduler, times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): 00:15 `giftcards:expire`,
+03:30 `queue:prune-failed`, 10:00 `giftcards:notify-expiring`, every 15 min `auth:clear-resets`, every 5 min
+`queue:monitor`. Check with `php artisan schedule:list` in the api container.
 
-## 7. Monitoring
+## Staging
 
-- Uptime: monitor `https://APP_DOMAIN/up` (Better Stack, UptimeRobot…). It checks the database and cache, not just PHP.
-- Security: alert on `warning` log lines — `Suspicious gift card scan` (cloned/replayed/foreign cards) and `Account locked`.
-- Logs: `docker compose logs` (JSON from Caddy, stderr from Laravel); ship with Vector/Promtail if desired.
-- Errors: add Sentry (`sentry/sentry-laravel`, `@sentry/nextjs`) — both only need a DSN.
-- Queue health: `queue:monitor` runs every 5 minutes from the scheduler and fires `QueueBusy` above 500 jobs.
+A second Coolify resource from the same repository and the same compose file, with its own domain (e.g.
+`https://staging.giftcardpro.at`) and `APP_ENV=staging` in its Environment Variables (branch `main` or a `staging`
+branch). It has its own database, Redis and volumes. Staging is held to the same rules as production (https URLs).
 
-## 8. Updating PHP / Node / MySQL
+## Troubleshooting
 
-Base images are pinned by major version. Rebuilding picks up patch releases; bump majors in the Dockerfiles
-and compose file deliberately and let CI verify.
+| Symptom | Cause / fix |
+|---|---|
+| `migrate` fails with "No public URL" | The gateway has no domain. Step 4. |
+| `migrate` fails with "app.url must be the https URL …" | The gateway domain is `http://…` (e.g. Coolify's generated sslip.io domain). Use an `https://` domain; for a quick test without your own domain, `https://<anything>.<server-ip>.sslip.io` works. |
+| `migrate` fails with "DB_PASSWORD is empty" | Coolify did not generate `SERVICE_PASSWORD_MYSQL` (older Coolify versions). Set `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT` and `SERVICE_PASSWORD_REDIS` yourself (long random values) **before** the first deploy, then *Redeploy*. |
+| `migrate` fails with "Access denied for user" after changing a password | The MySQL volume keeps the password of its first start. Put the old value back, or (only without data) delete the `mysql-data` volume. |
+| Certificate not issued / "not secure" | DNS does not point at the server yet, or ports 80/443 are closed. |
+| 419 / sign-in loops in the dashboard | The browser URL differs from the gateway domain (cookies are bound to it). Use exactly the configured domain. |
+| Build fails at `pecl install redis`, `composer install` or `npm ci` | Temporary outage of pecl.php.net, GitHub or npm. *Redeploy*. |
 
 ## Scaling out
 
 | Need | Step |
 |---|---|
-| More web traffic | Run several `api` and `web` replicas behind Caddy (`reverse_proxy` accepts multiple upstreams). The app is stateless — sessions, cache and locks live in Redis. |
-| Database | Move to a managed MySQL or a dedicated server; add a read replica for exports/reports. |
-| Isolation for enterprise customers | Deploy the same images per customer (single-tenant) — no code changes. |
+| More web traffic | Raise `pm.max_children` in `infra/docker/php/www.conf`, give the server more CPU; the app is stateless (sessions, cache, locks in Redis). |
+| Database | Move MySQL to a managed database: set `DB_HOST`, `DB_PASSWORD` etc. and remove the `mysql`/`backup` services. |
+| Isolation for enterprise customers | Deploy the same repository as its own Coolify resource per customer (single-tenant) — no code changes. |

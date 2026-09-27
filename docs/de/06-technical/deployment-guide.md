@@ -1,5 +1,7 @@
 # Deployment-Anleitung
 
+> **Hinweis (Coolify-Deployment):** Produktion läuft seit 1.4.2 auf **Coolify** mit `docker-compose.coolify.yml` (Build aus dem Quellcode, kein GHCR, keine Deploy-Skripte). Befehle mit `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` oder Caddy auf dem Host in diesem Dokument sind überholt. Maßgeblich sind [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (Deployment, Backups, Restore, Betrieb) und [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
+
 *Einrichtung des Produktivservers bei Hetzner, DNS, Firewall, Secrets, Docker Compose, CI/CD mit GitHub Actions, Release-Prozess, Rollout ohne Unterbrechung, Kontrollen nach dem Deployment und Rollback.*
 
 ---

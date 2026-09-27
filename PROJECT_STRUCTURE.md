@@ -11,7 +11,7 @@ GiftCardPro/
 ├── nfc/                Signpost: where the NFC code, tests and guides are          docs only
 ├── docs/               All documentation (technical, business, design, reports)    source
 ├── e2e/                Browser and API acceptance tests                           source
-├── infra/              Server config: Caddy, PHP-FPM, deploy + backup scripts      source
+├── infra/              Container config: gateway (Caddy), PHP-FPM + entrypoint     source
 ├── scripts/            Project scripts: collect a release, verify this structure   source
 ├── assets/             Store listing images                                       source
 ├── releases/           Release outputs (APK, AAB, symbols, source snapshots)       generated · NOT in Git
@@ -19,16 +19,16 @@ GiftCardPro/
 │   ├── previous/       older releases (1.4.0, 1.3.0)
 │   └── latest -> 1.4.1
 ├── signing/            Android upload key + passwords                             SECRET · NOT in Git
-├── .github/workflows/  CI (tests, builds) and deployment
+├── .github/workflows/  CI (tests, builds); deployment is done by Coolify
 ├── README.md                 product overview
 ├── PROJECT_STRUCTURE.md      this file
 ├── CURRENT_VERSION.md        which version is current, where its builds are
 ├── RUNNING_THE_PROJECT.md    how to install, run, test and release everything
 ├── QUICK_COMMANDS.md         cheat sheet
 ├── CHANGELOG.md              every change with its reason
-├── docker-compose.yml        production stack (Caddy, web, api, queue, scheduler, MySQL, Redis, backup)
+├── docker-compose.coolify.yml production stack for Coolify (gateway, api, migrate, worker, scheduler, web, MySQL, Redis, backup)
 ├── docker-compose.dev.yml    local services (MySQL, Redis, Mailpit)
-└── .env.production.example   template for the server's compose variables
+└── .env.production.example   reference of the Coolify environment variables
 ```
 
 There is **no customer app**. Guests use the web page a card opens (`https://<domain>/c/<token>`), which is part of
@@ -53,15 +53,15 @@ dashboard — see [nfc/README.md](nfc/README.md).
 | `nfc/` | One README pointing to the NFC code in dashboard, backend and waiter app | Source (docs) | Yes | Yes, but keep it: it is the map |
 | `docs/` | All documentation (below) | Source | Yes | No |
 | `e2e/` | Acceptance tests: `pilot-journey.mjs` (browser), `waiter-api.mjs` (API of the native app), `nfc-programming.mjs` (simulated NFC) | Source | Yes | No |
-| `infra/` | `caddy/Caddyfile`, `docker/php/` (PHP config + entrypoint), `scripts/deploy.sh`, `scripts/backup.sh` | Source | Yes | No |
+| `infra/` | `docker/gateway/` (Caddy image: path routing to Laravel/Next.js), `docker/php/` (PHP config + entrypoint with the roles migrate/app/worker/scheduler) | Source | Yes | No |
 | `scripts/` | `collect-release.sh` (files a finished release into `releases/`), `verify-structure.sh` (checks this layout) | Source | Yes | No |
 | `assets/` | `store/`: Play and App Store icons (see [assets/README.md](assets/README.md)) | Source | Yes | No (re-exportable from the app icon) |
 | `releases/` | Built apps, symbols, source snapshots per version (below) | Generated | **No** (too large, binary) — back it up instead | **Careful**: builds can be remade, but the uploaded AAB/IPA and its symbols belong together; keep at least the current and the previous release |
 | `signing/` | `giftcard-waiter-upload.jks` (Android upload key), `ANDROID_SIGNING.md` (passwords, fingerprints), `upload_certificate.pem` | **Secret** | **Never** | **No** — without the key no Play updates until Google resets it. Keep a copy in your password manager. |
-| `.github/workflows/` | `ci.yml` (all tests + builds on every push), `deploy.yml` (images + deploy on tag `v*`) | Source | Yes | No |
+| `.github/workflows/` | `ci.yml` (all tests + builds on every push, including the Coolify stack build) | Source | Yes | No |
 | `README.md`, `PROJECT_STRUCTURE.md`, `CURRENT_VERSION.md`, `RUNNING_THE_PROJECT.md`, `QUICK_COMMANDS.md`, `CHANGELOG.md` | Project documentation | Source | Yes | No |
-| `docker-compose.yml`, `docker-compose.dev.yml`, `.env.production.example`, `.env.staging.example`, `.gitignore`, `.dockerignore`, `.editorconfig` | Stack and tool configuration | Source | Yes | No |
-| `.env.production` | Real production compose variables (only on the server) | Secret | Never | No (on the server) |
+| `docker-compose.coolify.yml`, `docker-compose.dev.yml`, `.env.production.example`, `.gitignore`, `.dockerignore`, `.editorconfig` | Stack and tool configuration | Source | Yes | No |
+| Production secrets | Live only in Coolify (resource → *Environment Variables*); nothing on disk | Secret | Never | — |
 
 ## backend/
 
@@ -73,7 +73,7 @@ dashboard — see [nfc/README.md](nfc/README.md).
 | `routes/`, `config/`, `bootstrap/`, `resources/`, `public/` | Routes, configuration, app bootstrap, e-mail views, web root | Source | Yes | No |
 | `tests/` | PHPUnit unit + feature tests | Source | Yes | No |
 | `composer.json`, `composer.lock`, `phpunit.xml`, `phpstan.neon`, `pint.json`, `Dockerfile` | Dependencies and tool config | Source | Yes | No |
-| `.env.example`, `.env.staging.example`, `.env.production.example` | Templates for development, staging and production ([docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)) | Source | Yes | No |
+| `.env.example` | Template for development; staging/production are configured in Coolify ([docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)) | Source | Yes | No |
 | `.env` | Your local configuration (database password, `APP_KEY`) | Local / Secret | Never | Careful (`cp .env.example .env && php artisan key:generate`; local logins stop working) |
 | `vendor/` | PHP packages | Generated | Never | Yes (`composer install`) |
 | `database/database.sqlite` | Local SQLite database (zero-dependency mode) | Local | Never | Yes, loses local data (`touch` + `php artisan migrate --seed`) |

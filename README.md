@@ -13,7 +13,7 @@ Tap card  →  card opens  →  enter amount  →  Redeem  →  Done
 | **Backend** | Laravel 12 · PHP 8.4 · MySQL 8.4 · Redis · queues · Sanctum |
 | **Dashboard (web app)** | Next.js 15 (App Router) · TypeScript (strict) · Tailwind CSS 4 · shadcn/ui · React Query · React Hook Form · Zod |
 | **Waiter app** | Native Android + iPhone app **GiftCard Waiter** (Flutter 3.47) · NFC reader mode / Core NFC · device-bound sign-in · [waiter-app/](waiter-app/README.md) |
-| **Infrastructure** | Docker · Caddy (automatic HTTPS) · GitHub Actions · Hetzner Cloud |
+| **Infrastructure** | Coolify (Docker Compose, built from source, automatic HTTPS) · Caddy gateway · GitHub Actions CI · Hetzner Cloud |
 | **Tests** | 130 PHPUnit tests (SQLite + MySQL/MariaDB) · Larastan level 8 · 601 Flutter tests (unit, component, screen, end-to-end journey) · browser acceptance test of a pilot restaurant's first day incl. axe accessibility scan and an API test of the waiter app ([e2e/](e2e/README.md)) |
 
 ## Screenshots

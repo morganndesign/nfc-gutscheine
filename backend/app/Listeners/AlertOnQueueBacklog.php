@@ -38,8 +38,8 @@ final class AlertOnQueueBacklog
         try {
             Mail::raw(
                 "The queue {$queue} holds {$event->size} jobs (threshold 500).\n\n"
-                ."Check the worker container: docker compose --env-file .env.production ps queue\n"
-                .'Restart it if needed: docker compose --env-file .env.production restart queue',
+                ."Check the \"worker\" service in Coolify (resource → Logs, status healthy?).\n"
+                .'Restart it there if needed (the service restarts automatically after a crash).',
                 static fn ($message) => $message->to($to)->subject("[GiftCard Pro] Queue backlog on {$queue}"),
             );
         } catch (Throwable $e) {

@@ -4,9 +4,9 @@
 
 ```
 ┌──────────────┐   HTTPS (one origin)   ┌─────────┐  /api /sanctum /up   ┌──────────────────────────┐
-│ Browser      │ ─────────────────────▶ │  Caddy  │ ───────────────────▶ │ Laravel 12 (PHP-FPM)     │
+│ Browser      │ ─────────────────────▶ │ Gateway │ ───────────────────▶ │ Laravel 12 (PHP-FPM)     │
 │ · Dashboard  │                        │         │                      │  HTTP → Services → Models│
-│ · Waiter app │ ◀── Next.js pages ──── │         │ ──── everything else ─▶ Next.js 15 (standalone)  │
+│ · Waiter app │ ◀── Next.js pages ──── │ (Caddy) │ ──── everything else ─▶ Next.js 15 (standalone)  │
 │ · Balance pg │                        └─────────┘                      └──────┬──────────┬────────┘
 └──────┬───────┘                                                               │          │
        │ Web NFC / camera / iOS link                                    MySQL 8.4    Redis 7
