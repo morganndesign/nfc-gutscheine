@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash colours, dark theme (10 §2.3, 03a §1). -->
+<resources>
+    <color name="splash_background">#FF0A0A0C</color>
+    <color name="splash_mark">#FFF4F4F5</color>
+    <color name="splash_accent">#FFF0B454</color>
+</resources>

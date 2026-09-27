@@ -1,0 +1,1526 @@
+{
+  "@@locale": "en",
+  "appName": "GiftCard Waiter",
+  "@appName": {
+    "description": "Spec key: app.name (12 §5.1) · Max: 16 · Notes: 12 · launcher label, not translated"
+  },
+  "commonCancel": "Cancel",
+  "@commonCancel": {
+    "description": "Spec key: common.cancel (12 §5.1) · Max: 12 · Notes: 03a/03b"
+  },
+  "commonClose": "Close",
+  "@commonClose": {
+    "description": "Spec key: common.close (12 §5.1) · Max: 12 · Notes: 03a (a11y on ✕) / 12 (button)"
+  },
+  "commonBack": "Back",
+  "@commonBack": {
+    "description": "Spec key: common.back (12 §5.1) · Max: — · Notes: 03a · (a11y)"
+  },
+  "commonDone": "Done",
+  "@commonDone": {
+    "description": "Spec key: common.done (12 §5.1) · Max: 12 · Notes: 03b"
+  },
+  "commonTryAgain": "Try again",
+  "@commonTryAgain": {
+    "description": "Spec key: common.tryAgain (12 §5.1) · Max: 24 · Notes: 03b · §2.7"
+  },
+  "commonScanAgain": "Scan again",
+  "@commonScanAgain": {
+    "description": "Spec key: common.scanAgain (12 §5.1) · Max: 24 · Notes: 03b · §2.7"
+  },
+  "commonEnterNumber": "Enter card number",
+  "@commonEnterNumber": {
+    "description": "Spec key: common.enterNumber (12 §5.1) · Max: 24 · Notes: 03b · opens S11"
+  },
+  "commonEditNumber": "Edit number",
+  "@commonEditNumber": {
+    "description": "Spec key: common.editNumber (12 §5.1) · Max: 24 · Notes: 03b · S11 prefilled"
+  },
+  "commonOpenSettings": "Open Settings",
+  "@commonOpenSettings": {
+    "description": "Spec key: common.openSettings (12 §5.1) · Max: 24 · Notes: 12 · = camera.denied.action (alias)"
+  },
+  "commonBackToSignIn": "Back to sign in",
+  "@commonBackToSignIn": {
+    "description": "Spec key: common.backToSignIn (12 §5.1) · Max: 24 · Notes: 03a"
+  },
+  "commonCheckAgain": "Check again",
+  "@commonCheckAgain": {
+    "description": "Spec key: common.checkAgain (12 §5.1) · Max: 24 · Notes: 12 · alias suspended.retry (03a)"
+  },
+  "commonSupportCode": "Code {code}",
+  "@commonSupportCode": {
+    "description": "Spec key: common.supportCode (12 §5.1) · Max: 12 · Notes: 12 · alias problem.supportCode (03b) · §2.5",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "commonSupportCodeA11y": "Support code {code}",
+  "@commonSupportCodeA11y": {
+    "description": "Spec key: common.supportCode.a11y (12 §5.1) · Max: — · Notes: (a11y) · characters read singly",
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "commonCopied": "Copied",
+  "@commonCopied": {
+    "description": "Spec key: common.copied (12 §5.1) · Max: 24 · Notes: 03b · snackbar after long-press on the code"
+  },
+  "redeemNothingBooked": "Nothing was booked.",
+  "@redeemNothingBooked": {
+    "description": "Spec key: redeem.nothingBooked (12 §5.1) · Max: 28 · Notes: 03b · harmonised (DE full sentence)"
+  },
+  "getManager": "Please get a manager",
+  "@getManager": {
+    "description": "Spec key: getManager (12 §5.1) · Max: 28 · Notes: B · always ends with \".\" when used in a body"
+  },
+  "splashLoading": "Loading",
+  "@splashLoading": {
+    "description": "Spec key: splash.loading (12 §5.2) · Max: — · Notes: 03a · (a11y), only if splash > 1 s"
+  },
+  "startupOfflineTitle": "No internet connection",
+  "@startupOfflineTitle": {
+    "description": "Spec key: startup.offline.title (12 §5.2) · Max: 32 · Notes: 12 · startup problem (signed out, server unreachable at launch)"
+  },
+  "startupOfflineBody": "This phone is offline. Turn on Wi-Fi or mobile data, then try again.",
+  "@startupOfflineBody": {
+    "description": "Spec key: startup.offline.body (12 §5.2) · Max: 90 · Notes: 12"
+  },
+  "startupHostNotFoundTitle": "Server not found",
+  "@startupHostNotFoundTitle": {
+    "description": "Spec key: startup.hostNotFound.title (12 §5.2) · Max: 32 · Notes: 12 · DNS: the host name does not exist"
+  },
+  "startupHostNotFoundBody": "The address {host} does not exist. Check the server address.",
+  "@startupHostNotFoundBody": {
+    "description": "Spec key: startup.hostNotFound.body (12 §5.2) · Max: 90 · Notes: 12",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "startupRefusedTitle": "Server not running",
+  "@startupRefusedTitle": {
+    "description": "Spec key: startup.refused.title (12 §5.2) · Max: 32 · Notes: 12 · connection refused"
+  },
+  "startupRefusedBody": "Nothing answers at {host}. Check that the server is running and the address is right.",
+  "@startupRefusedBody": {
+    "description": "Spec key: startup.refused.body (12 §5.2) · Max: 90 · Notes: 12",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "startupTimeoutTitle": "Server not responding",
+  "@startupTimeoutTitle": {
+    "description": "Spec key: startup.timeout.title (12 §5.2) · Max: 32 · Notes: 12 · timeout / no route"
+  },
+  "startupTimeoutBody": "{host} did not answer in time. Check the network, then try again.",
+  "@startupTimeoutBody": {
+    "description": "Spec key: startup.timeout.body (12 §5.2) · Max: 90 · Notes: 12",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "startupTlsTitle": "No secure connection",
+  "@startupTlsTitle": {
+    "description": "Spec key: startup.tls.title (12 §5.2) · Max: 32 · Notes: 12 · TLS certificate rejected"
+  },
+  "startupTlsBody": "The certificate of {host} was rejected. Check the phone's date and time.",
+  "@startupTlsBody": {
+    "description": "Spec key: startup.tls.body (12 §5.2) · Max: 90 · Notes: 12",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "startupServerErrorTitle": "Server problem",
+  "@startupServerErrorTitle": {
+    "description": "Spec key: startup.serverError.title (12 §5.2) · Max: 32 · Notes: 12 · 5xx"
+  },
+  "startupServerErrorBody": "{host} reports a problem (status {status}). Try again later.",
+  "@startupServerErrorBody": {
+    "description": "Spec key: startup.serverError.body (12 §5.2) · Max: 90 · Notes: 12",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "startupInvalidResponseTitle": "Wrong server address",
+  "@startupInvalidResponseTitle": {
+    "description": "Spec key: startup.invalidResponse.title (12 §5.2) · Max: 32 · Notes: 12 · 404, HTML, redirect, unexpected JSON"
+  },
+  "startupInvalidResponseBody": "{host} is not a GiftCard Pro server. Check the server address.",
+  "@startupInvalidResponseBody": {
+    "description": "Spec key: startup.invalidResponse.body (12 §5.2) · Max: 90 · Notes: 12",
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "startupConfigurationTitle": "App not set up correctly",
+  "@startupConfigurationTitle": {
+    "description": "Spec key: startup.configuration.title (12 §5.2) · Max: 32 · Notes: 12 · build without a valid API address"
+  },
+  "startupConfigurationBody": "This version of the app has no valid server address. Please get a manager.",
+  "@startupConfigurationBody": {
+    "description": "Spec key: startup.configuration.body (12 §5.2) · Max: 90 · Notes: 12"
+  },
+  "startupStorageTitle": "Protected storage unavailable",
+  "@startupStorageTitle": {
+    "description": "Spec key: startup.storage.title (12 §5.2) · Max: 32 · Notes: 12 · secure storage (Keystore / Keychain) failed"
+  },
+  "startupStorageBody": "The app cannot open its protected storage. Restart the phone, then try again.",
+  "@startupStorageBody": {
+    "description": "Spec key: startup.storage.body (12 §5.2) · Max: 100 · Notes: 12"
+  },
+  "startupUnknownTitle": "The app could not start",
+  "@startupUnknownTitle": {
+    "description": "Spec key: startup.unknown.title (12 §5.2) · Max: 32 · Notes: 12 · anything else, start watchdog"
+  },
+  "startupUnknownBody": "Try again. If it happens again, please get a manager.",
+  "@startupUnknownBody": {
+    "description": "Spec key: startup.unknown.body (12 §5.2) · Max: 90 · Notes: 12"
+  },
+  "startupServer": "Server: {url}",
+  "@startupServer": {
+    "description": "Spec key: startup.server (12 §5.2) · Max: — · Notes: 12 · small print below the actions",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "startupDetail": "Details: {detail}",
+  "@startupDetail": {
+    "description": "Spec key: startup.detail (12 §5.2) · Max: — · Notes: 12 · technical reason, not translated",
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "startupEnvironment": "Environment: {name}",
+  "@startupEnvironment": {
+    "description": "Spec key: startup.environment (12 §5.2) · Max: — · Notes: 12 · development and staging builds only",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "startupChangeServer": "Change server",
+  "@startupChangeServer": {
+    "description": "Spec key: startup.changeServer (12 §5.2) · Max: 24 · Notes: 12 · development and staging builds only"
+  },
+  "envDevelopment": "Development",
+  "@envDevelopment": {
+    "description": "Spec key: env.development (12 §5.2) · Max: 16 · Notes: 12 · environment name"
+  },
+  "envStaging": "Staging",
+  "@envStaging": {
+    "description": "Spec key: env.staging (12 §5.2) · Max: 16 · Notes: 12 · environment name"
+  },
+  "envProduction": "Production",
+  "@envProduction": {
+    "description": "Spec key: env.production (12 §5.2) · Max: 16 · Notes: 12 · environment name"
+  },
+  "envBadgeDevelopment": "DEV",
+  "@envBadgeDevelopment": {
+    "description": "Spec key: env.badge.development (12 §5.2) · Max: 8 · Notes: 12 · corner badge, development builds"
+  },
+  "envBadgeStaging": "STAGING",
+  "@envBadgeStaging": {
+    "description": "Spec key: env.badge.staging (12 §5.2) · Max: 8 · Notes: 12 · corner badge, staging builds"
+  },
+  "envBadgeA11y": "Test environment {name}, server {host}. Long-press to change the server.",
+  "@envBadgeA11y": {
+    "description": "Spec key: env.badge.a11y (12 §5.2) · Max: — · Notes: 12 · (a11y)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "serverTitle": "Server address",
+  "@serverTitle": {
+    "description": "Spec key: server.title (12 §5.2) · Max: 32 · Notes: 12 · server sheet (development and staging builds)"
+  },
+  "serverLabel": "API address",
+  "@serverLabel": {
+    "description": "Spec key: server.label (12 §5.2) · Max: 24 · Notes: 12 · field label"
+  },
+  "serverHelp": "For example http://192.168.1.20:8000 (/api/v1 is added).",
+  "@serverHelp": {
+    "description": "Spec key: server.help (12 §5.2) · Max: 90 · Notes: 12 · helper text"
+  },
+  "serverDefault": "Default of this app: {url}",
+  "@serverDefault": {
+    "description": "Spec key: server.default (12 §5.2) · Max: — · Notes: 12",
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "serverSave": "Save and connect",
+  "@serverSave": {
+    "description": "Spec key: server.save (12 §5.2) · Max: 24 · Notes: 12 · signs out, then connects"
+  },
+  "serverReset": "Use default",
+  "@serverReset": {
+    "description": "Spec key: server.reset (12 §5.2) · Max: 24 · Notes: 12"
+  },
+  "serverInvalid": "Not a valid address. Start with http:// or https://.",
+  "@serverInvalid": {
+    "description": "Spec key: server.invalid (12 §5.2) · Max: 90 · Notes: 12 · field error"
+  },
+  "serverHttpsRequired": "This version only allows https addresses.",
+  "@serverHttpsRequired": {
+    "description": "Spec key: server.httpsRequired (12 §5.2) · Max: 90 · Notes: 12 · field error (staging)"
+  },
+  "serverWrongPath": "The address must end in /api/v1.",
+  "@serverWrongPath": {
+    "description": "Spec key: server.wrongPath (12 §5.2) · Max: 90 · Notes: 12 · field error"
+  },
+  "signInTitle": "Sign in",
+  "@signInTitle": {
+    "description": "Spec key: signIn.title (12 §5.3) · Max: 32 · Notes: 03a"
+  },
+  "signInSubtitle": "Use your staff account",
+  "@signInSubtitle": {
+    "description": "Spec key: signIn.subtitle (12 §5.3) · Max: 48 · Notes: 03a"
+  },
+  "signInEmailLabel": "E-mail",
+  "@signInEmailLabel": {
+    "description": "Spec key: signIn.email.label (12 §5.3) · Max: 20 · Notes: 03a"
+  },
+  "signInEmailPlaceholder": "name@example.com",
+  "@signInEmailPlaceholder": {
+    "description": "Spec key: signIn.email.placeholder (12 §5.3) · Max: 28 · Notes: 12 · example domains only"
+  },
+  "signInPasswordLabel": "Password",
+  "@signInPasswordLabel": {
+    "description": "Spec key: signIn.password.label (12 §5.3) · Max: 20 · Notes: 03a · also used in the S15 session sheet"
+  },
+  "signInPasswordShow": "Show password",
+  "@signInPasswordShow": {
+    "description": "Spec key: signIn.password.show (12 §5.3) · Max: — · Notes: 03a · (a11y)"
+  },
+  "signInPasswordHide": "Hide password",
+  "@signInPasswordHide": {
+    "description": "Spec key: signIn.password.hide (12 §5.3) · Max: — · Notes: 03a · (a11y)"
+  },
+  "signInForgot": "Forgot password",
+  "@signInForgot": {
+    "description": "Spec key: signIn.forgot (12 §5.3) · Max: 24 · Notes: 03a · harmonised (no \"?\" on buttons, §1.7)"
+  },
+  "signInSubmit": "Sign in",
+  "@signInSubmit": {
+    "description": "Spec key: signIn.submit (12 §5.3) · Max: 24 · Notes: 03a"
+  },
+  "signInLoading": "Signing in",
+  "@signInLoading": {
+    "description": "Spec key: signIn.loading (12 §5.3) · Max: — · Notes: 03a · (a11y)"
+  },
+  "signInNoAccess": "No login? A manager creates it in the dashboard.",
+  "@signInNoAccess": {
+    "description": "Spec key: signIn.noAccess (12 §5.3) · Max: 90 · Notes: 12 · caption"
+  },
+  "signInErrorRequired": "Required",
+  "@signInErrorRequired": {
+    "description": "Spec key: signIn.error.required (12 §5.3) · Max: 24 · Notes: 12 · inline"
+  },
+  "signInErrorEmailFormat": "Check the e-mail address",
+  "@signInErrorEmailFormat": {
+    "description": "Spec key: signIn.error.emailFormat (12 §5.3) · Max: 32 · Notes: 03a"
+  },
+  "signInErrorInvalid": "E-mail or password is incorrect. Check both and try again.",
+  "@signInErrorInvalid": {
+    "description": "Spec key: signIn.error.invalid (12 §5.3) · Max: 90 · Notes: 03a · A07"
+  },
+  "signInErrorNoPermission": "This account can't redeem cards. Please get a manager.",
+  "@signInErrorNoPermission": {
+    "description": "Spec key: signIn.error.noPermission (12 §5.3) · Max: 90 · Notes: 03a · A02"
+  },
+  "signInErrorThrottled": "Too many attempts. Try again in {time}.",
+  "@signInErrorThrottled": {
+    "description": "Spec key: signIn.error.throttled (12 §5.3) · Max: 48 · Notes: 03a · A08",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "signInErrorServer": "Can't sign in right now. Try again in a moment.",
+  "@signInErrorServer": {
+    "description": "Spec key: signIn.error.server (12 §5.3) · Max: 90 · Notes: 03a · A09 · support code below"
+  },
+  "signInOfflineBody": "Signing in needs a connection.",
+  "@signInOfflineBody": {
+    "description": "Spec key: signIn.offline.body (12 §5.3) · Max: 48 · Notes: 03a · A09"
+  },
+  "biometricsTitleFaceId": "Unlock with Face ID?",
+  "@biometricsTitleFaceId": {
+    "description": "Spec key: biometrics.title.faceId (12 §5.4) · Max: 32 · Notes: 03a · question allowed (offer screen)"
+  },
+  "biometricsTitleTouchId": "Unlock with Touch ID?",
+  "@biometricsTitleTouchId": {
+    "description": "Spec key: biometrics.title.touchId (12 §5.4) · Max: 32 · Notes: 03a"
+  },
+  "biometricsTitleAndroid": "Unlock with biometrics?",
+  "@biometricsTitleAndroid": {
+    "description": "Spec key: biometrics.title.android (12 §5.4) · Max: 32 · Notes: 03a"
+  },
+  "biometricsBody": "A faster start to every shift. Your password still works as a fallback.",
+  "@biometricsBody": {
+    "description": "Spec key: biometrics.body (12 §5.4) · Max: 90 · Notes: 03a"
+  },
+  "biometricsEnableFaceId": "Use Face ID",
+  "@biometricsEnableFaceId": {
+    "description": "Spec key: biometrics.enable.faceId (12 §5.4) · Max: 24 · Notes: 03a · B wording"
+  },
+  "biometricsEnableTouchId": "Use Touch ID",
+  "@biometricsEnableTouchId": {
+    "description": "Spec key: biometrics.enable.touchId (12 §5.4) · Max: 24 · Notes: 03a"
+  },
+  "biometricsEnableAndroid": "Use biometrics",
+  "@biometricsEnableAndroid": {
+    "description": "Spec key: biometrics.enable.android (12 §5.4) · Max: 24 · Notes: 03a"
+  },
+  "biometricsNotNow": "Not now",
+  "@biometricsNotNow": {
+    "description": "Spec key: biometrics.notNow (12 §5.4) · Max: 24 · Notes: 03a · B wording"
+  },
+  "biometricsReason": "To unlock GiftCard Waiter",
+  "@biometricsReason": {
+    "description": "Spec key: biometrics.reason (12 §5.4) · Max: 48 · Notes: 03a · iOS reason / Android prompt title"
+  },
+  "biometricsPromptSubtitleAndroid": "For service at {restaurant}",
+  "@biometricsPromptSubtitleAndroid": {
+    "description": "Spec key: biometrics.promptSubtitle.android (12 §5.4) · Max: 48 · Notes: 12 · BiometricPrompt subtitle",
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      }
+    }
+  },
+  "biometricsFailed": "Not confirmed. Try again.",
+  "@biometricsFailed": {
+    "description": "Spec key: biometrics.failed (12 §5.4) · Max: 48 · Notes: 03a · P11"
+  },
+  "biometricsNotEnrolledFaceId": "Face ID is not set up. Set it up in Settings.",
+  "@biometricsNotEnrolledFaceId": {
+    "description": "Spec key: biometrics.notEnrolled.faceId (12 §5.4) · Max: 90 · Notes: 12 · P10 snackbar"
+  },
+  "biometricsNotEnrolledTouchId": "Touch ID is not set up. Set it up in Settings.",
+  "@biometricsNotEnrolledTouchId": {
+    "description": "Spec key: biometrics.notEnrolled.touchId (12 §5.4) · Max: 90 · Notes: 12"
+  },
+  "biometricsNotEnrolledAndroid": "No biometrics set up. Set them up in Settings.",
+  "@biometricsNotEnrolledAndroid": {
+    "description": "Spec key: biometrics.notEnrolled.android (12 §5.4) · Max: 90 · Notes: 12"
+  },
+  "unlockButtonFaceId": "Unlock with Face ID",
+  "@unlockButtonFaceId": {
+    "description": "Spec key: unlock.button.faceId (12 §5.5) · Max: 28 · Notes: 03a"
+  },
+  "unlockButtonTouchId": "Unlock with Touch ID",
+  "@unlockButtonTouchId": {
+    "description": "Spec key: unlock.button.touchId (12 §5.5) · Max: 28 · Notes: 03a"
+  },
+  "unlockButtonAndroid": "Unlock",
+  "@unlockButtonAndroid": {
+    "description": "Spec key: unlock.button.android (12 §5.5) · Max: 28 · Notes: 03a"
+  },
+  "unlockUsePassword": "Use password",
+  "@unlockUsePassword": {
+    "description": "Spec key: unlock.usePassword (12 §5.5) · Max: 24 · Notes: 03a · B wording"
+  },
+  "unlockChanged": "Biometrics changed on this device. Sign in with your password.",
+  "@unlockChanged": {
+    "description": "Spec key: unlock.changed (12 §5.5) · Max: 90 · Notes: 03a · P13"
+  },
+  "unlockLockedOut": "Too many attempts. Use the password.",
+  "@unlockLockedOut": {
+    "description": "Spec key: unlock.lockedOut (12 §5.5) · Max: 48 · Notes: 12 · P12"
+  },
+  "unlockPendingCard": "The card opens after unlocking.",
+  "@unlockPendingCard": {
+    "description": "Spec key: unlock.pendingCard (12 §5.5) · Max: 48 · Notes: 03a · deep link waiting"
+  },
+  "topBarRecent": "Recent",
+  "@topBarRecent": {
+    "description": "Spec key: topBar.recent (12 §5.6) · Max: — · Notes: 03a · (a11y)"
+  },
+  "topBarMenu": "Menu, {name}",
+  "@topBarMenu": {
+    "description": "Spec key: topBar.menu (12 §5.6) · Max: — · Notes: 03a · (a11y)",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "readyAndroidTitle": "Hold the card to the phone",
+  "@readyAndroidTitle": {
+    "description": "Spec key: ready.android.title (12 §5.6) · Max: 32 · Notes: B"
+  },
+  "readyAndroidHint": "The card is detected automatically",
+  "@readyAndroidHint": {
+    "description": "Spec key: ready.android.hint (12 §5.6) · Max: 40 · Notes: 03a"
+  },
+  "readyIosButton": "Scan card",
+  "@readyIosButton": {
+    "description": "Spec key: ready.ios.button (12 §5.6) · Max: 24 · Notes: B"
+  },
+  "readyIosHint": "After tapping, hold the card near the top of the iPhone",
+  "@readyIosHint": {
+    "description": "Spec key: ready.ios.hint (12 §5.6) · Max: 60 · Notes: 03a · 2 lines"
+  },
+  "readyIosTimeout": "No card detected. Tap \"Scan card\" to try again.",
+  "@readyIosTimeout": {
+    "description": "Spec key: ready.ios.timeout (12 §5.6) · Max: 90 · Notes: 03a · P08"
+  },
+  "readyManual": "Card number",
+  "@readyManual": {
+    "description": "Spec key: ready.manual (12 §5.6) · Max: 16 · Notes: 03a · icon + noun (exception to verb + object, §1.2)"
+  },
+  "readyQr": "QR code",
+  "@readyQr": {
+    "description": "Spec key: ready.qr (12 §5.6) · Max: 16 · Notes: 03a · icon + noun"
+  },
+  "readyFirstCardTipAndroid": "Tip: the NFC antenna is usually at the top of the back, near the camera.",
+  "@readyFirstCardTipAndroid": {
+    "description": "Spec key: ready.firstCardTip.android (12 §5.6) · Max: 90 · Notes: 03a"
+  },
+  "readyFirstCardTipIos": "Tip: hold the card flat against the top edge, near the camera.",
+  "@readyFirstCardTipIos": {
+    "description": "Spec key: ready.firstCardTip.ios (12 §5.6) · Max: 90 · Notes: 03a"
+  },
+  "readyNoNfcTitle": "Scan the QR code on the card",
+  "@readyNoNfcTitle": {
+    "description": "Spec key: ready.noNfc.title (12 §5.6) · Max: 32 · Notes: 03a · P02"
+  },
+  "readyNoNfcHint": "This device has no NFC. Use the QR code or the card number.",
+  "@readyNoNfcHint": {
+    "description": "Spec key: ready.noNfc.hint (12 §5.6) · Max: 90 · Notes: 03a"
+  },
+  "readyNoNfcButton": "Scan QR code",
+  "@readyNoNfcButton": {
+    "description": "Spec key: ready.noNfc.button (12 §5.6) · Max: 24 · Notes: 03a"
+  },
+  "readyOfflineTap": "No connection – the card can't be checked",
+  "@readyOfflineTap": {
+    "description": "Spec key: ready.offline.tap (12 §5.6) · Max: 60 · Notes: 03a · L09 · harmonised (EN en dash)"
+  },
+  "readyOnline": "Connected again",
+  "@readyOnline": {
+    "description": "Spec key: ready.online (12 §5.6) · Max: 32 · Notes: 03a · snackbar / announcement"
+  },
+  "offlineTitle": "No connection",
+  "@offlineTitle": {
+    "description": "Spec key: offline.title (12 §5.6) · Max: 28 · Notes: B · also S10 network title"
+  },
+  "offlineBody": "Redeeming needs a connection so nothing is ever booked twice.",
+  "@offlineBody": {
+    "description": "Spec key: offline.body (12 §5.6) · Max: 90 · Notes: B"
+  },
+  "maintenanceDefault": "Scheduled maintenance: redeeming may be briefly unavailable.",
+  "@maintenanceDefault": {
+    "description": "Spec key: maintenance.default (12 §5.6) · Max: 90 · Notes: 03a · A12 fallback when the server text is missing"
+  },
+  "maintenanceDismiss": "Dismiss notice",
+  "@maintenanceDismiss": {
+    "description": "Spec key: maintenance.dismiss (12 §5.6) · Max: — · Notes: 03a · (a11y)"
+  },
+  "iosSheetAlert": "Hold the card near the top of the iPhone",
+  "@iosSheetAlert": {
+    "description": "Spec key: ios.sheet.alert (12 §5.7) · Max: 48 · Notes: B"
+  },
+  "iosSheetFound": "Card found",
+  "@iosSheetFound": {
+    "description": "Spec key: ios.sheet.found (12 §5.7) · Max: 48 · Notes: 03a · B wording"
+  },
+  "iosSheetReadFailed": "Couldn't read the card. Try again.",
+  "@iosSheetReadFailed": {
+    "description": "Spec key: ios.sheet.readFailed (12 §5.7) · Max: 48 · Notes: 03a"
+  },
+  "iosSheetMultiple": "More than one card detected. Hold only one.",
+  "@iosSheetMultiple": {
+    "description": "Spec key: ios.sheet.multiple (12 §5.7) · Max: 48 · Notes: 03a · P06"
+  },
+  "iosSheetTimeoutSoon": "No card yet. Hold it flat near the top of the iPhone.",
+  "@iosSheetTimeoutSoon": {
+    "description": "Spec key: ios.sheet.timeoutSoon (12 §5.7) · Max: 60 · Notes: 03a · P07"
+  },
+  "scanNotCard": "This is not a gift card",
+  "@scanNotCard": {
+    "description": "Spec key: scan.notCard (12 §5.7) · Max: 32 · Notes: 03a · harmonised (\"Gutscheinkarte\", \"poklon kartica\", §1.3) · L10"
+  },
+  "scanReadFailedTitle": "Couldn't read the card",
+  "@scanReadFailedTitle": {
+    "description": "Spec key: scan.readFailed.title (12 §5.7) · Max: 32 · Notes: 03a · L11"
+  },
+  "scanReadFailedBody": "Hold it still for a second.",
+  "@scanReadFailedBody": {
+    "description": "Spec key: scan.readFailed.body (12 §5.7) · Max: 48 · Notes: 03a"
+  },
+  "scanDetected": "Card detected",
+  "@scanDetected": {
+    "description": "Spec key: scan.detected (12 §5.7) · Max: — · Notes: 03a · (a11y) announcement"
+  },
+  "scanLookingUp": "Looking up card\u00a0…",
+  "@scanLookingUp": {
+    "description": "Spec key: scan.lookingUp (12 §5.7) · Max: 32 · Notes: 03a"
+  },
+  "scanSlow": "Still looking\u00a0…",
+  "@scanSlow": {
+    "description": "Spec key: scan.slow (12 §5.7) · Max: 32 · Notes: 03a · L08 · alias lookup.stillLooking (03b)"
+  },
+  "scanUnavailable": "NFC isn't available right now. Use the card number or QR code.",
+  "@scanUnavailable": {
+    "description": "Spec key: scan.unavailable (12 §5.7) · Max: 90 · Notes: 03a · P09"
+  },
+  "balanceCardOverline": "Gift card",
+  "@balanceCardOverline": {
+    "description": "Spec key: balanceCard.overline (12 §5.8) · Max: 16 · Notes: 12 · uppercased by style"
+  },
+  "balanceCardValidUntil": "Valid until {date}",
+  "@balanceCardValidUntil": {
+    "description": "Spec key: balanceCard.validUntil (12 §5.8) · Max: 24 · Notes: 12",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceCardNoExpiry": "No expiry date",
+  "@balanceCardNoExpiry": {
+    "description": "Spec key: balanceCard.noExpiry (12 §5.8) · Max: 24 · Notes: 12 · expires_at null"
+  },
+  "balanceCardMasked": "••••\u00a0{last4}",
+  "@balanceCardMasked": {
+    "description": "Spec key: balanceCard.masked (12 §5.8) · Max: 9 · Notes: 12",
+    "placeholders": {
+      "last4": {
+        "type": "String"
+      }
+    }
+  },
+  "balanceCardA11y": "Gift card {restaurant}. Balance {spokenAmount}. Card ending {last4}.",
+  "@balanceCardA11y": {
+    "description": "Spec key: balanceCard.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y) · validity and status appended",
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      },
+      "spokenAmount": {
+        "type": "String"
+      },
+      "last4": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeCardNumberA11y": "Card number {number}",
+  "@chargeCardNumberA11y": {
+    "description": "Spec key: charge.cardNumber.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y)",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yChargeClose": "Close card",
+  "@a11yChargeClose": {
+    "description": "Spec key: a11y.charge.close (12 §5.8) · Max: — · Notes: 03b · (a11y)"
+  },
+  "a11yAmount": "Amount {spokenAmount}",
+  "@a11yAmount": {
+    "description": "Spec key: a11y.amount (12 §5.8) · Max: — · Notes: 03b · (a11y) AmountDisplay",
+    "placeholders": {
+      "spokenAmount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeEnterAmount": "Enter amount",
+  "@chargeEnterAmount": {
+    "description": "Spec key: charge.enterAmount (12 §5.8) · Max: 24 · Notes: 03b · disabled button at € 0,00"
+  },
+  "chargeRedeem": "Redeem {amount}",
+  "@chargeRedeem": {
+    "description": "Spec key: charge.redeem (12 §5.8) · Max: 26+amt · Notes: B (§4.2 clarification)",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeRedeemFull": "Redeem full balance · {amount}",
+  "@chargeRedeemFull": {
+    "description": "Spec key: charge.redeemFull (12 §5.8) · Max: 26+amt · Notes: B · breaks at \" · \"",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeHold": "Hold to redeem",
+  "@chargeHold": {
+    "description": "Spec key: charge.hold (12 §5.8) · Max: 26 · Notes: B · HoldButton hint ≥ holdToConfirmThresholdCents"
+  },
+  "a11yHoldHint": "Double-tap and hold to redeem",
+  "@a11yHoldHint": {
+    "description": "Spec key: a11y.hold.hint (12 §5.8) · Max: — · Notes: 03b · (a11y)"
+  },
+  "chargeRedeeming": "Redeeming {amount}\u00a0…",
+  "@chargeRedeeming": {
+    "description": "Spec key: charge.redeeming (12 §5.8) · Max: 26+amt · Notes: 03b · S08 button label",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeOverBalance": "{diff} more than the balance",
+  "@chargeOverBalance": {
+    "description": "Spec key: charge.overBalance (12 §5.8) · Max: 40 · Notes: B",
+    "placeholders": {
+      "diff": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yOverBalance": "{diff} more than the balance. Redeem not available.",
+  "@a11yOverBalance": {
+    "description": "Spec key: a11y.overBalance (12 §5.8) · Max: — · Notes: 03b · (a11y)",
+    "placeholders": {
+      "diff": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeUseBalance": "Use balance · {amount}",
+  "@chargeUseBalance": {
+    "description": "Spec key: charge.useBalance (12 §5.8) · Max: 20+amt · Notes: B · QuickAmountChip",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeUseMax": "Use maximum · {amount}",
+  "@chargeUseMax": {
+    "description": "Spec key: charge.useMax (12 §5.8) · Max: 20+amt · Notes: 03b · R10",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeMaxSingle": "Max. {amount} per redemption",
+  "@chargeMaxSingle": {
+    "description": "Spec key: charge.maxSingle (12 §5.8) · Max: 40 · Notes: 03b · R10",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeFullOnly": "Only the full balance can be redeemed here.",
+  "@chargeFullOnly": {
+    "description": "Spec key: charge.fullOnly (12 §5.8) · Max: 90 · Notes: 03b · partial disabled, R11"
+  },
+  "chargeVelocityTitle": "Limit for this card reached",
+  "@chargeVelocityTitle": {
+    "description": "Spec key: charge.velocity.title (12 §5.8) · Max: 32 · Notes: 03b · R14"
+  },
+  "chargeVelocityBodyTime": "Possible again in {minutes}\u00a0min. Or get a manager.",
+  "@chargeVelocityBodyTime": {
+    "description": "Spec key: charge.velocity.bodyTime (12 §5.8) · Max: 90 · Notes: 03b · harmonised (\"min\" without period)",
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "chargeRateLimited": "Too many requests – possible again in {seconds}\u00a0s",
+  "@chargeRateLimited": {
+    "description": "Spec key: charge.rateLimited (12 §5.8) · Max: 60 · Notes: 03b · R15 · harmonised (EN en dash)",
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "chargeSwitchCardMessage": "Different card detected – Switch?",
+  "@chargeSwitchCardMessage": {
+    "description": "Spec key: charge.switchCard.message (12 §5.8) · Max: 48 · Notes: 03b · B EN wording (brief §2) · P14"
+  },
+  "chargeSwitchCardAction": "Switch",
+  "@chargeSwitchCardAction": {
+    "description": "Spec key: charge.switchCard.action (12 §5.8) · Max: 12 · Notes: 03b · B"
+  },
+  "chargeSwitchCardKeep": "Keep",
+  "@chargeSwitchCardKeep": {
+    "description": "Spec key: charge.switchCard.keep (12 §5.8) · Max: 12 · Notes: 03b"
+  },
+  "chargeSwitchCardDialogTitle": "Different card detected",
+  "@chargeSwitchCardDialogTitle": {
+    "description": "Spec key: charge.switchCard.dialogTitle (12 §5.8) · Max: 32 · Notes: 12 · Dialog fallback with screen reader (03b §2.18)"
+  },
+  "keypadDoubleZero": "Double zero",
+  "@keypadDoubleZero": {
+    "description": "Spec key: keypad.doubleZero (12 §5.8) · Max: — · Notes: 03a · (a11y) · alias a11y.keypad.doubleZero (03b)"
+  },
+  "keypadDelete": "Delete",
+  "@keypadDelete": {
+    "description": "Spec key: keypad.delete (12 §5.8) · Max: — · Notes: 03a · (a11y) · alias a11y.keypad.delete (03b)"
+  },
+  "keypadDeleteHint": "Long press to clear",
+  "@keypadDeleteHint": {
+    "description": "Spec key: keypad.delete.hint (12 §5.8) · Max: — · Notes: 03a · (a11y) · alias a11y.keypad.deleteHint (03b)"
+  },
+  "keypadCleared": "Amount cleared",
+  "@keypadCleared": {
+    "description": "Spec key: keypad.cleared (12 §5.8) · Max: — · Notes: 12 · (a11y) announcement"
+  },
+  "keypadMaxReached": "Maximum amount reached",
+  "@keypadMaxReached": {
+    "description": "Spec key: keypad.maxReached (12 §5.8) · Max: — · Notes: 12 · (a11y) · 7 digits"
+  },
+  "badgeActive": "Active",
+  "@badgeActive": {
+    "description": "Spec key: badge.active (12 §5.9) · Max: 16 · Notes: 12 · a11y only (active cards show no badge)"
+  },
+  "badgeInactive": "Not activated",
+  "@badgeInactive": {
+    "description": "Spec key: badge.inactive (12 §5.9) · Max: 16 · Notes: 12"
+  },
+  "badgeRedeemed": "Used up",
+  "@badgeRedeemed": {
+    "description": "Spec key: badge.redeemed (12 §5.9) · Max: 16 · Notes: 12 · status redeemed or balance 0"
+  },
+  "badgeBlocked": "Blocked",
+  "@badgeBlocked": {
+    "description": "Spec key: badge.blocked (12 §5.9) · Max: 16 · Notes: 12"
+  },
+  "badgeExpired": "Expired",
+  "@badgeExpired": {
+    "description": "Spec key: badge.expired (12 §5.9) · Max: 16 · Notes: 12"
+  },
+  "badgeReplaced": "Replaced",
+  "@badgeReplaced": {
+    "description": "Spec key: badge.replaced (12 §5.9) · Max: 16 · Notes: 12"
+  },
+  "cardBlocked": "Card blocked",
+  "@cardBlocked": {
+    "description": "Spec key: card.blocked (12 §5.9) · Max: 28 · Notes: B · danger · body = getManager"
+  },
+  "cardBlockedReason": "Reason: {reason}",
+  "@cardBlockedReason": {
+    "description": "Spec key: card.blocked.reason (12 §5.9) · Max: 90 · Notes: 03b · only if blocked_reason present",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cardExpired": "Card expired",
+  "@cardExpired": {
+    "description": "Spec key: card.expired (12 §5.9) · Max: 28 · Notes: B · warning"
+  },
+  "cardExpiredBody": "Expired on {date}. Please get a manager.",
+  "@cardExpiredBody": {
+    "description": "Spec key: card.expired.body (12 §5.9) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "cardInactive": "Card not activated yet",
+  "@cardInactive": {
+    "description": "Spec key: card.inactive (12 §5.9) · Max: 28 · Notes: B · warning"
+  },
+  "cardInactiveBody": "It can be redeemed once activated. Please get a manager.",
+  "@cardInactiveBody": {
+    "description": "Spec key: card.inactive.body (12 §5.9) · Max: 90 · Notes: 03b"
+  },
+  "cardReplaced": "Card was replaced",
+  "@cardReplaced": {
+    "description": "Spec key: card.replaced (12 §5.9) · Max: 28 · Notes: B · warning"
+  },
+  "cardReplacedBody": "The balance is on the new card. Ask the guest for the new card.",
+  "@cardReplacedBody": {
+    "description": "Spec key: card.replaced.body (12 §5.9) · Max: 90 · Notes: 03b"
+  },
+  "cardEmpty": "No balance left",
+  "@cardEmpty": {
+    "description": "Spec key: card.empty (12 §5.9) · Max: 28 · Notes: B · warning"
+  },
+  "cardEmptyBody": "This card has been fully used.",
+  "@cardEmptyBody": {
+    "description": "Spec key: card.empty.body (12 §5.9) · Max: 90 · Notes: 03b"
+  },
+  "redeemSlow": "Connection slow – retrying",
+  "@redeemSlow": {
+    "description": "Spec key: redeem.slow (12 §5.10) · Max: 36 · Notes: 03b · R02 · harmonised (EN en dash)"
+  },
+  "uncertainTitle": "Connection interrupted",
+  "@uncertainTitle": {
+    "description": "Spec key: uncertain.title (12 §5.10) · Max: 28 · Notes: B · R03/R04"
+  },
+  "uncertainBody": "Checking\u00a0… Nothing is ever booked twice.",
+  "@uncertainBody": {
+    "description": "Spec key: uncertain.body (12 §5.10) · Max: 90 · Notes: B · also the helper in R02"
+  },
+  "uncertainRetrying": "Attempt {n} of 3",
+  "@uncertainRetrying": {
+    "description": "Spec key: uncertain.retrying (12 §5.10) · Max: 20 · Notes: 03b",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "uncertainGuestHint": "Tell the guest: \"One moment please, the redemption is being confirmed.\"",
+  "@uncertainGuestHint": {
+    "description": "Spec key: uncertain.guestHint (12 §5.10) · Max: 90 · Notes: 03b · harmonised (never \"Zahlung / payment / plaćanje\", §1.3)"
+  },
+  "uncertainFailedBody": "Not confirmed yet. Try again – nothing is ever booked twice.",
+  "@uncertainFailedBody": {
+    "description": "Spec key: uncertain.failedBody (12 §5.10) · Max: 90 · Notes: 03b · R04"
+  },
+  "uncertainCancelled": "Not confirmed. Scan the card again before redeeming.",
+  "@uncertainCancelled": {
+    "description": "Spec key: uncertain.cancelled (12 §5.10) · Max: 90 · Notes: 03b · R05 · harmonised (no \"charging / terećenje\")"
+  },
+  "uncertainCancelledGuestHint": "Tell the guest: \"The redemption isn't confirmed yet. We'll check the balance before redeeming again.\"",
+  "@uncertainCancelledGuestHint": {
+    "description": "Spec key: uncertain.cancelledGuestHint (12 §5.10) · Max: 120 · Notes: 03b · harmonised (vocabulary); 3 lines allowed (quoted speech)"
+  },
+  "redeemBalanceChanged": "Balance changed: now {amount}",
+  "@redeemBalanceChanged": {
+    "description": "Spec key: redeem.balanceChanged (12 §5.10) · Max: 48 · Notes: 03b · R06",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "redeemTapAgain": "Please tap Redeem again.",
+  "@redeemTapAgain": {
+    "description": "Spec key: redeem.tapAgain (12 §5.10) · Max: 48 · Notes: 03b · R13"
+  },
+  "successTitle": "Redeemed",
+  "@successTitle": {
+    "description": "Spec key: success.title (12 §5.11) · Max: 20 · Notes: B"
+  },
+  "successRemaining": "Remaining balance {amount}",
+  "@successRemaining": {
+    "description": "Spec key: success.remaining (12 §5.11) · Max: 36 · Notes: B",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "successEmpty": "Card is now empty",
+  "@successEmpty": {
+    "description": "Spec key: success.empty (12 §5.11) · Max: 28 · Notes: 03b · replaces the remaining line at 0"
+  },
+  "successNextIos": "Scan next card",
+  "@successNextIos": {
+    "description": "Spec key: success.next.ios (12 §5.11) · Max: 24 · Notes: B"
+  },
+  "successNextAndroid": "Just tap the next card",
+  "@successNextAndroid": {
+    "description": "Spec key: success.next.android (12 §5.11) · Max: 32 · Notes: B"
+  },
+  "successShowGuest": "Show guest",
+  "@successShowGuest": {
+    "description": "Spec key: success.showGuest (12 §5.11) · Max: 24 · Notes: 03b · presentation mode"
+  },
+  "successCard": "Card ••••\u00a0{last4}",
+  "@successCard": {
+    "description": "Spec key: success.card (12 §5.11) · Max: 20 · Notes: 12 · caption",
+    "placeholders": {
+      "last4": {
+        "type": "String"
+      }
+    }
+  },
+  "guestRemainingLabel": "Remaining balance",
+  "@guestRemainingLabel": {
+    "description": "Spec key: guest.remaining.label (12 §5.11) · Max: 20 · Notes: 03b · Show-guest mode"
+  },
+  "a11ySuccess": "Redeemed {amount}, remaining balance {balance}",
+  "@a11ySuccess": {
+    "description": "Spec key: a11y.success (12 §5.11) · Max: — · Notes: 03b · (a11y) assertive; amounts in spoken form",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "problemNotFoundTitle": "Card not found",
+  "@problemNotFoundTitle": {
+    "description": "Spec key: problem.notFound.title (12 §5.12) · Max: 32 · Notes: B · L01/L02"
+  },
+  "problemNotFoundBody": "This card is not in the system. Check the card or ask the guest for another one.",
+  "@problemNotFoundBody": {
+    "description": "Spec key: problem.notFound.body (12 §5.12) · Max: 90 · Notes: 03b"
+  },
+  "problemNotFoundBodyManual": "No card with this number. Check the digits.",
+  "@problemNotFoundBodyManual": {
+    "description": "Spec key: problem.notFound.bodyManual (12 §5.12) · Max: 90 · Notes: 03b"
+  },
+  "problemForeignTitle": "Card from another restaurant",
+  "@problemForeignTitle": {
+    "description": "Spec key: problem.foreign.title (12 §5.12) · Max: 32 · Notes: B · L03"
+  },
+  "problemForeignBody": "It can only be redeemed at the restaurant that issued it.",
+  "@problemForeignBody": {
+    "description": "Spec key: problem.foreign.body (12 §5.12) · Max: 90 · Notes: 03b"
+  },
+  "problemVerifyTitle": "Card could not be verified",
+  "@problemVerifyTitle": {
+    "description": "Spec key: problem.verify.title (12 §5.12) · Max: 32 (2 lines) · Notes: B · L04"
+  },
+  "problemVerifyBody": "Do not accept this card for now. Please get a manager.",
+  "@problemVerifyBody": {
+    "description": "Spec key: problem.verify.body (12 §5.12) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)"
+  },
+  "problemThrottledTitle": "Too many scans",
+  "@problemThrottledTitle": {
+    "description": "Spec key: problem.throttled.title (12 §5.12) · Max: 32 · Notes: 03b · L05"
+  },
+  "problemThrottledBody": "Scanning is possible again shortly.",
+  "@problemThrottledBody": {
+    "description": "Spec key: problem.throttled.body (12 §5.12) · Max: 90 · Notes: 03b"
+  },
+  "problemScanAgainIn": "Scan again · {time}",
+  "@problemScanAgainIn": {
+    "description": "Spec key: problem.scanAgainIn (12 §5.12) · Max: 24 · Notes: 03b · disabled countdown button",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "problemNetworkBody": "The card could not be checked. Check Wi-Fi or mobile data, then try again.",
+  "@problemNetworkBody": {
+    "description": "Spec key: problem.network.body (12 §5.12) · Max: 90 · Notes: 03b · L06 (title = offline.title)"
+  },
+  "problemServerTitle": "Service not available right now",
+  "@problemServerTitle": {
+    "description": "Spec key: problem.server.title (12 §5.12) · Max: 32 · Notes: 03b · harmonised (title states what happened, §2.1)"
+  },
+  "problemServerBody": "The problem is not the card. Try again in a moment.",
+  "@problemServerBody": {
+    "description": "Spec key: problem.server.body (12 §5.12) · Max: 90 · Notes: 03b · harmonised (no \"wir/uns\" in the UI, §1.2)"
+  },
+  "manualTitle": "Card number",
+  "@manualTitle": {
+    "description": "Spec key: manual.title (12 §5.13) · Max: 28 · Notes: 03a"
+  },
+  "manualHelper": "16 digits on the back of the card",
+  "@manualHelper": {
+    "description": "Spec key: manual.helper (12 §5.13) · Max: 40 · Notes: 03a"
+  },
+  "manualCounter": "{count} of 16",
+  "@manualCounter": {
+    "description": "Spec key: manual.counter (12 §5.13) · Max: 12 · Notes: 03a · tabular figures",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "manualSubmit": "Look up card",
+  "@manualSubmit": {
+    "description": "Spec key: manual.submit (12 §5.13) · Max: 24 · Notes: 03a · enabled at 16 digits"
+  },
+  "manualErrorInvalid": "Check the card number",
+  "@manualErrorInvalid": {
+    "description": "Spec key: manual.error.invalid (12 §5.13) · Max: 32 · Notes: 03a"
+  },
+  "manualErrorPaste": "No valid card number to paste",
+  "@manualErrorPaste": {
+    "description": "Spec key: manual.error.paste (12 §5.13) · Max: 48 · Notes: 03a"
+  },
+  "qrTitle": "Scan QR code",
+  "@qrTitle": {
+    "description": "Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a"
+  },
+  "qrHint": "Point the camera at the QR code on the card",
+  "@qrHint": {
+    "description": "Spec key: qr.hint (12 §5.14) · Max: 48 · Notes: 03a"
+  },
+  "qrNotCard": "This QR code isn't a gift card",
+  "@qrNotCard": {
+    "description": "Spec key: qr.notCard (12 §5.14) · Max: 48 · Notes: 03a · harmonised (vocabulary) · L10"
+  },
+  "qrDark": "Too dark? Turn on the light.",
+  "@qrDark": {
+    "description": "Spec key: qr.dark (12 §5.14) · Max: 32 · Notes: 03a"
+  },
+  "qrTorchOn": "Turn on light",
+  "@qrTorchOn": {
+    "description": "Spec key: qr.torchOn (12 §5.14) · Max: — · Notes: 03a · (a11y)"
+  },
+  "qrTorchOff": "Turn off light",
+  "@qrTorchOff": {
+    "description": "Spec key: qr.torchOff (12 §5.14) · Max: — · Notes: 03a · (a11y)"
+  },
+  "qrManual": "Enter card number",
+  "@qrManual": {
+    "description": "Spec key: qr.manual (12 §5.14) · Max: 24 · Notes: 03a · = common.enterNumber (alias)"
+  },
+  "recentTitle": "Recent",
+  "@recentTitle": {
+    "description": "Spec key: recent.title (12 §5.15) · Max: 28 · Notes: 03b · harmonised (DE = topBar.recent)"
+  },
+  "recentSummary": "{count, plural, one {{count} redemption} other {{count} redemptions}} · {amount} today",
+  "@recentSummary": {
+    "description": "Spec key: recent.summary (12 §5.15) · Max: 40 · Notes: 03b · HistoryCard",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "recentRowRemaining": "Left {amount}",
+  "@recentRowRemaining": {
+    "description": "Spec key: recent.row.remaining (12 §5.15) · Max: 20 · Notes: 03b",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "recentRowEmpty": "Card now empty",
+  "@recentRowEmpty": {
+    "description": "Spec key: recent.row.empty (12 §5.15) · Max: 20 · Notes: 03b"
+  },
+  "recentRowA11y": "{time}, card ending {last4}, {amount} redeemed, remaining balance {balance}",
+  "@recentRowA11y": {
+    "description": "Spec key: recent.row.a11y (12 §5.15) · Max: — · Notes: 12 · (a11y)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "last4": {
+        "type": "String"
+      },
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "recentEmptyTitle": "No redemptions yet",
+  "@recentEmptyTitle": {
+    "description": "Spec key: recent.empty.title (12 §5.15) · Max: 32 · Notes: 03b"
+  },
+  "recentEmptyBody": "Redemptions from this phone appear here until 04:00.",
+  "@recentEmptyBody": {
+    "description": "Spec key: recent.empty.body (12 §5.15) · Max: 90 · Notes: 03b · harmonised (time format §1.5)"
+  },
+  "recentFooter": "This phone only · cleared at 04:00",
+  "@recentFooter": {
+    "description": "Spec key: recent.footer (12 §5.15) · Max: 48 · Notes: 03b · harmonised (time format)"
+  },
+  "recentLimit": "Latest 200 redemptions",
+  "@recentLimit": {
+    "description": "Spec key: recent.limit (12 §5.15) · Max: 40 · Notes: 03b"
+  },
+  "recentDetailTitle": "Redemption",
+  "@recentDetailTitle": {
+    "description": "Spec key: recent.detail.title (12 §5.15) · Max: 28 · Notes: 03b"
+  },
+  "recentDetailTime": "Time",
+  "@recentDetailTime": {
+    "description": "Spec key: recent.detail.time (12 §5.15) · Max: 20 · Notes: 03b"
+  },
+  "recentDetailCard": "Card",
+  "@recentDetailCard": {
+    "description": "Spec key: recent.detail.card (12 §5.15) · Max: 20 · Notes: 03b"
+  },
+  "recentDetailAmount": "Amount",
+  "@recentDetailAmount": {
+    "description": "Spec key: recent.detail.amount (12 §5.15) · Max: 20 · Notes: 03b"
+  },
+  "recentDetailRemaining": "Remaining balance",
+  "@recentDetailRemaining": {
+    "description": "Spec key: recent.detail.remaining (12 §5.15) · Max: 20 · Notes: 03b"
+  },
+  "recentDetailTransaction": "Transaction",
+  "@recentDetailTransaction": {
+    "description": "Spec key: recent.detail.transaction (12 §5.15) · Max: 20 · Notes: 03b · value: last 6 chars of the transaction id"
+  },
+  "recentDetailSupportCode": "Support code",
+  "@recentDetailSupportCode": {
+    "description": "Spec key: recent.detail.supportCode (12 §5.15) · Max: 20 · Notes: 03b"
+  },
+  "recentDetailReverseHint": "Wrong amount? A manager can reverse it in the dashboard.",
+  "@recentDetailReverseHint": {
+    "description": "Spec key: recent.detail.reverseHint (12 §5.15) · Max: 90 · Notes: 03b · B (EN from brief §1) · harmonised BHS (\"dashboard\", §1.3)"
+  },
+  "menuClose": "Close menu",
+  "@menuClose": {
+    "description": "Spec key: menu.close (12 §5.16) · Max: — · Notes: 03a · (a11y)"
+  },
+  "menuAccount": "Account",
+  "@menuAccount": {
+    "description": "Spec key: menu.account (12 §5.16) · Max: 24 · Notes: 12 · value: name and e-mail"
+  },
+  "menuRestaurant": "Restaurant",
+  "@menuRestaurant": {
+    "description": "Spec key: menu.restaurant (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuDevice": "Device",
+  "@menuDevice": {
+    "description": "Spec key: menu.device (12 §5.16) · Max: 24 · Notes: 03a · value: device name"
+  },
+  "menuSectionSettings": "Settings",
+  "@menuSectionSettings": {
+    "description": "Spec key: menu.section.settings (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuTheme": "Appearance",
+  "@menuTheme": {
+    "description": "Spec key: menu.theme (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuThemeSystem": "Match system",
+  "@menuThemeSystem": {
+    "description": "Spec key: menu.theme.system (12 §5.16) · Max: 14 · Notes: 03a"
+  },
+  "menuThemeLight": "Light",
+  "@menuThemeLight": {
+    "description": "Spec key: menu.theme.light (12 §5.16) · Max: 10 · Notes: 03a"
+  },
+  "menuThemeDark": "Dark",
+  "@menuThemeDark": {
+    "description": "Spec key: menu.theme.dark (12 §5.16) · Max: 10 · Notes: 03a"
+  },
+  "menuSunlightTip": "Outdoors, the light theme is easier to read.",
+  "@menuSunlightTip": {
+    "description": "Spec key: menu.sunlightTip (12 §5.16) · Max: 60 · Notes: 03a"
+  },
+  "menuSound": "Sounds",
+  "@menuSound": {
+    "description": "Spec key: menu.sound (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuHaptics": "Haptics",
+  "@menuHaptics": {
+    "description": "Spec key: menu.haptics (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuHapticsUnavailable": "Not available on this device",
+  "@menuHapticsUnavailable": {
+    "description": "Spec key: menu.haptics.unavailable (12 §5.16) · Max: 40 · Notes: 03a"
+  },
+  "menuKeepScreenOn": "Keep screen on",
+  "@menuKeepScreenOn": {
+    "description": "Spec key: menu.keepScreenOn (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuKeepScreenOnCaption": "While scanning and redeeming",
+  "@menuKeepScreenOnCaption": {
+    "description": "Spec key: menu.keepScreenOn.caption (12 §5.16) · Max: 40 · Notes: 03a"
+  },
+  "menuHelp": "Help",
+  "@menuHelp": {
+    "description": "Spec key: menu.help (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuVersion": "Version {version}",
+  "@menuVersion": {
+    "description": "Spec key: menu.version (12 §5.16) · Max: 32 · Notes: 03a",
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "menuSignOut": "Sign out",
+  "@menuSignOut": {
+    "description": "Spec key: menu.signOut (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuSignOutConfirmTitle": "Sign out?",
+  "@menuSignOutConfirmTitle": {
+    "description": "Spec key: menu.signOut.confirm.title (12 §5.16) · Max: 28 · Notes: 03a · Dialog"
+  },
+  "menuSignOutConfirmBody": "The shift history on this device will be deleted.",
+  "@menuSignOutConfirmBody": {
+    "description": "Spec key: menu.signOut.confirm.body (12 §5.16) · Max: 90 · Notes: 03a"
+  },
+  "menuSignOutConfirmAction": "Sign out",
+  "@menuSignOutConfirmAction": {
+    "description": "Spec key: menu.signOut.confirm.action (12 §5.16) · Max: 24 · Notes: 12 · DangerButton (cancel = common.cancel)"
+  },
+  "sessionExpired": "Session expired",
+  "@sessionExpired": {
+    "description": "Spec key: session.expired (12 §5.17) · Max: 28 · Notes: B · A01"
+  },
+  "sessionExpiredBody": "Sign in again to continue.",
+  "@sessionExpiredBody": {
+    "description": "Spec key: session.expired.body (12 §5.17) · Max: 90 · Notes: 03a"
+  },
+  "sessionExpiredAction": "Sign in again",
+  "@sessionExpiredAction": {
+    "description": "Spec key: session.expired.action (12 §5.17) · Max: 24 · Notes: 03a"
+  },
+  "forbiddenTitle": "No permission to redeem",
+  "@forbiddenTitle": {
+    "description": "Spec key: forbidden.title (12 §5.17) · Max: 32 · Notes: 12 · A03"
+  },
+  "forbiddenBody": "This account can no longer redeem cards. Please get a manager.",
+  "@forbiddenBody": {
+    "description": "Spec key: forbidden.body (12 §5.17) · Max: 90 · Notes: 12"
+  },
+  "deviceRevokedTitle": "This device was removed",
+  "@deviceRevokedTitle": {
+    "description": "Spec key: deviceRevoked.title (12 §5.17) · Max: 32 · Notes: 03a · A04"
+  },
+  "deviceRevokedBody": "It's no longer allowed for this restaurant. Please get a manager.",
+  "@deviceRevokedBody": {
+    "description": "Spec key: deviceRevoked.body (12 §5.17) · Max: 90 · Notes: 03a · harmonised (escalation wording §2.6)"
+  },
+  "deviceRevokedAction": "Sign in",
+  "@deviceRevokedAction": {
+    "description": "Spec key: deviceRevoked.action (12 §5.17) · Max: 24 · Notes: 03a"
+  },
+  "suspendedTitle": "Redeeming is paused",
+  "@suspendedTitle": {
+    "description": "Spec key: suspended.title (12 §5.17) · Max: 32 · Notes: 03a · A05"
+  },
+  "suspendedBody": "The restaurant's account is paused. Please get a manager.",
+  "@suspendedBody": {
+    "description": "Spec key: suspended.body (12 §5.17) · Max: 90 · Notes: 03a"
+  },
+  "lockedTitle": "Account temporarily locked",
+  "@lockedTitle": {
+    "description": "Spec key: locked.title (12 §5.17) · Max: 32 · Notes: 03a · A06"
+  },
+  "lockedBody": "Too many sign-in attempts. Try again in {time}.",
+  "@lockedBody": {
+    "description": "Spec key: locked.body (12 §5.17) · Max: 90 · Notes: 03a",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lockedButton": "Try again in {time}",
+  "@lockedButton": {
+    "description": "Spec key: locked.button (12 §5.17) · Max: 24 · Notes: 03a · disabled",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "lockedOver": "You can sign in again",
+  "@lockedOver": {
+    "description": "Spec key: locked.over (12 §5.17) · Max: — · Notes: 03a · (a11y)"
+  },
+  "deactivatedTitle": "Account deactivated",
+  "@deactivatedTitle": {
+    "description": "Spec key: deactivated.title (12 §5.17) · Max: 32 · Notes: 03a · A10"
+  },
+  "deactivatedBody": "This account can no longer be used. Please get a manager.",
+  "@deactivatedBody": {
+    "description": "Spec key: deactivated.body (12 §5.17) · Max: 90 · Notes: 03a"
+  },
+  "updateTitle": "Update required",
+  "@updateTitle": {
+    "description": "Spec key: update.title (12 §5.17) · Max: 32 · Notes: 03a · A11"
+  },
+  "updateBody": "This version is no longer supported. Update to keep redeeming.",
+  "@updateBody": {
+    "description": "Spec key: update.body (12 §5.17) · Max: 90 · Notes: 03a"
+  },
+  "updateAction": "Update now",
+  "@updateAction": {
+    "description": "Spec key: update.action (12 §5.17) · Max: 24 · Notes: 03a"
+  },
+  "nfcOffTitle": "NFC is off",
+  "@nfcOffTitle": {
+    "description": "Spec key: nfcOff.title (12 §5.18) · Max: 32 · Notes: 03a · P01"
+  },
+  "nfcOffBody": "Turn on NFC to scan cards.",
+  "@nfcOffBody": {
+    "description": "Spec key: nfcOff.body (12 §5.18) · Max: 90 · Notes: 03a"
+  },
+  "nfcOffAction": "Turn on NFC",
+  "@nfcOffAction": {
+    "description": "Spec key: nfcOff.action (12 §5.18) · Max: 24 · Notes: 03a"
+  },
+  "nfcOffOn": "NFC is on. Ready to scan.",
+  "@nfcOffOn": {
+    "description": "Spec key: nfcOff.on (12 §5.18) · Max: — · Notes: 03a · (a11y)"
+  },
+  "cameraDeniedTitle": "Camera access is off",
+  "@cameraDeniedTitle": {
+    "description": "Spec key: camera.denied.title (12 §5.18) · Max: 32 · Notes: 03a · P03"
+  },
+  "cameraDeniedBody": "Allow camera access in Settings to scan QR codes.",
+  "@cameraDeniedBody": {
+    "description": "Spec key: camera.denied.body (12 §5.18) · Max: 90 · Notes: 03a"
+  },
+  "cameraDeniedAction": "Open Settings",
+  "@cameraDeniedAction": {
+    "description": "Spec key: camera.denied.action (12 §5.18) · Max: 24 · Notes: 03a"
+  },
+  "cameraRestrictedBody": "The camera is restricted on this device. Use the card number.",
+  "@cameraRestrictedBody": {
+    "description": "Spec key: camera.restricted.body (12 §5.18) · Max: 90 · Notes: 03a · P04"
+  },
+  "cameraUnavailableTitle": "Camera not available",
+  "@cameraUnavailableTitle": {
+    "description": "Spec key: camera.unavailable.title (12 §5.18) · Max: 32 · Notes: 12 · P05"
+  },
+  "cameraUnavailableBody": "Close other apps using the camera or enter the card number.",
+  "@cameraUnavailableBody": {
+    "description": "Spec key: camera.unavailable.body (12 §5.18) · Max: 90 · Notes: 12"
+  },
+  "introSkip": "Skip",
+  "@introSkip": {
+    "description": "Spec key: intro.skip (12 §5.19) · Max: 16 · Notes: 03a"
+  },
+  "introNext": "Next",
+  "@introNext": {
+    "description": "Spec key: intro.next (12 §5.19) · Max: 24 · Notes: 03a"
+  },
+  "introStart": "Start",
+  "@introStart": {
+    "description": "Spec key: intro.start (12 §5.19) · Max: 24 · Notes: 03a"
+  },
+  "introPage": "Page {n} of 3",
+  "@introPage": {
+    "description": "Spec key: intro.page (12 §5.19) · Max: — · Notes: 03a · (a11y)",
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "intro1TitleAndroid": "Tap the card",
+  "@intro1TitleAndroid": {
+    "description": "Spec key: intro.1.title.android (12 §5.19) · Max: 28 · Notes: 03a"
+  },
+  "intro1BodyAndroid": "Hold the card to the back of the phone. The balance appears in under a second.",
+  "@intro1BodyAndroid": {
+    "description": "Spec key: intro.1.body.android (12 §5.19) · Max: 90 · Notes: 03a · harmonised (brand guide: \"unter einer Sekunde\" instead of \"sofort\")"
+  },
+  "intro1TitleIos": "Tap Scan, then hold the card",
+  "@intro1TitleIos": {
+    "description": "Spec key: intro.1.title.ios (12 §5.19) · Max: 32 · Notes: 03a"
+  },
+  "intro1BodyIos": "Tap \"Scan card\", then hold the card near the top of the iPhone.",
+  "@intro1BodyIos": {
+    "description": "Spec key: intro.1.body.ios (12 §5.19) · Max: 90 · Notes: 03a"
+  },
+  "intro1TitleNoNfc": "Scan the QR code",
+  "@intro1TitleNoNfc": {
+    "description": "Spec key: intro.1.title.noNfc (12 §5.19) · Max: 28 · Notes: 03a"
+  },
+  "intro1BodyNoNfc": "Point the camera at the QR code or type the card number.",
+  "@intro1BodyNoNfc": {
+    "description": "Spec key: intro.1.body.noNfc (12 §5.19) · Max: 90 · Notes: 03a"
+  },
+  "intro2Title": "Type the amount, redeem",
+  "@intro2Title": {
+    "description": "Spec key: intro.2.title (12 §5.19) · Max: 32 · Notes: 03a"
+  },
+  "intro2Body": "See the balance, type the amount, done. From {threshold}, press and hold to confirm.",
+  "@intro2Body": {
+    "description": "Spec key: intro.2.body (12 §5.19) · Max: 90 · Notes: 03a",
+    "placeholders": {
+      "threshold": {
+        "type": "String"
+      }
+    }
+  },
+  "intro3Title": "Never booked twice",
+  "@intro3Title": {
+    "description": "Spec key: intro.3.title (12 §5.19) · Max: 28 · Notes: 03a"
+  },
+  "intro3Body": "Redeeming only works online. Your shift's redemptions are under \"Recent\".",
+  "@intro3Body": {
+    "description": "Spec key: intro.3.body (12 §5.19) · Max: 90 · Notes: 03a"
+  },
+  "a11ySpokenAmount": "{euros, plural, one {{euros} euro} other {{euros} euros}} {cents}",
+  "@a11ySpokenAmount": {
+    "description": "Spec key: a11y.spokenAmount (12 §5.20) · Politeness: — · Notes: 12 · cents omitted when 0; \"{cents} Cent / cents / centi\" when euros = 0 (§1.4)",
+    "placeholders": {
+      "euros": {
+        "type": "int"
+      },
+      "cents": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yCardLoaded": "{restaurant}. Balance {spokenAmount}.",
+  "@a11yCardLoaded": {
+    "description": "Spec key: a11y.cardLoaded (12 §5.20) · Politeness: assertive · Notes: 12 · S07 opened; status appended if not active",
+    "placeholders": {
+      "restaurant": {
+        "type": "String"
+      },
+      "spokenAmount": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yProblem": "{title}. {body}",
+  "@a11yProblem": {
+    "description": "Spec key: a11y.problem (12 §5.20) · Politeness: assertive · Notes: 12 · every S10/S15 screen and banner",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "body": {
+        "type": "String"
+      }
+    }
+  },
+  "a11yReady": "Ready for the next card",
+  "@a11yReady": {
+    "description": "Spec key: a11y.ready (12 §5.20) · Politeness: polite · Notes: 12 · return to S05"
+  },
+  "a11yScanAvailable": "Scanning available again",
+  "@a11yScanAvailable": {
+    "description": "Spec key: a11y.scanAvailable (12 §5.20) · Politeness: polite · Notes: 12 · throttle end (03b §5.2)"
+  },
+  "a11yRedeemAvailable": "Redeem available again",
+  "@a11yRedeemAvailable": {
+    "description": "Spec key: a11y.redeemAvailable (12 §5.20) · Politeness: polite · Notes: 12 · rate/velocity countdown end"
+  }
+}

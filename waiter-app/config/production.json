@@ -1,0 +1,7 @@
+{
+  "APP_ENV": "production",
+  "API_BASE_URL": "https://app.giftcardpro.at/api/v1",
+  "CARD_DOMAINS": "app.giftcardpro.at",
+  "APP_STORE_URL": "",
+  "PLAY_STORE_URL": ""
+}

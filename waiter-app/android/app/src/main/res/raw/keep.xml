@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The four feedback sounds (10 §2.5) are referenced from WaiterFeedback.kt; keep them
+     explicitly so resource shrinking in release builds never removes them. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@raw/gcw_card_detected,@raw/gcw_success,@raw/gcw_warning,@raw/gcw_error" />

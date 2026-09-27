@@ -1,0 +1,15 @@
+{
+  "name": "giftcard-pro-e2e",
+  "private": true,
+  "type": "module",
+  "description": "Acceptance tests: the first day of a pilot restaurant (browser) and the native waiter app API.",
+  "scripts": {
+    "test": "node pilot-journey.mjs",
+    "test:waiter-api": "node waiter-api.mjs",
+    "test:nfc": "node nfc-programming.mjs"
+  },
+  "dependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "playwright": "^1.63.0"
+  }
+}

@@ -1,0 +1,218 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Users;
+
+use App\Enums\RoleSlug;
+use App\Enums\UserStatus;
+use App\Exceptions\Domain\InvalidCardStateException;
+use App\Exceptions\Domain\RoleAssignmentException;
+use App\Models\Restaurant;
+use App\Models\Role;
+use App\Models\User;
+use App\Notifications\StaffInvitation;
+use App\Services\Audit\AuditLogger;
+use App\Support\Actor;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
+
+/**
+ * Staff management within a restaurant. Users are never deleted: they are deactivated,
+ * which also revokes their API tokens and terminates their sessions.
+ */
+final class UserService
+{
+    public function __construct(private readonly AuditLogger $audit) {}
+
+    /**
+     * @param  array{name: string, email: string, role: string, password?: string|null, locale?: string|null}  $data
+     */
+    public function create(Actor $actor, Restaurant $restaurant, array $data, bool $sendInvite = true): User
+    {
+        $role = Role::findBySlug(RoleSlug::from($data['role']));
+        $this->assertAssignable($actor, $role);
+
+        return DB::transaction(function () use ($actor, $restaurant, $data, $role, $sendInvite): User {
+            $user = new User;
+            $user->fill([
+                'name' => $data['name'],
+                'email' => Str::lower($data['email']),
+                'password' => $data['password'] ?? Str::password(40),
+                'locale' => $data['locale'] ?? 'en',
+            ]);
+            $user->forceFill([
+                'restaurant_id' => $restaurant->getKey(),
+                'role_id' => $role->getKey(),
+                'status' => UserStatus::Active,
+                'password_changed_at' => isset($data['password']) ? Carbon::now() : null,
+            ])->save();
+
+            $this->audit->log('user.created', $actor, $user, null, [
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $role->slug,
+            ], restaurantId: $restaurant->getKey());
+
+            if ($sendInvite && ! isset($data['password'])) {
+                $inviter = $actor->user?->name;
+                DB::afterCommit(fn () => $this->sendInvitation($user, $restaurant, $inviter));
+            }
+
+            return $user;
+        });
+    }
+
+    /**
+     * @param  array{name?: string, email?: string, role?: string, locale?: string}  $data
+     */
+    public function update(Actor $actor, User $user, array $data): User
+    {
+        $this->assertManageable($actor, $user);
+
+        return DB::transaction(function () use ($actor, $user, $data): User {
+            $old = $user->only(['name', 'email', 'locale', 'role_id']);
+
+            if (isset($data['role'])) {
+                $role = Role::findBySlug(RoleSlug::from($data['role']));
+                $this->assertAssignable($actor, $role);
+                if ($user->is($actor->user) && $role->getKey() !== $user->role_id) {
+                    throw new RoleAssignmentException('You cannot change your own role.');
+                }
+                $user->role_id = $role->getKey();
+            }
+
+            $user->fill(array_filter([
+                'name' => $data['name'] ?? null,
+                'email' => isset($data['email']) ? Str::lower($data['email']) : null,
+                'locale' => $data['locale'] ?? null,
+            ], static fn ($v): bool => $v !== null));
+
+            if ($user->isDirty()) {
+                $new = $user->getDirty();
+                $user->save();
+                $this->audit->log('user.updated', $actor, $user, array_intersect_key($old, $new), $new);
+            }
+
+            return $user->refresh()->load('role');
+        });
+    }
+
+    public function deactivate(Actor $actor, User $user): User
+    {
+        $this->assertManageable($actor, $user);
+        if ($user->is($actor->user)) {
+            throw new RoleAssignmentException('You cannot deactivate your own account.');
+        }
+        if ($user->roleSlug() === RoleSlug::Owner && $this->activeOwnerCount($user) <= 1) {
+            throw new InvalidCardStateException('A restaurant must keep at least one active owner.');
+        }
+
+        return DB::transaction(function () use ($actor, $user): User {
+            $user->forceFill(['status' => UserStatus::Inactive])->save();
+            $this->terminateAccess($user, $actor);
+            $this->audit->log('user.deactivated', $actor, $user, ['status' => UserStatus::Active], ['status' => UserStatus::Inactive]);
+
+            return $user;
+        });
+    }
+
+    public function activate(Actor $actor, User $user): User
+    {
+        $this->assertManageable($actor, $user);
+
+        $user->forceFill(['status' => UserStatus::Active, 'failed_login_attempts' => 0, 'locked_until' => null])->save();
+        $this->audit->log('user.activated', $actor, $user, ['status' => UserStatus::Inactive], ['status' => UserStatus::Active]);
+
+        return $user;
+    }
+
+    public function changePassword(Actor $actor, User $user, string $newPassword): void
+    {
+        DB::transaction(function () use ($actor, $user, $newPassword): void {
+            $user->forceFill([
+                'password' => Hash::make($newPassword),
+                'password_changed_at' => Carbon::now(),
+                'remember_token' => Str::random(60),
+            ])->save();
+
+            // Other browser sessions are signed out by Sanctum's AuthenticateSession middleware, which
+            // compares the password hash stored in each session with the new one (works for every session driver).
+            $this->audit->log('user.password_changed', $actor, $user);
+        });
+    }
+
+    /**
+     * Staff who never signed in get their invitation again; everybody else a password reset link.
+     */
+    public function sendPasswordReset(Actor $actor, User $user): void
+    {
+        $this->assertManageable($actor, $user);
+
+        if (self::isPendingInvitation($user) && $user->restaurant !== null) {
+            $this->sendInvitation($user, $user->restaurant, $actor->user?->name);
+            $this->audit->log('user.invitation_resent', $actor, $user);
+
+            return;
+        }
+
+        Password::broker()->sendResetLink(['email' => $user->email]);
+        $this->audit->log('user.password_reset_sent', $actor, $user);
+    }
+
+    /** An account whose owner never chose a password (and never signed in). */
+    public static function isPendingInvitation(User $user): bool
+    {
+        return $user->password_changed_at === null && $user->last_login_at === null;
+    }
+
+    private function sendInvitation(User $user, Restaurant $restaurant, ?string $invitedBy): void
+    {
+        $token = Password::broker('invitations')->createToken($user);
+        $user->notify(new StaffInvitation($token, $restaurant->name, $invitedBy));
+    }
+
+    private function terminateAccess(User $user, Actor $actor): void
+    {
+        // Sessions of an inactive user are rejected on the next request by ResolveTenant.
+        $user->tokens()->whereNull('revoked_at')->update(['revoked_at' => Carbon::now(), 'revoked_by' => $actor->userId()]);
+        $user->forceFill(['remember_token' => Str::random(60)])->save();
+    }
+
+    private function activeOwnerCount(User $user): int
+    {
+        return User::query()
+            ->where('restaurant_id', $user->restaurant_id)
+            ->where('status', UserStatus::Active->value)
+            ->whereHas('role', static fn ($q) => $q->where('slug', RoleSlug::Owner->value))
+            ->count();
+    }
+
+    private function assertAssignable(Actor $actor, Role $role): void
+    {
+        $user = $actor->user;
+        if ($user === null) {
+            return; // system / console
+        }
+        if ($role->slug->isPlatform() && ! $user->isPlatformAdmin()) {
+            throw new RoleAssignmentException;
+        }
+        if (! $user->isPlatformAdmin() && ! $user->canManageRole($role)) {
+            throw new RoleAssignmentException;
+        }
+    }
+
+    private function assertManageable(Actor $actor, User $target): void
+    {
+        $user = $actor->user;
+        if ($user === null || $user->isPlatformAdmin() || $user->is($target)) {
+            return;
+        }
+        if (! $user->belongsToRestaurant($target->restaurant_id) || ! $user->canManageRole($target->role)) {
+            throw new RoleAssignmentException('You are not allowed to manage this user.');
+        }
+    }
+}

@@ -1,0 +1,23 @@
+<?php
+
+declare(strict_types=1);
+
+use Illuminate\Support\Facades\Schedule;
+
+/*
+| Nightly jobs run in the restaurants' business timezone (SCHEDULE_TIMEZONE, default Europe/Vienna),
+| so "00:15" really means a quarter past midnight for the restaurants.
+*/
+$tz = (string) config('giftcard.schedule_timezone');
+
+// Expire cards whose last valid day has ended; the remaining balance is written off via the ledger.
+Schedule::command('giftcards:expire')->dailyAt('00:15')->timezone($tz)->withoutOverlapping()->onOneServer();
+
+// Remind customers N days before their card expires (once per card).
+Schedule::command('giftcards:notify-expiring')->dailyAt('10:00')->timezone($tz)->withoutOverlapping()->onOneServer();
+
+// Housekeeping.
+Schedule::command('queue:prune-failed --hours=720')->dailyAt('03:30')->timezone($tz)->onOneServer();
+Schedule::command('auth:clear-resets')->everyFifteenMinutes()->onOneServer();
+Schedule::command('queue:monitor redis:default,redis:notifications --max=500')->everyFiveMinutes()->onOneServer()
+    ->when(static fn (): bool => config('queue.default') === 'redis');

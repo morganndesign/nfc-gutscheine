@@ -1,0 +1,164 @@
+// End-to-end acceptance test: the complete first day of a pilot restaurant, in real browsers.
+//
+//   platform admin onboards a restaurant → owner accepts the invitation → owner invites a waiter →
+//   owner sells a card → waiter redeems on a phone → owner reloads, replaces the "lost" card and
+//   exports the ledger → the old card is rejected → accessibility scan of the main screens.
+//
+// Requirements: API + web app running locally with MAIL_MAILER=log and LOG_LEVEL=debug (invitation links
+// are read from the Laravel log), and a platform admin (php artisan platform:create-admin).
+// Every run creates a new restaurant with unique e-mail addresses, so it can be repeated.
+//
+//   cd e2e && npm install && ADMIN_EMAIL=… ADMIN_PASSWORD=… npm test
+import { chromium, devices } from 'playwright'
+import { AxeBuilder } from '@axe-core/playwright'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+
+const BASE = process.env.BASE_URL ?? 'http://localhost:3000'
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@giftcardpro.test'
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Password123!'
+const LOG_DIR = process.env.LARAVEL_LOG_DIR ?? new URL('../backend/storage/logs/', import.meta.url).pathname
+const run = Date.now().toString(36)
+
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {})
+const errors = []
+const step = (n, text) => console.log(`${String(n).padStart(2)}. ${text}`)
+
+async function newPage(options, who) {
+  const page = await (await browser.newContext(options)).newPage()
+  page.on('pageerror', (e) => errors.push(`${who}: ${e.message}`))
+  page.on('console', (m) => m.type() === 'error' && !/401|Failed to load resource/.test(m.text()) && errors.push(`${who}: ${m.text()}`))
+  return page
+}
+
+function invitationLink(email) {
+  const text = fs.readdirSync(LOG_DIR).filter((f) => f.endsWith('.log')).map((f) => fs.readFileSync(LOG_DIR + f, 'utf8')).join('\n')
+  const re = /reset-password\?token=([a-f0-9]{64})&(?:amp;)?email=([^&\s"\]]+)/g
+  let token = null
+  for (let m; (m = re.exec(text)); ) if (decodeURIComponent(m[2]) === email) token = m[1]
+  assert.ok(token, `invitation e-mail for ${email} not found in ${LOG_DIR}`)
+  return `${BASE}/reset-password?token=${token}&email=${encodeURIComponent(email)}&invite=1`
+}
+
+async function signIn(page, email, password) {
+  await page.goto(`${BASE}/login`)
+  await page.fill('#email', email)
+  await page.fill('#password', password)
+  await page.click('button[type=submit]')
+  await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+}
+
+async function acceptInvitation(page, email, password) {
+  await page.goto(invitationLink(email))
+  await page.getByText('Welcome to GiftCard Pro').waitFor()
+  await page.fill('#password', password)
+  await page.fill('#confirmation', password)
+  await page.click('button[type=submit]')
+  await page.waitForURL('**/login**')
+  await signIn(page, email, password)
+}
+
+const desktop = { viewport: { width: 1440, height: 900 } }
+const owner = { email: `owner-${run}@pilot.test`, password: `Owner-${run}-2026` }
+const waiter = { email: `waiter-${run}@pilot.test`, password: `Waiter-${run}-2026` }
+
+// 1. Platform admin onboards the restaurant
+const admin = await newPage(desktop, 'admin')
+await signIn(admin, ADMIN_EMAIL, ADMIN_PASSWORD)
+await admin.getByRole('button', { name: /Onboard restaurant/ }).first().click()
+await admin.fill('#r-name', `Pilot ${run}`)
+await admin.fill('#r-email', `office-${run}@pilot.test`)
+await admin.fill('#o-name', 'Olivia Owner')
+await admin.fill('#o-email', owner.email)
+await admin.getByRole('button', { name: 'Create restaurant' }).click()
+await admin.waitForURL('**/admin/restaurants/**')
+step(1, 'restaurant onboarded, owner invited')
+
+// 2. Owner accepts the invitation and sees the getting-started panel
+const o = await newPage(desktop, 'owner')
+await acceptInvitation(o, owner.email, owner.password)
+await o.getByText('Welcome to GiftCard Pro').waitFor()
+step(2, 'owner signed in; getting-started panel shown')
+
+// 3. Owner invites a waiter
+await o.goto(`${BASE}/team`)
+await o.getByRole('button', { name: /Invite/ }).first().click()
+await o.fill('#u-name', 'Walter Waiter')
+await o.fill('#u-email', waiter.email)
+await o.getByRole('button', { name: 'Send invitation' }).click()
+await o.getByText('Invited', { exact: true }).first().waitFor()
+step(3, 'waiter invited')
+
+// 4. Owner sells a €100 card to a customer and marks the tag as written
+await o.goto(`${BASE}/cards/new`)
+await o.getByRole('button', { name: /^€\s?100$/ }).click()
+await o.getByRole('radio', { name: 'New customer' }).click()
+await o.fill('#first_name', 'Klara')
+await o.fill('#email', `klara-${run}@example.com`)
+await o.getByRole('button', { name: 'Create card' }).click()
+await o.getByText('Program the card').waitFor()
+await o.getByRole('button', { name: 'Mark as written' }).click()
+await o.getByText('Card recorded', { exact: true }).waitFor()
+await o.getByRole('link', { name: 'Open card' }).click()
+await o.waitForURL(/\/cards\/[0-9a-f-]{36}$/)
+await o.getByRole('button', { name: 'More actions' }).waitFor()
+const cardNumber = (await o.locator('h1').first().textContent()).trim()
+step(4, `card sold: ${cardNumber}`)
+
+// 5. Waiter redeems €24,90 on a phone — timed
+const w = await newPage({ ...devices['Pixel 7'] }, 'waiter')
+await acceptInvitation(w, waiter.email, waiter.password)
+await w.waitForURL('**/waiter')
+const t0 = Date.now()
+await w.getByRole('button', { name: 'Card number' }).click()
+await w.getByPlaceholder('1234 5678 9012 3456').fill(cardNumber)
+await w.getByRole('button', { name: 'Find card' }).click()
+await w.getByRole('button', { name: /Full balance/ }).waitFor()
+for (const k of ['2', '4', '9', '0']) await w.getByRole('button', { name: k, exact: true }).click()
+await w.getByRole('button', { name: /^Redeem/ }).click()
+await w.getByText('Remaining balance').waitFor()
+const seconds = (Date.now() - t0) / 1000
+assert.ok(seconds < 5, `waiter flow took ${seconds}s`)
+step(5, `waiter redeemed € 24,90 in ${seconds.toFixed(2)} s (incl. typing the card number)`)
+
+// 6. Owner reloads, then replaces the lost card
+await o.reload()
+await o.getByRole('button', { name: /Reload/ }).click()
+await o.fill('#amount', '20')
+await o.getByRole('dialog').getByRole('button', { name: /Reload/ }).click()
+await o.getByText(/loaded/).first().waitFor()
+await o.getByRole('button', { name: 'More actions' }).click()
+await o.getByRole('menuitem', { name: 'Replace lost card' }).click()
+await o.getByRole('button', { name: 'Lost', exact: true }).click()
+await o.getByRole('button', { name: 'Issue replacement' }).click()
+await o.waitForURL('**write=1')
+step(6, 'reloaded € 20 and issued a replacement card')
+
+// 7. The old card is rejected at the table
+await w.getByRole('button', { name: 'Next card' }).click()
+await w.getByRole('button', { name: 'Card number' }).click()
+await w.getByPlaceholder('1234 5678 9012 3456').fill(cardNumber)
+await w.getByRole('button', { name: 'Find card' }).click()
+await w.getByText('This card was replaced').waitFor()
+step(7, 'old card shows "replaced" to the waiter')
+
+// 8. Ledger export opens in Austrian Excel (decimal comma, readable types)
+await o.goto(`${BASE}/transactions`)
+const [download] = await Promise.all([o.waitForEvent('download'), o.getByRole('button', { name: 'Export CSV' }).click()])
+const csv = fs.readFileSync(await download.path(), 'utf8')
+assert.match(csv, /;Sale;/)
+assert.match(csv, /;-24,90;/)
+step(8, `export ok (${csv.trim().split('\n').length - 1} rows)`)
+
+// 9. No accessibility violations on the owner's main screens
+for (const url of ['/dashboard', '/cards', '/transactions']) {
+  await o.goto(BASE + url)
+  await o.waitForLoadState('networkidle')
+  const { violations } = await new AxeBuilder({ page: o }).withTags(['wcag2a', 'wcag2aa']).analyze()
+  assert.deepEqual(violations.map((v) => v.id), [], `axe violations on ${url}`)
+}
+step(9, 'accessibility scan clean')
+
+await browser.close()
+assert.deepEqual(errors, [], 'browser console errors')
+console.log('\nPilot journey passed.')

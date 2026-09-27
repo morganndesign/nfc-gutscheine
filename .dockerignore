@@ -1,0 +1,16 @@
+**/.git
+**/node_modules
+**/.next
+backend/vendor
+backend/.env
+backend/storage/logs/*
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/database/database.sqlite
+docs
+releases
+signing
+assets
+waiter-app
+e2e

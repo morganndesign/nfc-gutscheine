@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  CARD_DOMAIN comes from ios/Flutter/Environment.xcconfig, written by tool/release.sh from the first
+  CARD_DOMAINS entry of config/<environment>.json (default "localhost" for local runs, see
+  Debug.xcconfig / Release.xcconfig). That domain must serve /.well-known/apple-app-site-association
+  (WAITER_IOS_APP_IDS on the server).
+-->
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:$(CARD_DOMAIN)</string>
+	</array>
+	<!-- TAG only: the app uses NFCTagReaderSession (UID + NDEF). "NDEF" is rejected by App Store
+	     Connect for iOS 13+ SDKs (ITMS-90778). -->
+	<key>com.apple.developer.nfc.readersession.formats</key>
+	<array>
+		<string>TAG</string>
+	</array>
+</dict>
+</plist>

@@ -1,0 +1,101 @@
+"use client"
+
+import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { api, ApiError, prefetchCsrfCookie, setActingRestaurant } from "@/lib/api/client"
+import { setRegional } from "@/lib/regional"
+import type { Permission, SessionUser } from "@/lib/api/types"
+
+interface AuthContextValue {
+  user: SessionUser | null
+  isLoading: boolean
+  can: (permission: Permission) => boolean
+  canAny: (...permissions: Permission[]) => boolean
+  login: (email: string, password: string, remember: boolean) => Promise<SessionUser>
+  logout: () => Promise<void>
+  refresh: () => Promise<void>
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null)
+
+export const SESSION_QUERY_KEY = ["session"] as const
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
+
+  const { data, isLoading } = useQuery({
+    queryKey: SESSION_QUERY_KEY,
+    queryFn: async () => {
+      try {
+        return (await api<{ data: SessionUser }>("/auth/me")).data
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 419)) return null
+        throw error
+      }
+    },
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
+
+  const user = data ?? null
+
+  // Format money and dates in the restaurant's locale and timezone, everywhere.
+  // Runs during render (not in an effect) so the very first paint is already correct.
+  setRegional(user?.restaurant?.locale, user?.restaurant?.timezone)
+
+  // Fetch the CSRF cookie right away so the first card scan does not pay for an extra round trip.
+  useEffect(() => {
+    if (user) void prefetchCsrfCookie()
+  }, [user])
+
+  const can = useCallback((permission: Permission) => !!user?.permissions.includes(permission), [user])
+  const canAny = useCallback((...permissions: Permission[]) => permissions.some((p) => user?.permissions.includes(p)), [user])
+
+  const login = useCallback(
+    async (email: string, password: string, remember: boolean) => {
+      const result = await api<{ data: SessionUser }>("/auth/login", { method: "POST", body: { email, password, remember } })
+      // Drop data cached for a previous user, but keep the (observed) session query itself.
+      queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_QUERY_KEY[0] })
+      queryClient.setQueryData(SESSION_QUERY_KEY, result.data)
+      return result.data
+    },
+    [queryClient],
+  )
+
+  const logout = useCallback(async () => {
+    try {
+      await api("/auth/logout", { method: "POST" })
+    } finally {
+      setActingRestaurant(null)
+      queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_QUERY_KEY[0] })
+      queryClient.setQueryData(SESSION_QUERY_KEY, null)
+    }
+  }, [queryClient])
+
+  const refresh = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
+  }, [queryClient])
+
+  const value = useMemo(() => ({ user, isLoading, can, canAny, login, logout, refresh }), [user, isLoading, can, canAny, login, logout, refresh])
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+export function useAuth(): AuthContextValue {
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>")
+  return ctx
+}
+
+/** Only same-site paths are accepted as a post-login destination (prevents open redirects like "//evil.com" or "/\\evil.com"). */
+export function safeRedirectPath(next: string | null): string | null {
+  if (!next || !/^\/(?![\/\\])[^\s\\]*$/.test(next)) return null
+  return next
+}
+
+/** Where a user lands after login, based on what they are allowed to do. */
+export function homeFor(user: SessionUser): string {
+  if (user.is_platform_admin && !user.restaurant) return "/admin"
+  if (user.permissions.includes("dashboard.view")) return "/dashboard"
+  return "/waiter"
+}

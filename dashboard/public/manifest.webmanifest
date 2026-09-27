@@ -1,0 +1,13 @@
+{
+  "name": "GiftCard Pro",
+  "short_name": "GiftCards",
+  "description": "Scan and redeem restaurant gift cards.",
+  "start_url": "/waiter",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

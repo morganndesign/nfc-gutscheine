@@ -1,0 +1,637 @@
+{
+  "$description": "GiftCard Waiter design tokens (W3C DTCG format). Source of truth: 04 Design System (Appendix A, tiers 1-2), 05 Component Library (tier 3), 06 Motion, 08 Responsive, 10 Assets, 11 Sound & Haptics. Consumed by tool/generate_tokens.dart, which validates this file and writes lib/core/tokens/tokens.g.dart. Units: dimensions are logical points (pt = dp = Flutter logical pixel) unless a string with 'px' (physical pixels) is given. Colour tokens carry {light, dark}; null means 'none' in that theme. '$extensions.highContrast' is the high-contrast override (04 §10.1), either a reference or {light, dark}; references inside an override resolve to the referenced token's normal (non-high-contrast) value. A group may carry a '$root' token so that 'color.danger' and 'color.danger.bg' can both exist; '{color.danger}' references the root. Types beyond the DTCG standard (09 §2.3): 'spring' {response s, damping ratio}, 'haptic' {ios, android.api30, android.fallback}, 'sound' {file, maxMs, loudnessLufsM, truePeakDbtp}, 'typography' is extended with textTransform and $extensions {maxScale, minSizeAfterShrink, truncate}.",
+  "$extensions": {
+    "version": "1.0.0",
+    "product": "giftcard-waiter",
+    "source": "docs/design/waiter-app 04 Appendix A (v1.0, September 2026)"
+  },
+  "color": {
+    "bg": {
+      "canvas": { "$type": "color", "$value": { "light": "#FAFAFA", "dark": "#0A0A0C" }, "$description": "Every screen background (04 §8.3)." },
+      "surface": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#141417" }, "$description": "Sheets, TextField fill, HistoryCard (light)." },
+      "raised": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#1C1C21" }, "$description": "Sheet on sheet, snackbar (dark), dialog (dark)." },
+      "key": { "$type": "color", "$value": { "light": "#F1F1F3", "dark": "#1E1E23" }, "$description": "Keys, SecondaryButton, chips, disabled button fill, skeleton base, pressed fill of TertiaryButton/IconButton/rows." },
+      "keyPressed": { "$type": "color", "$value": { "light": "#E4E4E7", "dark": "#2A2A31" }, "$description": "Pressed key, pressed SecondaryButton, pressed chip." }
+    },
+    "fg": {
+      "primary": { "$type": "color", "$value": { "light": "#18181B", "dark": "#F4F4F5" }, "$description": "Text, icons, amounts." },
+      "secondary": { "$type": "color", "$value": { "light": "#52525B", "dark": "#A1A1AA" }, "$description": "Secondary text, inactive icons, banner body.", "$extensions": { "highContrast": "{color.fg.primary}" } },
+      "tertiary": { "$type": "color", "$value": { "light": "#71717A", "dark": "#8B8B94" }, "$description": "Meta, placeholders, timestamps, disabled labels. Never on bg.key (4.28 : 1 light).", "$extensions": { "highContrast": "{color.fg.secondary}" } },
+      "onAccent": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#0A0A0C" }, "$description": "Label/icon on action.primary." },
+      "onDanger": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#0A0A0C" }, "$description": "➕ DangerButton label (04 §8.4)." },
+      "onSuccess": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#0A0A0C" }, "$description": "➕ Check inside SuccessMark (13 · R22)." }
+    },
+    "border": {
+      "subtle": { "$type": "color", "$value": { "light": "#E4E4E7", "dark": "#26262B" }, "$description": "Dividers, dark-mode outlines. Decorative only.", "$extensions": { "highContrast": "{color.border.strong}" } },
+      "strong": { "$type": "color", "$value": { "light": "#A1A1AA", "dark": "#3F3F46" }, "$description": "Grabber, focus-ring base track. Not a stand-alone input boundary." },
+      "control": { "$type": "color", "$value": { "light": "#8A8A93", "dark": "#71717A" }, "$description": "➕ Resting boundary of TextField/CardNumberField (≥ 3 : 1, 13 · R06)." }
+    },
+    "action": {
+      "primary": { "$type": "color", "$value": { "light": "#18181B", "dark": "#F4F4F5" }, "$description": "PrimaryButton / HoldButton fill." },
+      "primaryPressed": { "$type": "color", "$value": { "light": "#27272A", "dark": "#D4D4D8" }, "$description": "Pressed PrimaryButton." }
+    },
+    "brand": {
+      "ink": { "$type": "color", "$value": { "light": "#0F172A", "dark": "#0F172A" }, "$description": "Default and fallback BalanceCard colour (04 §8.6)." }
+    },
+    "accent": {
+      "saffron": { "$type": "color", "$value": { "light": "#E8A33D", "dark": "#F0B454" }, "$description": "NFC arcs, hold ring (light), focus accent, snackbar action. Never text on light." },
+      "saffronText": { "$type": "color", "$value": { "light": "#B45309", "dark": "#F0B454" }, "$description": "Saffron as text on light (rare)." }
+    },
+    "success": {
+      "$root": { "$type": "color", "$value": { "light": "#047857", "dark": "#34D399" }, "$description": "Money moved, active status." },
+      "bg": { "$type": "color", "$value": { "light": "#ECFDF5", "dark": "#052E22" } }
+    },
+    "danger": {
+      "$root": { "$type": "color", "$value": { "light": "#B91C1C", "dark": "#F87171" }, "$description": "Blocked, errors, over-balance." },
+      "bg": { "$type": "color", "$value": { "light": "#FEF2F2", "dark": "#2A0E0E" } },
+      "pressed": { "$type": "color", "$value": { "light": "#991B1B", "dark": "#EF4444" }, "$description": "➕ Pressed DangerButton." }
+    },
+    "warning": {
+      "$root": { "$type": "color", "$value": { "light": "#B45309", "dark": "#FBBF24" }, "$description": "Expired, inactive, zero balance, maintenance." },
+      "bg": { "$type": "color", "$value": { "light": "#FFFBEB", "dark": "#2A1E06" } }
+    },
+    "info": {
+      "$root": { "$type": "color", "$value": { "light": "#1D4ED8", "dark": "#93C5FD" }, "$description": "Offline, neutral tips." },
+      "bg": { "$type": "color", "$value": { "light": "#EFF6FF", "dark": "#0B1A33" } }
+    },
+    "scrim": { "$type": "color", "$value": { "light": "rgba(10,10,12,0.48)", "dark": "rgba(0,0,0,0.64)" }, "$description": "Behind sheets and dialogs.", "$extensions": { "highContrast": { "light": "rgba(10,10,12,0.64)", "dark": "rgba(0,0,0,0.72)" } } },
+    "focus": {
+      "ring": { "$type": "color", "$value": { "light": "#18181B", "dark": "#F0B454" }, "$description": "➕ 2-pt focus ring (13 · R17)." },
+      "accent": { "$type": "color", "$value": { "light": "#E8A33D", "dark": null }, "$description": "➕ Light-theme decorative outer band on focus; none in dark." }
+    },
+    "hold": {
+      "progress": { "$type": "color", "$value": { "light": "#E8A33D", "dark": "#B45309" }, "$description": "➕ HoldButton ring progress (13 · R05)." },
+      "track": { "$type": "color", "$value": { "light": "#4F4F52", "dark": "#CFCFD0" }, "$description": "➕ HoldButton ring track (onAccent 24 % / 16 % composited on primary)." }
+    },
+    "inverse": {
+      "bg": { "$type": "color", "$value": { "light": "#18181B", "dark": "#1C1C21" }, "$description": "➕ Snackbar background." },
+      "fg": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#F4F4F5" }, "$description": "➕ Snackbar text." },
+      "action": { "$type": "color", "$value": { "light": "#E8A33D", "dark": "#F0B454" }, "$description": "➕ Snackbar action label." }
+    },
+    "card": {
+      "borderDark": { "$type": "color", "$value": { "light": null, "dark": "#26262B" }, "$description": "➕ BalanceCard outline in dark mode; none in light." }
+    },
+    "skeleton": {
+      "base": { "$type": "color", "$value": { "light": "#F1F1F3", "dark": "#1E1E23" }, "$description": "➕ Skeleton shapes (= bg.key)." },
+      "highlight": { "$type": "color", "$value": { "light": "#E0E0E2", "dark": "#2F2F34" }, "$description": "➕ Skeleton sweep band (8 % highlight)." }
+    },
+    "state": {
+      "hover": { "$type": "color", "$value": { "light": "rgba(24,24,27,0.04)", "dark": "rgba(244,244,245,0.04)" }, "$description": "➕ Pointer hover overlay." },
+      "pressedOverlay": { "$type": "color", "$value": { "light": "rgba(24,24,27,0.08)", "dark": "rgba(244,244,245,0.08)" }, "$description": "➕ Pressed overlay where no *Pressed token exists." }
+    },
+    "nfc": {
+      "arc": {
+        "hc": { "$type": "color", "$value": { "light": "#B45309", "dark": "#F0B454" }, "$description": "➕ NFC arcs in high-contrast mode (04 §10.1)." }
+      }
+    },
+    "camera": {
+      "overlay": { "$type": "color", "$value": { "light": "rgba(0,0,0,0.56)", "dark": "rgba(0,0,0,0.56)" }, "$description": "➕ S12 viewfinder mask." }
+    }
+  },
+  "type": {
+    "amount": {
+      "xl": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 64, "lineHeight": 68, "letterSpacing": "-2.5%", "fontFeatures": ["tnum"] }, "$description": "Amount being typed (S07, S08).", "$extensions": { "maxScale": 1.3, "minSizeAfterShrink": 40, "truncate": false } },
+      "l": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 48, "lineHeight": 52, "letterSpacing": "-2%", "fontFeatures": ["tnum"] }, "$description": "Success amount (S09).", "$extensions": { "maxScale": 1.3, "minSizeAfterShrink": 40, "truncate": false } }
+    },
+    "balance": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 40, "lineHeight": 44, "letterSpacing": "-2%", "fontFeatures": ["tnum"] }, "$description": "Balance on BalanceCard.", "$extensions": { "maxScale": 1.3, "minSizeAfterShrink": 40, "truncate": false } },
+    "title": {
+      "l": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 28, "lineHeight": 34, "letterSpacing": "-1%", "fontFeatures": ["tnum"] }, "$description": "Screen titles (S02, S10, S15, S16).", "$extensions": { "maxScale": 1.5 } },
+      "m": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 22, "lineHeight": 28, "letterSpacing": "-0.5%", "fontFeatures": ["tnum"] }, "$description": "Sheet titles, restaurant name on BalanceCard, dialog titles.", "$extensions": { "maxScale": 1.5 } }
+    },
+    "body": {
+      "l": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 400, "fontSize": 17, "lineHeight": 24, "letterSpacing": "0%", "fontFeatures": ["tnum"] }, "$description": "Primary body, Ready instruction, row primary text.", "$extensions": { "maxScale": 2.0 } },
+      "m": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 400, "fontSize": 15, "lineHeight": 22, "letterSpacing": "0%", "fontFeatures": ["tnum"] }, "$description": "Secondary body, banner body, inline messages.", "$extensions": { "maxScale": 2.0 } }
+    },
+    "label": {
+      "$root": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 15, "lineHeight": 20, "letterSpacing": "0%", "fontFeatures": ["tnum"] }, "$description": "Regular buttons, chips, snackbar action.", "$extensions": { "maxScale": 2.0 } },
+      "l": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 17, "lineHeight": 22, "letterSpacing": "0%", "fontFeatures": ["tnum"] }, "$description": "➕ Large buttons (64 pt CTA).", "$extensions": { "maxScale": 2.0 } }
+    },
+    "caption": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 500, "fontSize": 13, "lineHeight": 18, "letterSpacing": "0.5%", "fontFeatures": ["tnum"] }, "$description": "Meta, masked card number, badges, timestamps.", "$extensions": { "maxScale": 2.0 } },
+    "overline": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 11, "lineHeight": 14, "letterSpacing": "8%", "fontFeatures": ["tnum"], "textTransform": "uppercase" }, "$description": "'GIFT CARD' on BalanceCard, section overlines in sheets.", "$extensions": { "maxScale": 1.3 } },
+    "key": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 500, "fontSize": 30, "lineHeight": 36, "letterSpacing": "0%", "fontFeatures": ["tnum"] }, "$description": "Keypad digits.", "$extensions": { "maxScale": 1.2 } },
+    "cardNumber": { "$type": "typography", "$value": { "fontFamily": "GeistMono", "fontWeight": 500, "fontSize": 24, "lineHeight": 32, "letterSpacing": "2%", "fontFeatures": ["tnum"] }, "$description": "➕ CardNumberField (S11) only.", "$extensions": { "maxScale": 1.3, "minSizeAfterShrink": 20, "truncate": false } },
+    "currency": {
+      "xl": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 38, "lineHeight": 68, "letterSpacing": "-1%", "fontFeatures": ["tnum"] }, "$description": "➕ Currency symbol inside type.amount.xl (60 % of 64), baseline-aligned.", "$extensions": { "maxScale": 1.3, "truncate": false } },
+      "l": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 29, "lineHeight": 52, "letterSpacing": "-1%", "fontFeatures": ["tnum"] }, "$description": "➕ Currency symbol inside type.amount.l (60 % of 48).", "$extensions": { "maxScale": 1.3, "truncate": false } },
+      "balance": { "$type": "typography", "$value": { "fontFamily": "Geist", "fontWeight": 600, "fontSize": 24, "lineHeight": 44, "letterSpacing": "-1%", "fontFeatures": ["tnum"] }, "$description": "➕ Currency symbol inside type.balance (60 % of 40).", "$extensions": { "maxScale": 1.3, "truncate": false } },
+      "ratio": { "$type": "number", "$value": 0.6, "$description": "➕ Currency symbol size as a fraction of the amount size (04 §3.4)." },
+      "gap": {
+        "spaced": { "$type": "number", "$value": 0.16, "$description": "➕ Symbol gap in em of the amount size — de-AT, de-DE, de-CH." },
+        "tight": { "$type": "number", "$value": 0.04, "$description": "➕ Symbol gap in em of the amount size — en-GB, en-US." }
+      }
+    },
+    "shrinkStep": { "$type": "dimension", "$value": 2, "$description": "Shrink-to-fit steps down in 2-pt steps (04 §3.7)." }
+  },
+  "space": {
+    "0": { "$type": "dimension", "$value": 0 },
+    "1": { "$type": "dimension", "$value": 4 },
+    "2": { "$type": "dimension", "$value": 8 },
+    "3": { "$type": "dimension", "$value": 12 },
+    "4": { "$type": "dimension", "$value": 16 },
+    "5": { "$type": "dimension", "$value": 20 },
+    "6": { "$type": "dimension", "$value": 24 },
+    "8": { "$type": "dimension", "$value": 32 },
+    "10": { "$type": "dimension", "$value": 40 },
+    "12": { "$type": "dimension", "$value": 48 },
+    "16": { "$type": "dimension", "$value": 64 }
+  },
+  "layout": {
+    "margin": {
+      "compact": { "$type": "dimension", "$value": "{space.5}", "$description": "Width < 400 pt (04 §4.2; 08 W-compact and W-standard)." },
+      "regular": { "$type": "dimension", "$value": "{space.6}", "$description": "Width 400–599 pt (08 W-large)." },
+      "tablet": { "$type": "dimension", "$value": "{space.8}", "$description": "Width ≥ 600 pt." }
+    },
+    "widthClass": {
+      "standard": { "$type": "dimension", "$value": 360, "$description": "Lower bound of W-standard (08 §1.1)." },
+      "regular": { "$type": "dimension", "$value": 400, "$description": "Lower bound of regular width / W-large (04 §4.2, 08 §1.1)." },
+      "tablet": { "$type": "dimension", "$value": 600, "$description": "Lower bound of tablet width (04 §4.2, 08 §1.1)." }
+    },
+    "grid": {
+      "phoneColumns": { "$type": "number", "$value": 4, "$description": "04 §4.2." },
+      "phoneGutter": { "$type": "dimension", "$value": "{space.2}", "$description": "04 §4.2." },
+      "tabletColumns": { "$type": "number", "$value": 8, "$description": "04 §4.2." },
+      "tabletGutter": { "$type": "dimension", "$value": "{space.4}", "$description": "04 §4.2." }
+    },
+    "maxContent": {
+      "tablet": { "$type": "dimension", "$value": 560, "$description": "➕ Single-column tablet screens (04 §4.2, A.3)." }
+    },
+    "textMeasure": {
+      "tablet": { "$type": "dimension", "$value": 480, "$description": "➕ Tablet body text column (04 §3.5, A.3)." },
+      "centred": { "$type": "dimension", "$value": 320, "$description": "Centred block column: S10, EmptyState, S09, Splash (04 §3.5)." }
+    },
+    "maxForm": { "$type": "dimension", "$value": 400, "$description": "Max form width S02/S11 (08 §2)." },
+    "maxSheet": { "$type": "dimension", "$value": 560, "$description": "Max sheet width on tablets (08 §2)." },
+    "maxKeypad": { "$type": "dimension", "$value": 400, "$description": "Keypad max width (05 §2.1, 08 §2)." },
+    "compactHeight": { "$type": "dimension", "$value": 700, "$description": "Window heights below this are compact (04 §4.3, 08 §1.2)." },
+    "minWindow": {
+      "width": { "$type": "dimension", "$value": 320, "$description": "08 §1.3." },
+      "height": { "$type": "dimension", "$value": 568, "$description": "08 §1.3." }
+    },
+    "ctaBottom": {
+      "withHomeIndicator": { "$type": "dimension", "$value": "{space.4}", "$description": "CTA block bottom padding on devices with a home indicator / gesture bar (04 §4.4)." },
+      "withoutHomeIndicator": { "$type": "dimension", "$value": "{space.5}", "$description": "CTA block bottom padding on devices without (04 §4.4)." }
+    },
+    "gapBeforeCta": { "$type": "dimension", "$value": "{space.8}", "$description": "Minimum free space above the CTA block (04 §4.4)." },
+    "edgeNoTouch": { "$type": "dimension", "$value": 16, "$description": "iOS: nothing interactive within 16 pt of the side edges except full-width buttons (04 §4.5)." }
+  },
+  "radius": {
+    "xs": { "$type": "dimension", "$value": 8 },
+    "s": { "$type": "dimension", "$value": 12 },
+    "m": { "$type": "dimension", "$value": 16 },
+    "l": { "$type": "dimension", "$value": 20 },
+    "xl": { "$type": "dimension", "$value": 28 },
+    "sheet": { "$type": "dimension", "$value": 32 },
+    "full": { "$type": "dimension", "$value": 999 },
+    "continuousMin": { "$type": "dimension", "$value": 16, "$description": "iOS: radii ≥ 16 pt render as continuous corners (04 §5.2)." }
+  },
+  "border": {
+    "width": {
+      "hairline": { "$type": "dimension", "$value": "1px", "$description": "➕ 1 physical pixel = 1 / devicePixelRatio pt (04 §7)." },
+      "default": { "$type": "dimension", "$value": 1, "$description": "➕ TextField at rest, HC outlines." },
+      "focus": {
+        "$root": { "$type": "dimension", "$value": 2, "$description": "➕ Focus ring, focused/error inputs." },
+        "hc": { "$type": "dimension", "$value": 3, "$description": "➕ Focus ring in high contrast." }
+      },
+      "control": {
+        "hc": { "$type": "dimension", "$value": 2, "$description": "➕ Input boundary in high contrast (04 §10.1)." }
+      }
+    }
+  },
+  "focus": {
+    "offset": { "$type": "dimension", "$value": 2, "$description": "➕ Ring drawn outside with 2-pt offset (04 §13.1)." }
+  },
+  "size": {
+    "target": {
+      "min": { "$type": "dimension", "$value": 56, "$description": "56 × 56 pt (brief)." }
+    },
+    "button": {
+      "l": { "$type": "dimension", "$value": 64, "$description": "Large button height.", "$extensions": { "compactHeight": 56 } },
+      "m": { "$type": "dimension", "$value": 56, "$description": "Regular button height." }
+    },
+    "key": {
+      "$root": { "$type": "dimension", "$value": 72, "$description": "Keypad key height.", "$extensions": { "compactHeight": 64 } },
+      "gap": { "$type": "dimension", "$value": 8, "$description": "Keypad gap (≥ 8)." }
+    },
+    "topBar": { "$type": "dimension", "$value": 56, "$description": "+ safe area." },
+    "chip": {
+      "$root": { "$type": "dimension", "$value": 40, "$description": "QuickAmountChip visual height." },
+      "target": { "$type": "dimension", "$value": 56, "$description": "QuickAmountChip target height." }
+    },
+    "badge": { "$type": "dimension", "$value": 24 },
+    "field": { "$type": "dimension", "$value": 56, "$description": "TextField container." },
+    "cardNumberField": { "$type": "dimension", "$value": 64 },
+    "row": { "$type": "dimension", "$value": 64, "$description": "TransactionRow min height." },
+    "avatar": {
+      "m": { "$type": "dimension", "$value": 40 },
+      "l": { "$type": "dimension", "$value": 56 }
+    },
+    "iconButton": {
+      "fill": { "$type": "dimension", "$value": 44, "$description": "Pressed fill circle." }
+    },
+    "grabber": {
+      "width": { "$type": "dimension", "$value": 36 },
+      "height": { "$type": "dimension", "$value": 5 }
+    },
+    "snackbar": {
+      "min": { "$type": "dimension", "$value": 56 }
+    },
+    "spinner": {
+      "s": { "$type": "dimension", "$value": 20, "$extensions": { "stroke": 2 } },
+      "l": { "$type": "dimension", "$value": 32, "$extensions": { "stroke": 3 } }
+    },
+    "ring": {
+      "hold": { "$type": "dimension", "$value": 28, "$extensions": { "stroke": 3 } },
+      "countdown": { "$type": "dimension", "$value": 48, "$extensions": { "stroke": 3 } }
+    },
+    "successMark": { "$type": "dimension", "$value": 96 },
+    "hairline": {
+      "countdown": { "$type": "dimension", "$value": 2 }
+    },
+    "nfc": {
+      "canvas": {
+        "width": { "$type": "dimension", "$value": 176, "$description": "Glow may overflow (04 A.4, 05 §3.4)." },
+        "height": { "$type": "dimension", "$value": 120 }
+      },
+      "arc": {
+        "r1": { "$type": "dimension", "$value": 36, "$description": "Inner arc radius." },
+        "r2": { "$type": "dimension", "$value": 56, "$description": "Middle arc radius." },
+        "r3": { "$type": "dimension", "$value": 76, "$description": "Outer arc radius." },
+        "stroke": { "$type": "dimension", "$value": 3 },
+        "sweep": { "$type": "number", "$value": 100, "$description": "Degrees, centred on 12 o'clock." }
+      }
+    },
+    "balanceCard": {
+      "maxHeight": { "$type": "dimension", "$value": 220, "$description": "Phones (brief)." },
+      "compact": { "$type": "dimension", "$value": 88, "$description": "BalanceCard / compact strip (13 · R11)." }
+    }
+  },
+  "icon": {
+    "16": { "$type": "dimension", "$value": 16, "$extensions": { "stroke": 1.5 }, "$description": "StatusBadge, inline message icon, row chevrons, chips." },
+    "20": { "$type": "dimension", "$value": 20, "$extensions": { "stroke": 1.75 }, "$description": "Regular buttons, Banner, Snackbar leading icon." },
+    "24": { "$type": "dimension", "$value": 24, "$extensions": { "stroke": 1.75 }, "$description": "Default: TopBar IconButtons, large buttons, StatusBanner, keypad delete." },
+    "32": { "$type": "dimension", "$value": 32, "$extensions": { "stroke": 2.0 }, "$description": "BalanceCard NFC glyph, NfcScanAnimation centre glyph." },
+    "48": { "$type": "dimension", "$value": 48, "$extensions": { "stroke": 2.5 }, "$description": "ProblemScreen icon, S16 permission states." },
+    "grid": { "$type": "dimension", "$value": 24, "$description": "Icon master viewBox (10 §3.1)." }
+  },
+  "illustration": {
+    "problem": { "$type": "dimension", "$value": 120, "$description": "S10, S15 (10 §4.3).", "$extensions": { "compactHeight": 96 } },
+    "empty": { "$type": "dimension", "$value": 96, "$description": "S13 Recent empty state (10 §4.3)." },
+    "intro": { "$type": "dimension", "$value": 160, "$description": "S17 intro (10 §4.3, 13 · R04).", "$extensions": { "compactHeight": 120 } },
+    "stroke": { "$type": "dimension", "$value": 1.75, "$description": "Monoline stroke at the rendered size (10 §4.2)." },
+    "strokeHcExtra": { "$type": "dimension", "$value": 0.25, "$description": "High contrast: stroke +0.25 pt (10 §4.5)." },
+    "hideAtTextScale": { "$type": "number", "$value": 1.5, "$description": "Problem screens hide the illustration at text size ≥ 150 % (10 §4.3)." }
+  },
+  "elev": {
+    "0": { "$type": "shadow", "$value": { "light": [], "dark": { "surfaceStep": null, "border": null } }, "$description": "Everything flat." },
+    "1": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 1, "blur": 2, "spread": 0, "color": "rgba(0,0,0,0.04)" }], "dark": { "surfaceStep": "{color.bg.surface}", "border": "{color.border.subtle}" } }, "$description": "HistoryCard, Avatar on imagery. Dark: surface step 1 + hairline (04 §6.2)." },
+    "2": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 4, "blur": 16, "spread": 0, "color": "rgba(0,0,0,0.08)" }], "dark": { "surfaceStep": "{color.bg.raised}", "border": "{color.border.subtle}" } }, "$description": "Desaturated BalanceCard, skeleton, Dialog. Dark: surface step 2 + hairline." },
+    "3": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 12, "blur": 32, "spread": 0, "color": "rgba(0,0,0,0.12)" }], "dark": { "surfaceStep": "{color.bg.surface}", "border": "{color.border.subtle}" } }, "$description": "BottomSheet (cast upward: 0 −12 32), Snackbar. Dark: sheet surface + hairline.", "$extensions": { "upward": true } },
+    "card-brand": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 16, "blur": 40, "spread": 0, "color": "brand", "alpha": 0.28 }], "dark": { "surfaceStep": null, "border": "{color.card.borderDark}" } }, "$description": "BalanceCard brand glow: original brand colour at 28 % (light only); dark: no shadow, 1-px card.borderDark." }
+  },
+  "opacity": {
+    "disabled": { "$type": "number", "$value": 0.40, "$description": "➕ Disabled groups only." },
+    "cardSecondary": { "$type": "number", "$value": 0.76, "$description": "➕ Secondary text on BalanceCard if still ≥ 4.5 : 1." },
+    "placeholder": { "$type": "number", "$value": 1.00, "$description": "➕ Placeholders use fg.tertiary at full opacity." },
+    "pressedOverlay": { "$type": "number", "$value": 0.08 },
+    "hover": { "$type": "number", "$value": 0.04 },
+    "holdTrack": {
+      "light": { "$type": "number", "$value": 0.24 },
+      "dark": { "$type": "number", "$value": 0.16 }
+    },
+    "skeletonPlaceholder": {
+      "card": { "$type": "number", "$value": 0.16, "$description": "➕ Placeholder bars on a brand-coloured skeleton card." }
+    },
+    "skeletonHighlight": { "$type": "number", "$value": 0.08 },
+    "spinnerTrack": { "$type": "number", "$value": 0.16, "$description": "Spinner track = current colour at 16 % (04 §17.2)." },
+    "nfc": {
+      "idle": {
+        "inner": { "$type": "number", "$value": 0.80 },
+        "middle": { "$type": "number", "$value": 0.56 },
+        "outer": { "$type": "number", "$value": 0.32 }
+      }
+    }
+  },
+  "z": {
+    "content": { "$type": "number", "$value": 0 },
+    "chrome": { "$type": "number", "$value": 10 },
+    "scrim": { "$type": "number", "$value": 20 },
+    "sheet": { "$type": "number", "$value": 30 },
+    "sheetStacked": { "$type": "number", "$value": 40 },
+    "snackbar": { "$type": "number", "$value": 45 },
+    "dialog": { "$type": "number", "$value": 50 }
+  },
+  "motion": {
+    "duration": {
+      "instant": { "$type": "duration", "$value": "90ms" },
+      "fast": { "$type": "duration", "$value": "160ms" },
+      "base": { "$type": "duration", "$value": "240ms" },
+      "slow": { "$type": "duration", "$value": "360ms" },
+      "emphasis": { "$type": "duration", "$value": "520ms" }
+    },
+    "ease": {
+      "standard": { "$type": "cubicBezier", "$value": [0.2, 0, 0, 1], "$description": "Default for everything that moves and stays." },
+      "decelerate": { "$type": "cubicBezier", "$value": [0, 0, 0, 1], "$description": "Entering elements, release." },
+      "accelerate": { "$type": "cubicBezier", "$value": [0.3, 0, 1, 1], "$description": "Leaving elements." }
+    },
+    "spring": {
+      "card": { "$type": "spring", "$value": { "response": 0.42, "damping": 0.82 }, "$description": "BalanceCard arrival, SuccessMark halo (13 · R10)." },
+      "soft": { "$type": "spring", "$value": { "response": 0.55, "damping": 0.9 }, "$description": "Sheets, snackbar." }
+    },
+    "pressScale": {
+      "key": { "$type": "number", "$value": 0.96, "$description": "13 · R20." },
+      "button": { "$type": "number", "$value": 0.98, "$description": "13 · R20." },
+      "chip": { "$type": "number", "$value": 0.97, "$description": "13 · R20." }
+    }
+  },
+  "time": {
+    "feedbackDelay": { "$type": "duration", "$value": "150ms", "$description": "Skeleton / spinner only after 150 ms." },
+    "lookupSlow": { "$type": "duration", "$value": "3000ms", "$description": "'Still looking…'." },
+    "lookupTimeout": { "$type": "duration", "$value": "10000ms", "$description": "Network error." },
+    "redeemSlow": { "$type": "duration", "$value": "8000ms", "$description": "'Connection slow', automatic idempotent retry." },
+    "hold": { "$type": "duration", "$value": "600ms" },
+    "longPressClear": { "$type": "duration", "$value": "500ms", "$description": "Keypad delete long-press." },
+    "successReturn": { "$type": "duration", "$value": "4000ms" },
+    "cardSwap": { "$type": "duration", "$value": "300ms", "$description": "Android new-card cross-fade." },
+    "snackbar": { "$type": "duration", "$value": "4000ms" },
+    "skeletonSweep": { "$type": "duration", "$value": "1200ms", "$description": "Linear." },
+    "spinnerTurn": { "$type": "duration", "$value": "800ms", "$description": "One revolution, linear." },
+    "minIndicator": { "$type": "duration", "$value": "240ms", "$description": "An indicator, once shown, stays at least this long." }
+  },
+  "haptic": {
+    "$description": "Haptic tokens (04 §16, platform mapping authoritative in 11 §2.1, §5). Rules (11 T5/T6): keys coalesce to at most one per 50 ms; two different haptics < 80 ms apart → the later, higher-severity one wins.",
+    "$extensions": { "keyCoalesceMs": 50, "minSpacingMs": 80 },
+    "key": { "$type": "haptic", "$value": { "severity": 0, "ios": { "generator": "impact", "style": "light", "intensities": [0.5] }, "android": { "api30": { "constants": ["KEYBOARD_TAP"] }, "fallback": { "constants": ["KEYBOARD_TAP"] } } }, "$description": "An input registered (keypad touch-down)." },
+    "select": { "$type": "haptic", "$value": { "severity": 1, "ios": { "generator": "selection" }, "android": { "api30": { "constants": ["CLOCK_TICK"] }, "fallback": { "constants": ["CLOCK_TICK"] } } }, "$description": "A choice/selection changed." },
+    "cardDetected": { "$type": "haptic", "$value": { "severity": 2, "ios": { "generator": "impact", "style": "medium", "intensities": [1.0] }, "android": { "api30": { "constants": ["CONFIRM"] }, "fallback": { "oneShot": { "durationMs": 20, "amplitude": 180 } } } }, "$description": "A card was read. Paired with sound.cardDetected." },
+    "success": { "$type": "haptic", "$value": { "severity": 3, "ios": { "generator": "notification", "type": "success" }, "android": { "api30": { "constants": ["CONFIRM"], "waveform": { "timings": [0, 20, 60, 30], "amplitudes": [0, 160, 0, 255] }, "waveformDelayMs": 40 }, "fallback": { "waveform": { "timings": [0, 20, 60, 30], "amplitudes": [0, 160, 0, 255] } } } }, "$description": "Money moved. Paired with sound.success." },
+    "warning": { "$type": "haptic", "$value": { "severity": 4, "ios": { "generator": "notification", "type": "warning" }, "android": { "api30": { "waveform": { "timings": [0, 30, 80, 30], "amplitudes": [0, 200, 0, 200] } }, "fallback": { "waveform": { "timings": [0, 30, 80, 30], "amplitudes": [0, 200, 0, 200] } } } }, "$description": "Attention, recoverable." },
+    "error": { "$type": "haptic", "$value": { "severity": 5, "ios": { "generator": "notification", "type": "error" }, "android": { "api30": { "constants": ["REJECT"] }, "fallback": { "waveform": { "timings": [0, 40, 60, 40, 60, 40], "amplitudes": [0, 255, 0, 255, 0, 255] } } } }, "$description": "Failed / blocked." },
+    "holdTick": { "$type": "haptic", "$value": { "severity": 1, "ios": { "generator": "impact", "style": "rigid", "intensities": [0.5, 0.7, 1.0] }, "android": { "api30": { "constants": ["CLOCK_TICK", "CLOCK_TICK", "CONFIRM"] }, "fallback": { "constants": ["CLOCK_TICK", "CLOCK_TICK", "CLOCK_TICK"] } }, "stepsMs": [200, 400, 600] }, "$description": "HoldButton at 33 / 66 / 100 % (step index selects intensity / constant)." }
+  },
+  "sound": {
+    "$description": "Sound tokens (04 §16, 11 §2.2, §6). Files: iOS ios/Runner/Sounds/<file>.caf (16-bit LPCM, 48 kHz mono), Android res/raw/<file>.ogg (Vorbis q6, 48 kHz mono). True peak ≤ −1 dBTP.",
+    "cardDetected": { "$type": "sound", "$value": { "file": "gcw_card_detected", "maxMs": 60, "loudnessLufsM": -22, "truePeakDbtp": -1 }, "$description": "Single soft glass tick, 1.6 kHz." },
+    "success": { "$type": "sound", "$value": { "file": "gcw_success", "maxMs": 280, "loudnessLufsM": -18, "truePeakDbtp": -1 }, "$description": "Two-note rising chime E6 → B6 — the signature." },
+    "warning": { "$type": "sound", "$value": { "file": "gcw_warning", "maxMs": 150, "loudnessLufsM": -20, "truePeakDbtp": -1 }, "$description": "Single mid tone 660 Hz." },
+    "error": { "$type": "sound", "$value": { "file": "gcw_error", "maxMs": 240, "loudnessLufsM": -20, "truePeakDbtp": -1 }, "$description": "Two low tones 330 Hz, 2 × 90 ms, 60 ms gap." }
+  },
+  "button": {
+    "$description": "Tier 3 — 05 §1.0 shared button rules.",
+    "$extensions": { "tier": 3 },
+    "large": {
+      "height": { "$type": "dimension", "$value": "{size.button.l}" },
+      "radius": { "$type": "dimension", "$value": "{radius.l}" },
+      "paddingHorizontal": { "$type": "dimension", "$value": "{space.6}" },
+      "iconGap": { "$type": "dimension", "$value": "{space.2}" }
+    },
+    "regular": {
+      "height": { "$type": "dimension", "$value": "{size.button.m}" },
+      "radius": { "$type": "dimension", "$value": "{radius.m}" },
+      "paddingHorizontal": { "$type": "dimension", "$value": "{space.5}" },
+      "iconGap": { "$type": "dimension", "$value": "{space.2}" },
+      "minWidth": { "$type": "dimension", "$value": 120 }
+    },
+    "labelPaddingVerticalMin": { "$type": "dimension", "$value": "{space.3}", "$description": "Wrapped labels: min 12 pt top/bottom." },
+    "stackGap": { "$type": "dimension", "$value": "{space.3}" },
+    "sideBySideGap": { "$type": "dimension", "$value": "{space.2}" },
+    "cancelSlop": { "$type": "dimension", "$value": 16, "$description": "A touch that moves > 16 pt outside cancels the press." },
+    "tertiary": {
+      "pressedFillHeight": { "$type": "dimension", "$value": "{size.iconButton.fill}" },
+      "radius": { "$type": "dimension", "$value": "{radius.m}" },
+      "paddingHorizontal": { "$type": "dimension", "$value": "{space.4}" },
+      "minWidth": { "$type": "dimension", "$value": 120 }
+    }
+  },
+  "holdButton": {
+    "$description": "Tier 3 — 05 §1.5.",
+    "$extensions": { "tier": 3 },
+    "ringInset": { "$type": "dimension", "$value": "{space.5}", "$description": "Ring leading inset (centre 34 pt from the leading edge)." },
+    "labelPaddingHorizontal": { "$type": "dimension", "$value": 60 },
+    "lineGap": { "$type": "dimension", "$value": 2 },
+    "captionOpacity": { "$type": "number", "$value": 0.72, "$description": "Line 2 in fg.onAccent at 72 %." },
+    "disabledTrackOpacity": { "$type": "number", "$value": 0.24, "$description": "Disabled ring track: fg.tertiary at 24 %." },
+    "slop": { "$type": "dimension", "$value": 12, "$description": "Hold cancelled when the finger leaves by more than 12 pt (13 · R21)." },
+    "tapTeachThreshold": { "$type": "duration", "$value": "250ms", "$description": "A press shorter than this emphasises line 2." },
+    "tapTeachDuration": { "$type": "duration", "$value": "1200ms" },
+    "thresholdCents": { "$type": "number", "$value": 10000, "$description": "holdToConfirmThresholdCents (€ 100,00)." }
+  },
+  "iconButton": {
+    "$description": "Tier 3 — 05 §1.6.",
+    "$extensions": { "tier": 3 },
+    "target": { "$type": "dimension", "$value": "{size.target.min}" },
+    "fill": { "$type": "dimension", "$value": "{size.iconButton.fill}" },
+    "marginInset": { "$type": "dimension", "$value": 16, "$description": "Target edge at margin − 16 pt." }
+  },
+  "keypad": {
+    "$description": "Tier 3 — 05 §2.1.",
+    "$extensions": { "tier": 3 },
+    "key": {
+      "height": { "$type": "dimension", "$value": "{size.key}", "$extensions": { "compactHeight": 64 } },
+      "radius": { "$type": "dimension", "$value": "{radius.l}" }
+    },
+    "gap": { "$type": "dimension", "$value": "{size.key.gap}" },
+    "maxWidth": { "$type": "dimension", "$value": "{layout.maxKeypad}" },
+    "deleteNudge": { "$type": "dimension", "$value": -1, "$description": "Delete glyph nudged 1 pt left (04 §11.3)." },
+    "maxAmountDigits": { "$type": "number", "$value": 7 },
+    "maxCardDigits": { "$type": "number", "$value": 16 }
+  },
+  "amountDisplay": {
+    "$description": "Tier 3 — 05 §2.2.",
+    "$extensions": { "tier": 3 },
+    "messageGap": { "$type": "dimension", "$value": "{space.1}" },
+    "messageMinHeight": { "$type": "dimension", "$value": 40 },
+    "messageIconGap": { "$type": "dimension", "$value": "{space.2}" },
+    "digitSlide": { "$type": "dimension", "$value": 8 },
+    "limitNudge": { "$type": "dimension", "$value": 3, "$description": "Limit-reached nudge ±3 pt (13 · R18)." },
+    "announceDebounce": { "$type": "duration", "$value": "400ms" }
+  },
+  "chip": {
+    "$description": "Tier 3 — 05 §2.3 QuickAmountChip.",
+    "$extensions": { "tier": 3 },
+    "height": { "$type": "dimension", "$value": "{size.chip}" },
+    "target": { "$type": "dimension", "$value": "{size.chip.target}" },
+    "radius": { "$type": "dimension", "$value": "{radius.xs}" },
+    "paddingHorizontal": { "$type": "dimension", "$value": "{space.3}" },
+    "enterRise": { "$type": "dimension", "$value": 4 }
+  },
+  "textField": {
+    "$description": "Tier 3 — 05 §2.4.",
+    "$extensions": { "tier": 3 },
+    "height": { "$type": "dimension", "$value": "{size.field}" },
+    "radius": { "$type": "dimension", "$value": "{radius.s}" },
+    "paddingHorizontal": { "$type": "dimension", "$value": "{space.4}" },
+    "labelGap": { "$type": "dimension", "$value": "{space.2}" },
+    "helperGap": { "$type": "dimension", "$value": "{space.2}" },
+    "stackGap": { "$type": "dimension", "$value": "{space.4}" },
+    "shake": { "$type": "dimension", "$value": 6, "$description": "Field error shake ±6 pt, 240 ms, 2 cycles (13 · R18)." }
+  },
+  "cardNumberField": {
+    "$description": "Tier 3 — 05 §2.5.",
+    "$extensions": { "tier": 3 },
+    "height": { "$type": "dimension", "$value": "{size.cardNumberField}" },
+    "radius": { "$type": "dimension", "$value": "{radius.s}" },
+    "paddingHorizontal": { "$type": "dimension", "$value": "{space.4}" },
+    "groupGap": { "$type": "dimension", "$value": "{space.3}" },
+    "caretWidth": { "$type": "dimension", "$value": 2 },
+    "caretHeight": { "$type": "dimension", "$value": 24 },
+    "caretBlink": { "$type": "duration", "$value": "1000ms" }
+  },
+  "balanceCard": {
+    "$description": "Tier 3 — 05 §3.1, 04 §8.6.",
+    "$extensions": { "tier": 3 },
+    "aspectRatio": { "$type": "number", "$value": 1.586, "$description": "ID-1 width ÷ height." },
+    "minFullHeight": { "$type": "dimension", "$value": 136, "$description": "Below this the compact strip is used (13 · R11)." },
+    "radius": { "$type": "dimension", "$value": "{radius.xl}" },
+    "padding": { "$type": "dimension", "$value": "{space.6}" },
+    "glyphSize": { "$type": "dimension", "$value": "{icon.32}" },
+    "nameGlyphClearance": { "$type": "dimension", "$value": 40 },
+    "overlineGap": { "$type": "dimension", "$value": "{space.1}" },
+    "metaGap": { "$type": "dimension", "$value": "{space.1}" },
+    "badgeGap": { "$type": "dimension", "$value": "{space.2}" },
+    "compact": {
+      "height": { "$type": "dimension", "$value": "{size.balanceCard.compact}" },
+      "radius": { "$type": "dimension", "$value": "{radius.l}" },
+      "padding": { "$type": "dimension", "$value": "{space.3}" },
+      "glyphSize": { "$type": "dimension", "$value": 20 },
+      "rowGap": { "$type": "dimension", "$value": 2 }
+    },
+    "sheenMix": { "$type": "number", "$value": 0.06, "$description": "Sheen stops: +6 % toward white → +6 % toward black (sRGB)." },
+    "desaturation": { "$type": "number", "$value": 0.40, "$description": "OKLCH chroma reduction for blocked/expired/replaced." },
+    "minTextContrast": { "$type": "number", "$value": 4.5 },
+    "minGlyphContrast": { "$type": "number", "$value": 3.0 },
+    "lightEdgeContrast": { "$type": "number", "$value": 1.5 },
+    "textDark": { "$type": "color", "$value": { "light": "#0A0A0C", "dark": "#0A0A0C" }, "$description": "Near-black text candidate B (04 §8.6)." },
+    "textLight": { "$type": "color", "$value": { "light": "#FFFFFF", "dark": "#FFFFFF" }, "$description": "White text candidate A (04 §8.6)." },
+    "shadowAlpha": { "$type": "number", "$value": 0.28 }
+  },
+  "statusBadge": {
+    "$description": "Tier 3 — 05 §3.2.",
+    "$extensions": { "tier": 3 },
+    "height": { "$type": "dimension", "$value": "{size.badge}" },
+    "paddingHorizontal": { "$type": "dimension", "$value": "{space.2}" },
+    "iconGap": { "$type": "dimension", "$value": "{space.1}" },
+    "radius": { "$type": "dimension", "$value": "{radius.xs}" },
+    "darkTextOutlineOpacity": { "$type": "number", "$value": 0.16, "$description": "On a card with dark text: 1-px outline in that text colour at 16 %." }
+  },
+  "statusBanner": {
+    "$description": "Tier 3 — 05 §3.3.",
+    "$extensions": { "tier": 3 },
+    "radius": { "$type": "dimension", "$value": "{radius.m}" },
+    "padding": { "$type": "dimension", "$value": "{space.4}" },
+    "iconGap": { "$type": "dimension", "$value": "{space.3}" },
+    "titleBodyGap": { "$type": "dimension", "$value": 2 },
+    "bodyActionGap": { "$type": "dimension", "$value": "{space.1}" },
+    "minHeight": { "$type": "dimension", "$value": 56 },
+    "darkOutlineOpacity": { "$type": "number", "$value": 0.24 }
+  },
+  "nfcScan": {
+    "$description": "Tier 3 — 05 §3.4 NfcScanAnimation.",
+    "$extensions": { "tier": 3 },
+    "centerY": { "$type": "dimension", "$value": 100, "$description": "Centre C at (88, 100) in the 176 × 120 canvas." },
+    "dot": { "$type": "dimension", "$value": 8 },
+    "glowRadius": { "$type": "dimension", "$value": 96 },
+    "breathPeriod": { "$type": "duration", "$value": "2400ms", "$description": "13 · R07." },
+    "breathScale": { "$type": "number", "$value": 1.04 },
+    "readingScale": { "$type": "number", "$value": 1.06 },
+    "outerLag": { "$type": "duration", "$value": "120ms" },
+    "disabledDotStroke": { "$type": "dimension", "$value": 1.5 }
+  },
+  "successMark": {
+    "$description": "Tier 3 — 05 §3.8.",
+    "$extensions": { "tier": 3 },
+    "size": { "$type": "dimension", "$value": "{size.successMark}" },
+    "checkStroke": { "$type": "dimension", "$value": 6 },
+    "circleDraw": { "$type": "duration", "$value": "240ms", "$description": "13 · R09." },
+    "checkDraw": { "$type": "duration", "$value": "200ms", "$description": "13 · R09." }
+  },
+  "transactionRow": {
+    "$description": "Tier 3 — 05 §3.10.",
+    "$extensions": { "tier": 3 },
+    "height": { "$type": "dimension", "$value": "{size.row}" },
+    "paddingVertical": { "$type": "dimension", "$value": 10 },
+    "timeColumn": { "$type": "dimension", "$value": 48 },
+    "timeColumn12h": { "$type": "dimension", "$value": 64 },
+    "chevronGap": { "$type": "dimension", "$value": "{space.2}" },
+    "pressedInset": { "$type": "dimension", "$value": "{space.2}" }
+  },
+  "historyCard": {
+    "$description": "Tier 3 — 05 §3.11.",
+    "$extensions": { "tier": 3 },
+    "radius": { "$type": "dimension", "$value": "{radius.xl}" },
+    "padding": { "$type": "dimension", "$value": "{space.5}" }
+  },
+  "snackbar": {
+    "$description": "Tier 3 — 05 §4.1.",
+    "$extensions": { "tier": 3 },
+    "maxWidth": { "$type": "dimension", "$value": 560 },
+    "minHeight": { "$type": "dimension", "$value": "{size.snackbar.min}" },
+    "radius": { "$type": "dimension", "$value": "{radius.s}" },
+    "paddingHorizontal": { "$type": "dimension", "$value": "{space.4}" },
+    "paddingVertical": { "$type": "dimension", "$value": "{space.3}" },
+    "actionGap": { "$type": "dimension", "$value": "{space.4}" },
+    "ctaGap": { "$type": "dimension", "$value": "{space.3}" },
+    "noCtaBottomGap": { "$type": "dimension", "$value": "{space.4}" },
+    "enterRise": { "$type": "dimension", "$value": 16 },
+    "exitDrop": { "$type": "dimension", "$value": 8 },
+    "accessibleDuration": { "$type": "duration", "$value": "10000ms", "$description": "Informational snackbars with a screen reader or Switch Control." }
+  },
+  "sheet": {
+    "$description": "Tier 3 — 05 §4.2 BottomSheet.",
+    "$extensions": { "tier": 3 },
+    "radius": { "$type": "dimension", "$value": "{radius.sheet}" },
+    "grabberTop": { "$type": "dimension", "$value": "{space.2}" },
+    "handleArea": { "$type": "dimension", "$value": 24 },
+    "header": { "$type": "dimension", "$value": 56 },
+    "largeTopGap": { "$type": "dimension", "$value": "{space.3}" },
+    "stackedScrim": { "$type": "color", "$value": { "light": "rgba(0,0,0,0.32)", "dark": "rgba(0,0,0,0.32)" }, "$description": "Second scrim over the first sheet." },
+    "dismissFraction": { "$type": "number", "$value": 0.3 },
+    "dismissVelocity": { "$type": "number", "$value": 800, "$description": "pt/s." }
+  },
+  "dialog": {
+    "$description": "Tier 3 — 05 §4.3.",
+    "$extensions": { "tier": 3 },
+    "maxWidth": { "$type": "dimension", "$value": 360 },
+    "radius": { "$type": "dimension", "$value": "{radius.xl}" },
+    "padding": { "$type": "dimension", "$value": "{space.6}" },
+    "offsetY": { "$type": "dimension", "$value": -24 },
+    "titleBodyGap": { "$type": "dimension", "$value": "{space.2}" },
+    "bodyButtonsGap": { "$type": "dimension", "$value": "{space.6}" },
+    "buttonGap": { "$type": "dimension", "$value": "{space.3}" },
+    "enterScale": { "$type": "number", "$value": 0.96 }
+  },
+  "banner": {
+    "$description": "Tier 3 — 05 §4.4.",
+    "$extensions": { "tier": 3 },
+    "minHeight": { "$type": "dimension", "$value": 48 },
+    "minHeightWithAction": { "$type": "dimension", "$value": 56 },
+    "paddingVertical": { "$type": "dimension", "$value": "{space.3}" },
+    "iconGap": { "$type": "dimension", "$value": "{space.3}" },
+    "edgeOpacity": { "$type": "number", "$value": 0.24 }
+  },
+  "emptyState": {
+    "$description": "Tier 3 — 05 §4.5.",
+    "$extensions": { "tier": 3 },
+    "illustrationGap": { "$type": "dimension", "$value": "{space.6}" },
+    "titleBodyGap": { "$type": "dimension", "$value": "{space.2}" },
+    "actionGap": { "$type": "dimension", "$value": "{space.6}" },
+    "column": { "$type": "dimension", "$value": "{layout.textMeasure.centred}" },
+    "bias": { "$type": "dimension", "$value": 24 }
+  },
+  "problemScreen": {
+    "$description": "Tier 3 — 05 §4.6.",
+    "$extensions": { "tier": 3 },
+    "column": { "$type": "dimension", "$value": "{layout.textMeasure.centred}" },
+    "illustrationGap": { "$type": "dimension", "$value": "{space.8}", "$description": "Illustration → title (10 §4.3, authoritative for illustration placement)." },
+    "iconGap": { "$type": "dimension", "$value": "{space.6}", "$description": "Icon 48 / ProgressRing → title (05 §4.6)." },
+    "titleBodyGap": { "$type": "dimension", "$value": "{space.3}" },
+    "bodyCodeGap": { "$type": "dimension", "$value": "{space.4}" },
+    "actionGap": { "$type": "dimension", "$value": "{space.3}" },
+    "bias": { "$type": "dimension", "$value": 32 }
+  },
+  "topBar": {
+    "$description": "Tier 3 — 05 §5.1.",
+    "$extensions": { "tier": 3 },
+    "height": { "$type": "dimension", "$value": "{size.topBar}" },
+    "avatarGap": { "$type": "dimension", "$value": "{space.3}" }
+  }
+}

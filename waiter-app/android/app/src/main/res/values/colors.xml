@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Splash colours (10 §2.3, 03a §1): color.bg.canvas, color.fg.primary, color.accent.saffron. -->
+<resources>
+    <color name="splash_background">#FFFAFAFA</color>
+    <color name="splash_mark">#FF18181B</color>
+    <color name="splash_accent">#FFE8A33D</color>
+</resources>

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Display name until the platform name decision (13 Q10). Not translated. -->
+    <string name="app_name" translatable="false">GiftCard Waiter</string>
+</resources>

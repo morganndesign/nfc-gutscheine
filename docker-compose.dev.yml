@@ -1,0 +1,33 @@
+# ---------------------------------------------------------------------------
+# Local development services (MySQL, Redis, Mailpit). Run the apps natively:
+#   docker compose -f docker-compose.dev.yml up -d
+#   cd backend && php artisan serve    |   cd dashboard && npm run dev
+# ---------------------------------------------------------------------------
+name: giftcard-pro-dev
+
+services:
+  mysql:
+    image: mysql:8.4
+    ports: ["3306:3306"]
+    environment:
+      MYSQL_DATABASE: giftcard_pro
+      MYSQL_USER: giftcard
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: root
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--transaction-isolation=READ-COMMITTED"]
+    volumes: [mysql_dev:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    ports: ["6379:6379"]
+
+  mailpit:
+    image: axllent/mailpit:latest
+    ports: ["1025:1025", "8025:8025"]
+
+volumes:
+  mysql_dev:

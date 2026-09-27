@@ -1,0 +1,12 @@
+.env.production
+backend/.env.production
+backups/
+.DS_Store
+.idea/
+.vscode/
+e2e/node_modules/
+
+# Release outputs and signing material live next to the code but are never committed
+# (see PROJECT_STRUCTURE.md). Keep them in a backup / password manager instead.
+/releases/
+/signing/

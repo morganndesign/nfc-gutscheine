@@ -1,0 +1,62 @@
+name: giftcard_waiter
+description: "GiftCard Waiter — scan an NFC gift card and redeem its balance."
+publish_to: 'none'
+version: 1.4.2+2
+
+environment:
+  sdk: ^3.9.0
+  flutter: ">=3.35.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  app_links: ^7.2.1
+  connectivity_plus: ^7.3.1
+  dio: ^5.11.1
+  flutter_secure_storage: ^11.2.0
+  flutter_svg: ^2.3.0
+  intl: ^0.20.2
+  local_auth: ^3.0.2
+  local_auth_android: ^2.2.0
+  local_auth_darwin: ^2.0.4
+  mobile_scanner: ^7.4.2
+  package_info_plus: ^10.2.1
+  shared_preferences: ^2.5.5
+  timezone: ^0.11.1
+  url_launcher: ^6.3.2
+  uuid: ^4.6.0
+  wakelock_plus: ^1.8.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  mocktail: ^1.0.5
+  clock: ^1.1.2
+  shared_preferences_platform_interface: ^2.4.1
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/illustrations/
+  fonts:
+    - family: Geist
+      fonts:
+        - asset: assets/fonts/Geist-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Geist-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Geist-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Geist-Bold.ttf
+          weight: 700
+    - family: GeistMono
+      fonts:
+        - asset: assets/fonts/GeistMono-Medium.ttf
+          weight: 500

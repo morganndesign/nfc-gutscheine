@@ -1,0 +1,7 @@
+GiftCard Waiter sound set — loudness report (11 §6.3)
+LUFS-M max: ITU-R BS.1770 K-weighting, 400 ms window; true peak: 4x oversampled.
+
+sound.cardDetected   gcw_card_detected: 60 ms, LUFS-M max -25.25 (target ≤ -22), true peak  -5.97 dBTP, sample peak  -6.00 dBFS, onset 0.04 ms
+sound.success        gcw_success: 280 ms, LUFS-M max -18.00 (target ≤ -18), true peak  -7.47 dBTP, sample peak  -7.59 dBFS, onset 0.06 ms
+sound.warning        gcw_warning: 150 ms, LUFS-M max -20.00 (target ≤ -20), true peak  -3.90 dBTP, sample peak  -3.91 dBFS, onset 0.08 ms
+sound.error          gcw_error: 240 ms, LUFS-M max -20.00 (target ≤ -20), true peak  -4.06 dBTP, sample peak  -4.07 dBFS, onset 0.08 ms

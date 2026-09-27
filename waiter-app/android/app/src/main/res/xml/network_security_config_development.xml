@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Development environment only (APP_ENV=development, see build.gradle.kts): plain http is
+     allowed so a phone can reach a backend on the developer's computer in the local network
+     (http://192.168.x.x:8000). Staging and production builds use network_security_config.xml
+     (TLS only). -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>
