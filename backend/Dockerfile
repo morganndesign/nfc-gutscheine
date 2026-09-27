@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
 # GiftCard Pro API — production image (PHP 8.4 FPM, no web server inside).
 # Build context: repository root (needs backend/ and infra/docker/php/).
-# One image for four roles (CONTAINER_ROLE): migrate, app (php-fpm :9000, reached through
-# the gateway via FastCGI), worker, scheduler — see infra/docker/php/entrypoint.sh and
+# One image for three roles (CONTAINER_ROLE): app (php-fpm :9000, reached through
+# the gateway via FastCGI), worker, scheduler; each runs pending migrations on start — see infra/docker/php/entrypoint.sh and
 # docker-compose.coolify.yml.
 # ---------------------------------------------------------------------------
 FROM php:8.4-fpm-alpine AS base

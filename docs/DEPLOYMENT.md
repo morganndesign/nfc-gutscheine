@@ -15,9 +15,8 @@ Internet ──HTTPS──▶ Coolify proxy (TLS certificate for your domain)
                       ├─ /api/*  /sanctum/*  /up  /reset-password/*  ──FastCGI──▶ api :9000   (Laravel, php-fpm)
                       └─ everything else  ──────────────────────────────HTTP────▶ web :3000   (Next.js dashboard)
 
-  migrate   one-shot on every deploy: APP_KEY (first deploy), migrations, reference data → exits
-  worker    queue:work (e-mails, notifications)        ┐ start only after migrate
-  scheduler schedule:work (nightly expiry, reminders…)  ┘ finished successfully
+  worker    queue:work (e-mails, notifications)
+  scheduler schedule:work (nightly expiry, reminders…)
   mysql     MySQL 8.4            volume mysql-data
   redis     Redis 7.4 (AOF)      volume redis-data     sessions, cache, locks, queues
   backup    daily mysqldump      volume mysql-backups  (kept 14 days)
@@ -26,21 +25,23 @@ Internet ──HTTPS──▶ Coolify proxy (TLS certificate for your domain)
 | Service | Built from | Public | Health check | Restart | Volume |
 |---|---|---|---|---|---|
 | `gateway` | `infra/docker/gateway/` (Caddy) | **yes** — the only service with a domain | `GET /gateway-health` | unless-stopped | — |
-| `migrate` | `backend/Dockerfile` | no | none (one-shot, `exclude_from_hc`) | no | `laravel-storage` |
 | `api` | `backend/Dockerfile` | no (via gateway) | php-fpm ping | unless-stopped | `laravel-storage` |
 | `worker` | `backend/Dockerfile` | no | process check | unless-stopped | `laravel-storage` |
 | `scheduler` | `backend/Dockerfile` | no | process check | unless-stopped | `laravel-storage` |
 | `web` | `dashboard/Dockerfile` | no (via gateway) | `GET /login` | unless-stopped | — |
 | `mysql` | image `mysql:8.4` | no | `mysqladmin ping` | unless-stopped | `mysql-data` |
 | `redis` | image `redis:7.4-alpine` | no | `redis-cli ping` | unless-stopped | `redis-data` |
-| `backup` | image `mysql:8.4` | no | database reachable | unless-stopped | `mysql-backups` |
+| `backup` | image `mysql:8.4` | no | — | unless-stopped | `mysql-backups` |
 
 Why a gateway: the product is **one origin** — the dashboard, the API, the Sanctum cookies and the card links
 (`https://<domain>/c/<token>`) share one domain. The gateway does this path routing inside the stack, so Coolify only
 has to route one domain to one container, and nothing depends on proxy-specific path rules.
 
-Start order on every deploy: `mysql` + `redis` healthy → `migrate` runs and exits 0 → `api`, `worker`, `scheduler`
-→ `web` → `gateway`. If migrations fail, nothing new starts and the deployment is marked failed.
+Start order: the compose file has **no `depends_on`** — Coolify starts all eight containers at once. The order is
+enforced inside the Laravel containers (`infra/docker/php/entrypoint.sh`): wait until MySQL and Redis accept
+connections (up to 15 minutes on fresh volumes) → run the migrations (a Redis lock lets exactly one container
+migrate, the others wait until nothing is pending) → `api` seeds reference data → start. Until then the gateway
+answers 502 for the API. A failing migration stops the container with the error in its log (resource → *Logs*).
 
 ## What you need
 
@@ -71,7 +72,7 @@ Start order on every deploy: `mysql` + `redis` healthy → `migrate` runs and ex
      `MAIL_MAILER=smtp`, `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD`
      (optional: `MAIL_FROM_ADDRESS`, `OPS_ALERT_EMAIL`). Everything else has production defaults.
 6. **Deploy.** The first build takes 5–10 minutes (PHP extensions, Composer, Next.js). Follow the log; at the end
-   all services except `migrate` are *healthy* and `migrate` shows *exited (0)*.
+   all eight services are *healthy* (on the first deploy the Laravel services need 1–3 minutes: MySQL initialises, then the migrations run).
 7. **First administrator:** resource → *Terminal* → container **api** →
    ```bash
    php artisan platform:create-admin you@giftcardpro.at --name="Your Name"
@@ -92,8 +93,8 @@ comes from the environment variables of the Coolify resource.
 
 ## Updates
 
-Push to `main` (or press *Redeploy*). Coolify builds the new images, then replaces the containers; `migrate` runs
-the new migrations before the new `api`/`worker`/`scheduler` start. Expect a few seconds of interruption while
+Push to `main` (or press *Redeploy*). Coolify builds the new images, then replaces the containers; the first new
+Laravel container runs the new migrations, and `api`/`worker`/`scheduler` only start serving after that. Expect a few seconds of interruption while
 containers are replaced. Migrations are written to be backwards compatible with the previous release
 (expand → migrate → contract).
 
@@ -147,10 +148,10 @@ branch). It has its own database, Redis and volumes. Staging is held to the same
 
 | Symptom | Cause / fix |
 |---|---|
-| `migrate` fails with "No public URL" | The gateway has no domain. Step 4. |
-| `migrate` fails with "app.url must be the https URL …" | The gateway domain is `http://…` (e.g. Coolify's generated sslip.io domain). Use an `https://` domain; for a quick test without your own domain, `https://<anything>.<server-ip>.sslip.io` works. |
-| `migrate` fails with "DB_PASSWORD is empty" | Coolify did not generate `SERVICE_PASSWORD_MYSQL` (older Coolify versions). Set `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT` and `SERVICE_PASSWORD_REDIS` yourself (long random values) **before** the first deploy, then *Redeploy*. |
-| `migrate` fails with "Access denied for user" after changing a password | The MySQL volume keeps the password of its first start. Put the old value back, or (only without data) delete the `mysql-data` volume. |
+| `api`/`worker`/`scheduler` stop with "No public URL" | The gateway has no domain. Step 4. |
+| `api` fails with "app.url must be the https URL …" | The gateway domain is `http://…` (e.g. Coolify's generated sslip.io domain). Use an `https://` domain; for a quick test without your own domain, `https://<anything>.<server-ip>.sslip.io` works. |
+| `api` stops with "DB_PASSWORD is empty" | Coolify did not generate `SERVICE_PASSWORD_MYSQL` (older Coolify versions). Set `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT` and `SERVICE_PASSWORD_REDIS` yourself (long random values) **before** the first deploy, then *Redeploy*. |
+| `api` log repeats "MySQL not ready: … Access denied" after changing a password | The MySQL volume keeps the password of its first start. Put the old value back, or (only without data) delete the `mysql-data` volume. |
 | Certificate not issued / "not secure" | DNS does not point at the server yet, or ports 80/443 are closed. |
 | 419 / sign-in loops in the dashboard | The browser URL differs from the gateway domain (cookies are bound to it). Use exactly the configured domain. |
 | `env file /artifacts/<id>/.env not found` when you run `docker compose … config` by hand in Coolify's helper container | Not an error in the repository (it has no `env_file` and needs no `.env`). Coolify rewrites the compose file in `/artifacts/<id>/`, adds `env_file: .env` to every service, and writes that `.env` from the resource's *Environment Variables* only after the build, right before `docker compose up`. Validate the file from the repository instead: `docker compose -f docker-compose.coolify.yml config`. If a real deployment stops with this message, update Coolify (older 4.0.0-beta versions wrote the `.env` to a different directory, coollabsio/coolify#8953) and leave *Custom Start Command* empty. |

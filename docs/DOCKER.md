@@ -7,24 +7,25 @@ Production runs on **Coolify**, which builds every image from this repository on
 
 | Service(s) | Dockerfile | Contents |
 |---|---|---|
-| `migrate`, `api`, `worker`, `scheduler` | `backend/Dockerfile` (target `production`, context = repository root) | PHP 8.4-FPM (Alpine), extensions `pdo_mysql intl gd zip bcmath opcache pcntl redis`, OPcache + JIT, optimized autoloader, non-root `www-data`, `infra/docker/php/*` (php.ini, www.conf, entrypoint). |
+| `api`, `worker`, `scheduler` | `backend/Dockerfile` (target `production`, context = repository root) | PHP 8.4-FPM (Alpine), extensions `pdo_mysql intl gd zip bcmath opcache pcntl redis`, OPcache + JIT, optimized autoloader, non-root `www-data`, `infra/docker/php/*` (php.ini, www.conf, entrypoint). |
 | `web` | `dashboard/Dockerfile` | Next.js standalone server on Node 22 (Alpine), non-root `nextjs`. |
 | `gateway` | `infra/docker/gateway/Dockerfile` | Caddy 2 with `infra/docker/gateway/Caddyfile` (validated at build time). |
 | `mysql`, `backup` | image `mysql:8.4` | — |
 | `redis` | image `redis:7.4-alpine` | — |
 
-The Laravel image is built once and used by four services, selected by `CONTAINER_ROLE`
+The Laravel image is built from `backend/Dockerfile` for three services, selected by `CONTAINER_ROLE`
 (`infra/docker/php/entrypoint.sh`):
 
 | Role | Command | Purpose |
 |---|---|---|
-| `migrate` | — (one-shot) | First deploy: generates APP_KEY into the storage volume. Every deploy: `migrate --force --isolated` + reference seeders, then exits 0. |
 | `app` | `php-fpm` | HTTP API, reached by the gateway over FastCGI (:9000). |
 | `worker` | `php artisan queue:work redis …` | E-mails, notifications, other queued jobs. |
 | `scheduler` | `php artisan schedule:work` | Nightly card expiry, reminders, housekeeping. |
 
-`app`, `worker` and `scheduler` start only after `migrate` finished successfully; they cache config, routes,
-views and events on start. The entrypoint derives `APP_URL`, `FRONTEND_URL`, `CARD_BASE_URL`, `SESSION_DOMAIN`
+There is no `depends_on` and no one-shot service; on start every Laravel container generates the APP_KEY once
+(first deploy, unless set), waits for MySQL and Redis, runs `migrate --force --isolated` (one container at a time)
+and waits until no migration is pending; `app` then seeds reference data. Then config, routes, views and events
+are cached and the process starts. The entrypoint derives `APP_URL`, `FRONTEND_URL`, `CARD_BASE_URL`, `SESSION_DOMAIN`
 and `SANCTUM_STATEFUL_DOMAINS` from the gateway domain Coolify assigns.
 
 ## Stack
@@ -32,7 +33,7 @@ and `SANCTUM_STATEFUL_DOMAINS` from the gateway domain Coolify assigns.
 ```
 Coolify proxy (TLS) ──▶ gateway :80 ──/api,/sanctum,/up,/reset-password──FastCGI──▶ api :9000
                                     └──everything else─────────────────HTTP─────▶ web :3000
-             migrate · worker · scheduler · mysql 8.4 · redis 7.4 · backup
+             worker · scheduler · mysql 8.4 · redis 7.4 · backup
 ```
 
 - The dashboard and the API share one origin: Sanctum cookies are first-party, no CORS configuration.

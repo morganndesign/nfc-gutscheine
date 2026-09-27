@@ -103,15 +103,18 @@ if grep -rqsE 'ghcr\.io|image: *\$\{' docker-compose.coolify.yml .github/workflo
 else ok "docker-compose.coolify.yml builds from source, no registry"; fi
 grep -Eq '^\s+ports:' docker-compose.coolify.yml && bad "docker-compose.coolify.yml publishes host ports (Coolify's proxy routes the domain)" \
   || ok "no published host ports"
-for svc in gateway migrate api worker scheduler web mysql redis backup; do
+for svc in gateway api worker scheduler web mysql redis backup; do
   grep -Eq "^  $svc:" docker-compose.coolify.yml || { bad "service $svc missing in docker-compose.coolify.yml"; dep=1; }
 done
-[[ $dep == 0 ]] && ok "all nine services defined"
+[[ $dep == 0 ]] && ok "all eight services defined"
 grep -q 'SERVICE_URL_GATEWAY_80' docker-compose.coolify.yml && ok "gateway gets its domain from Coolify (SERVICE_URL_GATEWAY_80)" || bad "gateway domain variable missing"
 if grep -nE '^\s*env_file:|--env-file' docker-compose.coolify.yml backend/Dockerfile dashboard/Dockerfile infra/docker/gateway/Dockerfile >/dev/null; then
   bad "env_file / --env-file in the Coolify deployment (configuration must come from environment: only)"
 else ok "no env_file: the Coolify stack reads configuration from environment: only"; fi
 grep -Eq 'exclude_from_hc' docker-compose.coolify.yml && bad "exclude_from_hc makes plain docker compose reject the file" || ok "docker-compose.coolify.yml uses only standard Compose keys"
+if grep -nE '^\s*(depends_on|profiles):|restart: *"?no"?|service_(healthy|completed_successfully)|^x-|<<:' docker-compose.coolify.yml >/dev/null; then
+  bad "docker-compose.coolify.yml uses depends_on / profiles / restart:no / anchors (Coolify must start every service at once)"
+else ok "no depends_on, profiles, one-shot services or anchors: Coolify starts every service in one step"; fi
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
   # Run from an empty directory so that no .env file can be picked up.
   empty="$(mktemp -d)"

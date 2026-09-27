@@ -503,7 +503,7 @@ A release has one version number for everything (platform = backend + dashboard 
    If NFC code changed: the real-tag test (section 6.3).
 3. **Server (backend + dashboard).** Push to `main` (optionally tag it: `git tag v1.4.2 && git push --tags`) →
    Coolify builds everything from source and deploys ([docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#updates)).
-   The `migrate` service runs the migrations before the new containers start. Check `https://app.giftcardpro.at/up`.
+   The new Laravel containers run the migrations before they start serving. Check `https://app.giftcardpro.at/up`.
 4. **APK + AAB:** `cd waiter-app && tool/release.sh android production`
 5. **IPA / TestFlight (Mac):** `cd waiter-app && tool/release.sh ios production` → Xcode *Archive* → *Upload* (section 3.8),
    or `DEVELOPMENT_TEAM=<Team ID> tool/release.sh ios-ipa production` → `build/ios/ipa/*.ipa` → upload with Apple's

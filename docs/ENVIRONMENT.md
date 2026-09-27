@@ -128,7 +128,7 @@ fixed in the compose file (Redis sessions, secure cookies, `LOG_CHANNEL=stderr`,
 | Coolify, automatically | `SERVICE_URL_GATEWAY` / `SERVICE_FQDN_GATEWAY` (domain of the `gateway` service → `APP_URL`, `FRONTEND_URL`, `CARD_BASE_URL`, `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, default `MAIL_FROM_ADDRESS`), `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` |
 | The first deploy, automatically | `APP_KEY` (kept in the `laravel-storage` volume unless you set `APP_KEY` yourself) |
 | You (needed for real use) | `MAIL_*` (SMTP), later `WAITER_ANDROID_CERT_SHA256`, `WAITER_IOS_APP_IDS` |
-| You (optional) | `APP_ENV` (`staging`), `APP_URL`, `OPS_ALERT_EMAIL`, `NTAG424_*`, `SCHEDULE_TIMEZONE`, `LOG_LEVEL`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `MYSQL_INNODB_BUFFER_POOL_SIZE`, `DB_DATABASE`/`DB_USERNAME` (before the first deploy only) |
+| You (optional) | `APP_ENV` (`staging`), `APP_URL`, `OPS_ALERT_EMAIL`, `NTAG424_*`, `SCHEDULE_TIMEZONE`, `LOG_LEVEL`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `DB_DATABASE`/`DB_USERNAME` (before the first deploy only) |
 
 | Variable (web service) | Description |
 |---|---|

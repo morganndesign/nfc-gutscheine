@@ -24,6 +24,20 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Coolify: every container starts in one step, 27 September 2026 (part of 1.4.2)
+
+On a real Coolify server `mysql`, `redis` and `web` started, but `docker compose up` stopped on a `depends_on`
+health condition, and `gateway`, `migrate`, `api`, `worker` and `scheduler` stayed in *Created*.
+
+| Change | Why |
+|---|---|
+| `docker-compose.coolify.yml` simplified: no `depends_on`, no one-shot `migrate` service, no `restart: "no"`, no profiles, no YAML anchors; eight long-running services with `restart: unless-stopped`; the Laravel environment written out per service. | `docker compose up -d` starts every container immediately and cannot abort on a dependency condition. |
+| `infra/docker/php/entrypoint.sh`: each Laravel container waits for MySQL and Redis (up to 15 min), runs `migrate --force --isolated` (one container at a time via a Redis lock, the others wait until nothing is pending), `api` seeds reference data, then starts. APP_KEY generation is atomic (`ln`) because several containers start at the same time. Role `migrate` removed. | The start order now lives inside the containers instead of in Compose. |
+| MySQL health check: `mysqladmin ping -h 127.0.0.1` without credentials, `start_period` 180 s, `timeout` 10 s, `retries` 12. MySQL flags are fixed (`innodb-buffer-pool-size=512M`, no `sh -c` wrapper); `MYSQL_INNODB_BUFFER_POOL_SIZE` removed. | Fresh volumes initialise slowly on small servers; the check cannot hang on a password prompt. |
+| `backup` has no health check and no dependency; long start periods for `api`, `worker`, `scheduler` (300 s). | No container is marked unhealthy while it waits for the database or migrations. |
+| `scripts/verify-structure.sh` fails on `depends_on`, `profiles`, `restart: no`, health conditions and anchors. Docs updated (`DEPLOYMENT.md`, `DOCKER.md`, `ENVIRONMENT.md`, `RUNNING_THE_PROJECT.md`, `.env.production.example`). | |
+| Tested on fresh volumes with Coolify's command (`env_file: .env` injected, `--env-file`, `up -d`): `up` returns in 2 s with all eight containers running; all healthy after ~35 s; exactly one container ran the migrations; one APP_KEY shared by all; `/up`, `/login`, `/api/v1/app/config` 200; redeploy with kept volumes healthy, no migrations re-run. | |
+
 ## Coolify: configuration from the environment only, 27 September 2026 (part of 1.4.2)
 
 `docker compose config` in Coolify's helper container reported `env file /artifacts/<id>/.env not found`. The
