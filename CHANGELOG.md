@@ -24,6 +24,19 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Coolify: no ARG injection, bounded build steps, 27 September 2026 (part of 1.4.2)
+
+Coolify added 102 `ARG` lines (one per environment variable) to every stage of the API and web Dockerfiles, then
+the log stopped at *Pulling & building required images* (Coolify runs the build with hidden output).
+
+| Change | Why |
+|---|---|
+| `docker-compose.coolify.yml`: the `dockerfile:` of every build is written as `${LARAVEL_DOCKERFILE:-backend/Dockerfile}`, `${WEB_DOCKERFILE:-Dockerfile}`, `${GATEWAY_DOCKERFILE:-Dockerfile}` (same files). | Coolify skips its Dockerfile rewrite when the path contains a variable (`ApplicationDeploymentJob::resolveComposeDockerfilePath`). The injected ARGs are recorded in the image history of every `RUN` step — verified: DB password and APP_KEY readable with `docker history` — and they invalidate the build cache on every change of any variable. The Dockerfiles need no build arguments. |
+| `backend/Dockerfile`: `yes '' \| timeout 600 pecl install redis` (answers pecl's questions with the defaults, 10-minute limit); `timeout 900 composer install`. | `pecl` and `composer` download over the network without an overall deadline; a stalled mirror could block the build forever. |
+| `dashboard/Dockerfile`: `timeout 900 npm ci --fetch-timeout=60000 --fetch-retries=3`; `timeout 1800 npm run build`. | `npm ci` can stall without ever finishing when the registry connection breaks (seen here as "Exit handler never called"); a starved Next.js build now fails instead of running without end. |
+| `scripts/verify-structure.sh` checks that every build uses a variable Dockerfile path and that no Dockerfile declares `ARG`. `docs/DEPLOYMENT.md`: troubleshooting for a silent build and for the ARG message. | |
+| Tested: Coolify-style `docker compose build` with ~100 `--build-arg` values (including passwords): web and gateway built in 109 s, no secret in any image history; Dockerfile lint clean; the injected-ARG leak reproduced on a test image; the timeout wrapper returns 143 on a stalled step. The API image could not be rebuilt here (pecl.php.net is not reachable from the test machine). | |
+
 ## Coolify: every container starts in one step, 27 September 2026 (part of 1.4.2)
 
 On a real Coolify server `mysql`, `redis` and `web` started, but `docker compose up` stopped on a `depends_on`

@@ -115,6 +115,10 @@ grep -Eq 'exclude_from_hc' docker-compose.coolify.yml && bad "exclude_from_hc ma
 if grep -nE '^\s*(depends_on|profiles):|restart: *"?no"?|service_(healthy|completed_successfully)|^x-|<<:' docker-compose.coolify.yml >/dev/null; then
   bad "docker-compose.coolify.yml uses depends_on / profiles / restart:no / anchors (Coolify must start every service at once)"
 else ok "no depends_on, profiles, one-shot services or anchors: Coolify starts every service in one step"; fi
+n_build=$(grep -cE '^\s+build:' docker-compose.coolify.yml); n_var=$(grep -cE '^\s+dockerfile: \$\{[A-Z_]+:-[^}]+\}' docker-compose.coolify.yml)
+[[ "$n_build" == "$n_var" ]] && ok "every build uses a \${VAR:-default} Dockerfile path (Coolify injects no ARGs, no secrets in image history)" \
+  || bad "$((n_build - n_var)) build(s) without a \${VAR:-default} dockerfile path: Coolify would inject an ARG for every variable"
+grep -qE '^\s*ARG ' backend/Dockerfile dashboard/Dockerfile infra/docker/gateway/Dockerfile && bad "Dockerfiles declare ARGs (must need no build arguments)" || ok "Dockerfiles need no build arguments"
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
   # Run from an empty directory so that no .env file can be picked up.
   empty="$(mktemp -d)"

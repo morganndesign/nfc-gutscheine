@@ -11,6 +11,10 @@
 #   - start-up order is handled inside the containers: the Laravel containers wait
 #     for MySQL and Redis, then run the migrations (one at a time, guarded by a
 #     lock) before they start serving; the gateway answers 502 until api/web are up;
+#   - the Dockerfile paths contain a ${VAR:-default}: Coolify then does NOT rewrite the
+#     Dockerfiles with an ARG line for every environment variable. Those ARGs would put
+#     the passwords and APP_KEY into the image history and invalidate the build cache;
+#     the Dockerfiles need no build arguments at all;
 #   - configuration comes only from environment: (no env_file, no .env in the repo).
 #     Every ${VAR} has a default except the values Coolify generates:
 #     SERVICE_URL_GATEWAY, SERVICE_FQDN_GATEWAY, SERVICE_PASSWORD_MYSQL,
@@ -24,6 +28,7 @@ services:
   gateway:
     build:
       context: ./infra/docker/gateway
+      dockerfile: ${GATEWAY_DOCKERFILE:-Dockerfile}
     restart: unless-stopped
     environment:
       # Coolify routes the domain configured for this service to container port 80.
@@ -42,7 +47,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: ${LARAVEL_DOCKERFILE:-backend/Dockerfile}
       target: production
     restart: unless-stopped
     environment:
@@ -110,7 +115,7 @@ services:
   worker:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: ${LARAVEL_DOCKERFILE:-backend/Dockerfile}
       target: production
     restart: unless-stopped
     command: ["php", "artisan", "queue:work", "redis", "--queue=default,notifications", "--sleep=1", "--tries=5", "--max-time=3600", "--max-jobs=1000"]
@@ -180,7 +185,7 @@ services:
   scheduler:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: ${LARAVEL_DOCKERFILE:-backend/Dockerfile}
       target: production
     restart: unless-stopped
     command: ["php", "artisan", "schedule:work"]
@@ -249,6 +254,7 @@ services:
   web:
     build:
       context: ./dashboard
+      dockerfile: ${WEB_DOCKERFILE:-Dockerfile}
     restart: unless-stopped
     environment:
       NODE_ENV: production

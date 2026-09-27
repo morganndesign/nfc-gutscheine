@@ -4,6 +4,9 @@
 # One image for three roles (CONTAINER_ROLE): app (php-fpm :9000, reached through
 # the gateway via FastCGI), worker, scheduler; each runs pending migrations on start — see infra/docker/php/entrypoint.sh and
 # docker-compose.coolify.yml.
+#
+# Needs no build arguments. Every step that downloads something has a hard time limit
+# (`timeout`), so a stalled mirror fails the build with an error instead of blocking it.
 # ---------------------------------------------------------------------------
 FROM php:8.4-fpm-alpine AS base
 
@@ -11,7 +14,7 @@ RUN apk add --no-cache icu-libs libzip libpng freetype libjpeg-turbo oniguruma t
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev libpng-dev freetype-dev libjpeg-turbo-dev oniguruma-dev linux-headers \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" pdo_mysql intl zip gd bcmath opcache pcntl \
- && pecl install redis \
+ && yes '' | timeout 600 pecl install redis \
  && docker-php-ext-enable redis \
  && apk del .build-deps \
  && rm -rf /tmp/pear
@@ -25,7 +28,7 @@ WORKDIR /var/www/html
 # ---------------------------------------------------------------------------
 FROM base AS vendor
 COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress
+RUN timeout 900 composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-interaction --no-progress
 
 # ---------------------------------------------------------------------------
 FROM base AS production
