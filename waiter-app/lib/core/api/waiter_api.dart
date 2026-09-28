@@ -49,7 +49,8 @@ class ScanRequest {
       };
 }
 
-/// The endpoints of the waiter app (09 §9.2). Nothing else is ever called.
+/// The endpoints of the waiter app (09 §9.2), plus the card-selling endpoints of S20 (managers and owners).
+/// Nothing else is ever called.
 class WaiterApi {
   WaiterApi(this._client);
 
@@ -134,6 +135,86 @@ class WaiterApi {
     );
     return _parse(r, (Map<String, Object?> json) => RedeemResult.fromJson(json, requestId: r.requestId));
   }
+
+  // ------------------------------------------------ S20 · sell and program a card (the dashboard's endpoints)
+
+  /// Sells an active card. The same [idempotencyKey] on a retry replays the card instead of selling another.
+  Future<IssuedCard> createCard({required int value, String? customerEmail, required String idempotencyKey}) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/cards',
+      body: <String, Object?>{
+        'value': value,
+        'activate': true,
+        if (customerEmail != null) 'customer': <String, Object?>{'email': customerEmail},
+      },
+      headers: <String, String>{'Idempotency-Key': idempotencyKey},
+    );
+    return _parse(r, IssuedCard.fromJson);
+  }
+
+  Future<NfcCheckResult> checkTag({required String cardId, required String attemptId, required String uid, String? currentUrl}) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/cards/$cardId/nfc/check',
+      body: <String, Object?>{'attempt_id': attemptId, 'uid': uid, 'current_url': currentUrl},
+    );
+    return _parse(r, NfcCheckResult.fromJson);
+  }
+
+  /// Saves the chip after the tag was written and read back (`method: web_nfc` = verified write, the same
+  /// contract as the dashboard; the server compares URL and chip once more).
+  Future<void> bindTag({
+    required String cardId,
+    required String attemptId,
+    required String tagType,
+    required String uid,
+    required String readBackUid,
+    required String readBackUrl,
+    required Map<String, int> timings,
+  }) =>
+      _client.send(
+        'POST',
+        '/cards/$cardId/nfc',
+        body: <String, Object?>{
+          'method': 'web_nfc',
+          'attempt_id': attemptId,
+          'tag_type': tagType,
+          'uid': uid,
+          'read_back': <String, Object?>{'uid': readBackUid, 'url': readBackUrl},
+          'timings': timings,
+        },
+      );
+
+  Future<void> confirmTagLock({required String cardId, required String attemptId}) =>
+      _client.send('POST', '/cards/$cardId/nfc/lock', body: <String, Object?>{'attempt_id': attemptId});
+
+  /// Failures only the phone sees (unsupported chip, write error, mismatch, cancel), so every attempt is logged.
+  Future<void> reportTagFailure({
+    required String cardId,
+    required String attemptId,
+    required String stage,
+    required String result,
+    required String errorCode,
+    String? uid,
+    String? tagType,
+    String? previousUrl,
+    String? readBackUrl,
+  }) =>
+      _client.send(
+        'POST',
+        '/cards/$cardId/nfc/attempts',
+        body: <String, Object?>{
+          'attempt_id': attemptId,
+          'stage': stage,
+          'result': result,
+          'error_code': errorCode,
+          'uid': ?uid,
+          'tag_type': ?tagType,
+          'previous_url': ?previousUrl,
+          'read_back_url': ?readBackUrl,
+        },
+      );
 
   /// A 2xx body that does not parse is a server fault (never a half-rendered card).
   T _parse<T>(ApiResponse r, T Function(Map<String, Object?> json) parse) {

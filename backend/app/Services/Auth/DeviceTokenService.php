@@ -22,7 +22,8 @@ use Laravel\Sanctum\NewAccessToken;
 /**
  * Sign-in tokens for the native waiter app (GiftCard Waiter).
  *
- * A token can only scan and redeem, is bound to the phone that signed in (X-Device-Id), expires after
+ * A token can scan and redeem; for managers and owners (roles with `cards.create` and `cards.write_nfc`)
+ * it can also sell a card and program its tag in the app. It is bound to the phone that signed in (X-Device-Id), expires after
  * `device_token_days` without use and is renewed while the phone is in use. Revoking the device in
  * Devices stops the token immediately. One active token per person and phone: signing in again
  * replaces the previous token.
@@ -31,6 +32,24 @@ final class DeviceTokenService
 {
     /** @var list<string> */
     public const ABILITIES = [Permission::CardsScan->value, Permission::CardsRedeem->value];
+
+    /**
+     * Selling and programming cards in the app: granted only when the role has both permissions. The role is
+     * still checked on every request (a token never grants more than the role, see User::hasPermission).
+     *
+     * @var list<string>
+     */
+    public const ISSUING_ABILITIES = [Permission::CardsCreate->value, Permission::CardsWriteNfc->value];
+
+    /** @return list<string> */
+    public static function abilitiesFor(User $user): array
+    {
+        $granted = $user->role->permissionSlugs();
+
+        return array_diff(self::ISSUING_ABILITIES, $granted) === []
+            ? [...self::ABILITIES, ...self::ISSUING_ABILITIES]
+            : self::ABILITIES;
+    }
 
     public function __construct(
         private readonly DeviceService $devices,
@@ -63,7 +82,7 @@ final class DeviceTokenService
 
             $token = $user->createToken(
                 mb_substr('GiftCard Waiter · '.$device->name, 0, 191),
-                self::ABILITIES,
+                self::abilitiesFor($user),
                 Carbon::now()->addDays(self::lifetimeDays()),
             );
 
@@ -91,10 +110,22 @@ final class DeviceTokenService
         }
 
         $target = Carbon::now()->addDays(self::lifetimeDays());
-        if ($token->expires_at->lessThan($target->copy()->subDay())) {
-            PersonalAccessToken::query()->whereKey($token->getKey())->update(['expires_at' => $target]);
-            $token->setAttribute('expires_at', $target);
+        if (! $token->expires_at->lessThan($target->copy()->subDay())) {
+            return;
         }
+
+        $changes = ['expires_at' => $target];
+        // Once a day the abilities also follow the role (a waiter promoted to manager, or a token issued before
+        // card selling existed in the app) without a new sign-in.
+        $user = $token->tokenable;
+        if ($user instanceof User) {
+            $abilities = self::abilitiesFor($user);
+            if ($abilities !== array_values((array) $token->abilities)) {
+                $changes['abilities'] = $abilities;
+            }
+        }
+
+        $token->forceFill($changes)->saveQuietly();
     }
 
     /** Checks that a device-bound token is used from its own phone and that the phone is still allowed. */

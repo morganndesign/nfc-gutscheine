@@ -1,7 +1,7 @@
 name: giftcard_waiter
 description: "GiftCard Waiter — scan an NFC gift card and redeem its balance."
 publish_to: 'none'
-version: 1.4.2+2
+version: 1.4.3+3
 
 environment:
   sdk: ^3.9.0

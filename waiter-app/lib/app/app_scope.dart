@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../core/api/waiter_api.dart';
 import '../core/config/environment.dart';
 import '../core/config/environment_controller.dart';
 import '../core/diagnostics/diagnostic_log.dart';
@@ -8,6 +9,7 @@ import '../core/platform/connectivity_service.dart';
 import '../core/platform/feedback_service.dart';
 import '../core/platform/nfc_service.dart';
 import '../core/platform/system_service.dart';
+import '../core/platform/tag_writer.dart';
 import '../core/state/client_identity.dart';
 import '../core/state/loop_controller.dart';
 import '../core/state/session_controller.dart';
@@ -32,6 +34,8 @@ class AppServices {
     required this.appVersion,
     required this.buildNumber,
     required this.isTablet,
+    required this.api,
+    this.tagWriter,
   });
 
   /// Build configuration + server override (development / staging).
@@ -54,6 +58,14 @@ class AppServices {
   final String appVersion;
   final String buildNumber;
   final bool isTablet;
+
+  /// The API (S20 sells cards directly; the loop and the session own their calls).
+  final WaiterApi api;
+
+  /// Tag writing for S20; tests inject a fake.
+  final TagWriter? tagWriter;
+
+  TagWriter get writer => tagWriter ?? PlatformTagWriter(nfc: nfc);
 
   BiometricKind get biometricKind => session.biometricKind;
 }

@@ -800,6 +800,228 @@ abstract class AppLocalizations {
   /// **'Dismiss notice'**
   String get maintenanceDismiss;
 
+  /// Spec key: ready.newCard (12 §5.6) · Max: 24 · Notes: S20 · managers and owners only · button on S05
+  ///
+  /// In en, this message translates to:
+  /// **'New gift card'**
+  String get readyNewCard;
+
+  /// Spec key: issue.title (12 §5.6) · Max: 24 · Notes: S20 · screen title
+  ///
+  /// In en, this message translates to:
+  /// **'New gift card'**
+  String get issueTitle;
+
+  /// Spec key: issue.amount.label (12 §5.6) · Max: 24 · Notes: S20 · above the amount
+  ///
+  /// In en, this message translates to:
+  /// **'Card value'**
+  String get issueAmountLabel;
+
+  /// Spec key: issue.email.label (12 §5.6) · Max: 32 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'Guest e-mail (optional)'**
+  String get issueEmailLabel;
+
+  /// Spec key: issue.email.helper (12 §5.6) · Max: 60 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'The guest receives a confirmation.'**
+  String get issueEmailHelper;
+
+  /// Spec key: issue.email.invalid (12 §5.6) · Max: 60 · Notes: S20 · field error
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid e-mail address.'**
+  String get issueEmailInvalid;
+
+  /// Spec key: issue.amount.range (12 §5.6) · Max: 60 · Notes: S20 · server INVALID_AMOUNT
+  ///
+  /// In en, this message translates to:
+  /// **'The card value must be between {min} and {max}.'**
+  String issueAmountRange(String min, String max);
+
+  /// Spec key: issue.create (12 §5.6) · Max: 32 · Notes: S20 · primary
+  ///
+  /// In en, this message translates to:
+  /// **'Create card · {amount}'**
+  String issueCreate(String amount);
+
+  /// Spec key: issue.creating (12 §5.6) · Max: 32 · Notes: S20 · button progress
+  ///
+  /// In en, this message translates to:
+  /// **'Creating card …'**
+  String get issueCreating;
+
+  /// Spec key: issue.program.title (12 §5.6) · Max: 36 · Notes: S20 · programming
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a blank card to the phone'**
+  String get issueProgramTitle;
+
+  /// Spec key: issue.program.body (12 §5.6) · Max: 90 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it still on the back of the phone until the check mark appears.'**
+  String get issueProgramBody;
+
+  /// Spec key: issue.program.retap (12 §5.6) · Max: 60 · Notes: S20 · hint
+  ///
+  /// In en, this message translates to:
+  /// **'Lift the card and hold it to the phone again.'**
+  String get issueProgramRetap;
+
+  /// Spec key: issue.step.check (12 §5.6) · Max: 24 · Notes: S20 · step
+  ///
+  /// In en, this message translates to:
+  /// **'Check tag'**
+  String get issueStepCheck;
+
+  /// Spec key: issue.step.write (12 §5.6) · Max: 24 · Notes: S20 · step
+  ///
+  /// In en, this message translates to:
+  /// **'Write card link'**
+  String get issueStepWrite;
+
+  /// Spec key: issue.step.verify (12 §5.6) · Max: 24 · Notes: S20 · step
+  ///
+  /// In en, this message translates to:
+  /// **'Read back and verify'**
+  String get issueStepVerify;
+
+  /// Spec key: issue.step.save (12 §5.6) · Max: 28 · Notes: S20 · step
+  ///
+  /// In en, this message translates to:
+  /// **'Save chip to card'**
+  String get issueStepSave;
+
+  /// Spec key: issue.card (12 §5.6) · Max: 32 · Notes: S20 · card number, grouped
+  ///
+  /// In en, this message translates to:
+  /// **'Card {number}'**
+  String issueCard(String number);
+
+  /// Spec key: issue.success.title (12 §5.6) · Max: 20 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'Card ready'**
+  String get issueSuccessTitle;
+
+  /// Spec key: issue.success.balance (12 §5.6) · Max: 32 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'Balance {amount}'**
+  String issueSuccessBalance(String amount);
+
+  /// Spec key: issue.success.verified (12 §5.6) · Max: 40 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'NFC tag written and verified'**
+  String get issueSuccessVerified;
+
+  /// Spec key: issue.success.noTag (12 §5.6) · Max: 60 · Notes: S20 · after “Program later”
+  ///
+  /// In en, this message translates to:
+  /// **'No tag yet. Program it later in the dashboard.'**
+  String get issueSuccessNoTag;
+
+  /// Spec key: issue.success.another (12 §5.6) · Max: 28 · Notes: S20 · secondary
+  ///
+  /// In en, this message translates to:
+  /// **'Sell another card'**
+  String get issueSuccessAnother;
+
+  /// Spec key: issue.later (12 §5.6) · Max: 24 · Notes: S20 · keeps the card without a tag
+  ///
+  /// In en, this message translates to:
+  /// **'Program later'**
+  String get issueLater;
+
+  /// Spec key: issue.nfcOff (12 §5.6) · Max: 60 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'Turn on NFC to program the tag.'**
+  String get issueNfcOff;
+
+  /// Spec key: issue.createFailed.title (12 §5.6) · Max: 28 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'Card not created'**
+  String get issueCreateFailedTitle;
+
+  /// Spec key: issue.createFailed.body (12 §5.6) · Max: 90 · Notes: S20 · definitive answer
+  ///
+  /// In en, this message translates to:
+  /// **'No card was created. Check the connection and try again.'**
+  String get issueCreateFailedBody;
+
+  /// Spec key: issue.createUncertain.body (12 §5.6) · Max: 90 · Notes: S20 · same idempotency key
+  ///
+  /// In en, this message translates to:
+  /// **'The answer did not arrive. Try again, the card will not be created twice.'**
+  String get issueCreateUncertainBody;
+
+  /// Spec key: issue.notAllowed.title (12 §5.6) · Max: 28 · Notes: S20 · 403
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed'**
+  String get issueNotAllowedTitle;
+
+  /// Spec key: issue.notAllowed.body (12 §5.6) · Max: 120 · Notes: S20 · 403
+  ///
+  /// In en, this message translates to:
+  /// **'This account cannot sell cards on this phone. Sign out and in again, or use the dashboard.'**
+  String get issueNotAllowedBody;
+
+  /// Spec key: issue.tagFailed.title (12 §5.6) · Max: 28 · Notes: S20 · the card exists, nothing was saved to it
+  ///
+  /// In en, this message translates to:
+  /// **'Tag not programmed'**
+  String get issueTagFailedTitle;
+
+  /// Spec key: issue.tag.otherCard (12 §5.6) · Max: 90 · Notes: S20 · check refused, conflict
+  ///
+  /// In en, this message translates to:
+  /// **'This tag belongs to card {number}. Use a blank tag.'**
+  String issueTagOtherCard(String number);
+
+  /// Spec key: issue.tag.refused (12 §5.6) · Max: 90 · Notes: S20 · check refused
+  ///
+  /// In en, this message translates to:
+  /// **'This tag cannot be used for this card. Use a blank tag.'**
+  String get issueTagRefused;
+
+  /// Spec key: issue.tag.unsupported (12 §5.6) · Max: 90 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'This tag type is not supported. Use NTAG213, 215 or 216.'**
+  String get issueTagUnsupported;
+
+  /// Spec key: issue.tag.readOnly (12 §5.6) · Max: 90 · Notes: S20
+  ///
+  /// In en, this message translates to:
+  /// **'This tag is locked and cannot be written.'**
+  String get issueTagReadOnly;
+
+  /// Spec key: issue.tag.moved (12 §5.6) · Max: 90 · Notes: S20 · write / read failed, timeout
+  ///
+  /// In en, this message translates to:
+  /// **'The tag moved away. Hold it still and try again.'**
+  String get issueTagMoved;
+
+  /// Spec key: issue.tag.verifyFailed (12 §5.6) · Max: 90 · Notes: S20 · read-back mismatch
+  ///
+  /// In en, this message translates to:
+  /// **'The tag could not be verified. Try again with the same tag.'**
+  String get issueTagVerifyFailed;
+
+  /// Spec key: issue.tag.network (12 §5.6) · Max: 90 · Notes: S20 · check / save without answer
+  ///
+  /// In en, this message translates to:
+  /// **'No connection to the server. Try again.'**
+  String get issueTagNetwork;
+
   /// Spec key: ios.sheet.alert (12 §5.7) · Max: 48 · Notes: B
   ///
   /// In en, this message translates to:

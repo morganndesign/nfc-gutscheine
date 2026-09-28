@@ -17,6 +17,7 @@ import 'package:giftcard_waiter/core/platform/channels.dart';
 import 'package:giftcard_waiter/core/platform/connectivity_service.dart';
 import 'package:giftcard_waiter/core/platform/feedback_service.dart';
 import 'package:giftcard_waiter/core/platform/nfc_service.dart';
+import 'package:giftcard_waiter/core/platform/tag_writer.dart';
 import 'package:giftcard_waiter/core/platform/system_service.dart';
 import 'package:giftcard_waiter/core/state/business_calendar.dart';
 import 'package:giftcard_waiter/core/state/client_identity.dart';
@@ -207,6 +208,56 @@ abstract final class Payloads {
         },
       };
 
+  /// A manager / owner profile: role and the issuing abilities of the waiter-app sign-in.
+  static Map<String, Object?> manager({String role = 'manager', bool issuing = true, bool lockTags = false}) {
+    final Map<String, Object?> u = user();
+    final Map<String, Object?> restaurant = Map<String, Object?>.from(u['restaurant']! as Map<String, Object?>);
+    restaurant['settings'] = <String, Object?>{
+      ...(restaurant['settings']! as Map<String, Object?>),
+      'lock_nfc_tags_after_write': lockTags,
+    };
+    return <String, Object?>{
+      ...u,
+      'id': 'u-2',
+      'name': 'Mia Manager',
+      'email': 'mia@example.at',
+      'role': <String, Object?>{'slug': role, 'name': role},
+      'permissions': <String>['cards.scan', 'cards.redeem', if (issuing) ...<String>['cards.create', 'cards.write_nfc']],
+      'restaurant': restaurant,
+    };
+  }
+
+  static const String newCardId = '0f1e2d3c-4b5a-4968-8776-655443322110';
+  static const String newCardUrl = 'https://cards.example.at/c/1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+
+  static Map<String, Object?> issued({int value = 5000, bool replayed = false}) => <String, Object?>{
+        'data': <String, Object?>{
+          'id': newCardId,
+          'card_number': '1268834313520042',
+          'card_number_formatted': '1268 8343 1352 0042',
+          'status': 'active',
+          'currency': 'EUR',
+          'balance': value,
+        },
+        'nfc': <String, Object?>{'url': newCardUrl, 'tag_type_hint': 'ntag215', 'ndef_template': null},
+        'replayed': replayed,
+      };
+
+  static Map<String, Object?> tagCheck({String status = 'available', String? reason, String? conflict, String? url}) =>
+      <String, Object?>{
+        'data': <String, Object?>{
+          'status': status,
+          'reason': reason,
+          'message': null,
+          'conflict': conflict == null ? null : <String, Object?>{'card_id': 'other', 'card_number': conflict},
+          'content': 'blank',
+          'replaces_tag': false,
+          'locked': false,
+          'expected_url': url ?? newCardUrl,
+          'attempt_id': 'a',
+        },
+      };
+
   static Map<String, Object?> token() => <String, Object?>{
         'data': <String, Object?>{'token': 'gcp_test', 'expires_at': '2026-10-27T00:00:00Z', 'user': user()},
       };
@@ -303,6 +354,7 @@ class TestApp {
     bool isIos = false,
     Map<String, Object?>? user,
     Map<String, Object> prefs = const <String, Object>{},
+    TagWriter? tagWriter,
     AppEnvironment environment = const AppEnvironment(
       apiBaseUrl: 'https://cards.example.at/api/v1',
       cardDomains: <String>['cards.example.at'],
@@ -413,6 +465,8 @@ class TestApp {
         appVersion: '1.0.0',
         buildNumber: '1',
         isTablet: false,
+        api: api,
+        tagWriter: tagWriter,
       ),
       backend: backend,
       nfc: nfc,
@@ -421,5 +475,67 @@ class TestApp {
       feedbackCalls: feedbackCalls,
       connectivity: connectivity,
     );
+  }
+}
+
+/// Scripted tag writer for S20: [tap] holds a tag to the phone; each operation takes the next scripted
+/// result (or the defaults: a blank NTAG215 that reads back what was written).
+class FakeTagWriter implements TagWriter {
+  final StreamController<NfcWriterTag> _tags = StreamController<NfcWriterTag>.broadcast();
+  final List<String> calls = <String>[];
+  bool enabled = false;
+  String uid = '04:A2:3F:1B:6C:80:12';
+  String? type = 'ntag215';
+  bool writable = true;
+  String? written;
+
+  /// Errors thrown by the next call of an operation (`inspect`, `write`, `read`, `lock`).
+  final Map<String, List<TagIoException>> failNext = <String, List<TagIoException>>{};
+
+  /// Overrides what the read-back returns.
+  String? readBackUrl;
+  String? readBackUid;
+
+  void tap({String? uid, String? url}) => _tags.add(NfcWriterTag(uid: uid ?? this.uid, url: url));
+
+  void _maybeFail(String op) {
+    final List<TagIoException>? queue = failNext[op];
+    if (queue != null && queue.isNotEmpty) throw queue.removeAt(0);
+  }
+
+  @override
+  Stream<NfcWriterTag> get tags => _tags.stream;
+
+  @override
+  Future<void> setEnabled({required bool enabled}) async {
+    this.enabled = enabled;
+    calls.add('enabled:$enabled');
+  }
+
+  @override
+  Future<TagInfo> inspect() async {
+    calls.add('inspect');
+    _maybeFail('inspect');
+    return TagInfo(uid: uid, type: type, writable: writable, maxSize: -1);
+  }
+
+  @override
+  Future<void> writeUrl(String url) async {
+    calls.add('write:$url');
+    _maybeFail('write');
+    written = url;
+  }
+
+  @override
+  Future<NfcTagRead> readBack() async {
+    calls.add('read');
+    _maybeFail('read');
+    return NfcTagRead(uid: readBackUid ?? uid, url: readBackUrl ?? written);
+  }
+
+  @override
+  Future<void> lock() async {
+    calls.add('lock');
+    _maybeFail('lock');
   }
 }

@@ -410,6 +410,129 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get maintenanceDismiss => pseudoLocalize(base.maintenanceDismiss);
 
   @override
+  String get readyNewCard => pseudoLocalize(base.readyNewCard);
+
+  @override
+  String get issueTitle => pseudoLocalize(base.issueTitle);
+
+  @override
+  String get issueAmountLabel => pseudoLocalize(base.issueAmountLabel);
+
+  @override
+  String get issueEmailLabel => pseudoLocalize(base.issueEmailLabel);
+
+  @override
+  String get issueEmailHelper => pseudoLocalize(base.issueEmailHelper);
+
+  @override
+  String get issueEmailInvalid => pseudoLocalize(base.issueEmailInvalid);
+
+  @override
+  String issueAmountRange(String min, String max) => pseudoLocalize(
+    base.issueAmountRange(pseudoMarker(0), pseudoMarker(1)),
+    <String>[min, max],
+  );
+
+  @override
+  String issueCreate(String amount) =>
+      pseudoLocalize(base.issueCreate(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get issueCreating => pseudoLocalize(base.issueCreating);
+
+  @override
+  String get issueProgramTitle => pseudoLocalize(base.issueProgramTitle);
+
+  @override
+  String get issueProgramBody => pseudoLocalize(base.issueProgramBody);
+
+  @override
+  String get issueProgramRetap => pseudoLocalize(base.issueProgramRetap);
+
+  @override
+  String get issueStepCheck => pseudoLocalize(base.issueStepCheck);
+
+  @override
+  String get issueStepWrite => pseudoLocalize(base.issueStepWrite);
+
+  @override
+  String get issueStepVerify => pseudoLocalize(base.issueStepVerify);
+
+  @override
+  String get issueStepSave => pseudoLocalize(base.issueStepSave);
+
+  @override
+  String issueCard(String number) =>
+      pseudoLocalize(base.issueCard(pseudoMarker(0)), <String>[number]);
+
+  @override
+  String get issueSuccessTitle => pseudoLocalize(base.issueSuccessTitle);
+
+  @override
+  String issueSuccessBalance(String amount) => pseudoLocalize(
+    base.issueSuccessBalance(pseudoMarker(0)),
+    <String>[amount],
+  );
+
+  @override
+  String get issueSuccessVerified => pseudoLocalize(base.issueSuccessVerified);
+
+  @override
+  String get issueSuccessNoTag => pseudoLocalize(base.issueSuccessNoTag);
+
+  @override
+  String get issueSuccessAnother => pseudoLocalize(base.issueSuccessAnother);
+
+  @override
+  String get issueLater => pseudoLocalize(base.issueLater);
+
+  @override
+  String get issueNfcOff => pseudoLocalize(base.issueNfcOff);
+
+  @override
+  String get issueCreateFailedTitle =>
+      pseudoLocalize(base.issueCreateFailedTitle);
+
+  @override
+  String get issueCreateFailedBody =>
+      pseudoLocalize(base.issueCreateFailedBody);
+
+  @override
+  String get issueCreateUncertainBody =>
+      pseudoLocalize(base.issueCreateUncertainBody);
+
+  @override
+  String get issueNotAllowedTitle => pseudoLocalize(base.issueNotAllowedTitle);
+
+  @override
+  String get issueNotAllowedBody => pseudoLocalize(base.issueNotAllowedBody);
+
+  @override
+  String get issueTagFailedTitle => pseudoLocalize(base.issueTagFailedTitle);
+
+  @override
+  String issueTagOtherCard(String number) =>
+      pseudoLocalize(base.issueTagOtherCard(pseudoMarker(0)), <String>[number]);
+
+  @override
+  String get issueTagRefused => pseudoLocalize(base.issueTagRefused);
+
+  @override
+  String get issueTagUnsupported => pseudoLocalize(base.issueTagUnsupported);
+
+  @override
+  String get issueTagReadOnly => pseudoLocalize(base.issueTagReadOnly);
+
+  @override
+  String get issueTagMoved => pseudoLocalize(base.issueTagMoved);
+
+  @override
+  String get issueTagVerifyFailed => pseudoLocalize(base.issueTagVerifyFailed);
+
+  @override
+  String get issueTagNetwork => pseudoLocalize(base.issueTagNetwork);
+
+  @override
   String get iosSheetAlert => pseudoLocalize(base.iosSheetAlert);
 
   @override

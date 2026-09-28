@@ -556,6 +556,45 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `offline.body` | Einlösen braucht Internet, damit nie doppelt gebucht wird. | Redeeming needs a connection so nothing is ever booked twice. | Za iskorištavanje je potrebna veza, da se ništa ne knjiži dvaput. | 90 | **B** |
 | `maintenance.default` | Geplante Wartung: Einlösen kann kurz nicht möglich sein. | Scheduled maintenance: redeeming may be briefly unavailable. | Planirano održavanje: iskorištavanje može kratko biti nedostupno. | 90 | 03a · A12 fallback when the server text is missing |
 | `maintenance.dismiss` | Hinweis schließen | Dismiss notice | Zatvori obavijest | — | 03a · (a11y) |
+| `ready.newCard` | Neue Gutscheinkarte | New gift card | Nova poklon kartica | 24 | S20 · managers and owners only · button on S05 |
+| `issue.title` | Neue Gutscheinkarte | New gift card | Nova poklon kartica | 24 | S20 · screen title |
+| `issue.amount.label` | Kartenwert | Card value | Vrijednost kartice | 24 | S20 · above the amount |
+| `issue.email.label` | E-Mail des Gastes (optional) | Guest e-mail (optional) | E-mail gosta (neobavezno) | 32 | S20 |
+| `issue.email.helper` | Der Gast erhält eine Bestätigung. | The guest receives a confirmation. | Gost dobija potvrdu. | 60 | S20 |
+| `issue.email.invalid` | Bitte eine gültige E-Mail-Adresse eingeben. | Enter a valid e-mail address. | Unesite ispravnu e-mail adresu. | 60 | S20 · field error |
+| `issue.amount.range` | Der Kartenwert muss zwischen {min} und {max} liegen. | The card value must be between {min} and {max}. | Vrijednost kartice mora biti između {min} i {max}. | 60 | S20 · server INVALID_AMOUNT |
+| `issue.create` | Karte anlegen · {amount} | Create card · {amount} | Kreiraj karticu · {amount} | 32 | S20 · primary |
+| `issue.creating` | Karte wird angelegt … | Creating card … | Kartica se kreira … | 32 | S20 · button progress |
+| `issue.program.title` | Leere Karte an das Handy halten | Hold a blank card to the phone | Prislonite praznu karticu uz telefon | 36 | S20 · programming |
+| `issue.program.body` | Ruhig an die Rückseite halten, bis das Häkchen erscheint. | Keep it still on the back of the phone until the check mark appears. | Držite je mirno na poleđini telefona dok se ne pojavi kvačica. | 90 | S20 |
+| `issue.program.retap` | Karte kurz abheben und erneut anhalten. | Lift the card and hold it to the phone again. | Podignite karticu i ponovo je prislonite. | 60 | S20 · hint |
+| `issue.step.check` | Chip prüfen | Check tag | Provjera čipa | 24 | S20 · step |
+| `issue.step.write` | Kartenlink schreiben | Write card link | Upis linka kartice | 24 | S20 · step |
+| `issue.step.verify` | Zurücklesen und prüfen | Read back and verify | Očitavanje i provjera | 24 | S20 · step |
+| `issue.step.save` | Chip der Karte zuordnen | Save chip to card | Spremanje čipa uz karticu | 28 | S20 · step |
+| `issue.card` | Karte {number} | Card {number} | Kartica {number} | 32 | S20 · card number, grouped |
+| `issue.success.title` | Karte bereit | Card ready | Kartica spremna | 20 | S20 |
+| `issue.success.balance` | Guthaben {amount} | Balance {amount} | Stanje {amount} | 32 | S20 |
+| `issue.success.verified` | NFC-Chip beschrieben und geprüft | NFC tag written and verified | NFC čip upisan i provjeren | 40 | S20 |
+| `issue.success.noTag` | Noch kein Chip. Später im Dashboard beschreiben. | No tag yet. Program it later in the dashboard. | Još nema čipa. Upišite ga kasnije na kontrolnoj ploči. | 60 | S20 · after “Program later” |
+| `issue.success.another` | Weitere Karte verkaufen | Sell another card | Prodaj još jednu karticu | 28 | S20 · secondary |
+| `issue.later` | Später beschreiben | Program later | Upiši kasnije | 24 | S20 · keeps the card without a tag |
+| `issue.nfcOff` | NFC einschalten, um den Chip zu beschreiben. | Turn on NFC to program the tag. | Uključite NFC da biste upisali čip. | 60 | S20 |
+| `issue.createFailed.title` | Karte nicht angelegt | Card not created | Kartica nije kreirana | 28 | S20 |
+| `issue.createFailed.body` | Es wurde keine Karte angelegt. Verbindung prüfen und erneut versuchen. | No card was created. Check the connection and try again. | Nijedna kartica nije kreirana. Provjerite vezu i pokušajte ponovo. | 90 | S20 · definitive answer |
+| `issue.createUncertain.body` | Die Antwort kam nicht an. Erneut versuchen, die Karte wird nicht doppelt angelegt. | The answer did not arrive. Try again, the card will not be created twice. | Odgovor nije stigao. Pokušajte ponovo, kartica se neće kreirati dvaput. | 90 | S20 · same idempotency key |
+| `issue.notAllowed.title` | Nicht erlaubt | Not allowed | Nije dozvoljeno | 28 | S20 · 403 |
+| `issue.notAllowed.body` | Dieses Konto kann auf diesem Handy keine Karten verkaufen. Ab- und wieder anmelden oder das Dashboard verwenden. | This account cannot sell cards on this phone. Sign out and in again, or use the dashboard. | Ovaj račun ne može prodavati kartice na ovom telefonu. Odjavite se i ponovo prijavite ili koristite kontrolnu ploču. | 120 | S20 · 403 |
+| `issue.tagFailed.title` | Chip nicht beschrieben | Tag not programmed | Čip nije upisan | 28 | S20 · the card exists, nothing was saved to it |
+| `issue.tag.otherCard` | Dieser Chip gehört zur Karte {number}. Bitte einen leeren Chip verwenden. | This tag belongs to card {number}. Use a blank tag. | Ovaj čip pripada kartici {number}. Koristite prazan čip. | 90 | S20 · check refused, conflict |
+| `issue.tag.refused` | Dieser Chip kann für diese Karte nicht verwendet werden. Bitte einen leeren Chip verwenden. | This tag cannot be used for this card. Use a blank tag. | Ovaj čip se ne može koristiti za ovu karticu. Koristite prazan čip. | 90 | S20 · check refused |
+| `issue.tag.unsupported` | Dieser Chiptyp wird nicht unterstützt. Bitte NTAG213, 215 oder 216 verwenden. | This tag type is not supported. Use NTAG213, 215 or 216. | Ovaj tip čipa nije podržan. Koristite NTAG213, 215 ili 216. | 90 | S20 |
+| `issue.tag.readOnly` | Dieser Chip ist gesperrt und kann nicht beschrieben werden. | This tag is locked and cannot be written. | Ovaj čip je zaključan i ne može se upisati. | 90 | S20 |
+| `issue.tag.moved` | Der Chip wurde bewegt. Ruhig halten und erneut versuchen. | The tag moved away. Hold it still and try again. | Čip se pomjerio. Držite ga mirno i pokušajte ponovo. | 90 | S20 · write / read failed, timeout |
+| `issue.tag.verifyFailed` | Der Chip konnte nicht geprüft werden. Mit demselben Chip erneut versuchen. | The tag could not be verified. Try again with the same tag. | Čip nije moguće provjeriti. Pokušajte ponovo s istim čipom. | 90 | S20 · read-back mismatch |
+| `issue.tag.network` | Keine Verbindung zum Server. Erneut versuchen. | No connection to the server. Try again. | Nema veze sa serverom. Pokušajte ponovo. | 90 | S20 · check / save without answer |
+
+Rows marked **S20** belong to *New gift card* (managers and owners only, see [02 §4.4a](02-information-architecture-and-journey.md)); waiters never see them.
 
 ### 5.7 S06 Scanning and iOS system sheet
 
@@ -833,7 +872,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **311 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **348 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

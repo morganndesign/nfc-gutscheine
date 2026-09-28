@@ -410,6 +410,136 @@ class AppLocalizationsHr extends AppLocalizations {
   String get maintenanceDismiss => 'Zatvori obavijest';
 
   @override
+  String get readyNewCard => 'Nova poklon kartica';
+
+  @override
+  String get issueTitle => 'Nova poklon kartica';
+
+  @override
+  String get issueAmountLabel => 'Vrijednost kartice';
+
+  @override
+  String get issueEmailLabel => 'E-mail gosta (neobavezno)';
+
+  @override
+  String get issueEmailHelper => 'Gost dobija potvrdu.';
+
+  @override
+  String get issueEmailInvalid => 'Unesite ispravnu e-mail adresu.';
+
+  @override
+  String issueAmountRange(String min, String max) {
+    return 'Vrijednost kartice mora biti između $min i $max.';
+  }
+
+  @override
+  String issueCreate(String amount) {
+    return 'Kreiraj karticu · $amount';
+  }
+
+  @override
+  String get issueCreating => 'Kartica se kreira …';
+
+  @override
+  String get issueProgramTitle => 'Prislonite praznu karticu uz telefon';
+
+  @override
+  String get issueProgramBody =>
+      'Držite je mirno na poleđini telefona dok se ne pojavi kvačica.';
+
+  @override
+  String get issueProgramRetap => 'Podignite karticu i ponovo je prislonite.';
+
+  @override
+  String get issueStepCheck => 'Provjera čipa';
+
+  @override
+  String get issueStepWrite => 'Upis linka kartice';
+
+  @override
+  String get issueStepVerify => 'Očitavanje i provjera';
+
+  @override
+  String get issueStepSave => 'Spremanje čipa uz karticu';
+
+  @override
+  String issueCard(String number) {
+    return 'Kartica $number';
+  }
+
+  @override
+  String get issueSuccessTitle => 'Kartica spremna';
+
+  @override
+  String issueSuccessBalance(String amount) {
+    return 'Stanje $amount';
+  }
+
+  @override
+  String get issueSuccessVerified => 'NFC čip upisan i provjeren';
+
+  @override
+  String get issueSuccessNoTag =>
+      'Još nema čipa. Upišite ga kasnije na kontrolnoj ploči.';
+
+  @override
+  String get issueSuccessAnother => 'Prodaj još jednu karticu';
+
+  @override
+  String get issueLater => 'Upiši kasnije';
+
+  @override
+  String get issueNfcOff => 'Uključite NFC da biste upisali čip.';
+
+  @override
+  String get issueCreateFailedTitle => 'Kartica nije kreirana';
+
+  @override
+  String get issueCreateFailedBody =>
+      'Nijedna kartica nije kreirana. Provjerite vezu i pokušajte ponovo.';
+
+  @override
+  String get issueCreateUncertainBody =>
+      'Odgovor nije stigao. Pokušajte ponovo, kartica se neće kreirati dvaput.';
+
+  @override
+  String get issueNotAllowedTitle => 'Nije dozvoljeno';
+
+  @override
+  String get issueNotAllowedBody =>
+      'Ovaj račun ne može prodavati kartice na ovom telefonu. Odjavite se i ponovo prijavite ili koristite kontrolnu ploču.';
+
+  @override
+  String get issueTagFailedTitle => 'Čip nije upisan';
+
+  @override
+  String issueTagOtherCard(String number) {
+    return 'Ovaj čip pripada kartici $number. Koristite prazan čip.';
+  }
+
+  @override
+  String get issueTagRefused =>
+      'Ovaj čip se ne može koristiti za ovu karticu. Koristite prazan čip.';
+
+  @override
+  String get issueTagUnsupported =>
+      'Ovaj tip čipa nije podržan. Koristite NTAG213, 215 ili 216.';
+
+  @override
+  String get issueTagReadOnly => 'Ovaj čip je zaključan i ne može se upisati.';
+
+  @override
+  String get issueTagMoved =>
+      'Čip se pomjerio. Držite ga mirno i pokušajte ponovo.';
+
+  @override
+  String get issueTagVerifyFailed =>
+      'Čip nije moguće provjeriti. Pokušajte ponovo s istim čipom.';
+
+  @override
+  String get issueTagNetwork => 'Nema veze sa serverom. Pokušajte ponovo.';
+
+  @override
   String get iosSheetAlert => 'Prislonite karticu na vrh iPhonea';
 
   @override

@@ -37,6 +37,15 @@ final class NfcAdapterChanged extends NfcEvent {
   final NfcAvailability availability;
 }
 
+/// A tag held to the phone while the S20 writer is on (managers and owners).
+/// Never a card lookup: the loop ignores it.
+final class NfcWriterTag extends NfcEvent {
+  const NfcWriterTag({required this.uid, this.url});
+
+  final String uid;
+  final String? url;
+}
+
 /// iPhone: the system sheet closed (cancel, ≈ 60 s timeout, busy).
 final class NfcSessionEnded extends NfcEvent {
   const NfcSessionEnded(this.reason);
@@ -130,6 +139,11 @@ class PlatformNfcService implements NfcService {
         return NfcTagRead(uid: uid, url: url is String && url.isNotEmpty ? url : null);
       case 'readFailed':
         return const NfcReadFailed();
+      case 'writerTag':
+        final Object? uid = m['uid'];
+        if (uid is! String || uid.isEmpty) return null;
+        final Object? url = m['url'];
+        return NfcWriterTag(uid: uid, url: url is String && url.isNotEmpty ? url : null);
       case 'adapter':
         return NfcAdapterChanged(_availability(m['state']));
       case 'sessionEnded':

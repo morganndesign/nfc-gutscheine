@@ -75,19 +75,25 @@ class RestaurantSettings {
     required this.allowPartialRedemption,
     required this.maxSingleRedemption,
     required this.brandColor,
+    this.lockTagsAfterWrite = false,
   });
 
   factory RestaurantSettings.fromJson(Map<String, Object?> json) => RestaurantSettings(
         allowPartialRedemption: _bool(json, 'allow_partial_redemption', fallback: true),
         maxSingleRedemption: _intOrNull(json, 'max_single_redemption'),
         brandColor: _stringOrNull(json, 'brand_color'),
+        lockTagsAfterWrite: _bool(json, 'lock_nfc_tags_after_write'),
       );
 
   Map<String, Object?> toJson() => <String, Object?>{
         'allow_partial_redemption': allowPartialRedemption,
         'max_single_redemption': maxSingleRedemption,
         'brand_color': brandColor,
+        'lock_nfc_tags_after_write': lockTagsAfterWrite,
       };
+
+  /// S20: make a verified tag read-only (restaurant setting, same as the dashboard).
+  final bool lockTagsAfterWrite;
 
   final bool allowPartialRedemption;
 
@@ -148,17 +154,20 @@ class SessionUser {
     required this.email,
     required this.permissions,
     required this.restaurant,
+    this.roleSlug,
   });
 
   factory SessionUser.fromJson(Map<String, Object?> json) {
     final Object? restaurant = json['restaurant'];
     final Object? permissions = json['permissions'];
+    final Object? role = json['role'];
     return SessionUser(
       id: _string(json, 'id'),
       name: _string(json, 'name'),
       email: _string(json, 'email'),
       permissions: permissions is List ? permissions.whereType<String>().toList() : const <String>[],
       restaurant: restaurant == null ? null : Restaurant.fromJson(_map(restaurant, 'restaurant')),
+      roleSlug: role is Map ? _stringOrNull(role.cast<String, Object?>(), 'slug') : null,
     );
   }
 
@@ -168,6 +177,9 @@ class SessionUser {
   final List<String> permissions;
   final Restaurant? restaurant;
 
+  /// `owner`, `manager` or `waiter` (null in profiles cached by older versions).
+  final String? roleSlug;
+
   /// Cached so S05 can render before `/auth/me` answers (offline start).
   Map<String, Object?> toJson() => <String, Object?>{
         'id': id,
@@ -175,6 +187,7 @@ class SessionUser {
         'email': email,
         'permissions': permissions,
         'restaurant': restaurant?.toJson(),
+        if (roleSlug != null) 'role': <String, Object?>{'slug': roleSlug},
       };
 
   /// Waiter initials for the `Avatar` (max. two letters).
@@ -187,6 +200,13 @@ class SessionUser {
   }
 
   bool get canRedeem => permissions.contains('cards.scan') && permissions.contains('cards.redeem');
+
+  /// "New gift card" (S20): managers and owners whose sign-in carries both abilities. Only decides what is
+  /// shown; the server checks role and token on every request.
+  bool get canIssueCards =>
+      (roleSlug == 'manager' || roleSlug == 'owner') &&
+      permissions.contains('cards.create') &&
+      permissions.contains('cards.write_nfc');
 }
 
 /// Result of `POST /auth/token`.
@@ -341,4 +361,74 @@ class CurrentDevice {
   }
 
   final String name;
+}
+
+/// `POST /cards` (S20): the sold card and the link its tag must carry.
+@immutable
+class IssuedCard {
+  const IssuedCard({
+    required this.id,
+    required this.cardNumber,
+    required this.balance,
+    required this.currency,
+    required this.url,
+    required this.replayed,
+  });
+
+  factory IssuedCard.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Map<String, Object?> nfc = _map(json['nfc'], 'nfc');
+    return IssuedCard(
+      id: _string(data, 'id'),
+      cardNumber: _stringOrNull(data, 'card_number_formatted') ?? _string(data, 'card_number'),
+      balance: _int(data, 'balance'),
+      currency: _stringOrNull(data, 'currency') ?? 'EUR',
+      url: _string(nfc, 'url'),
+      replayed: json['replayed'] == true,
+    );
+  }
+
+  final String id;
+
+  /// Grouped for reading aloud, e.g. `1268 8343 1352 0042`.
+  final String cardNumber;
+
+  /// Cents.
+  final int balance;
+  final String currency;
+
+  /// The card URL, written verbatim to the tag and compared verbatim on read-back.
+  final String url;
+  final bool replayed;
+}
+
+/// `POST /cards/{id}/nfc/check` (S20, same contract as the dashboard).
+@immutable
+class NfcCheckResult {
+  const NfcCheckResult({
+    required this.status,
+    required this.expectedUrl,
+    this.reason,
+    this.conflictCardNumber,
+    this.locked = false,
+  });
+
+  factory NfcCheckResult.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Object? conflict = data['conflict'];
+    return NfcCheckResult(
+      status: _string(data, 'status'),
+      expectedUrl: _string(data, 'expected_url'),
+      reason: _stringOrNull(data, 'reason'),
+      conflictCardNumber: conflict is Map ? _stringOrNull(conflict.cast<String, Object?>(), 'card_number') : null,
+      locked: data['locked'] == true,
+    );
+  }
+
+  /// `available`, `already_programmed` or `refused`.
+  final String status;
+  final String expectedUrl;
+  final String? reason;
+  final String? conflictCardNumber;
+  final bool locked;
 }

@@ -414,6 +414,138 @@ class AppLocalizationsDe extends AppLocalizations {
   String get maintenanceDismiss => 'Hinweis schließen';
 
   @override
+  String get readyNewCard => 'Neue Gutscheinkarte';
+
+  @override
+  String get issueTitle => 'Neue Gutscheinkarte';
+
+  @override
+  String get issueAmountLabel => 'Kartenwert';
+
+  @override
+  String get issueEmailLabel => 'E-Mail des Gastes (optional)';
+
+  @override
+  String get issueEmailHelper => 'Der Gast erhält eine Bestätigung.';
+
+  @override
+  String get issueEmailInvalid => 'Bitte eine gültige E-Mail-Adresse eingeben.';
+
+  @override
+  String issueAmountRange(String min, String max) {
+    return 'Der Kartenwert muss zwischen $min und $max liegen.';
+  }
+
+  @override
+  String issueCreate(String amount) {
+    return 'Karte anlegen · $amount';
+  }
+
+  @override
+  String get issueCreating => 'Karte wird angelegt …';
+
+  @override
+  String get issueProgramTitle => 'Leere Karte an das Handy halten';
+
+  @override
+  String get issueProgramBody =>
+      'Ruhig an die Rückseite halten, bis das Häkchen erscheint.';
+
+  @override
+  String get issueProgramRetap => 'Karte kurz abheben und erneut anhalten.';
+
+  @override
+  String get issueStepCheck => 'Chip prüfen';
+
+  @override
+  String get issueStepWrite => 'Kartenlink schreiben';
+
+  @override
+  String get issueStepVerify => 'Zurücklesen und prüfen';
+
+  @override
+  String get issueStepSave => 'Chip der Karte zuordnen';
+
+  @override
+  String issueCard(String number) {
+    return 'Karte $number';
+  }
+
+  @override
+  String get issueSuccessTitle => 'Karte bereit';
+
+  @override
+  String issueSuccessBalance(String amount) {
+    return 'Guthaben $amount';
+  }
+
+  @override
+  String get issueSuccessVerified => 'NFC-Chip beschrieben und geprüft';
+
+  @override
+  String get issueSuccessNoTag =>
+      'Noch kein Chip. Später im Dashboard beschreiben.';
+
+  @override
+  String get issueSuccessAnother => 'Weitere Karte verkaufen';
+
+  @override
+  String get issueLater => 'Später beschreiben';
+
+  @override
+  String get issueNfcOff => 'NFC einschalten, um den Chip zu beschreiben.';
+
+  @override
+  String get issueCreateFailedTitle => 'Karte nicht angelegt';
+
+  @override
+  String get issueCreateFailedBody =>
+      'Es wurde keine Karte angelegt. Verbindung prüfen und erneut versuchen.';
+
+  @override
+  String get issueCreateUncertainBody =>
+      'Die Antwort kam nicht an. Erneut versuchen, die Karte wird nicht doppelt angelegt.';
+
+  @override
+  String get issueNotAllowedTitle => 'Nicht erlaubt';
+
+  @override
+  String get issueNotAllowedBody =>
+      'Dieses Konto kann auf diesem Handy keine Karten verkaufen. Ab- und wieder anmelden oder das Dashboard verwenden.';
+
+  @override
+  String get issueTagFailedTitle => 'Chip nicht beschrieben';
+
+  @override
+  String issueTagOtherCard(String number) {
+    return 'Dieser Chip gehört zur Karte $number. Bitte einen leeren Chip verwenden.';
+  }
+
+  @override
+  String get issueTagRefused =>
+      'Dieser Chip kann für diese Karte nicht verwendet werden. Bitte einen leeren Chip verwenden.';
+
+  @override
+  String get issueTagUnsupported =>
+      'Dieser Chiptyp wird nicht unterstützt. Bitte NTAG213, 215 oder 216 verwenden.';
+
+  @override
+  String get issueTagReadOnly =>
+      'Dieser Chip ist gesperrt und kann nicht beschrieben werden.';
+
+  @override
+  String get issueTagMoved =>
+      'Der Chip wurde bewegt. Ruhig halten und erneut versuchen.';
+
+  @override
+  String get issueTagVerifyFailed =>
+      'Der Chip konnte nicht geprüft werden. Mit demselben Chip erneut versuchen.';
+
+  @override
+  String get issueTagNetwork =>
+      'Keine Verbindung zum Server. Erneut versuchen.';
+
+  @override
   String get iosSheetAlert => 'Karte oben an das iPhone halten';
 
   @override

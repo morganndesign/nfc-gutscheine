@@ -12,8 +12,11 @@ import android.nfc.NdefMessage
 import android.nfc.NdefRecord
 import android.nfc.NfcAdapter
 import android.nfc.Tag
+import android.nfc.TagLostException
 import android.nfc.tech.MifareUltralight
 import android.nfc.tech.Ndef
+import android.nfc.tech.NdefFormatable
+import android.nfc.tech.NfcA
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -35,6 +38,12 @@ import java.util.concurrent.Executors
  * (and, in multi-window, the top resumed activity). Events are always posted
  * on the main thread; events produced before Dart subscribes (a background tap
  * that launched the app) are buffered and delivered on subscription.
+ *
+ * Writer mode (S20, managers and owners): while Dart has it on, every tag is
+ * delivered as a `writerTag` event only — never as a card read — and kept, so
+ * `writerInspect` / `writerWrite` / `writerRead` / `writerLock` act on the tag
+ * that is on the phone. The steps and the server checks run in Dart
+ * (`CardProgrammer`, the same workflow as the dashboard's Web NFC station).
  */
 internal class WaiterNfc(private val activity: Activity) :
     MethodChannel.MethodCallHandler,
@@ -56,6 +65,12 @@ internal class WaiterNfc(private val activity: Activity) :
     private val pending = ArrayDeque<Map<String, Any?>>()
 
     private var readerRequested = false
+    private var writerRequested = false
+
+    /** The tag on the phone in writer mode (replaced by every new tap). */
+    @Volatile
+    private var writerTag: Tag? = null
+    private val writerIo: ExecutorService = Executors.newSingleThreadExecutor()
     private var resumed = false
     private var topResumed = true
     private var readerActive = false
@@ -103,6 +118,8 @@ internal class WaiterNfc(private val activity: Activity) :
         eventChannel = null
         sink = null
         readerRequested = false
+        writerRequested = false
+        writerTag = null
         applyReaderMode()
     }
 
@@ -113,6 +130,7 @@ internal class WaiterNfc(private val activity: Activity) :
             receiverRegistered = false
         }
         intentReader.shutdownNow()
+        writerIo.shutdownNow()
         mainHandler.removeCallbacksAndMessages(null)
     }
 
@@ -168,6 +186,23 @@ internal class WaiterNfc(private val activity: Activity) :
                 openNfcSettings()
                 result.success(null)
             }
+            "writerMode" -> {
+                writerRequested = call.argument<Boolean>("enabled") == true
+                if (!writerRequested) writerTag = null
+                applyReaderMode()
+                result.success(null)
+            }
+            "writerInspect" -> onWriterTag(result) { tag -> inspect(tag) }
+            "writerWrite" -> {
+                val url = call.argument<String>("url")
+                if (url.isNullOrEmpty()) {
+                    result.error("BAD_ARGUMENT", "url is required", null)
+                } else {
+                    onWriterTag(result) { tag -> writeUrl(tag, url) }
+                }
+            }
+            "writerRead" -> onWriterTag(result) { tag -> readFresh(tag) }
+            "writerLock" -> onWriterTag(result) { tag -> lock(tag) }
             // iPhone-only session methods.
             else -> result.notImplemented()
         }
@@ -226,7 +261,7 @@ internal class WaiterNfc(private val activity: Activity) :
 
     private fun applyReaderMode() {
         val nfc = adapter ?: return
-        val shouldRun = readerRequested && resumed && topResumed && nfc.isEnabled
+        val shouldRun = (readerRequested || writerRequested) && resumed && topResumed && nfc.isEnabled
         if (shouldRun == readerActive) return
         try {
             if (shouldRun) {
@@ -246,7 +281,138 @@ internal class WaiterNfc(private val activity: Activity) :
 
     /** Binder thread. The NDEF check is left enabled, so the message is cached on the tag. */
     override fun onTagDiscovered(tag: Tag) {
+        if (writerRequested) {
+            writerTag = tag
+            val cached = Ndef.get(tag)?.cachedNdefMessage?.let(::firstUri)
+            emit(mapOf("type" to "writerTag", "uid" to formatUid(tag.id), "url" to cached))
+            return
+        }
         emit(readTag(tag))
+    }
+
+    // endregion
+
+    // region Writer (S20)
+
+    private class WriterError(val code: String, message: String) : Exception(message)
+
+    /** Runs [work] on the writer thread with the current tag; answers on the main thread. */
+    private fun onWriterTag(result: MethodChannel.Result, work: (Tag) -> Any?) {
+        val tag = writerTag
+        if (tag == null) {
+            result.error("NO_TAG", "No tag on the phone.", null)
+            return
+        }
+        writerIo.execute {
+            try {
+                val value = work(tag)
+                mainHandler.post { result.success(value) }
+            } catch (e: WriterError) {
+                mainHandler.post { result.error(e.code, e.message, null) }
+            } catch (e: TagLostException) {
+                mainHandler.post { result.error("TAG_LOST", e.message, null) }
+            } catch (e: SecurityException) {
+                // The Tag object is out of date: the tag left the field.
+                mainHandler.post { result.error("TAG_LOST", e.message, null) }
+            } catch (e: IOException) {
+                mainHandler.post { result.error("IO_FAILED", e.message, null) }
+            } catch (e: FormatException) {
+                mainHandler.post { result.error("IO_FAILED", e.message, null) }
+            }
+        }
+    }
+
+    /**
+     * Chip type from GET_VERSION (NXP NTAG213/215/216 datasheet: vendor 0x04, product 0x04, storage size
+     * 0x0F / 0x11 / 0x13) — exact, and unlike the dashboard's probe writes nothing is written to detect it.
+     */
+    private fun inspect(tag: Tag): Map<String, Any?> {
+        var type: String? = null
+        val nfcA = NfcA.get(tag)
+        if (nfcA != null) {
+            try {
+                nfcA.connect()
+                val v = nfcA.transceive(byteArrayOf(0x60))
+                if (v.size >= 8 && v[1] == 0x04.toByte() && v[2] == 0x04.toByte()) {
+                    type = when (v[6].toInt() and 0xFF) {
+                        0x0F -> "ntag213"
+                        0x11 -> "ntag215"
+                        0x13 -> "ntag216"
+                        else -> null
+                    }
+                }
+            } catch (e: TagLostException) {
+                throw e
+            } catch (_: IOException) {
+                // Not an NTAG21x (no GET_VERSION): type stays unknown.
+            } finally {
+                try {
+                    nfcA.close()
+                } catch (_: IOException) {
+                    // Nothing to release.
+                }
+            }
+        }
+        val ndef = Ndef.get(tag)
+        return mapOf(
+            "uid" to formatUid(tag.id),
+            "type" to type,
+            "writable" to (ndef?.isWritable ?: (NdefFormatable.get(tag) != null)),
+            "maxSize" to (ndef?.maxSize ?: -1),
+        )
+    }
+
+    /** One NDEF URI record with [url], replacing the whole message. */
+    private fun writeUrl(tag: Tag, url: String): Any? {
+        val message = NdefMessage(NdefRecord.createUri(url))
+        val ndef = Ndef.get(tag)
+        if (ndef == null) {
+            val formatable = NdefFormatable.get(tag) ?: throw WriterError("UNSUPPORTED", "Not an NDEF tag.")
+            try {
+                formatable.connect()
+                formatable.format(message)
+            } finally {
+                try {
+                    formatable.close()
+                } catch (_: IOException) {
+                    // Nothing to release.
+                }
+            }
+            return null
+        }
+        try {
+            ndef.connect()
+            if (!ndef.isWritable) throw WriterError("READ_ONLY", "The tag is read-only.")
+            if (message.byteArrayLength > ndef.maxSize) throw WriterError("TOO_SMALL", "The link does not fit.")
+            ndef.writeNdefMessage(message)
+        } finally {
+            closeQuietly(ndef)
+        }
+        return null
+    }
+
+    /** A fresh read from the chip (not the message cached at discovery). */
+    private fun readFresh(tag: Tag): Map<String, Any?> {
+        val ndef = Ndef.get(tag) ?: throw WriterError("READ_FAILED", "Not an NDEF tag.")
+        try {
+            ndef.connect()
+            val message = ndef.ndefMessage
+            return mapOf("uid" to formatUid(tag.id), "url" to message?.let(::firstUri))
+        } finally {
+            closeQuietly(ndef)
+        }
+    }
+
+    /** Makes the tag permanently read-only. */
+    private fun lock(tag: Tag): Any? {
+        val ndef = Ndef.get(tag) ?: throw WriterError("LOCK_FAILED", "Not an NDEF tag.")
+        try {
+            ndef.connect()
+            if (!ndef.canMakeReadOnly() || !ndef.makeReadOnly()) throw WriterError("LOCK_FAILED", "The tag could not be locked.")
+        } finally {
+            closeQuietly(ndef)
+        }
+        return null
     }
 
     // endregion

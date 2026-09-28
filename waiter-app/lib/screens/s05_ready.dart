@@ -19,6 +19,7 @@ import '../l10n/app_localizations.dart';
 import 'ios_sheet_texts.dart';
 import 's13_recent.dart';
 import 's14_menu.dart';
+import 's20_new_card.dart';
 import 'scan/card_slot.dart';
 import 'scan/focus_helpers.dart';
 
@@ -573,6 +574,32 @@ class _ReadyScreenState extends State<ReadyScreen> {
 
   /// The bottom action stack of each variant (03a §5.1, §5.2, V4–V6; 08 §5).
   Widget _actions(
+    BuildContext context, {
+    required LoopController loop,
+    required _Variant variant,
+    required bool tablet,
+  }) {
+    final Widget redeem = _redeemActions(context, loop: loop, variant: variant, tablet: tablet);
+    // S20: selling and programming a card — managers and owners on Android only. Waiters never see it; the
+    // server checks role and sign-in on every request.
+    final bool issue = !loop.isIos && (_services.session.user?.canIssueCards ?? false);
+    if (!issue) return redeem;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        redeem,
+        const SizedBox(height: Space.s2),
+        TertiaryButton(
+          label: _l10n.readyNewCard,
+          large: true,
+          onPressed: _offline ? null : () => unawaited(openNewCard(context)),
+        ),
+      ],
+    );
+  }
+
+  Widget _redeemActions(
     BuildContext context, {
     required LoopController loop,
     required _Variant variant,

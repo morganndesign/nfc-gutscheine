@@ -49,6 +49,9 @@ document — cross-link it (relative links to the file names below).
   forced-update and maintenance states.
 - **Out of scope v1 (never show):** reload, block, card creation, customer data, reports, team, settings of the
   restaurant, reversals, tips, receipts/printing, cash register integration.
+- **Exception since 1.4.3 (product decision after the pilot, 28 Sep 2026):** *New gift card* (S20) — sell a card and
+  program its NFC tag — for **managers and owners on Android only**. Waiters never see it; the redemption loop is
+  unchanged. See [02 §4.4a](02-information-architecture-and-journey.md#44a-s20-new-gift-card-managers-and-owners).
 - Card details and amount entry are **one screen** ("Charge") — the balance card sits at the top, the keypad
   below. This saves a transition and a tap; the user flow "Card Details → Enter Amount" happens on one surface.
 - **No confirmation screen.** The Redeem button always states the exact amount ("Redeem € 24,90").

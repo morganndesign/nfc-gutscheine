@@ -7,7 +7,7 @@ namespace App\Enums;
 /** How a tag was programmed. Only `web_nfc` proves the content by reading the tag back. */
 enum NfcWriteMethod: string
 {
-    /** Written and read back by the dashboard (Web NFC, Chrome on Android). */
+    /** Written and read back by a client: the dashboard (Web NFC, Chrome on Android) or GiftCard Waiter (Android). */
     case WebNfc = 'web_nfc';
     /** Written with an external app; the dashboard only records it (never with a UID). */
     case Manual = 'manual';

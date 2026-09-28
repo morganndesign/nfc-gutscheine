@@ -550,6 +550,182 @@
   "@maintenanceDismiss": {
     "description": "Spec key: maintenance.dismiss (12 §5.6) · Max: — · Notes: 03a · (a11y)"
   },
+  "readyNewCard": "New gift card",
+  "@readyNewCard": {
+    "description": "Spec key: ready.newCard (12 §5.6) · Max: 24 · Notes: S20 · managers and owners only · button on S05"
+  },
+  "issueTitle": "New gift card",
+  "@issueTitle": {
+    "description": "Spec key: issue.title (12 §5.6) · Max: 24 · Notes: S20 · screen title"
+  },
+  "issueAmountLabel": "Card value",
+  "@issueAmountLabel": {
+    "description": "Spec key: issue.amount.label (12 §5.6) · Max: 24 · Notes: S20 · above the amount"
+  },
+  "issueEmailLabel": "Guest e-mail (optional)",
+  "@issueEmailLabel": {
+    "description": "Spec key: issue.email.label (12 §5.6) · Max: 32 · Notes: S20"
+  },
+  "issueEmailHelper": "The guest receives a confirmation.",
+  "@issueEmailHelper": {
+    "description": "Spec key: issue.email.helper (12 §5.6) · Max: 60 · Notes: S20"
+  },
+  "issueEmailInvalid": "Enter a valid e-mail address.",
+  "@issueEmailInvalid": {
+    "description": "Spec key: issue.email.invalid (12 §5.6) · Max: 60 · Notes: S20 · field error"
+  },
+  "issueAmountRange": "The card value must be between {min} and {max}.",
+  "@issueAmountRange": {
+    "description": "Spec key: issue.amount.range (12 §5.6) · Max: 60 · Notes: S20 · server INVALID_AMOUNT",
+    "placeholders": {
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "issueCreate": "Create card · {amount}",
+  "@issueCreate": {
+    "description": "Spec key: issue.create (12 §5.6) · Max: 32 · Notes: S20 · primary",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "issueCreating": "Creating card\u00a0…",
+  "@issueCreating": {
+    "description": "Spec key: issue.creating (12 §5.6) · Max: 32 · Notes: S20 · button progress"
+  },
+  "issueProgramTitle": "Hold a blank card to the phone",
+  "@issueProgramTitle": {
+    "description": "Spec key: issue.program.title (12 §5.6) · Max: 36 · Notes: S20 · programming"
+  },
+  "issueProgramBody": "Keep it still on the back of the phone until the check mark appears.",
+  "@issueProgramBody": {
+    "description": "Spec key: issue.program.body (12 §5.6) · Max: 90 · Notes: S20"
+  },
+  "issueProgramRetap": "Lift the card and hold it to the phone again.",
+  "@issueProgramRetap": {
+    "description": "Spec key: issue.program.retap (12 §5.6) · Max: 60 · Notes: S20 · hint"
+  },
+  "issueStepCheck": "Check tag",
+  "@issueStepCheck": {
+    "description": "Spec key: issue.step.check (12 §5.6) · Max: 24 · Notes: S20 · step"
+  },
+  "issueStepWrite": "Write card link",
+  "@issueStepWrite": {
+    "description": "Spec key: issue.step.write (12 §5.6) · Max: 24 · Notes: S20 · step"
+  },
+  "issueStepVerify": "Read back and verify",
+  "@issueStepVerify": {
+    "description": "Spec key: issue.step.verify (12 §5.6) · Max: 24 · Notes: S20 · step"
+  },
+  "issueStepSave": "Save chip to card",
+  "@issueStepSave": {
+    "description": "Spec key: issue.step.save (12 §5.6) · Max: 28 · Notes: S20 · step"
+  },
+  "issueCard": "Card {number}",
+  "@issueCard": {
+    "description": "Spec key: issue.card (12 §5.6) · Max: 32 · Notes: S20 · card number, grouped",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "issueSuccessTitle": "Card ready",
+  "@issueSuccessTitle": {
+    "description": "Spec key: issue.success.title (12 §5.6) · Max: 20 · Notes: S20"
+  },
+  "issueSuccessBalance": "Balance {amount}",
+  "@issueSuccessBalance": {
+    "description": "Spec key: issue.success.balance (12 §5.6) · Max: 32 · Notes: S20",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "issueSuccessVerified": "NFC tag written and verified",
+  "@issueSuccessVerified": {
+    "description": "Spec key: issue.success.verified (12 §5.6) · Max: 40 · Notes: S20"
+  },
+  "issueSuccessNoTag": "No tag yet. Program it later in the dashboard.",
+  "@issueSuccessNoTag": {
+    "description": "Spec key: issue.success.noTag (12 §5.6) · Max: 60 · Notes: S20 · after “Program later”"
+  },
+  "issueSuccessAnother": "Sell another card",
+  "@issueSuccessAnother": {
+    "description": "Spec key: issue.success.another (12 §5.6) · Max: 28 · Notes: S20 · secondary"
+  },
+  "issueLater": "Program later",
+  "@issueLater": {
+    "description": "Spec key: issue.later (12 §5.6) · Max: 24 · Notes: S20 · keeps the card without a tag"
+  },
+  "issueNfcOff": "Turn on NFC to program the tag.",
+  "@issueNfcOff": {
+    "description": "Spec key: issue.nfcOff (12 §5.6) · Max: 60 · Notes: S20"
+  },
+  "issueCreateFailedTitle": "Card not created",
+  "@issueCreateFailedTitle": {
+    "description": "Spec key: issue.createFailed.title (12 §5.6) · Max: 28 · Notes: S20"
+  },
+  "issueCreateFailedBody": "No card was created. Check the connection and try again.",
+  "@issueCreateFailedBody": {
+    "description": "Spec key: issue.createFailed.body (12 §5.6) · Max: 90 · Notes: S20 · definitive answer"
+  },
+  "issueCreateUncertainBody": "The answer did not arrive. Try again, the card will not be created twice.",
+  "@issueCreateUncertainBody": {
+    "description": "Spec key: issue.createUncertain.body (12 §5.6) · Max: 90 · Notes: S20 · same idempotency key"
+  },
+  "issueNotAllowedTitle": "Not allowed",
+  "@issueNotAllowedTitle": {
+    "description": "Spec key: issue.notAllowed.title (12 §5.6) · Max: 28 · Notes: S20 · 403"
+  },
+  "issueNotAllowedBody": "This account cannot sell cards on this phone. Sign out and in again, or use the dashboard.",
+  "@issueNotAllowedBody": {
+    "description": "Spec key: issue.notAllowed.body (12 §5.6) · Max: 120 · Notes: S20 · 403"
+  },
+  "issueTagFailedTitle": "Tag not programmed",
+  "@issueTagFailedTitle": {
+    "description": "Spec key: issue.tagFailed.title (12 §5.6) · Max: 28 · Notes: S20 · the card exists, nothing was saved to it"
+  },
+  "issueTagOtherCard": "This tag belongs to card {number}. Use a blank tag.",
+  "@issueTagOtherCard": {
+    "description": "Spec key: issue.tag.otherCard (12 §5.6) · Max: 90 · Notes: S20 · check refused, conflict",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "issueTagRefused": "This tag cannot be used for this card. Use a blank tag.",
+  "@issueTagRefused": {
+    "description": "Spec key: issue.tag.refused (12 §5.6) · Max: 90 · Notes: S20 · check refused"
+  },
+  "issueTagUnsupported": "This tag type is not supported. Use NTAG213, 215 or 216.",
+  "@issueTagUnsupported": {
+    "description": "Spec key: issue.tag.unsupported (12 §5.6) · Max: 90 · Notes: S20"
+  },
+  "issueTagReadOnly": "This tag is locked and cannot be written.",
+  "@issueTagReadOnly": {
+    "description": "Spec key: issue.tag.readOnly (12 §5.6) · Max: 90 · Notes: S20"
+  },
+  "issueTagMoved": "The tag moved away. Hold it still and try again.",
+  "@issueTagMoved": {
+    "description": "Spec key: issue.tag.moved (12 §5.6) · Max: 90 · Notes: S20 · write / read failed, timeout"
+  },
+  "issueTagVerifyFailed": "The tag could not be verified. Try again with the same tag.",
+  "@issueTagVerifyFailed": {
+    "description": "Spec key: issue.tag.verifyFailed (12 §5.6) · Max: 90 · Notes: S20 · read-back mismatch"
+  },
+  "issueTagNetwork": "No connection to the server. Try again.",
+  "@issueTagNetwork": {
+    "description": "Spec key: issue.tag.network (12 §5.6) · Max: 90 · Notes: S20 · check / save without answer"
+  },
   "iosSheetAlert": "Hold the card near the top of the iPhone",
   "@iosSheetAlert": {
     "description": "Spec key: ios.sheet.alert (12 §5.7) · Max: 48 · Notes: B"

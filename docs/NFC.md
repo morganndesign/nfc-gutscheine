@@ -126,6 +126,16 @@ with a **unique index**: one chip belongs to at most one usable card on the whol
 program the same chip at the same moment. Replaced and expired cards keep `nfc_uid` for history and release the chip,
 so the tag of a replaced card can be re-programmed for its replacement.
 
+### In GiftCard Waiter (Android, managers and owners)
+
+Since 1.4.3 managers and owners can sell and program a card in the app: S05 → **New gift card** → amount (and
+optional guest e-mail) → **Create card** → hold a blank tag to the phone. The app runs the same steps as the dashboard
+against the same endpoints (`POST /cards`, `…/nfc/check`, `…/nfc`, `…/nfc/lock`, `…/nfc/attempts`) and records the
+verified write with `method: web_nfc` (written and read back by a client; the device is in the audit log). Two
+differences: the chip type is read with the NTAG21x GET_VERSION command instead of probe writes, and the read-back
+comes straight from the chip (no browser cache, so no second re-tap is needed). Waiters' sign-ins cannot create or
+program cards (403), and the app does not show the action to them.
+
 ### Without Chrome on Android
 
 Desktop browsers and iPhones cannot write tags from a web page. The dialog shows the URL for an external writer app

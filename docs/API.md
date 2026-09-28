@@ -37,8 +37,13 @@ POST /api/v1/auth/token
 
 Send the token as `Authorization: Bearer …` **together with the same `X-Device-Id`**. The token:
 
-- can only scan and redeem (abilities `cards.scan`, `cards.redeem`) and only reaches `auth/me`, `auth/logout`,
-  `scan`, `cards/{id}/redeem` and `devices/current` — even for owners;
+- can scan and redeem (abilities `cards.scan`, `cards.redeem`); for managers and owners (roles with `cards.create`
+  and `cards.write_nfc`) also sell and program cards (abilities `cards.create`, `cards.write_nfc`, since 1.4.3);
+- only reaches `auth/me`, `auth/logout`, `scan`, `cards/{id}/redeem`, `devices/current` and — for selling —
+  `POST cards`, `cards/{id}/nfc`, `cards/{id}/nfc/check`, `cards/{id}/nfc/lock`, `cards/{id}/nfc/attempts`.
+  Everything else (card lists, card details, reload, expire, customers, reports, settings) needs the web app,
+  even for owners. Every request is checked against the role **and** the token: a demoted manager loses selling at
+  once; the abilities follow the role at the daily renewal (or the next sign-in);
 - works only with the `X-Device-Id` it was issued for (another id → `401`);
 - stops at once when the device is revoked under **Devices** (`403 DEVICE_REVOKED`) and works again when it is restored;
 - expires after `DEVICE_TOKEN_DAYS` (30) without use and is renewed while the phone is used;

@@ -12,7 +12,8 @@ use Illuminate\Validation\Rule;
 /**
  * Records the tag of a card.
  *
- * - `web_nfc`: written and read back by the dashboard. The UID is stored only here, together with the
+ * - `web_nfc`: written and read back by a client — the dashboard (Web NFC) or GiftCard Waiter (managers and owners,
+ *   Android). The UID is stored only here, together with the
  *   read-back proof (`read_back.uid`, `read_back.url`), and only for NTAG213/215/216 (detected type).
  * - `manual` (external writer app), `provisioned` (NTAG 424 DNA), `printed` (QR only): no UID is accepted.
  */

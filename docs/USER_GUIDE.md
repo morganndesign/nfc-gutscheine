@@ -31,6 +31,7 @@ One page per role. Print the waiter page and leave it at the till for the first 
 
 | Task | Where |
 |---|---|
+| Sell a card in the waiter app | Managers and owners on Android: **New gift card** on the start screen → amount (optionally the guest's e-mail) → **Create card** → hold a blank NFC card to the back of the phone until the check mark appears. The card number and balance are shown; **Program later** keeps the card without a tag (program it in the dashboard). |
 | Sell a card | **Gift cards → New gift card**. Pick an amount, optionally add the customer's e-mail (they get a confirmation), then **Create card**. Next, write the NFC tag (Android: **Write NFC tag** — the tag is checked, written, read back and verified before its chip is saved) or **Print**. |
 | Program many tags | On an Android phone with Chrome: **Gift cards → Program NFC tags → Start programming**. Each card without a tag comes up in turn; hold one blank tag to the phone, label it with the number on screen. Tags of other cards are refused and nothing is written. Progress (`12 / 300 cards programmed`), successes, failed attempts, skipped cards, elapsed time and the average time per card are shown; **CSV** downloads the session log. After any error, **Try again** (same session) or **Skip card**. With several phones, give each its own start number. The card page lists every attempt under **Tag programming**. |
 | Look up a card | **Gift cards**, then search by number, customer, recipient or note. |

@@ -142,5 +142,6 @@ Future<AppServices> bootstrap() async {
     appVersion: package.version,
     buildNumber: package.buildNumber,
     isTablet: facts.isTablet,
+    api: api,
   );
 }

@@ -865,6 +865,9 @@ class LoopController extends ChangeNotifier {
         }
       case NfcReadFailed():
         _onReadFailed();
+      case NfcWriterTag():
+        // S20 programs this tag; it is never looked up as a card.
+        break;
       case NfcTagRead(:final String uid, :final String? url):
         if (_isIos) {
           unawaited(_onIosTag(uid, url));

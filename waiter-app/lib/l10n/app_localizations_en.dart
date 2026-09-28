@@ -411,6 +411,137 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenanceDismiss => 'Dismiss notice';
 
   @override
+  String get readyNewCard => 'New gift card';
+
+  @override
+  String get issueTitle => 'New gift card';
+
+  @override
+  String get issueAmountLabel => 'Card value';
+
+  @override
+  String get issueEmailLabel => 'Guest e-mail (optional)';
+
+  @override
+  String get issueEmailHelper => 'The guest receives a confirmation.';
+
+  @override
+  String get issueEmailInvalid => 'Enter a valid e-mail address.';
+
+  @override
+  String issueAmountRange(String min, String max) {
+    return 'The card value must be between $min and $max.';
+  }
+
+  @override
+  String issueCreate(String amount) {
+    return 'Create card · $amount';
+  }
+
+  @override
+  String get issueCreating => 'Creating card …';
+
+  @override
+  String get issueProgramTitle => 'Hold a blank card to the phone';
+
+  @override
+  String get issueProgramBody =>
+      'Keep it still on the back of the phone until the check mark appears.';
+
+  @override
+  String get issueProgramRetap =>
+      'Lift the card and hold it to the phone again.';
+
+  @override
+  String get issueStepCheck => 'Check tag';
+
+  @override
+  String get issueStepWrite => 'Write card link';
+
+  @override
+  String get issueStepVerify => 'Read back and verify';
+
+  @override
+  String get issueStepSave => 'Save chip to card';
+
+  @override
+  String issueCard(String number) {
+    return 'Card $number';
+  }
+
+  @override
+  String get issueSuccessTitle => 'Card ready';
+
+  @override
+  String issueSuccessBalance(String amount) {
+    return 'Balance $amount';
+  }
+
+  @override
+  String get issueSuccessVerified => 'NFC tag written and verified';
+
+  @override
+  String get issueSuccessNoTag =>
+      'No tag yet. Program it later in the dashboard.';
+
+  @override
+  String get issueSuccessAnother => 'Sell another card';
+
+  @override
+  String get issueLater => 'Program later';
+
+  @override
+  String get issueNfcOff => 'Turn on NFC to program the tag.';
+
+  @override
+  String get issueCreateFailedTitle => 'Card not created';
+
+  @override
+  String get issueCreateFailedBody =>
+      'No card was created. Check the connection and try again.';
+
+  @override
+  String get issueCreateUncertainBody =>
+      'The answer did not arrive. Try again, the card will not be created twice.';
+
+  @override
+  String get issueNotAllowedTitle => 'Not allowed';
+
+  @override
+  String get issueNotAllowedBody =>
+      'This account cannot sell cards on this phone. Sign out and in again, or use the dashboard.';
+
+  @override
+  String get issueTagFailedTitle => 'Tag not programmed';
+
+  @override
+  String issueTagOtherCard(String number) {
+    return 'This tag belongs to card $number. Use a blank tag.';
+  }
+
+  @override
+  String get issueTagRefused =>
+      'This tag cannot be used for this card. Use a blank tag.';
+
+  @override
+  String get issueTagUnsupported =>
+      'This tag type is not supported. Use NTAG213, 215 or 216.';
+
+  @override
+  String get issueTagReadOnly => 'This tag is locked and cannot be written.';
+
+  @override
+  String get issueTagMoved =>
+      'The tag moved away. Hold it still and try again.';
+
+  @override
+  String get issueTagVerifyFailed =>
+      'The tag could not be verified. Try again with the same tag.';
+
+  @override
+  String get issueTagNetwork => 'No connection to the server. Try again.';
+
+  @override
   String get iosSheetAlert => 'Hold the card near the top of the iPhone';
 
   @override

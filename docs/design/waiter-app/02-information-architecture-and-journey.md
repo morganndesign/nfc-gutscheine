@@ -156,6 +156,22 @@ GiftCard Waiter deliberately has almost no global chrome.
 | Close `IconButton` | S07, S10, S11, S12 | ✕, top-leading, 56 × 56 | The only element in the top 55 % that is interactive on those screens, and it is a secondary action. |
 | Keep screen awake | S05, S07, S09 | — | Setting "Keep screen on" (default ON) in S14. |
 
+### 4.4a S20 New gift card (managers and owners)
+
+Added in 1.4.3 (brief §1 exception). Only for signed-in users whose role is *manager* or *owner* **and** whose
+waiter-app sign-in carries `cards.create` + `cards.write_nfc` (the server grants them to those roles only); Android
+only (tags are written with the phone's NFC; iPhones keep using the dashboard). The server checks role and sign-in
+on every request — the app only decides what is shown.
+
+| Step | Screen / state | Server | Notes |
+|---|---|---|---|
+| Entry | S05: tertiary button *New gift card* below *Card number* / *QR code* | — | Hidden for waiters, on iPhone and while offline. Opens S20 as a full-screen task; card reading (reader mode) is paused while S20 is open, like the menu sheet — a tag held to the phone is never looked up or redeemed. |
+| Amount | Keypad + AmountDisplay (*Card value*), optional *Guest e-mail*, *Create card · € 50,00* | — | The e-mail gets the card confirmation (restaurant setting). |
+| Create | Button progress | `POST /cards` with `Idempotency-Key` | One key per sale, kept across *Try again* after no answer, so a card is never sold twice. 422 `INVALID_AMOUNT` → range under the amount; 403 → *Not allowed* on S20 (never the app-wide block). |
+| Program | *Hold a blank card to the phone* + steps (check, write, verify, save) | `…/nfc/check`, `…/nfc`, `…/nfc/lock`, `…/nfc/attempts` | The dashboard's workflow (docs/NFC.md): chip checked with the server before writing, NTAG213/215/216 identified with GET_VERSION, URL written, read back from the chip, compared, then saved. *Program later* leaves the card without a tag. |
+| Tag problem | ProblemScreen: *Tag not programmed* + reason, *Try again*, *Program later* | — | The card exists; nothing was saved to it. |
+| Done | SuccessMark, card number, balance, *NFC tag written and verified* | — | *Done* returns to S05 (reading resumes); *Sell another card*. |
+
 ### 4.5 App state machine
 
 The state machine is binding for engineering and QA. State names are used in [09 · Flutter handoff](09-flutter-handoff.md) and in test scripts. Screens are given in brackets.
