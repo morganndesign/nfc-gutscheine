@@ -112,10 +112,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Exactly what Coolify reads: no .env file, no --env-file, no env_file.
-      - name: Validate docker-compose.coolify.yml (no .env file present)
+      # Without Coolify's generated values the file must refuse to start (fail-fast);
+      # with them (test values here, like the .env Coolify writes) it must be valid.
+      - name: Validate docker-compose.coolify.yml (no .env file in the repository)
         run: |
           test ! -e .env
           ! grep -nE '^\s*env_file:' docker-compose.coolify.yml
+          ! env -i PATH="$PATH" HOME="$HOME" docker compose -f docker-compose.coolify.yml config --quiet
           docker compose -f docker-compose.coolify.yml config --quiet
+        env:
+          SERVICE_URL_GATEWAY: https://app.example.com
+          SERVICE_FQDN_GATEWAY: app.example.com
+          SERVICE_PASSWORD_MYSQL: ci-test
+          SERVICE_PASSWORD_MYSQLROOT: ci-test
+          SERVICE_PASSWORD_REDIS: ci-test
       - name: Build every service exactly as Coolify does
         run: docker compose -f docker-compose.coolify.yml build
+        env:
+          SERVICE_URL_GATEWAY: https://app.example.com
+          SERVICE_FQDN_GATEWAY: app.example.com
+          SERVICE_PASSWORD_MYSQL: ci-test
+          SERVICE_PASSWORD_MYSQLROOT: ci-test
+          SERVICE_PASSWORD_REDIS: ci-test

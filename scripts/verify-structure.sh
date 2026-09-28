@@ -122,8 +122,14 @@ grep -qE '^\s*ARG ' backend/Dockerfile dashboard/Dockerfile infra/docker/gateway
 if command -v docker >/dev/null && docker compose version >/dev/null 2>&1; then
   # Run from an empty directory so that no .env file can be picked up.
   empty="$(mktemp -d)"
-  (cd "$empty" && docker compose -f "$ROOT/docker-compose.coolify.yml" --project-directory "$ROOT" config --quiet 2>/dev/null) \
-    && ok "docker compose config passes without any .env file" || bad "docker compose config fails for docker-compose.coolify.yml"
+  printf 'SERVICE_URL_GATEWAY=https://app.example.com\nSERVICE_FQDN_GATEWAY=app.example.com\nSERVICE_PASSWORD_MYSQL=x\nSERVICE_PASSWORD_MYSQLROOT=x\nSERVICE_PASSWORD_REDIS=x\n' > "$empty/coolify.env"
+  (cd "$empty" && env -i PATH="$PATH" HOME="$HOME" docker compose --env-file coolify.env -f "$ROOT/docker-compose.coolify.yml" --project-directory "$ROOT" config --quiet 2>/dev/null) \
+    && ok "docker compose config passes with the variables Coolify generates (no .env in the repository)" || bad "docker compose config fails for docker-compose.coolify.yml"
+  out="$(cd "$empty" && env -i PATH="$PATH" HOME="$HOME" docker compose -f "$ROOT/docker-compose.coolify.yml" --project-directory "$ROOT" config --quiet 2>&1 || true)"
+  if [[ "$out" == *"required variable SERVICE_"* ]]; then
+    ok "fail-fast: without Coolify's generated values docker compose refuses to start (no empty passwords)"
+  else bad "without Coolify's values docker compose must stop with 'required variable SERVICE_…'"; fi
+  rm -f "$empty/coolify.env"
   rmdir "$empty"
 fi
 

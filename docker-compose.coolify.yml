@@ -18,7 +18,10 @@
 #   - configuration comes only from environment: (no env_file, no .env in the repo).
 #     Every ${VAR} has a default except the values Coolify generates:
 #     SERVICE_URL_GATEWAY, SERVICE_FQDN_GATEWAY, SERVICE_PASSWORD_MYSQL,
-#     SERVICE_PASSWORD_MYSQLROOT, SERVICE_PASSWORD_REDIS.
+#     SERVICE_PASSWORD_MYSQLROOT, SERVICE_PASSWORD_REDIS. Those are written as
+#     ${VAR:?message}: if one is empty (gateway without a domain, or the file started
+#     with plain `docker compose` instead of by Coolify) Compose stops before creating
+#     any container, with the message, instead of starting MySQL/Laravel without them.
 # Optional settings (mail, keys, …): Coolify → Environment Variables. Reference list:
 # .env.production.example. Full instructions: docs/DEPLOYMENT.md.
 # =============================================================================
@@ -59,7 +62,7 @@ services:
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       CARD_BASE_URL: ${CARD_BASE_URL:-}
-      SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY}
+      SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
       SERVICE_FQDN_GATEWAY: ${SERVICE_FQDN_GATEWAY}
       APP_LOCALE: ${APP_LOCALE:-en}
       APP_FALLBACK_LOCALE: en
@@ -71,11 +74,11 @@ services:
       DB_PORT: "3306"
       DB_DATABASE: ${DB_DATABASE:-giftcard_pro}
       DB_USERNAME: ${DB_USERNAME:-giftcard}
-      DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
+      DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       REDIS_CLIENT: phpredis
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       CACHE_STORE: redis
       CACHE_PREFIX: giftcardpro
       QUEUE_CONNECTION: redis
@@ -129,7 +132,7 @@ services:
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       CARD_BASE_URL: ${CARD_BASE_URL:-}
-      SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY}
+      SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
       SERVICE_FQDN_GATEWAY: ${SERVICE_FQDN_GATEWAY}
       APP_LOCALE: ${APP_LOCALE:-en}
       APP_FALLBACK_LOCALE: en
@@ -141,11 +144,11 @@ services:
       DB_PORT: "3306"
       DB_DATABASE: ${DB_DATABASE:-giftcard_pro}
       DB_USERNAME: ${DB_USERNAME:-giftcard}
-      DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
+      DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       REDIS_CLIENT: phpredis
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       CACHE_STORE: redis
       CACHE_PREFIX: giftcardpro
       QUEUE_CONNECTION: redis
@@ -198,7 +201,7 @@ services:
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       CARD_BASE_URL: ${CARD_BASE_URL:-}
-      SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY}
+      SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
       SERVICE_FQDN_GATEWAY: ${SERVICE_FQDN_GATEWAY}
       APP_LOCALE: ${APP_LOCALE:-en}
       APP_FALLBACK_LOCALE: en
@@ -210,11 +213,11 @@ services:
       DB_PORT: "3306"
       DB_DATABASE: ${DB_DATABASE:-giftcard_pro}
       DB_USERNAME: ${DB_USERNAME:-giftcard}
-      DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
+      DB_PASSWORD: ${SERVICE_PASSWORD_MYSQL:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       REDIS_CLIENT: phpredis
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       CACHE_STORE: redis
       CACHE_PREFIX: giftcardpro
       QUEUE_CONNECTION: redis
@@ -280,8 +283,8 @@ services:
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-giftcard_pro}
       MYSQL_USER: ${DB_USERNAME:-giftcard}
-      MYSQL_PASSWORD: ${SERVICE_PASSWORD_MYSQL}
-      MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_MYSQLROOT}
+      MYSQL_PASSWORD: ${SERVICE_PASSWORD_MYSQL:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
+      MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_MYSQLROOT:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -297,7 +300,7 @@ services:
     restart: unless-stopped
     command: ["sh", "-c", "exec redis-server --appendonly yes --maxmemory-policy noeviction --requirepass \"$$REDIS_PASSWORD\""]
     environment:
-      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS}
+      REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
     volumes:
       - redis-data:/data
     healthcheck:
@@ -333,7 +336,7 @@ services:
         done
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-giftcard_pro}
-      MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_MYSQLROOT}
+      MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_MYSQLROOT:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       BACKUP_TIME: ${BACKUP_TIME:-01:30}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
     volumes:
