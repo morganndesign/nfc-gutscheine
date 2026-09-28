@@ -1,0 +1,4 @@
+
+=== transfer replay: same key T, amount 40.00{ "http": 409, "code": "IDEMPOTENCY_CONFLICT",--
+=== transfer replay: same key T, amount omitted (= full balance){ "http": 200, "code": null,--
+=== transfer replay: same key T, DIFFERENT target{ "http": 409, "code": "IDEMPOTENCY_CONFLICT",

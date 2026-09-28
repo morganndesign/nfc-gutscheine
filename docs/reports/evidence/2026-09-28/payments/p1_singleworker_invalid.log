@@ -1,0 +1,60 @@
+
+=== card issued
+{
+ "id": "01a0e7b5-f186-71ef-800f-528ee6007420",
+ "balance": 5000,
+ "status": "active"
+}
+
+=== result distribution (http, code) -> count
+{
+ "422 CARD_NOT_REDEEMABLE": 15,
+ "201 None": 5
+}
+
+=== balances returned by the 201s
+[
+ 4000,
+ 3000,
+ 2000,
+ 1000,
+ 0
+]
+
+=== latency ms min/max
+[
+ 134,
+ 1559
+]
+
+=== ledger check
+{
+ "card_balance": 0,
+ "status": "redeemed",
+ "ledger_sum": 0,
+ "balance_ok": true,
+ "chain_ok": true,
+ "tx_count": 6
+}
+  issue           5000       0 ->    5000
+  redemption     -1000    5000 ->    4000
+  redemption     -1000    4000 ->    3000
+  redemption     -1000    3000 ->    2000
+  redemption     -1000    2000 ->    1000
+  redemption     -1000    1000 ->       0
+
+=== velocity probe: 20 parallel 3.00 redeems (limit 10/h) -> (http, code) count
+{
+ "201 None": 10,
+ "429 VELOCITY_LIMIT_EXCEEDED": 10
+}
+
+=== velocity probe ledger
+{
+ "card_balance": 2000,
+ "status": "active",
+ "ledger_sum": 2000,
+ "balance_ok": true,
+ "chain_ok": true,
+ "tx_count": 11
+}

@@ -1,0 +1,18 @@
+round 0: {'A->B 200 None': 10, 'B->A 200 None': 10, 'redeem A 201 None': 4, 'redeem B 201 None': 4}
+   A=11800 (ledger 11800, chain True)  B=7720 (ledger 7720, chain True)  A+B=19520  expected 20000-480=19520  conserved=True
+round 1: {'A->B 200 None': 10, 'B->A 200 None': 10, 'redeem A 201 None': 4, 'redeem B 201 None': 4}
+   A=11800 (ledger 11800, chain True)  B=7720 (ledger 7720, chain True)  A+B=19520  expected 20000-480=19520  conserved=True
+round 2: {'A->B 200 None': 10, 'B->A 200 None': 10, 'redeem A 201 None': 4, 'redeem B 201 None': 4}
+   A=11800 (ledger 11800, chain True)  B=7720 (ledger 7720, chain True)  A+B=19520  expected 20000-480=19520  conserved=True
+round 3: {'A->B 200 None': 10, 'B->A 200 None': 10, 'redeem A 201 None': 4, 'redeem B 201 None': 4}
+   A=11800 (ledger 11800, chain True)  B=7720 (ledger 7720, chain True)  A+B=19520  expected 20000-480=19520  conserved=True
+round 4: {'A->B 200 None': 10, 'B->A 200 None': 10, 'redeem A 201 None': 4, 'redeem B 201 None': 4}
+   A=11800 (ledger 11800, chain True)  B=7720 (ledger 7720, chain True)  A+B=19520  expected 20000-480=19520  conserved=True
+
+=== all rounds (op http code) -> count
+{
+ "A->B 200 None": 50,
+ "B->A 200 None": 50,
+ "redeem A 201 None": 20,
+ "redeem B 201 None": 20
+}

@@ -1,0 +1,10 @@
+##### transfer FULL balance src->dst, retried in flight (key retry-8066d883b0964b3f891ee1ee8377b01e)
+request #1: http 200 code=None replayed=False context=None
+request #2: http 200 code=None replayed=True context=None
+request #3 (late retry): http 200 replayed=True
+ledgers: {'card_balance': 0, 'status': 'redeemed', 'ledger_sum': 0, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2} {'card_balance': 6000, 'status': 'active', 'ledger_sum': 6000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+##### reload 500.00 to reach max_card_balance, retried in flight (key retry-7f5ede0c67794dd2991f260821d783f4)
+request #1: http 201 code=None replayed=False context=None
+request #2: http 200 code=None replayed=True context=None
+request #3 (late retry): http 200 replayed=True
+ledger: {'card_balance': 200000, 'status': 'active', 'ledger_sum': 200000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 3}

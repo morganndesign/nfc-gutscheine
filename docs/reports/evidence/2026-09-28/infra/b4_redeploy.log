@@ -1,0 +1,7 @@
+Container gcpaudit-api-1 Started 
+ Container gcpaudit-worker-1 Started 
+ Container gcpaudit-scheduler-1 Started
+recreate command finished after 12.0s
+responses: {(201, None): 1003, (502, None): 277}
+outage window: +10.6s .. +25.4s = 14.8s (deploy started +10.0s)
+errors that were nevertheless booked: 0

@@ -1,0 +1,16 @@
+== dump (same command as the backup service)
+-rw-r--r-- 1 root root 1610111 Sep 28 12:13 /backups/giftcard_pro_drill.sql.gz
+dump seconds: 1.547297726
+== restore into a fresh mysql:8.4
+restore seconds: 3.766776845
+source : 1512	9359	84283700	149	11
+restore: 1512	9359	84283700	149	11
+restore invariant:
+balance<>ledger	0
+row arithmetic	0
+chain break	0
+last<>card	0
+multi-reversal	0
+negative balance	0
+balance > max_card_balance	0
+cards / transactions total	1512 / 9359

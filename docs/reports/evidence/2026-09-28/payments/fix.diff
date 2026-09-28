@@ -1,0 +1,97 @@
+--- /tmp/audit2/payments/GiftCardService.orig.php	2026-09-28 13:16:03.575159042 +0200
++++ app/Services/GiftCards/GiftCardService.php	2026-09-28 13:16:03.594695533 +0200
+@@ -296,7 +296,7 @@
+         if ($idempotencyKey !== null) {
+             $existing = $this->findByKey($source->restaurant_id, $idempotencyKey);
+             if ($existing !== null) {
+-                return $this->replayTransfer($existing, $source, $target, $idempotencyKey);
++                return $this->replayTransfer($existing, $source, $target, $idempotencyKey, $amount);
+             }
+         }
+ 
+@@ -308,6 +308,9 @@
+                 $lockedSecond = $this->lock($second);
+                 $from = $lockedFirst->getKey() === $source->getKey() ? $lockedFirst : $lockedSecond;
+                 $to = $lockedFirst->getKey() === $target->getKey() ? $lockedFirst : $lockedSecond;
++                if ($idempotencyKey !== null && ($existing = $this->findByKey($source->restaurant_id, $idempotencyKey)) !== null) {
++                    return $this->replayTransfer($existing, $source, $target, $idempotencyKey, $amount);
++                }
+ 
+                 $settings = $this->settings();
+                 $this->assertTransferable($from, 'source');
+@@ -359,7 +362,7 @@
+                 throw $e;
+             }
+ 
+-            return $this->replayTransfer($existing, $source, $target, $idempotencyKey);
++            return $this->replayTransfer($existing, $source, $target, $idempotencyKey, $amount);
+         }
+     }
+ 
+@@ -450,6 +453,10 @@
+             }
+ 
+             $delta = -$original->amount;
++            $max = $this->settings()->max_card_balance;
++            if ($delta > 0 && $card->balance + $delta > $max) {
++                throw new BalanceLimitExceededException('', ['max_card_balance' => $max, 'balance' => $card->balance]);
++            }
+             if ($card->balance + $delta < 0) {
+                 throw new InsufficientBalanceException('The card balance is too low to reverse this reload.', ['balance' => $card->balance]);
+             }
+@@ -759,10 +766,17 @@
+         return $moment->utc();
+     }
+ 
++    private ?Closure $pendingReplay = null;
++
+     private function lock(GiftCard $card): GiftCard
+     {
+-        /** @var GiftCard */
+-        return GiftCard::query()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
++        /** @var GiftCard $locked */
++        $locked = GiftCard::query()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
++        if ($this->pendingReplay !== null && ($replay = ($this->pendingReplay)()) !== null) {
++            throw new \App\Exceptions\Domain\ReplayAfterLock($replay);
++        }
++
++        return $locked;
+     }
+ 
+     /**
+@@ -825,7 +839,21 @@
+         }
+ 
+         try {
+-            return DB::transaction($operation, self::DB_ATTEMPTS);
++            return DB::transaction(function () use ($operation, $restaurantId, $key, $matches): TransactionResult {
++                $this->pendingReplay = $key === null ? null
++                    : function () use ($restaurantId, $key, $matches): ?TransactionResult {
++                        $existing = $this->findByKey($restaurantId, $key);
++
++                        return $existing !== null ? $this->replay($existing, $matches) : null;
++                    };
++                try {
++                    return $operation();
++                } finally {
++                    $this->pendingReplay = null;
++                }
++            }, self::DB_ATTEMPTS);
++        } catch (\App\Exceptions\Domain\ReplayAfterLock $r) {
++            return $r->result;
+         } catch (UniqueConstraintViolationException $e) {
+             // A concurrent request with the same idempotency key won the race.
+             $existing = $key !== null ? $this->findByKey($restaurantId, $key) : null;
+@@ -855,9 +883,10 @@
+     /**
+      * @return array{source: TransactionResult, target: TransactionResult}
+      */
+-    private function replayTransfer(GiftCardTransaction $out, GiftCard $source, GiftCard $target, string $key): array
++    private function replayTransfer(GiftCardTransaction $out, GiftCard $source, GiftCard $target, string $key, ?int $amount = null): array
+     {
+-        if ($out->type !== TransactionType::TransferOut || $out->gift_card_id !== $source->getKey() || $out->counterparty_card_id !== $target->getKey()) {
++        if ($out->type !== TransactionType::TransferOut || $out->gift_card_id !== $source->getKey() || $out->counterparty_card_id !== $target->getKey()
++            || ($amount !== null && -$out->amount !== $amount)) {
+             throw new IdempotencyConflictException;
+         }
+ 

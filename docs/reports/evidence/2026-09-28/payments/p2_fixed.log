@@ -1,0 +1,15 @@
+##### A full-balance redeem: card 01a0e7bb-796b-7119-9882-d406237cd9ec balance 5000, redeem 5000 twice with key retry-313ff78d00c24a3fa88a98d5bbb5662a
+request #1: {'http': 201, 'code': None, 'message': None, 'replayed': False, 'tx_id': '01a0e7bb-877c-72d4-b24b-03bb00033506', 'tx_amount': -5000, 'balance': 0, 'ms': 3540}
+request #2: {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7bb-877c-72d4-b24b-03bb00033506', 'tx_amount': -5000, 'balance': 0, 'ms': 3047}
+ledger: {'card_balance': 0, 'status': 'redeemed', 'ledger_sum': 0, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+request #3 (late retry, same key): {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7bb-877c-72d4-b24b-03bb00033506', 'tx_amount': -5000, 'balance': 0, 'ms': 128}
+##### B partial redeem, balance sufficient for two: card 01a0e7bb-88d7-7112-b28d-92a3a8c86254 balance 5000, redeem 2000 twice with key retry-cd3f7b296eb140939fd268c225fc9363
+request #1: {'http': 201, 'code': None, 'message': None, 'replayed': False, 'tx_id': '01a0e7bb-96e9-73da-8776-107f1c3135e7', 'tx_amount': -2000, 'balance': 3000, 'ms': 3620}
+request #2: {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7bb-96e9-73da-8776-107f1c3135e7', 'tx_amount': -2000, 'balance': 3000, 'ms': 3118}
+ledger: {'card_balance': 3000, 'status': 'active', 'ledger_sum': 3000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+request #3 (late retry, same key): {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7bb-96e9-73da-8776-107f1c3135e7', 'tx_amount': -2000, 'balance': 3000, 'ms': 107}
+##### C redeem > half balance (second booking would be insufficient): card 01a0e7bb-9873-73fa-852f-6caca33ff3fd balance 5000, redeem 3000 twice with key retry-855999ee93b34093b834f21e30a4ec3a
+request #1: {'http': 201, 'code': None, 'message': None, 'replayed': False, 'tx_id': '01a0e7bb-a6c2-706f-a025-a27dd31f76f6', 'tx_amount': -3000, 'balance': 2000, 'ms': 3545}
+request #2: {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7bb-a6c2-706f-a025-a27dd31f76f6', 'tx_amount': -3000, 'balance': 2000, 'ms': 3042}
+ledger: {'card_balance': 2000, 'status': 'active', 'ledger_sum': 2000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+request #3 (late retry, same key): {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7bb-a6c2-706f-a025-a27dd31f76f6', 'tx_amount': -3000, 'balance': 2000, 'ms': 138}

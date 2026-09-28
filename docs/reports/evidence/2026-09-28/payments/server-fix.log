@@ -1,0 +1,119 @@
+
+   INFO  Server running on [http://127.0.0.1:8101].  
+
+  Press Ctrl+C to stop the server
+
+  2026-09-28 13:16:57 /api/v1/cards .............................. ~ 500.45ms
+  2026-09-28 13:16:58 /api/v1/cards/01a0e7bb-796b-7119-9882-d406237cd9ec/redeem  ~ 3s
+  2026-09-28 13:16:58 /api/v1/cards/01a0e7bb-796b-7119-9882-d406237cd9ec/redeem  ~ 3s
+  2026-09-28 13:17:02 /api/v1/cards/01a0e7bb-796b-7119-9882-d406237cd9ec/redeem  ~ 0.12ms
+  2026-09-28 13:17:02 /api/v1/cards ................................ ~ 0.02ms
+  2026-09-28 13:17:02 /api/v1/cards/01a0e7bb-88d7-7112-b28d-92a3a8c86254/redeem  ~ 3s
+  2026-09-28 13:17:02 /api/v1/cards/01a0e7bb-88d7-7112-b28d-92a3a8c86254/redeem  ~ 3s
+  2026-09-28 13:17:06 /api/v1/cards/01a0e7bb-88d7-7112-b28d-92a3a8c86254/redeem  ~ 0.14ms
+  2026-09-28 13:17:06 /api/v1/cards ................................ ~ 0.04ms
+  2026-09-28 13:17:06 /api/v1/cards/01a0e7bb-9873-73fa-852f-6caca33ff3fd/redeem  ~ 3s
+  2026-09-28 13:17:06 /api/v1/cards/01a0e7bb-9873-73fa-852f-6caca33ff3fd/redeem  ~ 3s
+  2026-09-28 13:17:10 /api/v1/cards/01a0e7bb-9873-73fa-852f-6caca33ff3fd/redeem  ~ 0.15ms
+  2026-09-28 13:17:10 /api/v1/cards ................................ ~ 0.18ms
+  2026-09-28 13:17:10 /api/v1/cards ................................ ~ 0.06ms
+  2026-09-28 13:17:10 /api/v1/cards/01a0e7bb-a9d8-7366-9ba2-40bfbb3faef3/transfer  ~ 3s
+  2026-09-28 13:17:11 /api/v1/cards/01a0e7bb-a9d8-7366-9ba2-40bfbb3faef3/transfer  ~ 3s
+  2026-09-28 13:17:14 /api/v1/cards/01a0e7bb-a9d8-7366-9ba2-40bfbb3faef3/transfer  ~ 547.95ms
+  2026-09-28 13:17:14 /api/v1/cards ................................ ~ 0.03ms
+  2026-09-28 13:17:14 /api/v1/cards/01a0e7bb-ba61-72aa-8600-840a3dd587b9/reload  ~ 0.07ms
+  2026-09-28 13:17:15 /api/v1/cards/01a0e7bb-ba61-72aa-8600-840a3dd587b9/reload  ~ 3s
+  2026-09-28 13:17:15 /api/v1/cards/01a0e7bb-ba61-72aa-8600-840a3dd587b9/reload  ~ 3s
+  2026-09-28 13:17:18 /api/v1/cards/01a0e7bb-ba61-72aa-8600-840a3dd587b9/reload  ~ 0.02ms
+  2026-09-28 13:17:19 /api/v1/cards ................................ ~ 0.16ms
+  2026-09-28 13:17:19 /api/v1/cards/01a0e7bb-cba6-7362-b727-0fa0ffdbca3a/redeem  ~ 0.04ms
+  2026-09-28 13:17:19 /api/v1/cards/01a0e7bb-cba6-7362-b727-0fa0ffdbca3a/redeem  ~ 500.71ms
+  2026-09-28 13:17:19 /api/v1/cards/01a0e7bb-cba6-7362-b727-0fa0ffdbca3a/redeem  ~ 0.03ms
+  2026-09-28 13:17:19 /api/v1/cards/01a0e7bb-cba6-7362-b727-0fa0ffdbca3a/reload  ~ 0.03ms
+  2026-09-28 13:17:19 /api/v1/cards ................................ ~ 0.03ms
+  2026-09-28 13:17:20 /api/v1/cards/01a0e7bb-ce44-72d7-bdb6-db98f8711a58/redeem  ~ 500.71ms
+  2026-09-28 13:17:20 /api/v1/cards ................................ ~ 0.03ms
+  2026-09-28 13:17:20 /api/v1/cards ................................ ~ 0.09ms
+  2026-09-28 13:17:20 /api/v1/cards/01a0e7bb-cfe5-703f-9483-e18565c158f5/transfer  ~ 502.35ms
+  2026-09-28 13:17:20 /api/v1/cards ................................ ~ 0.02ms
+  2026-09-28 13:17:20 /api/v1/cards/01a0e7bb-cfe5-703f-9483-e18565c158f5/transfer  ~ 0.02ms
+  2026-09-28 13:17:20 /api/v1/cards/01a0e7bb-cfe5-703f-9483-e18565c158f5/transfer  ~ 0.02ms
+  2026-09-28 13:17:20 /api/v1/cards/01a0e7bb-cfe5-703f-9483-e18565c158f5/transfer  ~ 0.02ms
+  2026-09-28 13:17:21 /api/v1/cards .............................. ~ 500.58ms
+  2026-09-28 13:17:21 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/redeem  ~ 0.09ms
+  2026-09-28 13:17:21 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/reload  ~ 0.04ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d5a6-7187-939f-7c819933104e/reverse  ~ 501.83ms
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/reload  ~ 503.35ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d5a6-7187-939f-7c819933104e/reverse  ~ 503.38ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d5a6-7187-939f-7c819933104e/reverse  ~ 503.38ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d5a6-7187-939f-7c819933104e/reverse  ~ 503.49ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d533-72c7-ace0-6c00e56e9f83/reverse  ~ 503.51ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d533-72c7-ace0-6c00e56e9f83/reverse  ~ 503.51ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d533-72c7-ace0-6c00e56e9f83/reverse  ~ 503.69ms
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/redeem  ~ 503.83ms
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/reload  ~ 503.90ms
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/redeem  ~ 503.98ms
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/redeem  ~ 503.92ms
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d5a6-7187-939f-7c819933104e/reverse  ~ 504.04ms
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/redeem  ~ 1s
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/redeem  ~ 1s
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/reload  ~ 1s
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/reload  ~ 1s
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d533-72c7-ace0-6c00e56e9f83/reverse  ~ 1s
+  2026-09-28 13:17:22 /api/v1/cards/01a0e7bb-d4a0-7324-90d6-2b486857aed0/reload  ~ 1s
+  2026-09-28 13:17:22 /api/v1/transactions/01a0e7bb-d533-72c7-ace0-6c00e56e9f83/reverse  ~ 1s
+  2026-09-28 13:17:23 /api/v1/transactions/01a0e7bb-d84b-7193-88ba-4bcf7c4c9be9/reverse  ~ 500.55ms
+  2026-09-28 13:17:23 /api/v1/settings ............................. ~ 0.05ms
+  2026-09-28 13:17:23 /api/v1/cards ................................ ~ 0.02ms
+  2026-09-28 13:17:23 /api/v1/cards/01a0e7bb-dd06-72f7-b5a9-28f2524c9441/reload  ~ 0.02ms
+  2026-09-28 13:17:23 /api/v1/cards/01a0e7bb-dd06-72f7-b5a9-28f2524c9441/redeem  ~ 0.02ms
+  2026-09-28 13:17:24 /api/v1/cards/01a0e7bb-dd06-72f7-b5a9-28f2524c9441/reload  ~ 502.42ms
+  2026-09-28 13:17:24 /api/v1/cards/01a0e7bb-dd06-72f7-b5a9-28f2524c9441/reload  ~ 0.06ms
+  2026-09-28 13:17:24 /api/v1/transactions/01a0e7bb-ddcb-7266-b64f-968d7596cb9a/reverse  ~ 0.02ms
+  2026-09-28 13:17:24 /api/v1/settings/cards ....................... ~ 0.02ms
+  2026-09-28 13:17:24 /api/v1/settings/cards ....................... ~ 0.02ms
+  2026-09-28 13:17:24 /api/v1/settings/cards ..................... ~ 500.53ms
+  2026-09-28 13:17:24 /api/v1/cards ................................ ~ 0.64ms
+  2026-09-28 13:17:24 /api/v1/settings/cards ....................... ~ 0.03ms
+  2026-09-28 13:17:25 /api/v1/cards .............................. ~ 507.77ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.11ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.19ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.26ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.29ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.31ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.31ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.39ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.52ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.62ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.56ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.62ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.65ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 564.70ms
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:25 /api/v1/cards/01a0e7bb-e24d-720b-80c1-6f22b202af37/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards ................................ ~ 0.02ms
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s
+  2026-09-28 13:17:26 /api/v1/cards/01a0e7bb-e7fe-7211-81b1-447c4ab2fb28/redeem  ~ 1s

@@ -1,0 +1,135 @@
+
+=== redeem 10.00 key K
+{
+ "http": 201,
+ "code": null,
+ "message": null,
+ "replayed": false,
+ "tx_id": "01a0e7b7-7a78-7123-b414-7d1389563186",
+ "tx_amount": -1000,
+ "balance": 4000,
+ "ms": 97
+}
+
+=== redeem 10.00 key K again (true retry)
+{
+ "http": 200,
+ "code": null,
+ "message": null,
+ "replayed": true,
+ "tx_id": "01a0e7b7-7a78-7123-b414-7d1389563186",
+ "tx_amount": -1000,
+ "balance": 4000,
+ "ms": 73
+}
+
+=== redeem 25.00 key K (different amount)
+{
+ "http": 409,
+ "code": "IDEMPOTENCY_CONFLICT",
+ "message": "This idempotency key was already used for a different request.",
+ "replayed": null,
+ "tx_id": null,
+ "tx_amount": null,
+ "balance": null,
+ "ms": 60
+}
+
+=== reload 10.00 key K (different operation)
+{
+ "http": 409,
+ "code": "IDEMPOTENCY_CONFLICT",
+ "message": "This idempotency key was already used for a different request.",
+ "replayed": null,
+ "tx_id": null,
+ "tx_amount": null,
+ "balance": null,
+ "ms": 67
+}
+
+=== redeem 10.00 key K on ANOTHER card
+{
+ "http": 409,
+ "code": "IDEMPOTENCY_CONFLICT",
+ "message": "This idempotency key was already used for a different request.",
+ "replayed": null,
+ "tx_id": null,
+ "tx_amount": null,
+ "balance": null,
+ "ms": 91
+}
+
+=== ledger card1
+{
+ "card_balance": 4000,
+ "status": "active",
+ "ledger_sum": 4000,
+ "balance_ok": true,
+ "chain_ok": true,
+ "tx_count": 2
+}
+
+=== transfer 10.00 src->dst key T
+{
+ "http": 200,
+ "replayed": false,
+ "src_bal": 4000,
+ "dst_bal": 2000,
+ "tx_amounts": [
+  -1000,
+  1000
+ ]
+}
+
+=== transfer replay: same key T, amount 40.00
+{
+ "http": 200,
+ "code": null,
+ "replayed": true,
+ "src_bal": 4000,
+ "dst_bal": 2000,
+ "tx_amounts": [
+  -1000,
+  1000
+ ]
+}
+
+=== transfer replay: same key T, amount omitted (= full balance)
+{
+ "http": 200,
+ "code": null,
+ "replayed": true,
+ "src_bal": 4000,
+ "dst_bal": 2000,
+ "tx_amounts": [
+  -1000,
+  1000
+ ]
+}
+
+=== transfer replay: same key T, DIFFERENT target
+{
+ "http": 409,
+ "code": "IDEMPOTENCY_CONFLICT",
+ "replayed": null
+}
+
+=== ledger src
+{
+ "card_balance": 4000,
+ "status": "active",
+ "ledger_sum": 4000,
+ "balance_ok": true,
+ "chain_ok": true,
+ "tx_count": 2
+}
+
+=== ledger dst
+{
+ "card_balance": 2000,
+ "status": "active",
+ "ledger_sum": 2000,
+ "balance_ok": true,
+ "chain_ok": true,
+ "tx_count": 2
+}

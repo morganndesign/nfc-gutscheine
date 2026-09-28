@@ -1,0 +1,37 @@
+body                                     http code                     booked  validation-msg
+{"amount": "10.005"}                     422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": 10.005}                       422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": 10.5}                         422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": 10.0}                         201  None                      -10     None
+{"amount": "100"}                        201  None                      -100    None
+{"amount": " 100"}                       201  None                      -100    None
+{"amount": "1e2"}                        422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": 1e2}                          201  None                      -100    None
+{"amount": 0}                            422  VALIDATION_FAILED         None    The amount field must be at least 1.
+{"amount": -100}                         422  VALIDATION_FAILED         None    The amount field must be at least 1.
+{"amount": "-100"}                       422  VALIDATION_FAILED         None    The amount field must be at least 1.
+{"amount": 100000001}                    422  VALIDATION_FAILED         None    The amount field must not be greater than 100000000.
+{"amount": 9223372036854775808}          422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": true}                         201  None                      -1      None
+{"amount": [100]}                        422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": "0x64"}                       422  VALIDATION_FAILED         None    The amount field must be an integer.
+{"amount": null}                         422  VALIDATION_FAILED         None    The amount field is required.
+{}                                       422  VALIDATION_FAILED         None    The amount field is required.
+ledger after amount probes: {'card_balance': 4689, 'status': 'active', 'ledger_sum': 4689, 'balance_ok': True, 'chain_ok': True, 'tx_count': 6} [('issue', 5000), ('redemption', -10), ('redemption', -100), ('redemption', -100), ('redemption', -100), ('redemption', -1)]
+Idempotency-Key='None'                   -> 400 IDEMPOTENCY_KEY_REQUIRED
+Idempotency-Key='short'                  -> 400 IDEMPOTENCY_KEY_REQUIRED
+Idempotency-Key='has:colon-123'          -> 400 IDEMPOTENCY_KEY_REQUIRED
+Idempotency-Key='xxxxxxxxxxxxxxxxxxxx'   -> 400 IDEMPOTENCY_KEY_REQUIRED
+Idempotency-Key='ok-key-6c8d989d5eb74'   -> 201 None
+
+tenant B redeem on A card -> 404
+tenant B reload on A card -> 404
+tenant B reverse A tx -> 404
+A transfer to tenant-B card by number -> 404 CARD_NOT_FOUND
+A transfer to tenant-B card by id -> 422 VALIDATION_FAILED
+same key tenant A -> 201  tenant B -> 201
+ledger A: True  ledger B: True
+
+allow_partial=false, redeem 10.00 of 50.00 -> INVALID_AMOUNT
+max_single_redemption=30.00, redeem 50.00 (full) -> INVALID_AMOUNT
+... but transfer 50.00 to another card (manager/owner path) -> 200

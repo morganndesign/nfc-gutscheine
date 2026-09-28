@@ -1,0 +1,12 @@
+check_name	violations
+balance<>ledger	0
+row arithmetic	0
+chain break	0
+last<>card	0
+multi-reversal	0
+negative balance	0
+balance > max_card_balance	2
+cards / transactions total	124 / 564
+card_number	balance	status
+1223699722994124	450000	active
+1272659059475972	250000	active

@@ -1,0 +1,5 @@
+=== result distribution (http, code) -> count
+{
+ "422 CARD_NOT_REDEEMABLE": 15,
+ "201 None": 5
+}

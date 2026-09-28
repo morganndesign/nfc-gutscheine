@@ -1,0 +1,52 @@
+== M10 iOS bundle ids
+461:				PRODUCT_BUNDLE_IDENTIFIER = eu.tapredeem.waiter;
+477:				PRODUCT_BUNDLE_IDENTIFIER = eu.tapredeem.waiter.RunnerTests;
+494:				PRODUCT_BUNDLE_IDENTIFIER = eu.tapredeem.waiter.RunnerTests;
+509:				PRODUCT_BUNDLE_IDENTIFIER = eu.tapredeem.waiter.RunnerTests;
+644:				PRODUCT_BUNDLE_IDENTIFIER = eu.tapredeem.waiter;
+668:				PRODUCT_BUNDLE_IDENTIFIER = eu.tapredeem.waiter;
+65:		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = Release.xcconfig; path = Flutter/Release.xcconfig; sourceTree = "<group>"; };
+66:		9740EEB21CF90195004384FC /* Debug.xcconfig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xcconfig; name = Debug.xcconfig; path = Flutter/Debug.xcconfig; sourceTree = "<group>"; };
+444:			name = Profile;
+467:			name = Profile;
+484:			name = Debug;
+499:			name = Release;
+514:			name = Profile;
+572:			name = Debug;
+627:			name = Release;
+651:			name = Debug;
+674:			name = Release;
+681:			buildConfigurations = (
+691:			buildConfigurations = (
+701:			buildConfigurations = (
+-- Android for comparison
+48:val appEnvSuffix: String = when (appEnv) {
+59:    if (appEnvSuffix == ".dev") "network_security_config_development" else "network_security_config"
+83:        applicationId = "eu.tapredeem.waiter"
+91:        applicationIdSuffix = appEnvSuffix
+== M5
+no global handlers in lib/
+no crash reporter dependency
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await launch();
+}
+
+/// Starts the app. Every failure ends on a screen with the reason and
+/// "Try again" — never on a launch screen that does not go away.
+Future<void> launch() async {
+  try {
+    runApp(WaiterApp(services: await bootstrap().timeout(bootstrapTimeout)));
+  } on Object catch (error) {
+    debugPrint('GiftCard Waiter could not start: $error');
+    AppEnvironment? environment;
+    try {
+      environment = AppEnvironment.fromDefines();
+    } on ConfigurationProblem {
+      environment = null;
+    }
+    final StartupProblem problem = error is TimeoutException
+        ? StartupProblem(StartupProblemKind.unknown, detail: 'start did not finish within ${bootstrapTimeout.inSeconds} s')
+        : StartupProblem.fromError(error);
+    runApp(StartupFailureApp(problem: problem, environment: environment, onRetry: launch));
+  }

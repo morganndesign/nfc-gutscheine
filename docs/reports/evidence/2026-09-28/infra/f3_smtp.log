@@ -1,0 +1,10 @@
+[13:59:42] owner invites a waiter: http=201 code=None after 61.5s  {'data': {'id': '01a0e7e1-aceb-73e0-b578-8e6c3df6f1d7', 'name': 'Tarpit Waiter', 'email': 'tarpit-7391b8@bellavista.test', 'status': 'active
+  user row created: 1 | notification_logs: [{'status': 'failed', 'e': 'Connection to "tarpit:2525" timed out.'}]
+[14:00:43] public forgot-password (existing account): http=500 code=None after 60.4s  {
+    "message": "Server Error"
+}
+[14:00:51] fpm status while 26 invitations hang: 
+[14:01:44] redeem #1 during saturation: http=201 code=None after 0.2s  {'data': {'card': {'id': '01a0e7e3-86f4-7213-bb53-1a7667f4ded3', 'restaurant_name': 'Trattoria Bella Vista', 'card_number': '1268 8343 1352 
+[14:01:45] redeem #2 during saturation: http=201 code=None after 0.1s  {'data': {'card': {'id': '01a0e7e3-86f3-72c0-86b4-d624596ae0e9', 'restaurant_name': 'Trattoria Bella Vista', 'card_number': '1270 0508 6878 
+[14:01:45] redeem #3 during saturation: http=201 code=None after 0.1s  {'data': {'card': {'id': '01a0e7e3-86f3-71b9-a6b4-9a9f3dea17cb', 'restaurant_name': 'Trattoria Bella Vista', 'card_number': '1264 1302 4358 
+26 invitations: Counter({(201, None): 26}) max 122.3 s

@@ -1,0 +1,32 @@
+
+##### A full-balance redeem: card 01a0e7b7-1020-7184-84f9-32efc2ef938b balance 5000, redeem 5000 twice with key retry-c4dd064e72c94163b64dac472d2c916a
+[lock] card row locked by external session
+[lock] released
+request #1: {'http': 201, 'code': None, 'message': None, 'replayed': False, 'tx_id': '01a0e7b7-1e21-73cc-8e1a-0e5f6051e7c7', 'tx_amount': -5000, 'balance': 0, 'ms': 3526}
+request #2: {'http': 422, 'code': 'CARD_NOT_REDEEMABLE', 'message': 'This gift card cannot be redeemed in its current state.', 'replayed': None, 'tx_id': None, 'tx_amount': None, 'balance': None, 'ms': 3024}
+   body: {'message': 'This gift card cannot be redeemed in its current state.', 'code': 'CARD_NOT_REDEEMABLE', 'context': {'status': 'redeemed'}}
+ledger: {'card_balance': 0, 'status': 'redeemed', 'ledger_sum': 0, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+  issue         5000      0->5000   key=None
+  redemption   -5000   5000->0      key=retry-c4dd064e72c94163b64dac472d2c916a
+request #3 (late retry, same key): {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7b7-1e21-73cc-8e1a-0e5f6051e7c7', 'tx_amount': -5000, 'balance': 0, 'ms': 86}
+
+##### B partial redeem, balance sufficient for two: card 01a0e7b7-1f43-7167-a4fd-3c32a0ddc9aa balance 5000, redeem 2000 twice with key retry-e7e81ffafc4a4a10ab8e40e722331660
+[lock] card row locked by external session
+[lock] released
+request #1: {'http': 201, 'code': None, 'message': None, 'replayed': False, 'tx_id': '01a0e7b7-2d4a-7342-a4f1-330791e79d80', 'tx_amount': -2000, 'balance': 3000, 'ms': 3534}
+request #2: {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7b7-2d4a-7342-a4f1-330791e79d80', 'tx_amount': -2000, 'balance': 3000, 'ms': 3046}
+ledger: {'card_balance': 3000, 'status': 'active', 'ledger_sum': 3000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+  issue         5000      0->5000   key=None
+  redemption   -2000   5000->3000   key=retry-e7e81ffafc4a4a10ab8e40e722331660
+request #3 (late retry, same key): {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7b7-2d4a-7342-a4f1-330791e79d80', 'tx_amount': -2000, 'balance': 3000, 'ms': 117}
+
+##### C redeem > half balance (second booking would be insufficient): card 01a0e7b7-2e95-7197-acd7-5263816045da balance 5000, redeem 3000 twice with key retry-f5ec0e1712d3486283ca7c98c7efc178
+[lock] card row locked by external session
+[lock] released
+request #1: {'http': 201, 'code': None, 'message': None, 'replayed': False, 'tx_id': '01a0e7b7-3caa-70b1-beb4-9c5e0b719d5f', 'tx_amount': -3000, 'balance': 2000, 'ms': 3615}
+request #2: {'http': 422, 'code': 'INSUFFICIENT_BALANCE', 'message': 'The gift card balance is insufficient for this amount.', 'replayed': None, 'tx_id': None, 'tx_amount': None, 'balance': None, 'ms': 3109}
+   body: {'message': 'The gift card balance is insufficient for this amount.', 'code': 'INSUFFICIENT_BALANCE', 'context': {'balance': 2000, 'requested': 3000}}
+ledger: {'card_balance': 2000, 'status': 'active', 'ledger_sum': 2000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+  issue         5000      0->5000   key=None
+  redemption   -3000   5000->2000   key=retry-f5ec0e1712d3486283ca7c98c7efc178
+request #3 (late retry, same key): {'http': 200, 'code': None, 'message': None, 'replayed': True, 'tx_id': '01a0e7b7-3caa-70b1-beb4-9c5e0b719d5f', 'tx_amount': -3000, 'balance': 2000, 'ms': 91}

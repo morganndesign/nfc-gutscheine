@@ -1,0 +1,4 @@
+=== P5 mixed race (op http code) -> count
+--
+reverse the 500.00 redemption: 422 BALANCE_LIMIT_EXCEEDED balance_after None
+card row: [{'balance': 200000, 'status': 'active'}] max_card_balance=200000 {'card_balance': 200000, 'status': 'active', 'ledger_sum': 200000, 'balance_ok': True, 'chain_ok': True, 'tx_count': 4}

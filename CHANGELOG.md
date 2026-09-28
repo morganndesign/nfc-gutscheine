@@ -24,6 +24,14 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Investor- and production-grade audit, 28 September 2026 (part of 1.4.2, no code changes)
+
+| Change | Why |
+|---|---|
+| `docs/reports/2026-09-28-investor-grade-audit.md`: every finding reproduced on MySQL 8.4 / the production-like Coolify stack, with probability, financial, customer and legal impact, severity, exact fix and effort; scores; the list of 11 launch blockers. | Decision basis before the first paying restaurant. |
+| `docs/reports/evidence/2026-09-28/`: payment, security, mobile and infrastructure probes with their logs (MySQL restart/crash under load, Redis outage, SMTP tarpit, load test, backup/restore and backup-failure drills, failed migration, redeploy), plus the verified fix diff for the idempotency findings. | Anyone can re-run the proofs. |
+| Corrects the earlier memory estimate (measured runtime peak 0.9 GB) and confirms: ledger invariant holds under concurrency and MySQL crash, tenant isolation holds, restore is exact. | Only reproducible claims. |
+
 ## Mailpit for local development; production readiness audit, 28 September 2026 (part of 1.4.2)
 
 | Change | Why |

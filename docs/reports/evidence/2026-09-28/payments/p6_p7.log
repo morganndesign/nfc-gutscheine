@@ -1,0 +1,124 @@
+
+=== P6 issue without expires_at
+{
+ "api_expires_at": "2029-09-28T21:59:59+00:00",
+ "db_expires_at": "2029-09-28 21:59:59",
+ "created_at": "2026-09-28 11:14:27",
+ "months_diff": 36
+}
+
+=== P6 issue with explicit expires_at=null
+{
+ "expires_at": null
+}
+
+expires_at set to 2026-09-27 11:14:27 for 01a0e7b9-2bd0-73e0-8a6b-3ba7549ebb2d and blocked card 01a0e7b9-2d46-703c-906b-ec3507d410c6
+redeem BEFORE nightly job: {'http': 422, 'code': 'CARD_EXPIRED', 'message': 'This gift card has expired.', 'replayed': None, 'tx_id': None, 'tx_amount': None, 'balance': None, 'ms': 96}
+$ php artisan giftcards:expire
+Trattoria Bella Vista: 2 card(s) expired
+Expired 2 card(s).
+
+card 01a0e7b9-2bd0-73e0-8a6b-3ba7549ebb2d {'card_balance': 0, 'status': 'expired', 'ledger_sum': 0, 'balance_ok': True, 'chain_ok': True, 'tx_count': 3}
+  issue         5000      0->5000  
+  redemption   -1500   5000->3500  
+  expiration   -3500   3500->0     
+card 01a0e7b9-2d46-703c-906b-ec3507d410c6 {'card_balance': 0, 'status': 'expired', 'ledger_sum': 0, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2}
+  issue         3000      0->3000  
+  expiration   -3000   3000->0     
+
+=== P6 nightly-expired card: recovery attempts
+{
+ "reverse expiration tx (owner)": [
+  409,
+  "TRANSACTION_NOT_REVERSIBLE"
+ ],
+ "reverse earlier redemption (owner)": [
+  409,
+  "TRANSACTION_NOT_REVERSIBLE"
+ ],
+ "PATCH expires_at +400d (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "PATCH expires_at null (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "unblock (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "activate (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "reload 10.00 (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "redeem 1.00 (owner)": [
+  422,
+  "CARD_EXPIRED"
+ ],
+ "transfer to new card (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "replace (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "expire again (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ]
+}
+
+P7 card 01a0e7b9-34c5-7159-a2ed-22d1dcbbf566 expires_at 2029-09-28T21:59:59+00:00 balance 8000
+P7 manager POST /cards/{id}/expire -> 200 status expired balance 0
+ledger {'card_balance': 0, 'status': 'expired', 'ledger_sum': 0, 'balance_ok': True, 'chain_ok': True, 'tx_count': 2} [('issue', 8000), ('expiration', -8000)]
+audit: [{'action': 'gift_card.expired', 'email': 'manager@bellavista.test'}]
+
+=== P7 manager-expired card: recovery attempts
+{
+ "reverse expiration tx (owner)": [
+  409,
+  "TRANSACTION_NOT_REVERSIBLE"
+ ],
+ "PATCH expires_at +400d (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "PATCH expires_at null (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "unblock (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "activate (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "reload 10.00 (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "redeem 1.00 (owner)": [
+  422,
+  "CARD_EXPIRED"
+ ],
+ "transfer to new card (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "replace (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ],
+ "expire again (owner)": [
+  409,
+  "INVALID_CARD_STATE"
+ ]
+}

@@ -1,0 +1,18 @@
+services:
+  gateway:
+    ports: ["8080:80"]
+    environment: { http_proxy: "", https_proxy: "", HTTP_PROXY: "", HTTPS_PROXY: "" }
+  web: { build: !reset null, image: "gcp-web:latest", pull_policy: never, environment: { http_proxy: "", https_proxy: "", HTTP_PROXY: "", HTTPS_PROXY: "" } }
+  api: { build: !reset null, image: "gcp-api:test", pull_policy: never, environment: { APP_ENV: production } }
+  worker: { build: !reset null, image: "gcp-api:test", pull_policy: never }
+  scheduler: { build: !reset null, image: "gcp-api:test", pull_policy: never }
+  mysql: { ports: ["33306:3306"] }
+  redis: { ports: ["36379:6379"] }
+  mailpit:
+    image: mirror.gcr.io/axllent/mailpit:latest
+    ports: ["38025:8025"]
+    environment: { MP_SMTP_AUTH_ACCEPT_ANY: "1", MP_SMTP_AUTH_ALLOW_INSECURE: "1" }
+  tarpit:
+    image: mirror.gcr.io/library/php:8.4-fpm-alpine
+    entrypoint: ["php", "/tarpit.php"]
+    volumes: ["/tmp/audit2/infra/tarpit.php:/tarpit.php:ro"]

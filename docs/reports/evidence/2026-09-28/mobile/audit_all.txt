@@ -1,0 +1,117 @@
+   Woah! You appear to be trying to run flutter as root.
+   We strongly recommend running the flutter tool without superuser privileges.
+  /
+📎
+Resolving dependencies...
+Downloading packages...
+  code_assets 1.2.1 (2.1.0 available)
+  dbus 0.7.15 (0.8.0 available)
+  hooks 2.0.2 (2.2.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  nm 0.5.0 (0.6.0 available)
+  objective_c 9.5.0 (9.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  test_api 0.7.12 (0.7.14 available)
+  vector_math 2.4.0 (2.4.3 available)
+Got dependencies!
+10 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart
+00:00 +0: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M1: first attempt unanswered 8 s, retry (same key) gets 422 CARD_NOT_REDEEMABLE
+AUDIT M1[CARD_NOT_REDEEMABLE] attempts=2 sameKey=true phase=RedeemPhase.entering notice=NothingBookedNotice card.status=CardStatus.redeemed card.balance=0
+00:00 +1: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M1: first attempt unanswered 8 s, retry (same key) gets 422 INSUFFICIENT_BALANCE
+AUDIT M1[INSUFFICIENT_BALANCE] attempts=2 sameKey=true phase=RedeemPhase.entering notice=BalanceChangedNotice card.status=CardStatus.active card.balance=0
+00:00 +2: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M1: first attempt unanswered 8 s, retry (same key) gets 409 IDEMPOTENCY_CONFLICT
+AUDIT M1[IDEMPOTENCY_CONFLICT] attempts=2 sameKey=true phase=RedeemPhase.entering notice=TapAgainNotice card.status=CardStatus.active card.balance=5000
+AUDIT M1[IDEMPOTENCY_CONFLICT] after tap-again: attempts=3 key3==key1? false state=SuccessState
+00:00 +3: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M2: uncertain → Cancel → edit amount → new key, second redemption without re-scan
+AUDIT M2 first=96f5751f-ba7b-4629-b371-f6165968ac92 second=ae60ed9f-afa1-4c20-b8a0-4b44ed6ac80d same=false scans=1 state=SuccessState
+00:00 +4: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M6: uncertain redeem, background > 15 min → attempt discarded, redo gets a new key
+AUDIT M6 after 16 min background: state=ReadyState phase=AccessPhase.active
+AUDIT M6 redo key=8b7c8e4e-4a33-4588-9a7b-7123de047d36 first=fdcef09f-9f58-422f-88f8-a5a0668ed351 same=false
+00:00 +5: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M6b: RedeemAttempts is memory-only — a new instance (process restart) issues a new key
+AUDIT M6b hasPending after restart=false
+00:00 +6: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M7: NFC tag event delivered while launching (cold start) is dropped
+AUDIT M7 wantsReaderMode while launching=false
+AUDIT M7 after start: phase=AccessPhase.active state=ReadyState scans=0
+00:00 +7: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M7b: same tap with biometrics enabled (phase locked) is dropped too; a link is kept
+AUDIT M7b locked: scans=0 pendingLinkKept=true
+00:00 +8: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M8a: AmountEntry.fromCents throws above 9 999 999
+AUDIT M8a fromCents(10000000) → RangeError (cents): Invalid value: Not in inclusive range 0..9999999: 10000000
+00:00 +9: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M8b: lookup of a €100 000 card, partial=false
+AUDIT M8b partial=false state=LookingUpState slow=false uncaught=RangeError wantsReaderMode=true
+AUDIT M8b uncaught error: RangeError (cents): Invalid value: Not in inclusive range 0..9999999: 10000000
+AUDIT M8b after back(): ReadyState
+00:00 +10: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M8b: lookup of a €100 000 card, partial=true
+AUDIT M8b partial=true state=ChargeState  uncaught=Null wantsReaderMode=true
+00:00 +11: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M12a: double tap on Redeem sends exactly one request
+AUDIT M12a redeem requests=1 state=SuccessState
+00:00 +12: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M12b: uncertain retries + Try again + reconnect all reuse one key
+AUDIT M12b attempts=12 distinctKeys=1
+00:00 +13: /tmp/audit2/mobile/app/test/audit/redeem_audit_test.dart: M12c: 5xx on the slow retry stays uncertain (not definitive)
+AUDIT M12c after 8s+500: phase=RedeemPhase.uncertainAuto
+00:00 +14: loading /tmp/audit2/mobile/app/test/audit/access_audit_test.dart
+00:02 +14: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M1-UI: retry after 8 s answered CARD_NOT_REDEEMABLE shows "Nothing was booked."
+AUDIT M1-UI text "Nothing was booked." visible=true state=RedeemPhase.entering
+00:05 +15: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M3: signed out, /app/config answers after 1900 ms
+AUDIT M3[1900 ms] phase=AccessPhase.signedOut problem=null
+00:05 +16: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M3: signed out, /app/config answers after 3000 ms
+AUDIT M3[3000 ms] phase=AccessPhase.startupProblem problem=StartupProblemKind.timeout
+AUDIT M3[3000 ms] after Try again: phase=AccessPhase.startupProblem configRequests=2
+00:05 +17: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M4: iOS production build (config/production.json) — "Update now" opens nothing
+AUDIT M4 production.json APP_STORE_URL="" → appStoreUrl=null
+AUDIT M4 launches=0 log=[update.noStoreUrl, update.noStoreUrl] screen=1
+00:05 +18: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M5: no global error handler and no crash reporter in lib/ or pubspec
+AUDIT M5 handler hits=[] reporters=[]
+00:05 +19: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M5b: an uncaught async error in the loop never reaches the DiagnosticLog
+AUDIT M5b zone errors=[RangeError] log mentions RangeError=0
+00:05 +20: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M9: after "Not now" biometrics are never offered again (not even after sign-out)
+AUDIT M9 first sign-in → AccessPhase.onboardingBiometrics; after Not now + sign-out + sign-in → AccessPhase.active; biometricsEnabled=false; S14 menu mentions biometrics=false
+00:05 +21: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:05 +22: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://APP.GIFTCARDPRO.AT/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://APP.GIFTCARDPRO.AT/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:05 +23: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e?picc=AA&cmac=BB
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e?picc=AA&cmac=BB" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e?picc=AA&cmac=BB
+00:05 +24: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) http://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "http://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:05 +25: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:05 +26: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at.evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at.evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:05 +27: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://evil.example@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://evil.example@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:05 +28: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at@evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at@evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:05 +29: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at%40evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at%40evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +30: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example\@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://evil.example\\@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +31: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example#@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://evil.example#@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +32: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at:8443/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at:8443/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at:8443/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:06 +33: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at./c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at./c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +34: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/x/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at/x/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +35: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e/extra
+AUDIT M11 REJECT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e/extra"
+00:06 +36: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/C/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at/C/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +37: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at//c//b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at//c//b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at//c//b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:06 +38: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/../c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/../c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:06 +39: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/not-a-uuid
+AUDIT M11 REJECT "https://app.giftcardpro.at/c/not-a-uuid"
+00:06 +40: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/%62b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at/c/%62b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +41: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) javascript://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "javascript://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:06 +42: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false)   https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e  
+AUDIT M11 ACCEPT "  https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e  " → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:06 +43: /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e#frag
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e#frag" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e#frag
+00:06 +44: All tests passed!

@@ -1,0 +1,94 @@
+   Woah! You appear to be trying to run flutter as root.
+   We strongly recommend running the flutter tool without superuser privileges.
+  /
+📎
+Resolving dependencies...
+Downloading packages...
+  code_assets 1.2.1 (2.1.0 available)
+  dbus 0.7.15 (0.8.0 available)
+  hooks 2.0.2 (2.2.0 available)
+  material_color_utilities 0.13.0 (0.13.1 available)
+  meta 1.18.3 (1.19.0 available)
+  nm 0.5.0 (0.6.0 available)
+  objective_c 9.5.0 (9.6.0 available)
+  record_use 0.6.0 (1.1.1 available)
+  test_api 0.7.12 (0.7.14 available)
+  vector_math 2.4.0 (2.4.3 available)
+Got dependencies!
+10 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+00:00 +0: loading /tmp/audit2/mobile/app/test/audit/access_audit_test.dart
+00:00 +0: M1-UI: retry after 8 s answered CARD_NOT_REDEEMABLE shows "Nothing was booked."
+AUDIT M1-UI text "Nothing was booked." visible=true state=RedeemPhase.entering
+00:03 +1: M3: signed out, /app/config answers after 1900 ms
+AUDIT M3[1900 ms] phase=AccessPhase.signedOut problem=null
+00:03 +2: M3: signed out, /app/config answers after 3000 ms
+AUDIT M3[3000 ms] phase=AccessPhase.startupProblem problem=StartupProblemKind.timeout
+AUDIT M3[3000 ms] after Try again: phase=AccessPhase.startupProblem configRequests=2
+00:03 +3: M4: iOS production build (config/production.json) — "Update now" opens nothing
+AUDIT M4 production.json APP_STORE_URL="" → appStoreUrl=null
+AUDIT M4 launches=0 log=[update.noStoreUrl, update.noStoreUrl] screen=1
+00:03 +4: M5: no global error handler and no crash reporter in lib/ or pubspec
+AUDIT M5 handler hits=[] reporters=[]
+00:03 +5: M5b: an uncaught async error in the loop never reaches the DiagnosticLog
+AUDIT M5b zone errors=[RangeError] log mentions RangeError=0
+00:03 +6: M9: after "Not now" biometrics are never offered again (not even after sign-out)
+AUDIT M9 first sign-in → AccessPhase.onboardingBiometrics; after Not now + sign-out + sign-in → AccessPhase.active; biometricsEnabled=false; S14 menu mentions biometrics=false
+00:03 +7: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:03 +8: M11: CardLink.parse (release semantics: allowHttp=false) https://APP.GIFTCARDPRO.AT/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://APP.GIFTCARDPRO.AT/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:03 +9: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e?picc=AA&cmac=BB
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e?picc=AA&cmac=BB" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e?picc=AA&cmac=BB
+00:03 +10: M11: CardLink.parse (release semantics: allowHttp=false) http://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "http://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +11: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +12: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at.evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at.evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +13: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://evil.example@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://evil.example@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:03 +14: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at@evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at@evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +15: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at%40evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at%40evil.example/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +16: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example\@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://evil.example\\@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +17: M11: CardLink.parse (release semantics: allowHttp=false) https://evil.example#@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://evil.example#@app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +18: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at:8443/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at:8443/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at:8443/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:03 +19: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at./c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at./c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +20: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/x/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at/x/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +21: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e/extra
+AUDIT M11 REJECT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e/extra"
+00:03 +22: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/C/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at/C/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +23: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at//c//b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at//c//b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at//c//b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:03 +24: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/../c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/../c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:03 +24 -1: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/../c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e [E]
+  Expected: <false>
+    Actual: <true>
+  
+  package:matcher                                     expect
+  package:flutter_test/src/widget_tester.dart 473:18  expect
+  test/audit/access_audit_test.dart 199:9             main.<fn>.<fn>
+  
+00:03 +24 -1: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/not-a-uuid
+AUDIT M11 REJECT "https://app.giftcardpro.at/c/not-a-uuid"
+00:03 +25 -1: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/%62b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "https://app.giftcardpro.at/c/%62b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +26 -1: M11: CardLink.parse (release semantics: allowHttp=false) javascript://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+AUDIT M11 REJECT "javascript://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e"
+00:03 +27 -1: M11: CardLink.parse (release semantics: allowHttp=false)   https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e  
+AUDIT M11 ACCEPT "  https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e  " → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e
+00:04 +28 -1: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e#frag
+AUDIT M11 ACCEPT "https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e#frag" → sent as https://app.giftcardpro.at/c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e#frag
+00:04 +29 -1: Some tests failed.
+
+Failing tests:
+  /tmp/audit2/mobile/app/test/audit/access_audit_test.dart: M11: CardLink.parse (release semantics: allowHttp=false) https://app.giftcardpro.at/c/../c/b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e

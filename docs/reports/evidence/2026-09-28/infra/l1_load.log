@@ -1,0 +1,23 @@
+=== 10 terminals + 4 dashboard users, think 0.5s, 48s: 1138 requests = 23.9 req/s, redeems 10.2/s
+   scan                   n=  485 p50=159.1 p95=654.0 p99=992.8 max=1110 ms
+   redeem                 n=  485 p50=155.0 p95=591.6 p99=792.0 max=945 ms
+   dash /dashboard/stats  n=   56 p50=739.0 p95=1288.5 p99=1333.5 max=1334 ms
+   dash /cards            n=   56 p50=444.3 p95=800.7 p99=1018.1 max=1018 ms
+   dash /dashboard/activity n=   56 p50=158.4 p95=351.6 p99=597.3 max=597 ms
+   errors: none
+=== 30 terminals + 4 dashboard users, think 0.5s, 47s: 1404 requests = 29.7 req/s, redeems 13.7/s
+   dash /dashboard/stats  n=   36 p50=1224.2 p95=2163.9 p99=2272.3 max=2272 ms
+   scan                   n=  648 p50=752.6 p95=1385.6 p99=1618.4 max=1986 ms
+   redeem                 n=  648 p50=802.9 p95=1552.9 p99=1828.3 max=2338 ms
+   dash /cards            n=   36 p50=1181.2 p95=1701.7 p99=1831.9 max=1832 ms
+   dash /dashboard/activity n=   36 p50=744.5 p95=1089.5 p99=1268.7 max=1269 ms
+   errors: none
+=== 60 terminals + 4 dashboard users, think 0.5s, 51s: 1300 requests = 25.3 req/s, redeems 12.0/s
+   dash /dashboard/stats  n=   24 p50=2501.2 p95=3700.8 p99=3876.2 max=3876 ms
+   scan                   n=  614 p50=1967.3 p95=2917.9 p99=3122.5 max=3295 ms
+   redeem                 n=  614 p50=2195.1 p95=3000.3 p99=3441.7 max=3870 ms
+   dash /cards            n=   24 p50=2331.5 p95=3330.6 p99=3536.3 max=3536 ms
+   dash /dashboard/activity n=   24 p50=1774.0 p95=2287.4 p99=2805.4 max=2805 ms
+   errors: none
+peak memory MiB: {'api': 110, 'backup': 1, 'gateway': 27, 'mailpit': 10, 'mysql': 585, 'redis': 5, 'scheduler': 53, 'web': 53, 'worker': 33} sum 876
+invariant: (('balance<>ledger', '0'), ('row arithmetic', '0'), ('chain break', '0'), ('last<>card', '0'), ('multi-reversal', '0'), ('negative balance', '0'), ('balance > max_card_balance', '0'), ('cards / transactions total', '1512 / 9359'))

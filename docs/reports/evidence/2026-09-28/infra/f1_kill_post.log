@@ -1,0 +1,2 @@
+dup keys: [{'n': 0}]
+invariant: (('balance<>ledger', '0'), ('row arithmetic', '0'), ('chain break', '0'), ('last<>card', '0'), ('multi-reversal', '0'), ('negative balance', '0'), ('balance > max_card_balance', '0'), ('cards / transactions total', '960 / 5271'))

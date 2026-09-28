@@ -1,0 +1,13 @@
+[kill] issued 300 cards
+kill -9 mysqld host pid 1962 rc=0
+state after kill: running restarts=1
+injected at +12.1s, docker returned at +13.3s
+mysql state: running restarts=1 health=healthy
+responses: {"201 None": 1461, "500 None": 320}
+errors per second (+s: n): {11: 17, 12: 42, 13: 61, 14: 57, 15: 56, 16: 55, 17: 32}
+error window: +11.4s .. +17.7s (6.3s), max latency 1921 ms
+keys with >1 booking: 0; 200 but not booked: 0; error but BOOKED: 1 of 320 errors
+  error-but-booked: 500 None
+same-key retry after recovery: {"201 None replayed=False": 319, "200 None replayed=True": 1}
+keys with >1 booking after retries: 0
+invariant: (('balance<>ledger', '0'), ('row arithmetic', '0'), ('chain break', '0'), ('last<>card', '0'), ('multi-reversal', '0'), ('negative balance', '0'), ('balance > max_card_balance', '0'), ('cards / transactions total', '1260 / 7352'))

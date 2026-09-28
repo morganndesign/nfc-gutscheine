@@ -1,0 +1,33 @@
+
+=== all rounds (op http code) -> count
+{}
+
+=== drain race (op http code) -> count
+{
+ "xfer-all X->Y 422 INSUFFICIENT_BALANCE": 4,
+ "xfer-all X->Y 200 None": 1,
+ "redeem X 422 CARD_NOT_REDEEMABLE": 3,
+ "redeem X 201 None": 2
+}
+
+=== drain race ledgers
+{
+ "X": {
+  "card_balance": 0,
+  "status": "redeemed",
+  "ledger_sum": 0,
+  "balance_ok": true,
+  "chain_ok": true,
+  "tx_count": 4
+ },
+ "Y": {
+  "card_balance": 7000,
+  "status": "active",
+  "ledger_sum": 7000,
+  "balance_ok": true,
+  "chain_ok": true,
+  "tx_count": 2
+ },
+ "X+Y": 7000,
+ "expected": 7000
+}

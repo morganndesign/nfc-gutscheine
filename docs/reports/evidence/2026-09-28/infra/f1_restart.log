@@ -1,0 +1,11 @@
+[restart] issued 300 cards
+gcpaudit-mysql-1
+injected at +12.1s, docker returned at +16.0s
+mysql state: running restarts=0 health=healthy
+responses: {"201 None": 1407, "500 None": 575}
+errors per second (+s: n): {11: 15, 12: 54, 13: 98, 14: 84, 15: 59, 16: 71, 17: 71, 18: 74, 19: 49}
+error window: +11.6s .. +20.1s (8.5s), max latency 1687 ms
+keys with >1 booking: 0; 200 but not booked: 0; error but BOOKED: 0 of 575 errors
+same-key retry after recovery: {"201 None replayed=False": 575}
+keys with >1 booking after retries: 0
+invariant: (('balance<>ledger', '0'), ('row arithmetic', '0'), ('chain break', '0'), ('last<>card', '0'), ('multi-reversal', '0'), ('negative balance', '0'), ('balance > max_card_balance', '0'), ('cards / transactions total', '660 / 4622'))

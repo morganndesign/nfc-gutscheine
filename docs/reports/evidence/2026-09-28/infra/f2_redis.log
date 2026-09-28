@@ -1,0 +1,41 @@
+--- baseline
+  redeem     http=201 code=None 73 ms 
+  card_get   http=403 code=FORBIDDEN 43 ms {'message': 'You do not have permission to perform this action.', 'code': 'FORBIDDEN'}
+  dashboard  http=404 code=NOT_FOUND 27 ms {'message': 'The requested resource was not found.', 'code': 'NOT_FOUND'}
+  /up       (200, 18)
+redis dbsize before: 4
+gcpaudit-redis-1
+--- redis STOPPED
+  redeem     http=500 code=None 40 ms {'message': 'Server Error'}
+  card_get   http=500 code=None 34 ms {'message': 'Server Error'}
+  dashboard  http=404 code=NOT_FOUND 17 ms {'message': 'The requested resource was not found.', 'code': 'NOT_FOUND'}
+  /up       (500, 20)
+redeem during outage: http=500 -> ledger rows for its key: 0
+containers during outage: gcpaudit-api-1 Up 13 minutes (healthy)
+gcpaudit-backup-1 Up 13 minutes
+gcpaudit-gateway-1 Up 13 minutes (healthy)
+gcpaudit-mailpit-1 Up 13 minutes (healthy)
+gcpaudit-mysql-1 Up 2 minutes (healthy)
+gcpaudit-redis-1 Exited (0) 22 seconds ago
+gcpaudit-scheduler-1 Up 13 minutes (healthy)
+gcpaudit-web-1 Up 13 minutes (healthy)
+gcpaudit-worker-1 Up 21 seconds (healthy)
+worker log tail: Redis not ready: php_network_getaddresses: getaddrinfo for redis failed: Name does not resolve
+PHP Warning:  Redis::connect(): php_network_getaddresses: getaddrinfo for redis failed: Name does not resolve in Command line code on line 8
+Redis not ready: php_network_getaddresses: getaddrinfo for redis failed: Name does not resolve
+gcpaudit-redis-1
+--- redis STARTED again (no other action)
+  redeem     http=201 code=None 73 ms 
+  card_get   http=403 code=FORBIDDEN 38 ms {'message': 'You do not have permission to perform this action.', 'code': 'FORBIDDEN'}
+  dashboard  http=404 code=NOT_FOUND 25 ms {'message': 'The requested resource was not found.', 'code': 'NOT_FOUND'}
+  /up       (200, 21)
+redis dbsize after: 4
+containers 30s later: gcpaudit-api-1 Up 14 minutes (healthy)
+gcpaudit-backup-1 Up 14 minutes
+gcpaudit-gateway-1 Up 14 minutes (healthy)
+gcpaudit-mailpit-1 Up 14 minutes (healthy)
+gcpaudit-mysql-1 Up 2 minutes (healthy)
+gcpaudit-redis-1 Up 38 seconds (healthy)
+gcpaudit-scheduler-1 Up 14 minutes (healthy)
+gcpaudit-web-1 Up 14 minutes (healthy)
+gcpaudit-worker-1 Up About a minute (healthy)

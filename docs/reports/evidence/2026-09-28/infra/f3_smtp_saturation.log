@@ -1,0 +1,5 @@
+[14:03:00] php-fpm processes busy: 19
+[14:03:59] redeem #1 during saturation: http=201 code=None after 58.6s  {'data': {'card': {'id': '01a0e7e5-8d3a-7352-ac78-0c8f60d46acf', 'restaurant_name': 'Trattoria Bella Vista', 'card_number': '1215 2833 0934 
+[14:03:59] redeem #2 during saturation: http=201 code=None after 0.0s  {'data': {'card': {'id': '01a0e7e5-8d44-716c-a843-fd048a05a1b5', 'restaurant_name': 'Trattoria Bella Vista', 'card_number': '1257 2579 2503 
+[14:03:59] redeem #3 during saturation: http=201 code=None after 0.0s  {'data': {'card': {'id': '01a0e7e5-8d32-70ac-a885-ffef2585f01b', 'restaurant_name': 'Trattoria Bella Vista', 'card_number': '1200 4704 6348 
+26 invitations: Counter({(201, None): 26}) max 123.5 s
