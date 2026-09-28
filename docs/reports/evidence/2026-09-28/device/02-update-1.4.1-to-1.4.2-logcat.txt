@@ -1,0 +1,35 @@
+09-28 17:23:35.603  2923  2940 I ActivityManager: Start proc 9717:eu.tapredeem.waiter/u0a85 for activity eu.tapredeem.waiter/.MainActivity
+09-28 17:24:04.161  9717  9749 W FlutterSecureStorage: Algorithm changed detected.
+09-28 17:24:04.162  9717  9749 E FlutterSecureStorage: Key mismatch detected during cipher initialization: Algorithm changed detected
+09-28 17:24:04.163  9717  9749 E FlutterSecureStorage: This typically occurs after an algorithm change.
+09-28 17:24:04.163  9717  9749 E FlutterSecureStorage: Stored key cannot be decrypted with current algorithm.
+09-28 17:24:04.163  9717  9749 I FlutterSecureStorage: migrateOnAlgorithmChange is enabled. Attempting data migration...
+09-28 17:24:04.164  9717  9749 I FlutterSecureStorage: Starting data migration from saved to current cipher algorithms...
+09-28 17:24:04.164  9717  9749 I FlutterSecureStorage: Detected biometric migration: FROM=AES_GCM_NoPadding, TO=RSA_ECB_OAEPwithSHA_256andMGF1Padding
+09-28 17:24:04.164  9717  9749 I FlutterSecureStorage: Starting biometric migration (authentication required)...
+09-28 17:24:04.164  9717  9749 I FlutterSecureStorage: Migration direction: FROM biometric=true, TO biometric=false
+09-28 17:24:04.164  9717  9749 I FlutterSecureStorage: You will be prompted to authenticate with your OLD biometric settings to decrypt existing data.
+09-28 17:24:04.165  9717  9749 D FlutterSecureStorage: Step 1/6: Getting saved biometric cipher...
+09-28 17:24:04.404  9717  9749 E FlutterSecureStorage: Failed to initialize biometric migration
+09-28 17:24:04.404  9717  9749 E FlutterSecureStorage: java.security.InvalidAlgorithmParameterException: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
+09-28 17:24:04.404  9717  9749 E FlutterSecureStorage: Caused by: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
+09-28 17:24:04.404  9717  9749 E FlutterSecureStorage: 	... 19 more
+09-28 17:24:04.407  9717  9749 E FlutterSecureStorage: Data migration failed: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
+09-28 17:24:04.407  9717  9749 E FlutterSecureStorage: java.security.InvalidAlgorithmParameterException: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
+09-28 17:24:04.407  9717  9749 E FlutterSecureStorage: Caused by: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
+09-28 17:24:04.407  9717  9749 E FlutterSecureStorage: 	... 19 more
+09-28 17:24:04.407  9717  9749 W FlutterSecureStorage: resetOnError is enabled. Deleting all data as fallback...
+09-28 17:24:04.608  1748  1748 I keystore: del USRPKEY_eu.tapredeem.waiter.FlutterSecureStoragePluginKeyOAEP 10085
+09-28 17:24:04.681  1748  1748 I keystore: del USRCERT_eu.tapredeem.waiter.FlutterSecureStoragePluginKeyOAEP 10085
+09-28 17:24:04.684  1748  1748 I keystore: del CACERT_eu.tapredeem.waiter.FlutterSecureStoragePluginKeyOAEP 10085
+09-28 17:24:04.685  9717  9749 I FlutterSecureStorage: Deleted key from AndroidKeyStore
+09-28 17:24:04.721  9717  9749 D FlutterSecureStorage: Deleted all encrypted data
+09-28 17:24:04.722  9717  9749 D FlutterSecureStorage: Deleted wrapped keys from SharedPreferences
+09-28 17:24:04.722  9717  9749 D FlutterSecureStorage: Updated algorithm markers to current
+09-28 17:24:04.722  9717  9749 W FlutterSecureStorage: All data deleted. Reinitializing with new algorithm...
+09-28 17:24:05.710  1748  1748 I keystore: del USRPKEY_eu.tapredeem.waiter.FlutterSecureStoragePluginKeyOAEP 10085
+09-28 17:24:05.713  1748  1748 I keystore: del USRCERT_eu.tapredeem.waiter.FlutterSecureStoragePluginKeyOAEP 10085
+09-28 17:24:05.731  1748  1748 I keystore: del CACERT_eu.tapredeem.waiter.FlutterSecureStoragePluginKeyOAEP 10085
+09-28 17:24:21.185  9717  9717 I flutter : GiftCard Waiter could not start: TimeoutException after 0:00:20.000000: Future not completed
+09-28 17:24:30.424  1748  1748 I keystore: 1 0
+09-28 17:24:40.754  2923  2946 I ActivityManager: Displayed eu.tapredeem.waiter/.MainActivity: +1m5s941ms (total +16m34s582ms)

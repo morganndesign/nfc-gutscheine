@@ -1,0 +1,8 @@
+# Android 9 emulator (google_apis x86, PIN 1234 set), GiftCard Waiter 1.4.1 (versionCode 1), cold start 17:18.
+# Console excerpt of `adb logcat -d | grep FlutterSecureStorage` for pid 9547 (copied from the test session).
+09-28 17:18:30.410  9547  9571 E FlutterSecureStorage: Failed to initialize storage cipher
+09-28 17:18:30.410  9547  9571 E FlutterSecureStorage: java.security.InvalidAlgorithmParameterException: java.lang.IllegalStateException: At least one fingerprint must be enrolled to create keys requiring user authentication for every use
+09-28 17:18:30.410  9547  9571 E FlutterSecureStorage: 	at android.security.keystore.AndroidKeyStoreKeyGeneratorSpi.engineInit(AndroidKeyStoreKeyGeneratorSpi.java:248)
+09-28 17:18:30.410  9547  9571 E FlutterSecureStorage: 	at javax.crypto.KeyGenerator.init(KeyGenerator.java:519)
+09-28 17:18:31.331  9547  9547 E flutter : (unhandled exception, obfuscated Dart stack follows — no runApp, launch screen stays)
+# Screen at 17:20 and 17:21 (150 s / 180 s after start): launch screen only (01-1.4.1-cold-start-after-150s.png).
