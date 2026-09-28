@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Status** | **FROZEN**, v2.0, 28 September 2026. This is the baseline for implementation. |
+| **Status** | **FROZEN**, v2.1, 28 September 2026 (v2.0 + ADR-001). This is the baseline for implementation. |
 | **Change control** | After freezing, a change needs a short **architecture decision record** (ADR) appended to §20: what changes, why, the security impact, and approval by the product owner. The code must not diverge silently from this document. |
 | **Supersedes** | The v2 draft (commit `301c551`). For **scope**, it also supersedes `ntag424-platform-architecture.md`, which remains the reference for cryptographic detail (key derivation, APDU sequences, personalisation steps) where §9 and §10 point to it. |
 | **Evidence marks** | **[Code]** repository path:line (code at commit `0493784`, unchanged since); **[Vendor]** official documentation; **[Law]** statute or ruling (not legal advice); **[Assessment]** engineering judgement |
@@ -29,7 +29,7 @@
 **Final decisions (this revision):**
 
 13. **Anonymous cards are supported and behave like cash.** Registration is optional and exists only for guests who want recovery. It is never forced.
-14. **Printable QR vouchers exist only for digital vouchers:** online purchases, or guests who explicitly choose a printable voucher. They are never part of a physical card.
+14. **Printable QR vouchers exist only for digital vouchers:** online purchases, or guests who explicitly choose a printable voucher. They are never part of a physical card, and a voucher is never card and QR at the same time (decision 26).
 15. **Apple Wallet and Google Wallet are out of the current scope.** The model stays open for them (§18), but nothing is designed around them.
 16. **Every physical card always has a lifecycle state** (§7).
 17. **Batch management** with production, key, assignment and delivery data, and live counts per state (§8).
@@ -45,6 +45,17 @@
     - defence in depth.
 19. **Realistic implementation:** no enterprise feature without clear security or operational value.
 20. **After this review, the architecture is frozen.**
+
+**Implementation decisions (ADR-001, 28 September 2026):**
+
+21. **Phase 0 comes first.** It removes every path that spends from a card voucher without a verified NTAG 424 DNA card.
+22. **NTAG21x is migration-only.** A legacy card can prove possession for a swap to a 424 card; it can never spend.
+23. **The dashboard never programs cards.**
+24. **Card numbers are internal identifiers** for support, inventory and batch management. They never authorise redemption and are never shown to guests.
+25. **Every voucher activation is linked to a payment record** that says how payment was received. GiftCard Pro records the payment; it does not process it.
+26. **A voucher is either a physical-card voucher or a digital QR voucher, never both at once.** Binding a card to a digital voucher converts it.
+27. **Every physical card has a permanent internal identifier** (cryptographically random, never exposed to users), used for lifecycle, security and audit.
+28. **No overrides.** A card voucher is only ever debited with its verified card. An unreadable card is replaced (registered vouchers) or is lost (anonymous vouchers).
 
 ---
 
@@ -134,8 +145,8 @@ All findings are from the code at commit `0493784`.
 | C1 | **Card = voucher.** `gift_cards` holds balance *and* `public_token`, `card_number`, `nfc_uid`, `nfc_tag_type`, counters and lock flags. | 3, 4, 11 | Voucher keeps money, expiry and customer. New tables `media`, `cards` (physical cards with a lifecycle), `card_batches`, `card_events` (§5, §14). |
 | C2 | **Vouchers are active on creation** (`activate` defaults to `true`) and there is **no payment record** of any kind. | 5, 6, 10 | Voucher `pending_payment` → payment recorded (cash, terminal, online) → bound (if a card is sold) → `active`. |
 | C3 | **Binding trusts the client.** `method: web_nfc` passes UID, read-back UID and URL as *claims*. Any other method (`manual`, `provisioned`, `printed`) binds **without any verification**. A 424 card "marked as provisioned" gets its UID on the first tap. | 7, 8 | Binding requires a server-verified tap of a personalised stock chip (live AES authentication through the phone). No other binding path exists. |
-| C4 | **Spending needs no card.** Redeem, reload and transfer take a card id. `qr`, `manual` and `api` scans skip chip checks, and waiters can spend by typing the number. | 8, and the purpose of 424 | Every debit references a single-use, server-issued presentment. Manual lookup is gone; a manager override with step-up replaces it. |
-| C5 | **Card numbers everywhere:** generated (16-digit Luhn, restaurant prefix), shown, printed, exported, used for search, manual entry and transfers. | 2 | No number on any card. A **voucher reference** (non-secret, not a credential) exists on receipts, e-mails and in the dashboard only. |
+| C4 | **Spending needs no card.** Redeem, reload and transfer take a card id. `qr`, `manual` and `api` scans skip chip checks, and waiters can spend by typing the number. | 8, and the purpose of 424 | Every debit references a single-use, server-issued presentment. Manual lookup and overrides are gone (decision 28). |
+| C5 | **Card numbers everywhere:** generated (16-digit Luhn, restaurant prefix), shown, printed, exported, used for search, manual entry and transfers. | 2 | No number on any card. The existing voucher number stays as an **internal identifier** for staff and support only: never shown to guests, never a credential (decision 24). |
 | C6 | **Print page with QR and full card number.** `GET /cards/{id}/qr` returns the tag URL as an SVG. | 2 | Removed. The printable QR voucher is a separate, revocable medium with its own secret, only for digital vouchers (§6). |
 | C7 | **Replace = new card + balance transfer** (new token, new number, `TransferOut`/`TransferIn`). | 11 | Revoke medium + bind medium. The ledger is untouched. |
 | C8 | **One URL for everything:** the tag URL, the QR and the e-mail link are the same bearer token (`/c/{uuid}`), stored in clear. | 4, 9 | Separate credentials per medium, stored as hashes. The e-mail link is view-and-show-QR, not a bearer spend link. The chip carries a SUN URL with no static token. |
@@ -166,11 +177,11 @@ Line counts from `wc -l`, including tests. "Remove" means: delete once v2 bindin
 |---|---|---|
 | **Backend: writer and binding workflow** | `NfcProgrammingService.php` (457); `BindNfcTagRequest`, `CheckNfcTagRequest`, `LockNfcTagRequest`, `ReportNfcFailureRequest`; `NfcWriteAttemptResource`; `NfcWriteAttempt` model; enums `NfcWriteMethod`, `NfcWriteStage`, `NfcWriteResult`; `tests/Feature/NfcProgrammingTest.php` (26 tests); the migrations stay (history) | ≈ 1 450 |
 | Backend: in `GiftCardService` | `bindNfcTag`, `markNfcLocked`, `assertChipAvailable`, `replace` (l.367–431, 592–695) | ≈ 170 |
-| Backend: card numbers and QR | `CardNumberGenerator` (49), `QrCodeService` (21, **kept**: it renders the printable QR), `qr` and `nfcPayload` actions, `card_number_prefix` setting | ≈ 120 |
+| Backend: card numbers and QR | `CardNumberGenerator` (49, **kept**: it generates the internal voucher number), `QrCodeService` (21, **kept**: it renders the printable QR), `qr` and `nfcPayload` actions, `card_number_prefix` setting | ≈ 120 |
 | **Dashboard: writer and station** | `lib/nfc-programming.ts` (601) + tests (526); `nfc-writer.tsx`, `nfc-program-steps.tsx`, `nfc-attempts.tsx`, `nfc-error.tsx`, `card-qr.tsx`; `hooks/use-nfc-programmer.ts`; `cards/program/page.tsx` (686); `print/cards/[id]/page.tsx`; and at the repository root `e2e/nfc-programming.mjs` (437) | ≈ 2 900 |
 | Dashboard: card numbers | Manual entry in the web terminal, transfer by number, number columns, search | ≈ 150 (edits) |
 | **Waiter app: writer** | `core/issue/card_programmer.dart` (330) + tests (211); `core/platform/tag_writer.dart` (115); writer paths in `WaiterNfc.kt` (`onWriterTag`, `inspect`, `writeUrl`, `readFresh`, `lock`: l.300–420); writer events in `nfc_service.dart` | ≈ 800 |
-| Waiter app: manual number entry | `s11_manual_entry.dart` (459) + its test (330), `components/card_number_field.dart` (289); replaced by a smaller manager override screen. `core/format/card_number.dart` **stays**: it formats the reference of existing vouchers. | ≈ 1 080 |
+| Waiter app: manual number entry | `s11_manual_entry.dart` (459) + its test (330), `components/card_number_field.dart` (289); removed without replacement (no overrides, decision 28). `core/format/card_number.dart` **stays**: it formats the internal voucher number for staff. | ≈ 1 080 |
 | **Total** | | **≈ 6 700 lines**, of which about 2 100 are tests and the end-to-end script |
 
 **Kept and reused:**
@@ -219,7 +230,7 @@ Line counts from `wc -l`, including tests. "Remove" means: delete once v2 bindin
 | **Maintainability** | ✅ After the simplifications in §4.3 | **One monolith** (Laravel) plus one small crypto service. One app for waiters, managers and personalisation stations. One HSM provider. One chip type for new cards. The existing ledger code, proven under concurrency in the audit, is kept rather than rewritten. The APDU relay is written once and shared by the till, binding and the station. |
 | **Operational simplicity** | ⚠ Acceptable, with four routines that must exist | 1. **Key ceremony:** once, then yearly or when a custodian leaves. 2. **Batch acceptance** per delivery. 3. **Crypto-service monitoring**: two instances, alerting, and the outage runbook (card transactions pause; §10.3). 4. **The tap domain** registered for 10 years with registrar lock and certificate monitoring: if `t.giftcardpro.at` ever lapses, every card in circulation stops working. Runbooks in §19. Nothing else needs daily attention. |
 | **Security** | ✅ Meets decision 18 | See §13, which maps every principle to concrete controls. Remaining accepted risks are listed there: relay attack, a compromised backend while in control, owner-level fraud, anonymous cards as cash. |
-| **Restaurant workflow** | ✅ Simpler than today | **Sale:** payment → amount → one tap. **Redeem:** one tap → amount. **Lost card** (registered): the guest's recovery code, or a reference search plus the contact's e-mail confirmation → tap a new card. **Stock:** confirm a delivery once. There is no programming, writing, locking or tag-type knowledge, and no Chrome-on-Android requirement. iPhone and Android behave the same. |
+| **Restaurant workflow** | ✅ Simpler than today | **Sale:** payment → amount → one tap. **Redeem:** one tap → amount. **Lost or unreadable card** (registered): the guest's recovery code, or a voucher-number search plus the contact's e-mail confirmation → tap a new card. **Stock:** confirm a delivery once. There is no programming, writing, locking or tag-type knowledge, and no Chrome-on-Android requirement. iPhone and Android behave the same. |
 | **Future extensibility** | ✅ Additive only | Wallets = new medium types. Chains = an `organization_id` column plus acceptance rules. Double-entry = a migration from the append-only ledger. Offline terminals = a new verifier with SAM AV3. All of these are **additive migrations**: new tables or new nullable columns, with no change to how vouchers, cards, batches or media work (§18). |
 
 ### 4.2 Remaining decisions challenged
@@ -228,7 +239,7 @@ Each decision was re-examined against "simplify only without reducing security".
 
 | # | Decision | Challenge | Verdict |
 |---|---|---|---|
-| R1 | Live AES challenge at every card redemption | Could the passive SUN URL suffice and save one round trip? | **Keep.** A SUN URL can be skimmed from a pocket and replayed once. Only a server-chosen challenge stops that (earlier design A4). The cost is about 0.2–0.5 s per tap. **No degraded mode:** SUN verification needs the same crypto service, and a per-restaurant switch to weaker checks would let one restaurant lower security. An outage pauses card transactions; registered guests can use the override (§10.5). |
+| R1 | Live AES challenge at every card redemption | Could the passive SUN URL suffice and save one round trip? | **Keep.** A SUN URL can be skimmed from a pocket and replayed once. Only a server-chosen challenge stops that (earlier design A4). The cost is about 0.2–0.5 s per tap. **No degraded mode:** SUN verification needs the same crypto service, and a per-restaurant switch to weaker checks would let one restaurant lower security. An outage pauses card transactions. |
 | R2 | A separate crypto service | Laravel could call the HSM directly. | **Keep, as a sidecar container** on the same host with its own credentials. Direct calls would put HSM credentials in the web app, where any code-injection bug can use them freely. The sidecar gives a narrow API, rate limits and a separate audit trail for about 800 lines of code **[Assessment]**. |
 | R3 | HSM tiers T1/T2/T3 | Three tiers is enterprise complexity. | **Simplify: one tier.** Google Cloud HSM (roots non-extractable, per-card keys only briefly in the crypto service's memory). It works from the current hosting and costs a few euros per month **[Vendor]**. The T3 (all-in-HSM) option is removed from the roadmap. |
 | R4 | Two-level key derivation (root → batch → card) | Is the batch level needed? | **Keep.** It is cheap and limits a future manufacturer leak to one batch. It also allows manufacturer personalisation later without exposing roots. |
@@ -236,7 +247,7 @@ Each decision was re-examined against "simplify only without reducing security".
 | R6 | Double-entry ledger, per-organisation hash chain | Needed for chains, not for single-restaurant vouchers. | **Defer.** Keep today's per-voucher ledger (balance before/after, row locks, idempotency). Make it **append-only** (triggers, no UPDATE/DELETE grant), add a **hash chain** and a **unique presentment id**. Tamper evidence is kept, and 14–20 days are saved. |
 | R7 | Organisations, programs, acceptance networks | No chain customer yet. | **Defer.** The restaurant stays the tenant. Adding `organization_id` later is additive (§18). |
 | R8 | Presentments (single-use proof of presence) | — | **Keep.** This is what closes every "spend without the card" path. It is one table and one service. |
-| R9 | Assurance-level limit matrix (per level: per transaction, per day, lifetime, rolling 30 days) | Complex to explain and to configure. | **Simplify.** Card vouchers no longer carry weak media (R10, R13), so a matrix is not needed. **One limit model** (§6.3): a per-transaction and a per-voucher daily ceiling for all media, plus a few fixed caps for specific risks: legacy cards, the first 24 h of online vouchers, 72 h after a recovery, and overrides. |
+| R9 | Assurance-level limit matrix (per level: per transaction, per day, lifetime, rolling 30 days) | Complex to explain and to configure. | **Simplify.** Card vouchers no longer carry weak media (R10, R13), so a matrix is not needed. **One limit model** (§6.3): a per-transaction and a per-voucher daily ceiling for all media, plus a few fixed caps for specific risks: legacy digital QR links, the first 24 h of online vouchers, and 72 h after a recovery. |
 | R10 | E-mail voucher on card vouchers: view by default, "enable phone payment" at the counter | An extra role and an extra flow. | **Simplify.** On a card voucher, the e-mail is a **recovery contact** (balance, receipts, recovery). It never spends, so there is no "enable" flow. On a digital voucher, the e-mail voucher spends (rotating QR after device confirmation). |
 | R11 | Self-registration by tapping one's own card | Skimming makes it abusable; it only ever gave view rights. | **Remove.** Registration happens at the sale or later at the counter: a manager taps the card (A3), enters the e-mail, and the guest confirms by e-mail link. Tapping with one's own phone still shows the balance. |
 | R12 | Card reuse and re-keying of returned cards | A rare case that needs a re-keying flow. | **Remove.** Each card serves one voucher for its life. Returned or replaced cards are **destroyed**. |
@@ -293,7 +304,7 @@ erDiagram
 
 | Entity | Owns | Never owns |
 |---|---|---|
-| **Voucher** | Balance, ledger, expiry, status, optional customer, issuing restaurant, reference, payments | Anything about how it is presented |
+| **Voucher** | Balance, ledger, expiry, status, optional customer, issuing restaurant, internal voucher number, payments | Anything about how it is presented |
 | **Medium** | "This credential may access that voucher", its status, its secret hash if any | Money, expiry |
 | **Card** (physical) | UID, batch, key set, lifecycle state, stock location | Money, customer, expiry |
 | **Batch** | Production, key, assignment and delivery data | Money |
@@ -301,9 +312,15 @@ erDiagram
 
 ### 5.2 Voucher rules
 
-- **Reference:** 10 characters of Crockford base32 plus a check character, random, unique per restaurant (e.g. `GC-7K4M-2Q9P-X`).
-  - It appears on receipts, e-mails and in the dashboard. It is **never printed on a card and never a credential**: it finds a voucher, it never spends it.
-  - Existing vouchers keep their current numbers as their reference.
+- **Voucher number (internal):** the existing `card_number` (random, 16 digits, Luhn) stays.
+  - It is shown only to restaurant staff (dashboard, app) and platform support, for support and accounting.
+  - It is **never printed on a card, never in guest e-mails, and never a credential**: it can find a voucher for staff, it can never spend it (decision 24).
+- **Physical card identifiers:**
+  - `cards.id`: UUID version 4 (122 random bits), the permanent internal identifier. It is **never serialised to any client**, and is used for lifecycle, events and audit (decision 27). Laravel's default `HasUuids` produces time-ordered v7 UUIDs, so cards use `HasVersion4Uuids`.
+  - `cards.card_number`: the inventory number `<batch code>-<sequence>` (e.g. `B-2026-0007-0123`), used by staff and platform for support, inventory and batch management.
+  - `cards.uid`: the chip UID, used only inside verification.
+- **Card voucher or digital voucher (decision 26).** `gift_cards.kind` is `card` or `digital`. Binding a card to a digital voucher sets `kind = card`, revokes its QR media and turns the e-mail voucher into a recovery contact, all in one transaction. The reverse (a card voucher becoming QR-redeemable) is not possible.
+- **Payment record (decision 25):** activation requires a `payments` row with a method: `cash`, `card_terminal` (+ terminal receipt number), `online_psp` (+ provider payment id), `bank_transfer` (+ reference) or `complimentary`. A complimentary voucher (e.g. marketing) needs an owner's approval and a reason.
 - **Status:**
   - `pending_payment` → `awaiting_card` (paid, card still to bind) → `active`;
   - `blocked`, `expired`, `cancelled`, `closed`.
@@ -326,7 +343,8 @@ erDiagram
 | `email_voucher`, digital voucher | Recipient | Link to the voucher page. The rotating QR appears after a one-time e-mail code confirms the device. | **A2**: fresh value from a confirmed device | Yes |
 | `email_voucher`, card voucher | Registered guest | Recovery contact: balance, receipts, suspend, and a recovery code valid only for `select` | A0 | **No** |
 | `printable_qr` | Holder of the paper or PDF | Static QR for **digital vouchers only** (decision 14); one active per voucher | **A1**: bearer | Yes |
-| `legacy_token` | Old NTAG21x card, printed QR or old e-mail link | The old `public_token`; one medium for all three places | A1, capped | Yes, until the sunset |
+| `legacy_token` on an NTAG21x card voucher | Old NTAG21x card, printed QR, old e-mail link | The old `public_token`; one medium for all three places | — | **No.** It proves possession for a swap only (decision 22). |
+| `legacy_token` on a digital voucher (`qr_only`) | Printed QR or e-mail link of an existing digital voucher | The digital QR product before v2 | A1, capped | Yes, until migrated to an e-mail voucher or the sunset |
 | *future:* `wallet_apple`, `wallet_google` | — | Out of scope (§18) | — | — |
 
 ### 6.2 Allowed combinations
@@ -336,7 +354,7 @@ erDiagram
 | Card, anonymous (cash sale, no e-mail) | `nfc_card` |
 | Card, registered | `nfc_card` + `email_voucher` (recovery contact) |
 | Online / digital | `email_voucher` (spends) + optional `printable_qr` |
-| Digital that later receives a card (§11.4) | + `nfc_card`. **The printable QR is revoked** at binding; the e-mail voucher keeps spending. |
+| Digital that later receives a card (§11.4) | Becomes a card voucher: + `nfc_card`; **the printable QR is revoked and the e-mail voucher becomes a recovery contact** (decision 26). |
 | Printable voucher sold in person | `printable_qr` (+ optional `email_voucher`) |
 
 ### 6.3 One limit model
@@ -348,10 +366,10 @@ All limits are restaurant settings, within platform bounds. They are checked in 
 | Maximum voucher value | €500 | Sale and reload |
 | Per transaction | €250 | Every debit, all media |
 | Per voucher per day | €500 | Sum of all debits of a voucher |
-| Legacy media | €50 per transaction, €100 per day | `legacy_token` during the sunset |
+| Legacy digital QR | €50 per transaction, €100 per day | `legacy_token` of digital vouchers, until migrated |
 | Online, first 24 h after payment | €100 in total, **no card binding** | Online vouchers (stolen-card purchases) |
 | New card after recovery without the old card | €100 in total during the first 72 h | Registered vouchers (§11.6) |
-| Override (unreadable card) | €50 each; two per voucher per 30 days; five per restaurant per day | Registered vouchers only, contact confirms (§10.5) |
+| Overrides | **None** (decision 28) | An unreadable card is replaced (§11.6) |
 
 ### 6.4 Consistency
 
@@ -569,7 +587,7 @@ The details (APDU sequences, file settings, derivation input layouts, ceremony s
 | Restaurant branding, GiftCard Pro branding. Nothing else. | NDEF URL `https://t.giftcardpro.at/{k}?e=<32 hex>&m=<16 hex>`. `{k}` = key-set version, shared by every card of that key set. `e` = UID + tap counter, encrypted with random padding, different on every tap. `m` = MAC with the card's own key. |
 | | Five AES-128 keys, never readable; SDM configuration; NDEF writable only with the card's own K0 |
 
-**Not on the card:** balance, amount, restaurant, customer, expiry, reference, token, batch code, or any value that stays the same between taps.
+**Not on the card:** balance, amount, restaurant, customer, expiry, voucher or card number, token, batch code, or any value that stays the same between taps.
 
 **Stated limit:** the 7-byte UID is sent in clear in the radio handshake to any NFC reader (ISO 14443). It links to nothing outside our database.
 
@@ -631,7 +649,7 @@ A presentment is the server's record that **this medium, or this guest, was genu
 - `rotating_qr`: A2;
 - `printable_qr`: A1;
 - `legacy_token`: A1;
-- `email_link`: a one-time link sent to a confirmed contact. It counts as `select` for recovery, contact changes and override confirmation, and as `resume` or `suspend` for the contact's own card actions.
+- `email_link`: a one-time link sent to a confirmed contact. It counts as `select` for recovery and contact changes, and as `resume` or `suspend` for the contact's own card actions.
 
 **Validity and enforcement:**
 - 60 seconds, bound to device, user and restaurant.
@@ -659,7 +677,7 @@ The phone never sees a key or RndA. A recording of any earlier exchange cannot a
 - A SUN-verified tap on the guest's phone shows the balance page (A0), if the restaurant allows public balance.
 - **SUN alone never spends, binds or receives.**
 - **There is no degraded mode.** Verifying a SUN needs the crypto service as much as live authentication does, and a restaurant-level switch to weaker checks would let one restaurant lower security.
-- **If the crypto service or HSM is down,** card transactions pause. Registered guests can be served through the override (§10.5), which needs no card cryptography, and QR vouchers keep working.
+- **If the crypto service or HSM is down,** card transactions pause; digital QR vouchers keep working. There is no fallback that spends a card voucher without its verified card (decision 21).
 - Availability is handled by running two crypto-service instances and by the HSM provider's service level (§19).
 - **The web dashboard never redeems or binds cards,** because Web NFC cannot run the challenge **[Vendor]**.
 
@@ -674,24 +692,20 @@ The phone never sees a key or RndA. A recording of any earlier exchange cannot a
 - **Printable QR:** a 256-bit random secret, stored as a SHA-256 hash; one active per voucher.
   - Created with the sale. Re-issuing needs a guest `select` presentment.
   - It is refused on any voucher that has a physical card.
-- **Legacy token:** hash lookup of the old `public_token`; legacy limits apply.
+- **Legacy token:** hash lookup of the old `public_token`. It spends only on digital (`qr_only`) vouchers; on NTAG21x card vouchers it only proves possession for a swap.
 
-### 10.5 Overrides (unreadable card, no silent bypass)
+### 10.5 No overrides (decision 28)
 
-- **Registered vouchers only.** An anonymous voucher cannot be identified without its card (cash semantics). An override on it would let staff drain vouchers nobody watches.
-- **Flow:**
-  1. The manager finds the voucher by reference or contact.
-  2. The contact receives a one-time confirmation link (`email_link` presentment).
-  3. The guest confirms at the table.
-  4. The manager completes it with step-up (device-bound biometric key or server-verified PIN) and a reason.
-- **Limits:** €50 per override, two per voucher per 30 days, five per restaurant per day.
-- **Effects:** risk event, owner report; the voucher is flagged "replace card".
-- Waiters, API tokens and the dashboard without step-up can never override.
+A card voucher is debited **only** with a live-authenticated presentment of its own card.
+- **Unreadable card, registered voucher:** the guest proves the voucher (recovery code or `email_link`), the manager binds a new stock card (§11.6), and the guest pays with the new card during the same visit.
+- **Unreadable card, anonymous voucher:** like a lost banknote, it cannot be identified, so it cannot be spent.
+
+This removes the one path that previously allowed spending without the card.
 
 ### 10.6 A debit, end to end
 
 In one database transaction:
-1. Lock the presentment (or override): valid, unused, same device/user/restaurant, `purpose = spend`, and its medium bound to this voucher.
+1. Lock the presentment: valid, unused, same device/user/restaurant, `purpose = spend`, its medium bound to this voucher, and its method allowed for the voucher's kind (card voucher: `live_auth` only; digital voucher: QR methods only).
 2. Lock the voucher: `active`; card `active` where applicable; balance; limits (§6.3).
 3. Append the ledger entry with the presentment id (unique) and the hash-chain link.
 4. Mark the presentment consumed.
@@ -732,7 +746,7 @@ sequenceDiagram
     API-->>App: ✅ 50,00 € on card ••A1
 ```
 
-- **Anonymous sale:** no e-mail. The success screen shows the reference for the restaurant's own records, and a line reminds staff: "Anonymous card: like cash."
+- **Anonymous sale:** no e-mail. The success screen shows the internal voucher number for the restaurant's records (staff only), and a line reminds staff: "Anonymous card: like cash."
 - **Registered sale:** the guest receives a confirmation link. The e-mail becomes a recovery contact once confirmed.
 - **Above the four-eyes threshold** (default €300), a second person approves before activation.
 
@@ -769,7 +783,7 @@ sequenceDiagram
 1. The guest shows the e-mail voucher's rotating QR (A2), or the printable QR.
 2. The manager scans it: presentment with `purpose = select`.
 3. The manager taps an available card: bind, as in 11.1 steps 4–17. **Both presentments are consumed by the bind** (`POST /vouchers/{id}/cards {bind, select}`).
-4. The server revokes the printable QR, if any. A registered contact gets an e-mail: "A card was added to your voucher."
+4. The voucher becomes a card voucher: the printable QR is revoked and the e-mail voucher becomes the recovery contact. A registered contact gets an e-mail: "A card was added to your voucher."
 
 Refused within 24 h of an online payment (§6.3).
 
@@ -784,7 +798,7 @@ Refused within 24 h of an online payment (§6.3).
 | Situation | Rule |
 |---|---|
 | Damaged, chip still answers | The old card is tapped (`select`), which proves possession. Then a new available card is tapped (`bind`): the old card becomes `replaced`. Immediate, manager step-up, for anonymous and registered cards alike. |
-| Lost, stolen or chip dead, **registered** | The guest proves the voucher: either the recovery code from the confirmed contact page (`select`), or the manager searches by reference or contact and the contact confirms via an `email_link`. Then: manager step-up; bind a new card; the old card becomes `replaced`. The new card spends at most €100 in its first 72 h; every contact is notified; risk rule "rebind then debit". If the same user sold the voucher within the last 30 days, the owner (a different person) approves. |
+| Lost, stolen, chip dead or unreadable, **registered** | The guest proves the voucher: either the recovery code from the confirmed contact page (`select`), or the manager searches by voucher number or contact and the contact confirms via an `email_link`. Then: manager step-up; bind a new card; the old card becomes `replaced`. The new card spends at most €100 in its first 72 h; every contact is notified; risk rule "rebind then debit". If the same user sold the voucher within the last 30 days, the owner (a different person) approves. |
 | Lost or stolen, **anonymous** | **Like cash: the balance is lost** (decision 13). There is no recovery path for staff or owners, so social engineering is impossible. |
 | Chip dead, **anonymous** | Unidentifiable, so treated like lost. The plastic can be destroyed. Its record stays `active` and harmless, because nobody can present it. |
 
@@ -809,7 +823,7 @@ A card from any other batch or restaurant is refused. Nothing that has not arriv
 
 ### 11.9 Legacy NTAG21x card
 
-It is read as today and spends within the legacy limits. A manager tap on a new card swaps it: new card `active`, the old legacy card `replaced`, and its legacy medium revoked. The sunset rules are in §16.
+It **never spends** (decision 22). A tap proves possession (`select`). The manager then taps a new stock card: new card `active`, the old legacy card `replaced`, its legacy medium revoked, the balance unchanged. The sunset rules are in §16.
 
 ---
 
@@ -822,11 +836,10 @@ It is read as today and spends within the legacy limits. A manager tap on a new 
 | Redeem (tap card or scan QR) | Waiter, manager | Today's scan; manual number entry removed |
 | **Sell voucher**: card, printable, or e-mail only | Manager, owner | S20 create → write → verify → lock |
 | **Add card to voucher** | Manager, owner | New |
-| **Replace card** | Manager, owner | Dashboard "replace" (money transfer) |
+| **Replace card** (lost, damaged or unreadable; no overrides) | Manager, owner | Dashboard "replace" (money transfer) and manual entry (S11) |
 | **Register card** (§11.7) | Manager | New |
 | **Receive cards** | Manager | New |
 | **Card info**: tap → state, batch, voucher | Manager | New |
-| **Override** (registered vouchers, contact confirms) | Manager | Manual entry (S11) |
 | **Station mode**: personalise and verify blank chips | `station_operator` on an enrolled station phone only | External NXP tools |
 
 - **The relay** is one native component per platform: Android `IsoDep`, iOS `NFCISO7816Tag` (AID already declared in `Info.plist:86–88` **[Code]**).
@@ -837,10 +850,10 @@ It is read as today and spends within the legacy limits. A manager tap on a new 
 
 ### 12.2 Dashboard
 
-- **Vouchers:** by reference; status, balance, history, media (card ••A1 with its lifecycle state, e-mail contact, printable QR), revoke, block.
+- **Vouchers:** by internal voucher number; status, balance, history, media (card ••A1 with its lifecycle state, e-mail contact, printable QR), revoke, block.
 - **Cards and batches:** stock per batch (the §8.3 buckets), low-stock alert, "order more cards", card history (`card_events`).
 - **Online shop settings:** payment-provider onboarding, amounts, texts, refund policy.
-- **Owner reports:** overrides, risk events, cash reconciliation (declared cash vs cash sales), four-eyes approvals.
+- **Owner reports:** replacements, risk events, cash reconciliation (declared cash vs cash sales), four-eyes approvals.
 - **Web terminal:** scans e-mail and printable QRs with the camera. **No card handling** (§10.3) and no manual number entry.
 
 ### 12.3 Platform admin
@@ -861,15 +874,15 @@ Key sets (metadata and KCVs only), batches (create, approve, import manifest, ac
 | **Cryptographic verification** | AES live challenge (K3) for every card use at the till; SUN MAC and counter; NXP originality signature at personalisation; HMAC for rotating QRs; hashed static secrets. |
 | **Tamper-evident audit** | Ledger, `card_events` and `audit_logs` are append-only (triggers, no UPDATE/DELETE grant) and hash-chained. The chain head is anchored nightly off-site (object-lock bucket and owner e-mail). A nightly verifier recomputes balances and chains. |
 | **Hardware-backed keys** | Roots in Google Cloud HSM, imported once in a dual-control ceremony; per-card keys derived on demand; crypto service with no key export. |
-| **Fraud prevention** | The limit model (§6.3); payment evidence for every sale; four-eyes above a threshold; the override limits; risk rules (§13.4); online velocity rules and 3-D Secure. |
-| **Least privilege** | Waiters: scan and redeem only. Managers: sell, bind, replace, override within limits. Owners: approvals and settings. Platform staff: batches and stations, never vouchers. Three database users (app DML without UPDATE/DELETE on append-only tables, migrator, read-only reporting). |
+| **Fraud prevention** | The limit model (§6.3); payment evidence for every sale; four-eyes above a threshold; no overrides; risk rules (§13.4); online velocity rules and 3-D Secure. |
+| **Least privilege** | Waiters: scan and redeem only. Managers: sell, bind, replace. Owners: approvals and settings. Platform staff: batches and stations, never vouchers. Three database users (app DML without UPDATE/DELETE on append-only tables, migrator, read-only reporting). |
 | **Defence in depth** | Chip crypto + presentment + limits + risk rules + audit + reconciliation. Each layer alone limits the damage when another fails. |
 
 ### 13.2 Invariants (each with an automated test)
 
-1. **No debit** without a consumed presentment or override, in the same transaction.
+1. **No debit** without a consumed presentment, in the same transaction. A card voucher accepts only a live-authenticated card presentment; a digital voucher only a QR presentment.
 2. **No card is bound** unless it is `available`, belongs to the voucher's restaurant, and was proven with A3.
-3. **No sale** without a payment record. **No online voucher** without a verified webhook.
+3. **No activation** without a payment record (cash, card terminal, online provider, bank transfer, or owner-approved complimentary). **No online voucher** without a verified webhook.
 4. **No key material** outside the HSM and the crypto service's memory.
 5. **No value on any medium,** and nothing identifying printed on a card.
 6. **Counters only go up.** Challenges and presentments are single-use and short-lived.
@@ -888,7 +901,7 @@ Key sets (metadata and KCVs only), batches (create, approve, import manifest, ac
 | Relay attack (live) | Low | Low–Medium | RF UID check (phone emulation fails), limits, physical-card policy | Hardware relay with a UID-programmable emulator: accepted |
 | Lost anonymous card | Medium | Guest loses balance | Cash semantics, clearly communicated at sale | **Accepted by product decision** |
 | Stolen box of cards | Medium | None | Zero value; binding only after the restaurant confirms receipt; lost shipments are final | None |
-| Waiter spends without the card | Medium today | Medium | Presentment required; no manual lookup | None (overrides are manager-only) |
+| Waiter spends without the card | Medium today | Medium | Presentment required; no manual lookup; no overrides | None |
 | Manager sells without payment | Medium | Medium–High | Payment record; cash reconciliation; four-eyes > €300; owner report | Owner-level fraud |
 | Manager binds a card to someone else's voucher | Low | Medium | Invariant 8; guest notification; 72 h cap after recovery | Collusion with an owner |
 | Leaked printable QR | Medium | Low–Medium | Guest's choice (bearer); limits; redemption notices; re-issue; revoked when a card is bound | Up to the balance, like a lost paper voucher |
@@ -909,7 +922,7 @@ Key sets (metadata and KCVs only), batches (create, approve, import manifest, ac
 2. RF UID mismatch: reject; suspend the card after two occurrences.
 3. SUN counter jump > 50 since the last tap: flag (heavy reading or skimming).
 4. Rebind followed by a debit within 24 h: flag, notify.
-5. Overrides: any attempt refused by the caps, or more than 3 per employee per week: notify the owner.
+5. Replacements: more than 1 per voucher per 30 days, or more than 3 per employee per week: notify the owner.
 6. Sales without a card-terminal or online reference outside opening hours: flag.
 7. A guest e-mail belonging to a staff user, or used on more than 3 vouchers: flag.
 8. Any tap of a card from a `compromised` batch: possession only, swap prompt.
@@ -922,18 +935,18 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `gift_cards` (vouchers) | + `reference` (unique per restaurant), status + `awaiting_card`/`cancelled`/`closed`, `customer_id` optional, `lock_version` | Existing money columns stay. The `nfc_*`, `public_token`, `replaced_*` columns are frozen and dropped after the sunset. |
-| `gift_card_transactions` (ledger) | + `presentment_id` UNIQUE, `override_id` UNIQUE, `payment_id`, `chain_seq`, `prev_hash`, `entry_hash` | Append-only (triggers, grants). Single-entry per voucher (R6). |
-| `payments` | `voucher_id, method (cash, card_terminal, online), psp, psp_payment_id UNIQUE, amount, status, received_by, device_id, terminal_ref` | Every sale and reload references one |
+| `gift_cards` (vouchers) | + `kind` (`card`, `digital`); `card_number` kept as the internal voucher number; status + `awaiting_card`/`cancelled`/`closed`, `customer_id` optional, `lock_version` | Existing money columns stay. The `nfc_*`, `public_token`, `replaced_*` columns are frozen and dropped after the sunset. |
+| `gift_card_transactions` (ledger) | + `presentment_id` UNIQUE, `payment_id`, `chain_seq`, `prev_hash`, `entry_hash` | Append-only (triggers, grants). Single-entry per voucher (R6). |
+| `payments` | `voucher_id, method (cash, card_terminal, online_psp, bank_transfer, complimentary), approved_by (complimentary), psp, psp_payment_id UNIQUE, amount, status, received_by, device_id, terminal_ref` | Every sale and reload references one |
 | `media` | `voucher_id, type (nfc_card, email_voucher, printable_qr, legacy_token), role (spend, recovery), status (active, suspended, revoked), card_id UNIQUE NULL, secret_hash, secret_ciphertext, created_by, revoked_by/at/reason` | For `nfc_card`, the effective status is the card's state (one source of truth) |
 | `media_devices` | `medium_id, device_cookie_hash, confirmed_at, revoked_at` | E-mail voucher device confirmations |
-| `cards` | `uid BINARY(7) UNIQUE, chip_type, batch_id NULL, key_set_id NULL, restaurant_id, state, state_changed_at, sdm_counter, originality_sig, successor_card_id` | CHECK constraint on state; index (batch_id, state). `batch_id` and `key_set_id` are NULL only for legacy cards. |
+| `cards` | `id` UUIDv4 (never serialised), `card_number` (inventory, unique), `uid BINARY(7) UNIQUE, chip_type, batch_id NULL, key_set_id NULL, restaurant_id, state, state_changed_at, sdm_counter, originality_sig, successor_card_id` | CHECK constraint on state; index (batch_id, state). `batch_id` and `key_set_id` are NULL only for legacy cards. |
 | `card_events` | `card_id, from_state, to_state, reason, actor_id, device_id, request_id, ref_type/ref_id, created_at` | Append-only, hash-chained with the audit log |
 | `card_batches` | See §8.1 | — |
 | `key_sets`, `key_references`, `key_ceremonies` | Version, provider label, KCV, status; ceremony minutes | **Never** key material |
 | `presentments` | `purpose, method, level, medium_id, card_id, rf_uid, sdm_counter, device_id, user_id, restaurant_id, status, expires_at, consumed_at` | Single use |
-| `authorizations` | `kind (override, four_eyes_sale, recovery, resume), voucher_id, requested_by, approved_by, step_up_ref, guest_presentment_id, reason, max_amount, expires_at, consumed_at` | One table for every approval that needs a second person, a step-up or a guest confirmation |
-| `contacts`, `contact_confirmations` | Contact: `voucher_id, customer_id, confirmed_at, revoked_at`. Confirmation: `token_hash, purpose (register, change, recovery, override, suspend, resume), expires_at, used_at` | E-mail links are single-use and count as guest presentments (`email_link`) |
+| `authorizations` | `kind (four_eyes_sale, recovery, resume, complimentary), voucher_id, requested_by, approved_by, step_up_ref, guest_presentment_id, reason, max_amount, expires_at, consumed_at` | One table for every approval that needs a second person, a step-up or a guest confirmation |
+| `contacts`, `contact_confirmations` | Contact: `voucher_id, customer_id, confirmed_at, revoked_at`. Confirmation: `token_hash, purpose (register, change, recovery, suspend, resume), expires_at, used_at` | E-mail links are single-use and count as guest presentments (`email_link`) |
 | `online_orders`, `webhook_events` | Order data; PSP event id UNIQUE | Exactly-once webhooks |
 | `customers` | + `email_confirmed_at`, encrypted e-mail and name, `email_blind_index` | — |
 | `devices`, `device_keys` | + role (`pos`, `station`), step-up public key | No attestation in v2 (R15) |
@@ -950,13 +963,13 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 | `POST /presentments`, `POST /presentments/{id}/complete` | Start (with relay bytes or QR) and finish a presentment. Replaces `POST /scan`. |
 | `POST /vouchers` | Create with payment (cash / terminal), optional e-mail, form (card / printable / e-mail) |
 | `POST /vouchers/{id}/cards` | Bind a card `{bind_presentment_id, select_presentment_id?, replaces_card_id?}`. A select presentment is required when the voucher already existed before this visit; `replaces_card_id` handles replacement (§11.6). |
-| `POST /vouchers/{id}/redemptions`, `/reloads` | Debits need `presentment_id` or an override authorization; reloads need a payment. **Transfers between vouchers are removed in v2.** |
+| `POST /vouchers/{id}/redemptions`, `/reloads` | Debits need a `presentment_id` whose method fits the voucher's kind; reloads need a payment. **Transfers between vouchers are removed in v2.** |
 | `POST /vouchers/{id}/contact`, `POST /contacts/confirm` | Register a recovery contact (§11.7) |
 | `POST /vouchers/{id}/printable` | Re-issue the printable QR: digital vouchers only; guest `select` presentment required; refused if the voucher has a card |
 | `POST /media/{id}/revoke`, `/suspend`, `/resume` | Medium status; resume rules in §7.2. Guests suspend from their contact page. |
 | `POST /cards/receive` | Confirm a delivery `{presentment_id, counted_quantity}`; while the batch is `on_hold`, each further call with a card's presentment checks in that card |
 | `POST /presentments` with `purpose = verify`; `GET /batches`, `GET /batches/{id}/counts` | Card info (state, batch, voucher) from a tap; stock |
-| `POST /authorizations`, `POST /authorizations/{id}/approve` | Overrides, four-eyes sales, recovery approvals |
+| `POST /authorizations`, `POST /authorizations/{id}/approve` | Four-eyes sales, complimentary vouchers, recovery approvals, owner resumes |
 | `POST /shop/{restaurant}/orders`, `POST /webhooks/{psp}` | Online sales |
 | **Public** `GET t.giftcardpro.at/{k}?e&m` | Balance page after SUN verification (throttled) |
 | **Public** `GET /v/{token}` | E-mail voucher page |
@@ -976,7 +989,7 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 
 | Today | After migration |
 |---|---|
-| `gift_cards` row | The same voucher (same id). `card_number` becomes its `reference`. |
+| `gift_cards` row | The same voucher (same id). `card_number` stays as the internal voucher number. `kind = digital` for `qr_only` vouchers, otherwise `card`. |
 | `public_token` (tag URL, printed QR, e-mail link) | **One** `legacy_token` medium with `secret_hash = SHA-256(token)`. Revoking it kills the tag, the printed QR and old e-mail links together. The plain column is cleared. |
 | NTAG213/215/216 binding | A `cards` row (chip type legacy, no batch, state `active`) linked to that `legacy_token` medium |
 | NTAG 424 personalised with external tools | Only if any exist (R14): a `cards` row with key set v0, spending only through a valid SUN, never with the bare token. Otherwise this path is not built. |
@@ -988,9 +1001,10 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 
 | When | Rule |
 |---|---|
-| T0: first premium cards live | NTAG21x writing off everywhere. Legacy media spend within legacy limits (§6.3). Every manager tap on a legacy card offers a one-tap swap. |
+| Phase 0 | NTAG21x writing and NTAG21x **spending** off everywhere. Legacy card balances are **preserved, not lost**; they wait for the swap. Digital (`qr_only`) vouchers keep spending by QR (legacy limits apply from Phase 3). |
+| T0: first premium cards live | Every manager tap on a legacy card offers the one-tap swap (§11.9). |
 | T0 + 9 months | Owners get the list of legacy vouchers with a balance; confirmed contacts get a swap invitation. |
-| T0 + 12 months | Legacy media become view-only. A swap still takes one tap, and **no balance is ever forfeited**. |
+| T0 + 12 months | Legacy digital QR links become view-only unless migrated to an e-mail voucher. A legacy card swap remains possible, and **no balance is ever forfeited**. |
 
 ### 16.3 Code removal order
 
@@ -1009,6 +1023,8 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 
 ## 17. Implementation phases and effort
 
+> **ADR-001:** the detailed plan, schedule and current estimates are in `docs/implementation/v2-implementation-plan.md`: pilot scope **85–119** engineer-days, with the online shop **100–139**, plus Track B (audit blockers, 4–6 days). The table below is the v2.0 estimate, kept for reference.
+
 For one experienced engineer who knows the code base, including tests **[Assessment]**.
 
 | Phase | Content | Days |
@@ -1018,7 +1034,7 @@ For one experienced engineer who knows the code base, including tests **[Assessm
 | **2** | Schema: references, media, cards + lifecycle, card events, batches, presentments, payments, append-only + hash chain; backfill and verification | 9–12 |
 | **3** | Presentment service, SUN v2 on the tap domain, guest balance page, limit model, risk rules | 7–10 |
 | **4** | Live authentication: server protocol, Android `IsoDep` and iOS ISO 7816 relay, latency tests | 12–16 |
-| **5** | App: sell, add card, replace, register, receive, card info, override; step-up; contacts and e-mail confirmations; authorizations. Dashboard: vouchers and media, batches and stock, owner reports | 14–18 |
+| **5** | App: sell, add card, replace, register, receive, card info; step-up; contacts and e-mail confirmations; authorizations. Dashboard: vouchers and media, batches and stock, owner reports | 14–18 |
 | **6** | Station mode (personalisation + per-card QA), batch acceptance, platform batch admin; manifest import when needed | 10–14 |
 | **7** | Legacy migration and sunset tooling; removal of the writer, card numbers, print page, replace-by-transfer | 4–6 |
 | **8** | E-mail voucher v2 (device confirmation, rotating QR, recovery code), printable QR, rewritten e-mail templates without balances | 4–6 |
@@ -1062,7 +1078,7 @@ For one experienced engineer who knows the code base, including tests **[Assessm
 1. **Key ceremony**: generation, import, KCV check, custodian rotation.
 2. **Batch acceptance**: sampling, approval, rejection handling.
 3. **Delivery**: shipment, lost pack, restaurant receipt.
-4. **Crypto service or HSM unavailable**: two instances, alerting, the HSM provider status; card transactions pause, QR vouchers and overrides for registered vouchers continue; message to restaurants.
+4. **Crypto service or HSM unavailable**: two instances, alerting, the HSM provider status; card transactions pause, digital QR vouchers continue; message to restaurants.
 5. **Compromised batch or key set** (§8.4).
 6. **Lost or stolen manager phone**: device revocation.
 7. **Suspected insider fraud**: audit export, chain verification.
@@ -1085,6 +1101,7 @@ For one experienced engineer who knows the code base, including tests **[Assessm
 | ADR | Date | Decision |
 |---|---|---|
 | ADR-000 | 28 Sep 2026 | v2 architecture frozen as this document |
+| ADR-001 | 28 Sep 2026 | Implementation decisions 21–28: Phase 0 first; NTAG21x migration-only (never spends); no dashboard programming; card numbers internal only; payment record for every activation (methods incl. complimentary); card or digital voucher, never both; UUIDv4 internal card id; overrides removed. Sections amended: §1, §3.2, §3.4, §4.1, §4.2 (R1, R9), §5.2, §6, §10, §11, §12, §13, §14, §15, §16, §17, §19. The implementation plan is `docs/implementation/v2-implementation-plan.md`. |
 
 ---
 
