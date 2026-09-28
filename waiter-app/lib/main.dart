@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import 'app/app_scope.dart';
 import 'app/bootstrap.dart';
 import 'app/startup_failure_app.dart';
 import 'app/waiter_app.dart';
@@ -19,9 +20,11 @@ Future<void> main() async {
 
 /// Starts the app. Every failure ends on a screen with the reason and
 /// "Try again" — never on a launch screen that does not go away.
-Future<void> launch() async {
+/// [start] and [timeout] are replaced only in tests.
+Future<void> launch({Future<AppServices> Function() start = bootstrap, Duration timeout = bootstrapTimeout}) async {
+  Future<void> retry() => launch(start: start, timeout: timeout);
   try {
-    runApp(WaiterApp(services: await bootstrap().timeout(bootstrapTimeout)));
+    runApp(WaiterApp(services: await start().timeout(timeout)));
   } on Object catch (error) {
     debugPrint('GiftCard Waiter could not start: $error');
     AppEnvironment? environment;
@@ -31,8 +34,8 @@ Future<void> launch() async {
       environment = null;
     }
     final StartupProblem problem = error is TimeoutException
-        ? StartupProblem(StartupProblemKind.unknown, detail: 'start did not finish within ${bootstrapTimeout.inSeconds} s')
+        ? StartupProblem(StartupProblemKind.unknown, detail: 'start did not finish within ${timeout.inSeconds} s')
         : StartupProblem.fromError(error);
-    runApp(StartupFailureApp(problem: problem, environment: environment, onRetry: launch));
+    runApp(StartupFailureApp(problem: problem, environment: environment, onRetry: retry));
   }
 }

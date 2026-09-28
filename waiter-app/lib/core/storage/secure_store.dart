@@ -21,11 +21,15 @@ abstract interface class SecretStore {
 /// leaves the launch screen. The token is never gated by biometrics
 /// (09 §7.6); the app's biometric unlock is a UI lock.
 class PlatformSecretStore implements SecretStore {
-  PlatformSecretStore()
-      : _storage = const FlutterSecureStorage(
-          iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device, synchronizable: false),
-          aOptions: AndroidOptions(),
-        );
+  PlatformSecretStore() : _storage = const FlutterSecureStorage(iOptions: iosOptions, aOptions: androidOptions);
+
+  /// Standard (non-biometric) mode; guarded by a test, see the class comment.
+  static const AndroidOptions androidOptions = AndroidOptions();
+
+  static const IOSOptions iosOptions = IOSOptions(
+    accessibility: KeychainAccessibility.first_unlock_this_device,
+    synchronizable: false,
+  );
 
   final FlutterSecureStorage _storage;
 
