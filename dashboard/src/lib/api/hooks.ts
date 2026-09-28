@@ -12,6 +12,7 @@ import type {
   Device,
   GiftCard,
   HistoryEntry,
+  MailStatus,
   NfcPayload,
   NfcTagType,
   NfcWriteAttempt,
@@ -23,8 +24,8 @@ import type {
   Restaurant,
   RestaurantSettings,
   Role,
-  ScannedCard,
   ScanMethod,
+  ScannedCard,
   StaffUser,
   SystemSetting,
   Transaction,
@@ -448,18 +449,98 @@ export function usePlatformStats() {
   })
 }
 
-export function useAdminRestaurants(search: string, page = 1) {
+export type AdminRestaurantFilter = "all" | "active" | "suspended" | "archived"
+
+export function useAdminRestaurants(search: string, page = 1, status: AdminRestaurantFilter = "all") {
   return useQuery({
-    queryKey: [...keys.admin, "restaurants", search, page],
-    queryFn: () => api<Paginated<Restaurant>>("/admin/restaurants", { query: { search, page } }),
+    queryKey: [...keys.admin, "restaurants", "list", search, page, status],
+    queryFn: () => api<Paginated<Restaurant>>("/admin/restaurants", { query: { search, page, status: status === "all" ? undefined : status } }),
     placeholderData: keepPreviousData,
   })
+}
+
+/** Records that make a restaurant non-deletable (they must be kept; archive instead). */
+export interface RestaurantBusinessData {
+  gift_cards: number
+  transactions: number
+  customers: number
 }
 
 export function useAdminRestaurant(id: string) {
   return useQuery({
     queryKey: [...keys.admin, "restaurants", id],
-    queryFn: () => api<{ data: Restaurant; users: StaffUser[] }>(`/admin/restaurants/${id}`),
+    queryFn: () => api<{ data: Restaurant; users: StaffUser[]; business_data: RestaurantBusinessData }>(`/admin/restaurants/${id}`),
+    enabled: id !== "",
+  })
+}
+
+export type UpdateRestaurantInput = Partial<
+  Pick<
+    Restaurant,
+    | "name"
+    | "legal_name"
+    | "vat_number"
+    | "email"
+    | "phone"
+    | "website"
+    | "address_line1"
+    | "address_line2"
+    | "postal_code"
+    | "city"
+    | "country"
+    | "currency"
+    | "timezone"
+    | "locale"
+    | "plan"
+  >
+>
+
+export function useUpdateRestaurant() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: UpdateRestaurantInput }) =>
+      api<{ data: Restaurant }>(`/admin/restaurants/${id}`, { method: "PATCH", body: input }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.admin }),
+  })
+}
+
+export function useDeleteRestaurant() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, confirm }: { id: string; confirm: string }) =>
+      api<{ message: string }>(`/admin/restaurants/${id}`, { method: "DELETE", body: { confirm } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.admin }),
+  })
+}
+
+/**
+ * Sends an invitation again: the restaurant owner's (no userId) or another not yet active account's.
+ * A mistyped name or e-mail address can be corrected in the same step.
+ */
+export function useResendInvitation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ restaurantId, userId, name, email }: { restaurantId: string; userId?: string; name?: string; email?: string }) =>
+      api<{ message: string; data: StaffUser }>(
+        userId ? `/admin/restaurants/${restaurantId}/users/${userId}/invitation` : `/admin/restaurants/${restaurantId}/invitation`,
+        { method: "POST", body: { name: name || undefined, email: email || undefined } },
+      ),
+    // Also after a failed delivery: the attempt (and any correction) is saved and shown.
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.admin }),
+  })
+}
+
+export function useMailStatus() {
+  return useQuery({
+    queryKey: [...keys.admin, "mail"],
+    queryFn: async () => (await api<{ data: MailStatus }>("/admin/mail")).data,
+    staleTime: 60_000,
+  })
+}
+
+export function useSendTestMail() {
+  return useMutation({
+    mutationFn: () => api<{ message: string }>("/admin/mail/test", { method: "POST" }),
   })
 }
 
@@ -480,7 +561,7 @@ export interface CreateRestaurantInput {
 export function useCreateRestaurant() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: CreateRestaurantInput) => api<{ data: Restaurant }>("/admin/restaurants", { method: "POST", body: input }),
+    mutationFn: (input: CreateRestaurantInput) => api<{ data: Restaurant; owner: StaffUser }>("/admin/restaurants", { method: "POST", body: input }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.admin }),
   })
 }
@@ -488,16 +569,19 @@ export function useCreateRestaurant() {
 export function useRestaurantStatus() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, action, reason }: { id: string; action: "suspend" | "reactivate"; reason?: string }) =>
+    mutationFn: ({ id, action, reason }: { id: string; action: "suspend" | "reactivate" | "archive" | "restore"; reason?: string }) =>
       api(`/admin/restaurants/${id}/${action}`, { method: "POST", body: reason ? { reason } : {} }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.admin }),
   })
 }
 
-export function usePlatformAudit(page = 1) {
+export function usePlatformAudit(page = 1, filters: { restaurantId?: string; action?: string } = {}) {
   return useQuery({
-    queryKey: [...keys.admin, "audit", page],
-    queryFn: () => api<Paginated<AuditLog>>("/admin/audit-logs", { query: { page } }),
+    queryKey: [...keys.admin, "audit", page, filters.restaurantId ?? "", filters.action ?? ""],
+    queryFn: () =>
+      api<Paginated<AuditLog>>("/admin/audit-logs", {
+        query: { page, restaurant_id: filters.restaurantId || undefined, action: filters.action || undefined },
+      }),
     placeholderData: keepPreviousData,
   })
 }

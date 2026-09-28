@@ -11,7 +11,6 @@ use App\Exceptions\Domain\RoleAssignmentException;
 use App\Models\Restaurant;
 use App\Models\Role;
 use App\Models\User;
-use App\Notifications\StaffInvitation;
 use App\Services\Audit\AuditLogger;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
@@ -26,7 +25,10 @@ use Illuminate\Support\Str;
  */
 final class UserService
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly InvitationService $invitations,
+    ) {}
 
     /**
      * @param  array{name: string, email: string, role: string, password?: string|null, locale?: string|null}  $data
@@ -171,8 +173,7 @@ final class UserService
 
     private function sendInvitation(User $user, Restaurant $restaurant, ?string $invitedBy): void
     {
-        $token = Password::broker('invitations')->createToken($user);
-        $user->notify(new StaffInvitation($token, $restaurant->name, $invitedBy));
+        $this->invitations->send($user, $restaurant, $invitedBy);
     }
 
     private function terminateAccess(User $user, Actor $actor): void

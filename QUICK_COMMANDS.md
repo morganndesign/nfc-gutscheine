@@ -58,6 +58,7 @@ adb reverse tcp:3000 tcp:3000                           # then Chrome on the pho
 (cd e2e && npm test)                                    # pilot journey   (backend + dashboard running)
 (cd e2e && npm run test:waiter-api)                     # waiter app API
 (cd e2e && npm run test:nfc)                            # NFC programming, simulated tags
+(cd e2e && npm run test:admin)                          # platform administration
 
 # ── Database ─────────────────────────────────────────────────────────────────
 (cd backend && php artisan make:migration add_x_to_y_table)

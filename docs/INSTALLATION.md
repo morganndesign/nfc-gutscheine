@@ -67,9 +67,12 @@ Demo data is never seeded in production. Create the operator account interactive
 php artisan platform:create-admin you@company.com --name="Your Name"
 ```
 
-Sign in, open **Restaurants → Onboard restaurant**, and the owner receives a welcome e-mail with a link to
-set their password (valid 72 hours). If it expired: open the restaurant (**Open restaurant**) → **Team** →
-**Resend invitation**.
+First open **System settings → E-mail delivery** and press **Send test e-mail to me**: a red banner on every
+platform page means e-mails are only written to the log (`MAIL_MAILER=log`) and invitations reach nobody.
+
+Then open **Restaurants → Onboard restaurant**; the owner receives a welcome e-mail with a link to set their
+password (valid 72 hours). The list shows each owner's invitation state (pending, expired, not delivered). If
+the link expired or the address was mistyped: **⋯ → Invite again** (the address can be corrected there).
 
 ## 5. First restaurant
 

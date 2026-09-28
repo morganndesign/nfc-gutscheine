@@ -4,30 +4,47 @@ import { use, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, LogIn, PauseCircle, PlayCircle } from "lucide-react"
-import { toast } from "sonner"
-import { ReasonDialog } from "@/components/common/reason-dialog"
+import { ArrowLeft, History, LogIn, Mail, MoreHorizontal } from "lucide-react"
+import { canInviteAgain, InvitationBadge } from "@/components/admin/invitation-badge"
+import { MailWarning } from "@/components/admin/mail-warning"
+import { InviteAgainDialog, RestaurantActions, RestaurantStatusBadge } from "@/components/admin/restaurant-actions"
 import { RequirePermission } from "@/components/layout/auth-guard"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserStatusBadge } from "@/components/common/user-status-badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useAdminRestaurant, useRestaurantStatus } from "@/lib/api/hooks"
-import { errorMessage, setActingRestaurant } from "@/lib/api/client"
+import { useAdminRestaurant } from "@/lib/api/hooks"
+import { setActingRestaurant } from "@/lib/api/client"
+import type { StaffUser } from "@/lib/api/types"
 import { formatDate, formatRelative } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
 
 function RestaurantContent({ id }: { id: string }) {
-  const { data, isLoading, refetch } = useAdminRestaurant(id)
-  const status = useRestaurantStatus()
-  const [suspending, setSuspending] = useState(false)
+  const { data, isLoading, isError } = useAdminRestaurant(id)
+  const [inviting, setInviting] = useState<StaffUser | null>(null)
   const qc = useQueryClient()
   const router = useRouter()
 
+  if (isError)
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" size="sm" asChild className="-ml-2">
+          <Link href="/admin">
+            <ArrowLeft /> Restaurants
+          </Link>
+        </Button>
+        <p className="text-muted-foreground text-sm">This restaurant does not exist (anymore).</p>
+      </div>
+    )
   if (isLoading || !data) return <Skeleton className="h-96 w-full rounded-2xl" />
+
   const r = data.data
+  const archived = r.archived_at !== null
+  const usable = !archived && r.status === "active"
+  const business = data.business_data
+  const hasBusinessData = business.gift_cards + business.transactions + business.customers > 0
 
   return (
     <div className="space-y-6">
@@ -37,15 +54,15 @@ function RestaurantContent({ id }: { id: string }) {
             <ArrowLeft /> Restaurants
           </Link>
         </Button>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold tracking-tight">{r.name}</h1>
-            {r.status === "active" ? <Badge variant="secondary">Active</Badge> : <Badge variant="destructive">Suspended</Badge>}
+            <RestaurantStatusBadge restaurant={r} />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
-              disabled={r.status !== "active"}
+              disabled={!usable}
               onClick={() => {
                 setActingRestaurant(r.id)
                 void qc.resetQueries()
@@ -54,33 +71,26 @@ function RestaurantContent({ id }: { id: string }) {
             >
               <LogIn /> Open restaurant
             </Button>
-            {r.status === "active" ? (
-              <Button variant="outline" className="text-destructive" onClick={() => setSuspending(true)}>
-                <PauseCircle /> Suspend
-              </Button>
-            ) : (
-              <Button
-                onClick={async () => {
-                  try {
-                    await status.mutateAsync({ id: r.id, action: "reactivate" })
-                    toast.success("Restaurant reactivated")
-                    void refetch()
-                  } catch (e) {
-                    toast.error(errorMessage(e))
-                  }
-                }}
-              >
-                <PlayCircle /> Reactivate
-              </Button>
-            )}
+            <Button variant="outline" asChild>
+              <Link href={`/admin/audit?restaurant_id=${r.id}`}>
+                <History /> Audit log
+              </Link>
+            </Button>
+            <RestaurantActions restaurant={r} variant="buttons" />
           </div>
         </div>
-        {r.status === "suspended" ? (
+        {archived ? (
+          <p className="text-muted-foreground text-sm">
+            Archived {formatRelative(r.archived_at)}. Its users and devices are locked out; all data is kept. Restore it to continue.
+          </p>
+        ) : r.status === "suspended" ? (
           <p className="text-destructive text-sm">
-            Suspended {formatRelative(r.suspended_at)}: {r.suspension_reason}
+            Disabled {formatRelative(r.suspended_at)}: {r.suspension_reason}
           </p>
         ) : null}
       </div>
+
+      <MailWarning />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
@@ -93,6 +103,7 @@ function RestaurantContent({ id }: { id: string }) {
               {[r.address_line1, [r.postal_code, r.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "No address"}
             </p>
             <p className="text-muted-foreground">{r.email ?? "—"}</p>
+            {r.vat_number ? <p className="text-muted-foreground">VAT {r.vat_number}</p> : null}
             <p className="text-muted-foreground">
               {r.currency} · {r.locale} · {r.timezone}
             </p>
@@ -101,7 +112,12 @@ function RestaurantContent({ id }: { id: string }) {
             </p>
             <p className="text-muted-foreground">Customer since {formatDate(r.created_at)}</p>
             <p className="pt-2 font-medium">
-              {r.gift_cards_count ?? 0} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)}
+              {business.gift_cards} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)} outstanding
+            </p>
+            <p className="text-muted-foreground text-xs">
+              {hasBusinessData
+                ? `${business.transactions} transactions and ${business.customers} customers are kept: this restaurant can be archived but not deleted.`
+                : "No gift cards, transactions or customers yet: the restaurant can be deleted permanently."}
             </p>
           </CardContent>
         </Card>
@@ -116,48 +132,65 @@ function RestaurantContent({ id }: { id: string }) {
                   <TableHead className="pl-6">Name</TableHead>
                   <TableHead className="hidden sm:table-cell">Role</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden pr-6 md:table-cell">Last sign-in</TableHead>
+                  <TableHead className="hidden md:table-cell">Last sign-in</TableHead>
+                  <TableHead className="w-12 pr-6">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.users.map((u) => (
                   <TableRow key={u.id}>
                     <TableCell className="pl-6">
-                      <div className="font-medium">{u.name}</div>
+                      <div className="font-medium">
+                        {u.name}
+                        {r.owner?.id === u.id ? <span className="text-muted-foreground font-normal"> · primary owner</span> : null}
+                      </div>
                       <div className="text-muted-foreground text-xs">{u.email}</div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">{u.role?.name}</TableCell>
                     <TableCell>
-                      <UserStatusBadge user={u} />
+                      {canInviteAgain(u.invitation) && u.status === "active" ? <InvitationBadge invitation={u.invitation} /> : <UserStatusBadge user={u} />}
                     </TableCell>
-                    <TableCell className="text-muted-foreground hidden pr-6 md:table-cell">{formatRelative(u.last_login_at)}</TableCell>
+                    <TableCell className="text-muted-foreground hidden md:table-cell">{formatRelative(u.last_login_at)}</TableCell>
+                    <TableCell className="pr-6 text-right">
+                      {usable && u.status === "active" && canInviteAgain(u.invitation) ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" aria-label={`Actions for ${u.name}`}>
+                              <MoreHorizontal />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setInviting(u)}>
+                              <Mail /> Invite again
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : null}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            {data.users.length === 0 ? <p className="text-muted-foreground px-6 py-4 text-sm">No users.</p> : null}
           </CardContent>
         </Card>
       </div>
 
-      <ReasonDialog
-        open={suspending}
-        onOpenChange={setSuspending}
-        title={`Suspend ${r.name}`}
-        description="All users of this restaurant are locked out immediately. Cards keep their balances and work again after reactivation."
-        confirmLabel="Suspend"
-        destructive
-        pending={status.isPending}
-        onConfirm={async (reason) => {
-          try {
-            await status.mutateAsync({ id: r.id, action: "suspend", reason })
-            toast.success("Restaurant suspended")
-            setSuspending(false)
-            void refetch()
-          } catch (e) {
-            toast.error(errorMessage(e))
-          }
-        }}
-      />
+      {inviting ? (
+        <InviteAgainDialog
+          restaurantId={r.id}
+          person={{
+            userId: r.owner?.id === inviting.id ? undefined : inviting.id,
+            name: inviting.name,
+            email: inviting.email,
+            invitation: inviting.invitation,
+          }}
+          open
+          onOpenChange={(o) => (!o ? setInviting(null) : undefined)}
+        />
+      ) : null}
     </div>
   )
 }

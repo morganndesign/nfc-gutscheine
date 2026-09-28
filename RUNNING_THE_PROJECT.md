@@ -498,7 +498,7 @@ A release has one version number for everything (platform = backend + dashboard 
    (cd backend && php artisan test && vendor/bin/pint --test && vendor/bin/phpstan analyse)
    (cd dashboard && npm run lint && npm run typecheck && npm test && npm run build)
    (cd waiter-app && flutter analyze && flutter test)
-   (cd e2e && npm test && npm run test:waiter-api && npm run test:nfc)      # backend + dashboard running
+   (cd e2e && npm test && npm run test:waiter-api && npm run test:nfc && npm run test:admin)   # backend + dashboard running
    ```
    If NFC code changed: the real-tag test (section 6.3).
 3. **Server (backend + dashboard).** Push to `main` (optionally tag it: `git tag v1.4.2 && git push --tags`) →
@@ -536,6 +536,7 @@ npx playwright install chromium
 ADMIN_EMAIL=admin@giftcardpro.test ADMIN_PASSWORD='Password123!' npm test   # pilot journey (~2 min)
 API_URL=http://localhost:8000 npm run test:waiter-api                        # API of the native app
 npm run test:nfc                                                             # NFC programming, simulated tags
+npm run test:admin                                                           # platform administration (restaurants, invitations)
 ```
 Details: [e2e/README.md](e2e/README.md).
 

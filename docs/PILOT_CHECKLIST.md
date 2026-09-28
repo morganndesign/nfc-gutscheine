@@ -7,7 +7,7 @@ Use this list for the first restaurant. Tick each item. Everything here was run 
 
 - [ ] **Server:** production stack running ([DEPLOYMENT.md](DEPLOYMENT.md)) and `https://APP_DOMAIN/up` returns `200`.
 - [ ] **`CARD_BASE_URL`** is the final domain. Cards written with another domain stop working.
-- [ ] **E-mail:** real SMTP configured. Send yourself an invitation and check that it does not land in spam.
+- [ ] **E-mail:** real SMTP configured (`MAIL_MAILER=smtp` — Coolify pre-fills `log`). **System settings → Send test e-mail to me** succeeds and the mail does not land in spam.
 - [ ] **`SCHEDULE_TIMEZONE=Europe/Vienna`** is set. The `scheduler` container shows `schedule:list` with expiry at 00:15.
 - [ ] **Backups:** nightly dump and off-site sync configured, and **one restore tested**.
 - [ ] **Monitoring:** uptime check on `/up`, and alerts on `warning` log lines (suspicious scans, locked accounts).
@@ -16,7 +16,7 @@ Use this list for the first restaurant. Tick each item. Everything here was run 
 
 ## B. Onboarding day (with the owner)
 
-1. [ ] **Onboard the restaurant** under Restaurants → Onboard restaurant. The owner gets the invitation.
+1. [ ] **Onboard the restaurant** under Restaurants → Onboard restaurant. The owner gets the invitation (the list shows "Invitation pending"; if it says "not delivered", fix the mail settings and use **⋯ → Invite again**).
 2. [ ] The owner **accepts the invitation** and follows the **Welcome** panel on the dashboard:
    - [ ] **Card rules**: values, validity (check the Austrian rules with their advisor), reloads, partial redemption.
    - [ ] **Restaurant profile**: legal name, VAT number (UID), address, language `Deutsch (Österreich)`, time zone.

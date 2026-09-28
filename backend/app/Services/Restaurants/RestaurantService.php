@@ -6,24 +6,39 @@ namespace App\Services\Restaurants;
 
 use App\Enums\RestaurantStatus;
 use App\Enums\RoleSlug;
+use App\Exceptions\Domain\InvitationNotPossibleException;
+use App\Exceptions\Domain\RestaurantNotDeletableException;
+use App\Models\Customer;
+use App\Models\Device;
+use App\Models\GiftCard;
+use App\Models\GiftCardTransaction;
+use App\Models\NotificationLog;
+use App\Models\NotificationTemplate;
+use App\Models\PersonalAccessToken;
 use App\Models\Restaurant;
+use App\Models\RestaurantSetting;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Users\InvitationService;
 use App\Services\Users\UserService;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
- * Platform-level restaurant (tenant) lifecycle.
+ * Platform-level restaurant (tenant) lifecycle:
+ *   create (+ owner invitation) → update → suspend / reactivate ("disable") → archive / restore
+ *   → delete (only without business data).
  */
 final class RestaurantService
 {
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly UserService $users,
+        private readonly InvitationService $invitations,
     ) {}
 
     /**
@@ -61,6 +76,11 @@ final class RestaurantService
     /** @param array<string, mixed> $data */
     public function update(Actor $actor, Restaurant $restaurant, array $data): Restaurant
     {
+        if (isset($data['currency']) && $data['currency'] !== $restaurant->currency
+            && GiftCard::query()->withoutGlobalScopes()->withTrashed()->where('restaurant_id', $restaurant->getKey())->exists()) {
+            throw ValidationException::withMessages(['currency' => 'The currency cannot be changed after gift cards were issued.']);
+        }
+
         $restaurant->fill($data);
         $dirty = $restaurant->getDirty();
 
@@ -97,6 +117,152 @@ final class RestaurantService
         $this->audit->log('restaurant.reactivated', $actor, $restaurant, ['status' => RestaurantStatus::Suspended], ['status' => RestaurantStatus::Active], restaurantId: $restaurant->getKey());
 
         return $restaurant;
+    }
+
+    /**
+     * Archiving hides the restaurant and locks out all of its users and devices (the tenant no longer
+     * resolves). All data is kept; restore() brings everything back unchanged.
+     */
+    public function archive(Actor $actor, Restaurant $restaurant, ?string $reason): Restaurant
+    {
+        DB::transaction(function () use ($actor, $restaurant, $reason): void {
+            $restaurant->delete();
+            $this->audit->log('restaurant.archived', $actor, $restaurant, null, null, array_filter(['reason' => $reason]), $restaurant->getKey());
+        });
+
+        return $restaurant;
+    }
+
+    public function restore(Actor $actor, Restaurant $restaurant): Restaurant
+    {
+        DB::transaction(function () use ($actor, $restaurant): void {
+            $restaurant->restore();
+            $this->audit->log('restaurant.restored', $actor, $restaurant, restaurantId: $restaurant->getKey());
+        });
+
+        return $restaurant;
+    }
+
+    /**
+     * Counts of the records that make a restaurant non-deletable.
+     *
+     * @return array{gift_cards: int, transactions: int, customers: int}
+     */
+    public function businessData(Restaurant $restaurant): array
+    {
+        $id = $restaurant->getKey();
+
+        return [
+            'gift_cards' => GiftCard::query()->withoutGlobalScopes()->withTrashed()->where('restaurant_id', $id)->count(),
+            'transactions' => GiftCardTransaction::query()->withoutGlobalScopes()->where('restaurant_id', $id)->count(),
+            'customers' => Customer::query()->withoutGlobalScopes()->withTrashed()->where('restaurant_id', $id)->count(),
+        ];
+    }
+
+    /**
+     * Permanently deletes a restaurant that has no business data (e.g. created by mistake): its users with
+     * their tokens, sessions and pending invitations, devices, settings and own e-mail templates.
+     * Audit and notification logs are kept (their restaurant reference becomes empty).
+     *
+     * @throws RestaurantNotDeletableException when gift cards, transactions or customers exist
+     */
+    public function delete(Actor $actor, Restaurant $restaurant, string $confirmation): void
+    {
+        if (! hash_equals(Str::lower($restaurant->slug), Str::lower(trim($confirmation)))) {
+            throw ValidationException::withMessages(['confirm' => "Type the restaurant's short name \"{$restaurant->slug}\" to confirm."]);
+        }
+
+        DB::transaction(function () use ($actor, $restaurant): void {
+            $locked = Restaurant::withTrashed()->whereKey($restaurant->getKey())->lockForUpdate()->firstOrFail();
+            $counts = $this->businessData($locked);
+
+            if (array_sum($counts) > 0) {
+                throw new RestaurantNotDeletableException(sprintf(
+                    '%s has %d gift card(s), %d transaction(s) and %d customer(s). These records must be kept, so the restaurant cannot be deleted. Archive it instead.',
+                    $locked->name, $counts['gift_cards'], $counts['transactions'], $counts['customers'],
+                ), $counts);
+            }
+
+            $id = $locked->getKey();
+            $users = User::withTrashed()->where('restaurant_id', $id)->get(['id', 'email']);
+            $userIds = $users->pluck('id')->all();
+
+            PersonalAccessToken::query()->where('restaurant_id', $id)
+                ->orWhere(static fn ($q) => $q->where('tokenable_type', (new User)->getMorphClass())->whereIn('tokenable_id', $userIds))
+                ->delete();
+            DB::table('sessions')->whereIn('user_id', $userIds)->delete();
+            DB::table((string) config('auth.passwords.invitations.table'))->whereIn('email', $users->pluck('email')->all())->delete();
+            Device::withTrashed()->withoutGlobalScopes()->where('restaurant_id', $id)->forceDelete();
+            User::withTrashed()->whereKey($userIds)->forceDelete();
+            NotificationTemplate::query()->withoutGlobalScopes()->where('restaurant_id', $id)->delete();
+            RestaurantSetting::query()->where('restaurant_id', $id)->delete();
+            $locked->forceDelete();
+
+            $this->audit->log('restaurant.deleted', $actor, null, $locked->only(['name', 'slug']), null, [
+                'restaurant_id' => $id,
+                'users_deleted' => count($userIds),
+            ]);
+        });
+    }
+
+    /**
+     * Sends the owner's invitation again (new link; the previous one stops working). While the owner has
+     * not accepted it yet, a mistyped name or e-mail address can be corrected at the same time.
+     *
+     * @param  array{name?: string|null, email?: string|null}  $corrections
+     * @return array{owner: User, log: NotificationLog}
+     */
+    public function resendOwnerInvitation(Actor $actor, Restaurant $restaurant, array $corrections = []): array
+    {
+        $owner = $restaurant->owner()->first();
+        if ($owner === null) {
+            throw new InvitationNotPossibleException('This restaurant has no owner account to invite.');
+        }
+
+        return ['owner' => $owner, 'log' => $this->resendInvitation($actor, $restaurant, $owner, $corrections)];
+    }
+
+    /** @param array{name?: string|null, email?: string|null} $corrections */
+    public function resendInvitation(Actor $actor, Restaurant $restaurant, User $user, array $corrections = []): NotificationLog
+    {
+        if ($restaurant->trashed()) {
+            throw new InvitationNotPossibleException('The restaurant is archived. Restore it before inviting anyone.');
+        }
+        if (! $restaurant->isActive()) {
+            throw new InvitationNotPossibleException('The restaurant is disabled. Enable it first, otherwise the invited person cannot sign in.');
+        }
+        if ($user->restaurant_id !== $restaurant->getKey()) {
+            throw new InvitationNotPossibleException('This account does not belong to the restaurant.');
+        }
+        if (! UserService::isPendingInvitation($user)) {
+            throw new InvitationNotPossibleException("{$user->name} has already accepted the invitation. Use \"Send password reset\" if they forgot their password.");
+        }
+        if (! $user->isActive()) {
+            throw new InvitationNotPossibleException("{$user->name}'s account is deactivated.");
+        }
+
+        return DB::transaction(function () use ($actor, $restaurant, $user, $corrections): NotificationLog {
+            $old = $user->only(['name', 'email']);
+            $user->fill(array_filter([
+                'name' => $corrections['name'] ?? null,
+                'email' => isset($corrections['email']) ? Str::lower((string) $corrections['email']) : null,
+            ], static fn ($v): bool => $v !== null && $v !== ''));
+
+            if ($user->isDirty()) {
+                $new = $user->getDirty();
+                if (isset($new['email'])) {
+                    // The old address must not keep a working link.
+                    DB::table((string) config('auth.passwords.invitations.table'))->where('email', $old['email'])->delete();
+                }
+                $user->save();
+                $this->audit->log('user.updated', $actor, $user, array_intersect_key($old, $new), $new, restaurantId: $restaurant->getKey());
+            }
+
+            $log = $this->invitations->send($user, $restaurant, $actor->user?->name);
+            $this->audit->log('user.invitation_resent', $actor, $user, metadata: ['delivery' => $log->status], restaurantId: $restaurant->getKey());
+
+            return $log;
+        });
     }
 
     private function uniqueSlug(string $source): string

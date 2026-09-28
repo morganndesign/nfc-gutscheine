@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\RestaurantStatus;
+use App\Enums\RoleSlug;
 use Database\Factories\RestaurantFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -37,7 +38,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $suspension_reason
  * @property Carbon $created_at
  * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  * @property-read RestaurantSetting $settings
+ * @property-read User|null $owner
  */
 class Restaurant extends Model
 {
@@ -87,6 +90,19 @@ class Restaurant extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * The restaurant's first owner account: the one created (and invited) when the restaurant was onboarded.
+     *
+     * @return HasOne<User, $this>
+     */
+    public function owner(): HasOne
+    {
+        return $this->hasOne(User::class)->ofMany(
+            ['created_at' => 'min', 'id' => 'min'],
+            static fn ($q) => $q->whereHas('role', static fn ($r) => $r->where('slug', RoleSlug::Owner->value)),
+        );
     }
 
     /** @return HasMany<GiftCard, $this> */

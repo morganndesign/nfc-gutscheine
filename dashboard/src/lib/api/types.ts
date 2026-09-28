@@ -211,6 +211,29 @@ export interface StaffUser {
   last_login_at: string | null
   locked: boolean
   created_at: string
+  /** Only in platform administration responses. */
+  invitation?: InvitationSummary | null
+}
+
+/**
+ * State of an account's invitation (platform admin). `delivery` is the outcome of the latest e-mail:
+ * "logged" means the platform only writes e-mails to its log (MAIL_MAILER=log) — nobody received it.
+ */
+export interface InvitationSummary {
+  status: "accepted" | "pending" | "expired" | "not_sent"
+  expires_at: string | null
+  last_sent_at: string | null
+  delivery: "sent" | "logged" | "failed" | "pending" | null
+  error: string | null
+}
+
+export interface RestaurantOwner {
+  id: string
+  name: string
+  email: string
+  status: "active" | "inactive"
+  last_login_at: string | null
+  invitation: InvitationSummary | null
 }
 
 export interface Role {
@@ -260,7 +283,18 @@ export interface Restaurant {
   users_count?: number
   gift_cards_count?: number
   outstanding_balance?: number
+  /** Set when the restaurant is archived (hidden, users locked out, data kept). */
+  archived_at: string | null
+  owner?: RestaurantOwner | null
   created_at: string
+}
+
+export interface MailStatus {
+  mailer: string
+  delivers: boolean
+  from_address: string | null
+  from_name: string | null
+  problem: string | null
 }
 
 export interface AuditLog {
@@ -330,6 +364,7 @@ export interface DashboardCharts {
 export interface PlatformStats {
   restaurants_total: number
   restaurants_active: number
+  restaurants_archived: number
   cards_total: number
   cards_active: number
   transactions_this_month: number

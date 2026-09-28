@@ -16,12 +16,15 @@ use App\Models\GiftCardTransaction;
 use App\Models\Restaurant;
 use App\Models\SystemSetting;
 use App\Services\Audit\AuditLogger;
+use App\Services\Users\InvitationService;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 final class PlatformController extends Controller
 {
@@ -32,6 +35,7 @@ final class PlatformController extends Controller
         return response()->json(['data' => [
             'restaurants_total' => Restaurant::query()->count(),
             'restaurants_active' => Restaurant::query()->where('status', RestaurantStatus::Active->value)->count(),
+            'restaurants_archived' => Restaurant::onlyTrashed()->count(),
             'cards_total' => GiftCard::query()->withoutGlobalScopes()->count(),
             'cards_active' => GiftCard::query()->withoutGlobalScopes()->where('status', GiftCardStatus::Active->value)->count(),
             'transactions_this_month' => GiftCardTransaction::query()->withoutGlobalScopes()->where('created_at', '>=', $monthStart)->count(),
@@ -86,6 +90,46 @@ final class PlatformController extends Controller
         });
 
         return $this->settings();
+    }
+
+    /** Whether e-mails (invitations, password links, card e-mails) actually reach recipients. */
+    public function mailStatus(InvitationService $invitations): JsonResponse
+    {
+        $delivers = $invitations->mailDelivers();
+
+        return response()->json(['data' => [
+            'mailer' => (string) config('mail.default'),
+            'delivers' => $delivers,
+            'from_address' => config('mail.from.address'),
+            'from_name' => config('mail.from.name'),
+            'problem' => $delivers ? null : $invitations->nonDeliveryReason(),
+        ]]);
+    }
+
+    /** Sends a short test e-mail to the signed-in administrator and reports the mail server's answer. */
+    public function sendTestMail(Request $request, InvitationService $invitations, AuditLogger $audit): JsonResponse
+    {
+        $user = $this->user($request);
+
+        if (! $invitations->mailDelivers()) {
+            return response()->json(['message' => $invitations->nonDeliveryReason(), 'code' => 'MAIL_NOT_DELIVERED'], 422);
+        }
+
+        try {
+            Mail::raw(
+                "This is a test e-mail from GiftCard Pro.\n\nIf you can read it, invitations and password e-mails are delivered.",
+                static fn ($m) => $m->to($user->email)->subject('GiftCard Pro: test e-mail'),
+            );
+        } catch (Throwable $e) {
+            report($e);
+            $audit->log('platform.mail_test', Actor::fromRequest($request), null, metadata: ['result' => 'failed'], restaurantId: null);
+
+            return response()->json(['message' => 'The mail server refused the test e-mail: '.mb_substr($e->getMessage(), 0, 500), 'code' => 'MAIL_NOT_DELIVERED'], 422);
+        }
+
+        $audit->log('platform.mail_test', Actor::fromRequest($request), null, metadata: ['result' => 'sent'], restaurantId: null);
+
+        return response()->json(['message' => "Test e-mail sent to {$user->email}."]);
     }
 
     private function cast(string $type, mixed $value): mixed

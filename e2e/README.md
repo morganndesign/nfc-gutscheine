@@ -23,6 +23,14 @@ ADMIN_EMAIL=admin@giftcardpro.test ADMIN_PASSWORD='Password123!' npm test
 
 Each run creates a new restaurant with unique addresses, so it can run repeatedly against the same database.
 
+# Platform administration — `platform-admin.mjs`
+
+`npm run test:admin` (same requirements as the pilot journey): onboards a restaurant, checks the list columns
+(Restaurant · Owner · Email · Status · Created · Actions), edits it, sends the invitation again with a corrected
+address, lets the owner accept, disables/enables, archives/restores, checks that a restaurant with gift cards
+cannot be deleted (with the demo data) and deletes the empty one after the typed confirmation, filters the
+audit log and scans the admin screens with axe. With the log mailer it expects "not delivered" messages.
+
 # Waiter app API — `waiter-api.mjs`
 
 Plays the calls of the native waiter app (GiftCard Waiter) against a running API: start-up config, device-bound

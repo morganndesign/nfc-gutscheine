@@ -48,7 +48,7 @@ final class PasswordController extends Controller
                 'password_confirmation' => (string) $request->input('password_confirmation'),
                 'token' => (string) $request->validated('token'),
             ],
-            function (User $user, string $password) use ($request): void {
+            function (User $user, string $password) use ($request, $broker): void {
                 $user->forceFill([
                     'password' => $password,
                     'remember_token' => Str::random(60),
@@ -58,7 +58,13 @@ final class PasswordController extends Controller
                     'email_verified_at' => $user->email_verified_at ?? Carbon::now(),
                 ])->save();
 
-                $this->audit->log('auth.password_reset', new Actor($user, null, $request->ip(), (string) $request->userAgent()), $user, restaurantId: $user->restaurant_id);
+                // Choosing the first password activates an invited account.
+                $this->audit->log(
+                    $broker === 'invitations' ? 'user.invitation_accepted' : 'auth.password_reset',
+                    new Actor($user, null, $request->ip(), (string) $request->userAgent()),
+                    $user,
+                    restaurantId: $user->restaurant_id,
+                );
             },
         );
 

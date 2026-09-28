@@ -246,13 +246,24 @@ curl -X POST https://app.example.com/api/v1/cards/$CARD/redeem \
 
 ### Platform administration `[platform.*]`
 
-| GET | `/admin/stats` |
+| GET | `/admin/stats` — incl. `restaurants_archived` |
 |---|---|
-| GET / POST | `/admin/restaurants` — POST `{name, …, owner:{name, email, password?}}` creates tenant + owner invitation |
-| GET / PATCH | `/admin/restaurants/{id}` |
-| POST | `/admin/restaurants/{id}/suspend` `{reason}` · `/reactivate` |
-| GET | `/admin/audit-logs` |
+| GET | `/admin/restaurants?search=&status=active\|suspended\|archived` — each with `owner {id, name, email, status, last_login_at, invitation}` and `archived_at` |
+| POST | `/admin/restaurants` `{name, …, owner:{name, email, password?}}` — creates restaurant + owner account and e-mails the invitation; response `owner.invitation.delivery` = `sent` \| `failed` \| `logged` |
+| GET | `/admin/restaurants/{id}` — also archived ones; `users` (each with `invitation`), `business_data {gift_cards, transactions, customers}` |
+| PATCH | `/admin/restaurants/{id}` — profile fields plus `plan`, `currency` (currency only before the first gift card) |
+| POST | `/admin/restaurants/{id}/suspend` `{reason}` · `/reactivate` ("Disable" / "Enable") |
+| POST | `/admin/restaurants/{id}/archive` `{reason?}` · `/restore` — archive = soft delete: hidden, users and devices locked out, data kept |
+| DELETE | `/admin/restaurants/{id}` `{confirm: "<slug>"}` — permanent; `409 RESTAURANT_NOT_DELETABLE` (with counts in `context`) when gift cards, transactions or customers exist |
+| POST | `/admin/restaurants/{id}/invitation` `{name?, email?}` — owner's invitation again (new link, old one invalid; corrects a mistyped address) · `/admin/restaurants/{id}/users/{user}/invitation` for other pending accounts. `409 INVITATION_NOT_POSSIBLE` (accepted, disabled, archived), `422 INVITATION_NOT_DELIVERED` (mail server refused / log mailer) |
+| GET | `/admin/audit-logs?restaurant_id=&action=` (action = prefix) |
 | GET / PUT | `/admin/system-settings` — PUT `{settings: [{key, value}]}` |
+| GET | `/admin/mail` → `{mailer, delivers, from_address, from_name, problem}` · POST `/admin/mail/test` sends a test e-mail to the signed-in admin |
+
+Invitations: the account exists from the start with an unknown random password. The e-mail carries a single-use
+token of the `invitations` password broker (random, stored hashed, valid 72 h; a new invitation replaces it).
+Choosing a password with `POST /auth/reset-password` activates the account (`user.invitation_accepted` in the
+audit log). Every attempt is recorded in `notification_logs` (`template_key = staff_invitation`).
 
 ## Resource shapes
 

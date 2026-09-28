@@ -33,6 +33,7 @@ final class UserResource extends JsonResource
             'last_login_at' => $user->last_login_at?->toIso8601String(),
             'locked' => $user->isLocked(),
             'created_at' => $user->created_at->toIso8601String(),
+            'invitation' => $this->when($user->invitationSummary !== null, static fn (): ?array => $user->invitationSummary),
         ];
     }
 }

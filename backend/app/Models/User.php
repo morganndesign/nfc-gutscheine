@@ -54,6 +54,14 @@ class User extends Authenticatable implements CanResetPasswordContract
     use Notifiable;
     use SoftDeletes;
 
+    /**
+     * Invitation state for API output (set by the platform admin controllers, see InvitationService::summaries()).
+     * A plain property, never an attribute: it can not be saved by accident.
+     *
+     * @var array<string, mixed>|null
+     */
+    public ?array $invitationSummary = null;
+
     protected $fillable = ['name', 'email', 'password', 'locale'];
 
     protected $hidden = ['password', 'remember_token'];

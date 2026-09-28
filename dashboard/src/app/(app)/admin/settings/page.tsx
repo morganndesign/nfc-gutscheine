@@ -1,18 +1,61 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { CheckCircle2, Loader2, Mail } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter } from "@/components/ui/card"
+import { MailWarning } from "@/components/admin/mail-warning"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
-import { useSystemSettings, useUpdateSystemSettings } from "@/lib/api/hooks"
+import { useMailStatus, useSendTestMail, useSystemSettings, useUpdateSystemSettings } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
+
+/** Mail delivery: which mailer is active and a test e-mail to the signed-in admin. */
+function MailDeliveryCard() {
+  const { data } = useMailStatus()
+  const test = useSendTestMail()
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>E-mail delivery</CardTitle>
+        <CardDescription>Invitations, password links and card e-mails. Configured in the deployment (MAIL_* variables).</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        {!data ? (
+          <Skeleton className="h-10 w-full" />
+        ) : data.delivers ? (
+          <p className="flex items-center gap-2">
+            <CheckCircle2 className="size-4 text-emerald-600" /> Delivered with <span className="font-mono">{data.mailer}</span> from {data.from_name} &lt;
+            {data.from_address}&gt;
+          </p>
+        ) : (
+          <MailWarning showLink={false} />
+        )}
+      </CardContent>
+      <CardFooter className="justify-end">
+        <Button
+          variant="outline"
+          disabled={test.isPending || !data?.delivers}
+          onClick={async () => {
+            try {
+              toast.success((await test.mutateAsync()).message)
+            } catch (e) {
+              toast.error(errorMessage(e), { duration: 15_000 })
+            }
+          }}
+        >
+          {test.isPending ? <Loader2 className="animate-spin" /> : <Mail />} Send test e-mail to me
+        </Button>
+      </CardFooter>
+    </Card>
+  )
+}
 
 function Content() {
   const { data } = useSystemSettings()
@@ -28,6 +71,7 @@ function Content() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader title="System settings" description="Platform-wide configuration." />
+      <MailDeliveryCard />
       <Card>
         <CardContent className="space-y-5">
           {data.map((s) => (

@@ -5,12 +5,15 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Building2, CreditCard, Euro, Loader2, Plus, Receipt, Search } from "lucide-react"
 import { toast } from "sonner"
+import { InvitationBadge, invitationDetail } from "@/components/admin/invitation-badge"
+import { MailWarning } from "@/components/admin/mail-warning"
+import { RestaurantActions, RestaurantStatusBadge } from "@/components/admin/restaurant-actions"
 import { PageHeader } from "@/components/common/page-header"
+import { Segmented } from "@/components/common/segmented"
 import { StatCard } from "@/components/common/stat-card"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { EmptyState } from "@/components/common/empty-state"
 import { RequirePermission } from "@/components/layout/auth-guard"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -18,15 +21,17 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useDebounce } from "@/hooks/use-debounce"
-import { useAdminRestaurants, useCreateRestaurant, usePlatformStats, type CreateRestaurantInput } from "@/lib/api/hooks"
+import { useAdminRestaurants, useCreateRestaurant, usePlatformStats, type AdminRestaurantFilter, type CreateRestaurantInput } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import { formatDate, formatNumber } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
 
+const EMPTY_FORM = { name: "", email: "", phone: "", address_line1: "", postal_code: "", city: "Wien", ownerName: "", ownerEmail: "" }
+
 function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const create = useCreateRestaurant()
   const router = useRouter()
-  const [form, setForm] = useState({ name: "", email: "", phone: "", address_line1: "", postal_code: "", city: "Wien", ownerName: "", ownerEmail: "" })
+  const [form, setForm] = useState(EMPTY_FORM)
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [k]: e.target.value }))
 
   return (
@@ -34,7 +39,9 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Onboard restaurant</DialogTitle>
-          <DialogDescription>Creates an isolated tenant and invites the owner by e-mail.</DialogDescription>
+          <DialogDescription>
+            Creates the restaurant and its owner account, and e-mails the owner a link to choose a password (valid 72 hours).
+          </DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -55,7 +62,14 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
             }
             try {
               const res = await create.mutateAsync(input)
-              toast.success(`${res.data.name} created · invitation sent to ${form.ownerEmail}`)
+              const invitation = res.owner.invitation
+              if (invitation && invitation.delivery !== "sent") {
+                // The restaurant exists; the owner can be invited again from its page once mail works.
+                toast.warning(`${res.data.name} created, but the invitation was not delivered`, { description: invitationDetail(invitation), duration: 15_000 })
+              } else {
+                toast.success(`${res.data.name} created · invitation sent to ${res.owner.email}`)
+              }
+              setForm(EMPTY_FORM)
               onOpenChange(false)
               router.push(`/admin/restaurants/${res.data.id}`)
             } catch (err) {
@@ -122,7 +136,8 @@ function AdminContent() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [creating, setCreating] = useState(false)
-  const { data, isLoading } = useAdminRestaurants(useDebounce(search), page)
+  const [filter, setFilter] = useState<AdminRestaurantFilter>("all")
+  const { data, isLoading } = useAdminRestaurants(useDebounce(search), page, filter)
   const s = stats.data
 
   return (
@@ -136,13 +151,14 @@ function AdminContent() {
           </Button>
         }
       />
+      <MailWarning />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label="Restaurants"
           icon={Building2}
           loading={stats.isLoading}
           value={s?.restaurants_total ?? 0}
-          hint={`${s?.restaurants_active ?? 0} active`}
+          hint={`${s?.restaurants_active ?? 0} active${s?.restaurants_archived ? ` · ${s.restaurants_archived} archived` : ""}`}
         />
         <StatCard
           label="Gift cards"
@@ -155,11 +171,27 @@ function AdminContent() {
         <StatCard label="Volume sold this month" icon={Euro} loading={stats.isLoading} value={formatMoney(s?.volume_sold_this_month ?? 0, "EUR")} />
       </div>
       <div className="bg-card overflow-hidden rounded-2xl border">
-        <div className="border-b p-3">
-          <div className="relative">
+        <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input value={search} onChange={(e) => (setSearch(e.target.value), setPage(1))} placeholder="Search restaurants…" className="h-9 pl-9" />
+            <Input
+              value={search}
+              onChange={(e) => (setSearch(e.target.value), setPage(1))}
+              placeholder="Search by restaurant, owner or e-mail…"
+              className="h-9 pl-9"
+            />
           </div>
+          <Segmented
+            label="Status"
+            value={filter}
+            onChange={(v) => (setFilter(v), setPage(1))}
+            options={[
+              { value: "all", label: "All" },
+              { value: "active", label: "Active" },
+              { value: "suspended", label: "Disabled" },
+              { value: "archived", label: "Archived" },
+            ]}
+          />
         </div>
         {isLoading ? (
           <div className="space-y-2 p-4">
@@ -173,11 +205,13 @@ function AdminContent() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4">Restaurant</TableHead>
-                  <TableHead className="hidden sm:table-cell">Status</TableHead>
-                  <TableHead className="hidden text-right sm:table-cell">Cards</TableHead>
-                  <TableHead className="pr-4 text-right sm:pr-2">Outstanding</TableHead>
-                  <TableHead className="hidden text-right md:table-cell">Users</TableHead>
-                  <TableHead className="hidden pr-4 md:table-cell">Created</TableHead>
+                  <TableHead className="hidden md:table-cell">Owner</TableHead>
+                  <TableHead className="hidden lg:table-cell">Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="w-12 pr-4 text-right">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,20 +225,29 @@ function AdminContent() {
                       >
                         {r.name}
                       </Link>
-                      <div className="text-muted-foreground text-xs">{r.city ?? r.slug}</div>
+                      <div className="text-muted-foreground text-xs">
+                        {r.city ?? r.slug} · {r.gift_cards_count ?? 0} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)}
+                      </div>
+                      <div className="text-muted-foreground text-xs md:hidden">{r.owner ? `${r.owner.name} · ${r.owner.email}` : "No owner"}</div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      {r.status === "active" ? <Badge variant="secondary">Active</Badge> : <Badge variant="destructive">Suspended</Badge>}
+                    <TableCell className="hidden md:table-cell">
+                      {r.owner ? (
+                        <div className="space-y-1">
+                          <div>{r.owner.name}</div>
+                          <InvitationBadge invitation={r.owner.invitation} />
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No owner</span>
+                      )}
                     </TableCell>
-                    <TableCell className="tabular hidden text-right sm:table-cell">{r.gift_cards_count ?? 0}</TableCell>
-                    <TableCell className="tabular pr-4 text-right sm:pr-2">
-                      {formatMoney(r.outstanding_balance ?? 0, r.currency)}
-                      <span className="text-muted-foreground block text-xs sm:hidden">
-                        {r.gift_cards_count ?? 0} cards{r.status !== "active" ? " · Suspended" : ""}
-                      </span>
+                    <TableCell className="text-muted-foreground hidden lg:table-cell">{r.owner?.email ?? r.email ?? "—"}</TableCell>
+                    <TableCell>
+                      <RestaurantStatusBadge restaurant={r} />
                     </TableCell>
-                    <TableCell className="tabular hidden text-right md:table-cell">{r.users_count ?? 0}</TableCell>
-                    <TableCell className="text-muted-foreground hidden pr-4 md:table-cell">{formatDate(r.created_at)}</TableCell>
+                    <TableCell className="text-muted-foreground hidden sm:table-cell">{formatDate(r.created_at)}</TableCell>
+                    <TableCell className="pr-4 text-right" onClick={(e) => e.stopPropagation()}>
+                      <RestaurantActions restaurant={r} variant="menu" onDeleted={() => undefined} />
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -212,7 +255,11 @@ function AdminContent() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={Building2} title="No restaurants" description="Onboard the first restaurant to get started." />
+          <EmptyState
+            icon={Building2}
+            title={search || filter !== "all" ? "No matching restaurants" : "No restaurants"}
+            description={search || filter !== "all" ? "Change the search or the status filter." : "Onboard the first restaurant to get started."}
+          />
         )}
       </div>
       <CreateRestaurantDialog open={creating} onOpenChange={setCreating} />

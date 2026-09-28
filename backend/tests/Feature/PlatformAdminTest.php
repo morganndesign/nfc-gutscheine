@@ -85,12 +85,17 @@ final class PlatformAdminTest extends TestCase
         $this->getJson('/api/v1/admin/audit-logs')->assertOk()->assertJsonPath('data.0.action', 'gift_card.issued');
     }
 
-    public function test_restaurant_data_is_never_deleted(): void
+    public function test_restaurant_business_data_is_never_deleted(): void
     {
         $this->actingAsAdmin();
         $restaurant = $this->restaurant();
+        $this->issueCard($restaurant, 5000);
 
-        $this->deleteJson("/api/v1/admin/restaurants/{$restaurant->id}")->assertStatus(405);
+        $this->deleteJson("/api/v1/admin/restaurants/{$restaurant->id}", ['confirm' => $restaurant->slug])
+            ->assertStatus(409)
+            ->assertJsonPath('code', 'RESTAURANT_NOT_DELETABLE')
+            ->assertJsonPath('context.gift_cards', 1)
+            ->assertJsonPath('context.transactions', 1);
         $this->assertTrue(Restaurant::query()->whereKey($restaurant->id)->exists());
     }
 }

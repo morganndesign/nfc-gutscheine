@@ -44,6 +44,15 @@ final class RestaurantResource extends JsonResource
             'users_count' => $this->whenCounted('users'),
             'gift_cards_count' => $this->whenCounted('giftCards'),
             'outstanding_balance' => $this->when(isset($restaurant->outstanding_balance), static fn (): int => (int) $restaurant->getAttribute('outstanding_balance')),
+            'archived_at' => $restaurant->deleted_at?->toIso8601String(),
+            'owner' => $this->whenLoaded('owner', static fn (): ?array => $restaurant->owner === null ? null : [
+                'id' => $restaurant->owner->id,
+                'name' => $restaurant->owner->name,
+                'email' => $restaurant->owner->email,
+                'status' => $restaurant->owner->status->value,
+                'last_login_at' => $restaurant->owner->last_login_at?->toIso8601String(),
+                'invitation' => $restaurant->owner->invitationSummary,
+            ]),
             'created_at' => $restaurant->created_at->toIso8601String(),
         ];
     }

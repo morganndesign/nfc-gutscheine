@@ -145,13 +145,21 @@ Route::prefix('v1')->group(function (): void {
             Route::get('stats', [PlatformController::class, 'stats']);
             Route::get('restaurants', [RestaurantController::class, 'index']);
             Route::post('restaurants', [RestaurantController::class, 'store']);
-            Route::get('restaurants/{restaurant}', [RestaurantController::class, 'show']);
+            // Archived (soft-deleted) restaurants can only be viewed, restored or deleted.
+            Route::get('restaurants/{restaurant}', [RestaurantController::class, 'show'])->withTrashed();
             Route::patch('restaurants/{restaurant}', [RestaurantController::class, 'update']);
             Route::post('restaurants/{restaurant}/suspend', [RestaurantController::class, 'suspend']);
             Route::post('restaurants/{restaurant}/reactivate', [RestaurantController::class, 'reactivate']);
+            Route::post('restaurants/{restaurant}/archive', [RestaurantController::class, 'archive']);
+            Route::post('restaurants/{restaurant}/restore', [RestaurantController::class, 'restore'])->withTrashed();
+            Route::delete('restaurants/{restaurant}', [RestaurantController::class, 'destroy'])->withTrashed();
+            Route::post('restaurants/{restaurant}/invitation', [RestaurantController::class, 'resendOwnerInvitation']);
+            Route::post('restaurants/{restaurant}/users/{user}/invitation', [RestaurantController::class, 'resendUserInvitation']);
             Route::get('audit-logs', [PlatformController::class, 'auditLogs'])->middleware('can:platform.audit.view');
             Route::get('system-settings', [PlatformController::class, 'settings'])->middleware('can:platform.settings.manage');
             Route::put('system-settings', [PlatformController::class, 'updateSettings'])->middleware('can:platform.settings.manage');
+            Route::get('mail', [PlatformController::class, 'mailStatus'])->middleware('can:platform.settings.manage');
+            Route::post('mail/test', [PlatformController::class, 'sendTestMail'])->middleware('can:platform.settings.manage');
         });
     });
 });
