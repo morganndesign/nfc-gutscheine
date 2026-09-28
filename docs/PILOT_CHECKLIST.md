@@ -7,7 +7,7 @@ Use this list for the first restaurant. Tick each item. Everything here was run 
 
 - [ ] **Server:** production stack running ([DEPLOYMENT.md](DEPLOYMENT.md)) and `https://APP_DOMAIN/up` returns `200`.
 - [ ] **`CARD_BASE_URL`** is the final domain. Cards written with another domain stop working.
-- [ ] **E-mail:** real SMTP configured (`MAIL_MAILER=smtp` — Coolify pre-fills `log`). **System settings → Send test e-mail to me** succeeds and the mail does not land in spam.
+- [ ] **E-mail:** real SMTP configured (`MAIL_MAILER=smtp` — Coolify pre-fills `log`). **System settings → Send test e-mail** succeeds (to a mailbox you can check) and the mail does not land in spam.
 - [ ] **`SCHEDULE_TIMEZONE=Europe/Vienna`** is set. The `scheduler` container shows `schedule:list` with expiry at 00:15.
 - [ ] **Backups:** nightly dump and off-site sync configured, and **one restore tested**.
 - [ ] **Monitoring:** uptime check on `/up`, and alerts on `warning` log lines (suspicious scans, locked accounts).

@@ -67,8 +67,9 @@ Demo data is never seeded in production. Create the operator account interactive
 php artisan platform:create-admin you@company.com --name="Your Name"
 ```
 
-First open **System settings → E-mail delivery** and press **Send test e-mail to me**: a red banner on every
-platform page means e-mails are only written to the log (`MAIL_MAILER=log`) and invitations reach nobody.
+First open **System settings → E-mail delivery**: it shows the mailer and SMTP server in use. Press **Send test
+e-mail** (to your own address by default, or any mailbox you enter). Only if a red banner appears on the platform
+pages are e-mails written to the log (`MAIL_MAILER=log`) instead of being delivered.
 
 Then open **Restaurants → Onboard restaurant**; the owner receives a welcome e-mail with a link to set their
 password (valid 72 hours). The list shows each owner's invitation state (pending, expired, not delivered). If

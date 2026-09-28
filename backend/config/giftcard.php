@@ -61,6 +61,14 @@ return [
     // Operations alerts (e.g. a queue backlog found by queue:monitor). Empty = the platform support e-mail.
     'ops_alert_email' => env('OPS_ALERT_EMAIL'),
 
+    // Language of account e-mails (invitations). The restaurant's language is used when a translation exists
+    // (restaurant locale de-AT → de, en-GB → en); otherwise this platform default. Texts: lang/<locale>/invitation.php.
+    'mail_locale' => env('MAIL_LOCALE', 'de'),
+    'mail_locales' => ['de', 'en'],
+
+    // "Send test e-mail": refuse a recipient whose domain has no mail server (MX/A record) before trying.
+    'verify_mail_domains' => (bool) env('MAIL_VERIFY_DOMAINS', true),
+
     'exports' => [
         'chunk_size' => 1000,
     ],

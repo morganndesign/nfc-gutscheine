@@ -258,12 +258,17 @@ curl -X POST https://app.example.com/api/v1/cards/$CARD/redeem \
 | POST | `/admin/restaurants/{id}/invitation` `{name?, email?}` — owner's invitation again (new link, old one invalid; corrects a mistyped address) · `/admin/restaurants/{id}/users/{user}/invitation` for other pending accounts. `409 INVITATION_NOT_POSSIBLE` (accepted, disabled, archived), `422 INVITATION_NOT_DELIVERED` (mail server refused / log mailer) |
 | GET | `/admin/audit-logs?restaurant_id=&action=` (action = prefix) |
 | GET / PUT | `/admin/system-settings` — PUT `{settings: [{key, value}]}` |
-| GET | `/admin/mail` → `{mailer, delivers, from_address, from_name, problem}` · POST `/admin/mail/test` sends a test e-mail to the signed-in admin |
+| GET | `/admin/mail` → `{mailer, delivers, from_address, from_name, host, port, problem}` (SMTP server without credentials) |
+| POST | `/admin/mail/test` `{to?}` — test e-mail to `to` or, without it, the signed-in platform admin; the recipient is logged ("Platform test e-mail requested") and validated first (`422 VALIDATION_FAILED` on `to` when missing, invalid or — with `MAIL_VERIFY_DOMAINS` — its domain has no mail server). `422 MAIL_RECIPIENT_REJECTED` when the server refuses the recipient (550–553), `422 MAIL_NOT_DELIVERED` for other failures; response `data {recipient, mailer, guard}` |
 
 Invitations: the account exists from the start with an unknown random password. The e-mail carries a single-use
 token of the `invitations` password broker (random, stored hashed, valid 72 h; a new invitation replaces it).
 Choosing a password with `POST /auth/reset-password` activates the account (`user.invitation_accepted` in the
-audit log). Every attempt is recorded in `notification_logs` (`template_key = staff_invitation`).
+audit log). Every attempt is recorded in `notification_logs` (`template_key = staff_invitation`). The e-mail is German by
+default: its language is the restaurant's (`de-AT`/`de-DE`/`de-CH` → `de`, `en-GB`/`en-US` → `en`) when a translation
+exists, otherwise `MAIL_LOCALE` (default `de`). Wording: `backend/lang/<locale>/invitation.php`; button fallback line
+and footer: `backend/lang/<locale>.json`. A new language = copy `lang/en/invitation.php` + `lang/en.json` to
+`lang/<xx>/…`, translate, add `<xx>` to `giftcard.mail_locales`.
 
 ## Resource shapes
 

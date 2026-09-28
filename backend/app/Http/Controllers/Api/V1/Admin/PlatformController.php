@@ -22,8 +22,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Throwable;
 
 final class PlatformController extends Controller
@@ -102,34 +106,73 @@ final class PlatformController extends Controller
             'delivers' => $delivers,
             'from_address' => config('mail.from.address'),
             'from_name' => config('mail.from.name'),
+            // Where SMTP connects (no credentials), so the admin can confirm the production settings.
+            'host' => config('mail.default') === 'smtp' ? config('mail.mailers.smtp.host') : null,
+            'port' => config('mail.default') === 'smtp' ? (int) config('mail.mailers.smtp.port') : null,
             'problem' => $delivers ? null : $invitations->nonDeliveryReason(),
         ]]);
     }
 
-    /** Sends a short test e-mail to the signed-in administrator and reports the mail server's answer. */
+    /**
+     * Sends a short test e-mail and reports the mail server's answer. Recipient: the signed-in platform
+     * administrator (session guard "web" via Sanctum for the dashboard, or a Sanctum token), or an explicit
+     * `to` address. The recipient is validated and logged before anything is sent.
+     */
     public function sendTestMail(Request $request, InvitationService $invitations, AuditLogger $audit): JsonResponse
     {
         $user = $this->user($request);
+        $to = $request->validate(['to' => ['nullable', 'string', 'max:191']])['to'] ?? null;
+        $recipient = Str::lower(trim((string) ($to ?? $user->email)));
+        $guard = Auth::guard('web')->check() ? 'web (session via Sanctum)' : 'sanctum (API token)';
+
+        Log::info('Platform test e-mail requested', [
+            'recipient' => $recipient,
+            'recipient_source' => $to !== null ? 'request' : 'authenticated user',
+            'user_id' => $user->getKey(),
+            'user_email' => $user->email,
+            'guard' => $guard,
+            'mailer' => config('mail.default'),
+        ]);
+
+        $rules = ['required', 'email:rfc'];
+        if (config('giftcard.verify_mail_domains')) {
+            $rules = ['required', 'email:rfc,dns'];
+        }
+        Validator::make(['to' => $recipient], ['to' => $rules], [
+            'to.required' => 'Your account has no e-mail address. Enter a recipient for the test e-mail.',
+            'to.email' => "\"{$recipient}\" cannot receive e-mail: the address is invalid or its domain has no mail server (MX record).",
+        ])->validate();
 
         if (! $invitations->mailDelivers()) {
             return response()->json(['message' => $invitations->nonDeliveryReason(), 'code' => 'MAIL_NOT_DELIVERED'], 422);
         }
 
+        $data = ['recipient' => $recipient, 'mailer' => (string) config('mail.default'), 'guard' => $guard];
+
         try {
             Mail::raw(
                 "This is a test e-mail from GiftCard Pro.\n\nIf you can read it, invitations and password e-mails are delivered.",
-                static fn ($m) => $m->to($user->email)->subject('GiftCard Pro: test e-mail'),
+                static fn ($m) => $m->to($recipient)->subject('GiftCard Pro: test e-mail'),
             );
         } catch (Throwable $e) {
             report($e);
-            $audit->log('platform.mail_test', Actor::fromRequest($request), null, metadata: ['result' => 'failed'], restaurantId: null);
+            $error = mb_substr($e->getMessage(), 0, 500);
+            // 550–553: the server accepted the connection and the sender but refused this recipient.
+            $rejected = (bool) preg_match('/\b55[0-3]\b/', $error);
+            $audit->log('platform.mail_test', Actor::fromRequest($request), null, metadata: ['result' => 'failed', 'recipient' => $recipient], restaurantId: null);
 
-            return response()->json(['message' => 'The mail server refused the test e-mail: '.mb_substr($e->getMessage(), 0, 500), 'code' => 'MAIL_NOT_DELIVERED'], 422);
+            return response()->json([
+                'message' => $rejected
+                    ? "The mail server refused the recipient {$recipient}: {$error} The connection, login and sender work; this address (or its domain) cannot receive e-mail. Test with another address."
+                    : "The mail server refused the test e-mail to {$recipient}: {$error}",
+                'code' => $rejected ? 'MAIL_RECIPIENT_REJECTED' : 'MAIL_NOT_DELIVERED',
+                'data' => $data,
+            ], 422);
         }
 
-        $audit->log('platform.mail_test', Actor::fromRequest($request), null, metadata: ['result' => 'sent'], restaurantId: null);
+        $audit->log('platform.mail_test', Actor::fromRequest($request), null, metadata: ['result' => 'sent', 'recipient' => $recipient], restaurantId: null);
 
-        return response()->json(['message' => "Test e-mail sent to {$user->email}."]);
+        return response()->json(['message' => "Test e-mail sent to {$recipient}.", 'data' => $data]);
     }
 
     private function cast(string $type, mixed $value): mixed

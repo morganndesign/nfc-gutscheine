@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Throwable;
 
 /**
@@ -45,13 +46,13 @@ final class InvitationService
 
         try {
             $token = Password::broker('invitations')->createToken($user);
-            $user->notify(new StaffInvitation(
+            $user->notify((new StaffInvitation(
                 $token,
                 $restaurant->name,
                 $invitedBy,
                 $user->roleSlug() === RoleSlug::Owner,
                 is_string($support) && $support !== '' ? $support : null,
-            ));
+            ))->locale($this->localeFor($restaurant)));
 
             $log->update($this->mailDelivers()
                 ? ['status' => 'sent', 'sent_at' => Carbon::now()]
@@ -62,6 +63,24 @@ final class InvitationService
         }
 
         return $log;
+    }
+
+    /**
+     * Language of the invitation: the restaurant's language when a translation exists (de-AT, de-DE, de-CH → de;
+     * en-GB, en-US → en), otherwise the platform default (config giftcard.mail_locale, "de").
+     */
+    public function localeFor(Restaurant $restaurant): string
+    {
+        /** @var list<string> $supported */
+        $supported = (array) config('giftcard.mail_locales', ['de']);
+        $language = Str::before(Str::lower((string) $restaurant->locale), '-');
+        if (in_array($language, $supported, true)) {
+            return $language;
+        }
+
+        $default = (string) config('giftcard.mail_locale', 'de');
+
+        return in_array($default, $supported, true) ? $default : 'de';
     }
 
     /** False when e-mails are only written to the log (MAIL_MAILER=log): nobody receives an invitation. */

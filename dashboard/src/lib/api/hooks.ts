@@ -538,9 +538,14 @@ export function useMailStatus() {
   })
 }
 
+/** Sends a test e-mail to `to`, or to the signed-in platform admin when omitted. */
 export function useSendTestMail() {
   return useMutation({
-    mutationFn: () => api<{ message: string }>("/admin/mail/test", { method: "POST" }),
+    mutationFn: (to?: string) =>
+      api<{ message: string; data: { recipient: string; mailer: string; guard: string } }>("/admin/mail/test", {
+        method: "POST",
+        body: { to: to || undefined },
+      }),
   })
 }
 

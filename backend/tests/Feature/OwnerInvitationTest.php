@@ -84,10 +84,10 @@ final class OwnerInvitationTest extends TestCase
         $mails = $this->sentMails();
         $this->assertCount(1, $mails);
         $this->assertSame('hanna@hirsch.test', $mails[0]->getOriginalMessage()->getTo()[0]->getAddress());
-        $this->assertSame('You have been invited to Zum Goldenen Hirschen on GiftCard Pro', $mails[0]->getOriginalMessage()->getSubject());
+        $this->assertSame('Einladung zu GiftCard Pro', $mails[0]->getOriginalMessage()->getSubject());
         $body = (string) $mails[0]->getOriginalMessage()->getTextBody();
-        $this->assertStringContainsString('Platform Admin invited you to set up Zum Goldenen Hirschen', $body);
-        $this->assertStringContainsString('support@', $body, 'Owners are told to contact support, not "their restaurant owner".');
+        $this->assertStringContainsString('Sie wurden als Inhaber des Restaurants „Zum Goldenen Hirschen“ zu GiftCard Pro eingeladen.', $body);
+        $this->assertStringContainsString('support@giftcardpro.at', $body, 'Owners are told to contact support, not "their restaurant owner".');
         $q = $this->query($this->linkFrom($mails[0]));
         $this->assertSame('1', $q['invite']);
         $this->assertSame('hanna@hirsch.test', $q['email']);
@@ -235,7 +235,7 @@ final class OwnerInvitationTest extends TestCase
 
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/users/{$waiter->id}/invitation")->assertOk();
         $this->assertStringContainsString(
-            'ask your restaurant owner',
+            'bitten Sie die Restaurantleitung',
             (string) $this->sentMails()[1]->getOriginalMessage()->getTextBody(),
         );
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/users/{$foreign->id}/invitation")

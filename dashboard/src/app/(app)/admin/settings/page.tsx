@@ -13,12 +13,16 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { useMailStatus, useSendTestMail, useSystemSettings, useUpdateSystemSettings } from "@/lib/api/hooks"
+import { useAuth } from "@/lib/auth"
 import { errorMessage } from "@/lib/api/client"
 
 /** Mail delivery: which mailer is active and a test e-mail to the signed-in admin. */
 function MailDeliveryCard() {
   const { data } = useMailStatus()
   const test = useSendTestMail()
+  const { user } = useAuth()
+  const [to, setTo] = useState<string | null>(null)
+  const recipient = to ?? user?.email ?? ""
 
   return (
     <Card>
@@ -31,26 +35,43 @@ function MailDeliveryCard() {
           <Skeleton className="h-10 w-full" />
         ) : data.delivers ? (
           <p className="flex items-center gap-2">
-            <CheckCircle2 className="size-4 text-emerald-600" /> Delivered with <span className="font-mono">{data.mailer}</span> from {data.from_name} &lt;
-            {data.from_address}&gt;
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+            <span>
+              Delivered with <span className="font-mono">{data.mailer}</span>
+              {data.host ? (
+                <>
+                  {" "}
+                  via{" "}
+                  <span className="font-mono">
+                    {data.host}:{data.port}
+                  </span>
+                </>
+              ) : null}{" "}
+              from {data.from_name} &lt;{data.from_address}&gt;
+            </span>
           </p>
         ) : (
           <MailWarning showLink={false} />
         )}
+        <div className="space-y-2">
+          <Label htmlFor="test-mail-to">Send a test e-mail to</Label>
+          <Input id="test-mail-to" type="email" value={recipient} onChange={(e) => setTo(e.target.value)} placeholder="name@example.com" autoComplete="email" />
+          <p className="text-muted-foreground text-xs">Your own address by default. Use any mailbox you can check, e.g. a Gmail address.</p>
+        </div>
       </CardContent>
       <CardFooter className="justify-end">
         <Button
           variant="outline"
-          disabled={test.isPending || !data?.delivers}
+          disabled={test.isPending || !data?.delivers || recipient.trim() === ""}
           onClick={async () => {
             try {
-              toast.success((await test.mutateAsync()).message)
+              toast.success((await test.mutateAsync(recipient.trim() === user?.email ? undefined : recipient.trim())).message)
             } catch (e) {
-              toast.error(errorMessage(e), { duration: 15_000 })
+              toast.error(errorMessage(e), { duration: 20_000 })
             }
           }}
         >
-          {test.isPending ? <Loader2 className="animate-spin" /> : <Mail />} Send test e-mail to me
+          {test.isPending ? <Loader2 className="animate-spin" /> : <Mail />} Send test e-mail
         </Button>
       </CardFooter>
     </Card>

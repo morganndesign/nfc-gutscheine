@@ -24,6 +24,22 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Test e-mail recipient and German invitation e-mail, 28 September 2026 (part of 1.4.2)
+
+In production (SMTP working, invitations arriving in Gmail) **Send test e-mail** failed with
+`550 Unrouteable address`. The action (`PlatformController::sendTestMail`, `POST /admin/mail/test`) did send to the
+signed-in platform admin (`$request->user()`, Sanctum → session guard `web` in the dashboard). A 550 after the
+server accepted connection, login and sender means that recipient address — the admin account's own — or its
+domain cannot receive mail.
+
+| Change | Why |
+|---|---|
+| Test e-mail: recipient = optional `to` or the signed-in admin; logged before sending ("Platform test e-mail requested": recipient, source, user id, guard, mailer); a missing or invalid address — or, with `MAIL_VERIFY_DOMAINS` (default on), a domain without mail server — is a `422` validation error on `to` and nothing is sent; a 550–553 answer is reported as `MAIL_RECIPIENT_REJECTED` naming the address; response contains `recipient`, `mailer`, `guard`. | Make the recipient visible and never deliver to a missing or impossible address. |
+| System settings → E-mail delivery: shows mailer and SMTP server (`host:port`, no credentials); **Send test e-mail** with a recipient field pre-filled with the admin's address. The red banner still appears only while `MAIL_MAILER=log`. | Test with any mailbox; confirm the production settings at a glance. |
+| Invitation e-mail in German (default) with natural wording and „…“ typography; English kept as a second language. All text in `lang/de/invitation.php`, `lang/en/invitation.php`; the button fallback line and footer of Laravel's (unchanged, responsive) template in `lang/de.json`, `lang/en.json`. Language = the restaurant's (`de-*` → de, `en-*` → en) or `MAIL_LOCALE` (default `de`, new compose/env variable). Greeting uses the first name. | DACH market; further languages only need translation files. |
+| `platform.support_email` placeholder `support@giftcardpro.app` → `support@giftcardpro.at` (seeder; migration changes it only if still the placeholder). | Address shown in owner invitations. |
+| Tests: `PlatformTestMailTest` (9), `InvitationEmailLocalizationTest` (5), invitation tests updated — 207 PHPUnit tests. Rendered HTML checked on desktop and mobile width; platform-admin and pilot journeys pass. | |
+
 ## Platform administration completed, 28 September 2026 (part of 1.4.2)
 
 **Why invitations "were not sent".** The invitation code path existed and works: creating a restaurant sends one

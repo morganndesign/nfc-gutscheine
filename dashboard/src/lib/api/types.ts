@@ -294,6 +294,9 @@ export interface MailStatus {
   delivers: boolean
   from_address: string | null
   from_name: string | null
+  /** SMTP server (no credentials); null for other mailers. */
+  host: string | null
+  port: number | null
   problem: string | null
 }
 

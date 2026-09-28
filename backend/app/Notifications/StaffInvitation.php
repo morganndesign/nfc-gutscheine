@@ -7,11 +7,13 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\Str;
 
 /**
- * Welcome e-mail for a new account: explains who invited them and lets them choose a password.
- * (Laravel's "reset password" e-mail would confuse people who never had an account.)
- * Sent synchronously by InvitationService, which records the outcome in notification_logs.
+ * Invitation e-mail for a new account: restaurant owner (created by the platform) or staff (created by the
+ * restaurant). All wording lives in lang/<locale>/invitation.php; the button fallback line and the footer come
+ * from lang/<locale>.json (Laravel's notification template). The language is chosen by InvitationService via
+ * Notification::locale(). Sent synchronously; the outcome is recorded in notification_logs.
  */
 final class StaffInvitation extends Notification
 {
@@ -42,20 +44,37 @@ final class StaffInvitation extends Notification
             'invite' => 1,
         ]);
 
-        $who = $this->invitedBy !== null ? "{$this->invitedBy} invited you" : 'You have been invited';
-        $expired = match (true) {
-            ! $this->forOwner => 'ask your restaurant owner to resend the invitation.',
-            $this->supportEmail !== null => "write to {$this->supportEmail} for a new invitation.",
-            default => 'contact GiftCard Pro support for a new invitation.',
+        $restaurant = ['restaurant' => $this->restaurantName];
+        $body = match (true) {
+            $this->forOwner => __('invitation.body_owner', $restaurant),
+            $this->invitedBy !== null => __('invitation.body_staff', $restaurant + ['inviter' => $this->invitedBy]),
+            default => __('invitation.body_staff_anonymous', $restaurant),
         };
 
-        return (new MailMessage)
-            ->subject("You have been invited to {$this->restaurantName} on GiftCard Pro")
-            ->greeting("Hello {$notifiable->name},")
-            ->line($this->forOwner
-                ? "{$who} to set up {$this->restaurantName} on GiftCard Pro. Your account is the owner account of the restaurant."
-                : "{$who} to manage gift cards for {$this->restaurantName}.")
-            ->action('Set your password', $url)
-            ->line("This link is valid for 72 hours and works once. If it has expired, {$expired}");
+        $message = (new MailMessage)
+            ->subject(__('invitation.subject'))
+            ->greeting(__('invitation.headline'))
+            ->line(__('invitation.greeting', ['name' => self::firstName($notifiable->name)]))
+            ->line($body)
+            ->line(__('invitation.instruction'))
+            ->action(__('invitation.action'), $url)
+            ->line(__('invitation.expiry'));
+
+        // Owners contact the platform; staff ask their own restaurant.
+        if (! $this->forOwner) {
+            $message->line(__('invitation.support_staff'));
+        } elseif ($this->supportEmail !== null) {
+            $message->line(__('invitation.support'))->line("[{$this->supportEmail}](mailto:{$this->supportEmail})");
+        }
+
+        return $message->salutation(__('invitation.closing')."\n\n".__('invitation.signature'));
+    }
+
+    /** "Hanna Maria Hirsch" → "Hanna"; a single word is used as it is. */
+    public static function firstName(string $name): string
+    {
+        $first = Str::of($name)->squish()->before(' ')->toString();
+
+        return $first !== '' ? $first : $name;
     }
 }
