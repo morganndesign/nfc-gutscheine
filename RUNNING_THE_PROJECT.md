@@ -70,8 +70,10 @@ DB_CONNECTION=sqlite
 SESSION_DRIVER=database
 CACHE_STORE=database
 QUEUE_CONNECTION=sync
-MAIL_MAILER=log                   # e-mails (invitations, password links) go to storage/logs/laravel.log
 ```
+E-mails (invitations, password links) need no setting: with `MAIL_MAILER=failover` from `.env.example` they go to
+Mailpit when it runs (`docker compose -f docker-compose.dev.yml up -d mailpit`, or `brew install mailpit && mailpit`;
+inbox http://localhost:8025), otherwise into `storage/logs/laravel.log`.
 and create the database file: `touch database/database.sqlite`
 
 **B — MySQL + Redis + Mailpit (like production):**
@@ -527,7 +529,7 @@ Detailed store steps and the release checklist: [docs/MOBILE_RELEASE.md](docs/MO
 
 ## 9. Acceptance tests (e2e)
 
-Real-browser tests against a running stack (backend on :8000 with `MAIL_MAILER=log` and `LOG_LEVEL=debug`,
+Real-browser tests against a running stack (backend on :8000 — invitation links are read from Mailpit, or from the log with `LOG_LEVEL=debug`,
 dashboard on :3000, demo data).
 ```bash
 cd e2e

@@ -81,13 +81,15 @@ return [
             'transport' => 'array',
         ],
 
+        // Local development default (.env.example): Mailpit via SMTP; when it is not running the message goes
+        // to the log instead. retry_after 0: try Mailpit again on the next e-mail (it may have been started).
         'failover' => [
             'transport' => 'failover',
             'mailers' => [
                 'smtp',
                 'log',
             ],
-            'retry_after' => 60,
+            'retry_after' => 0,
         ],
 
         'roundrobin' => [

@@ -8,7 +8,7 @@ a Pixel 7 for the waiter) and fails on any broken step, console error or accessi
 "lost" card, 7. the old card is rejected, 8. CSV export (decimal comma), 9. axe accessibility scan.
 
 ```bash
-# API with MAIL_MAILER=log and LOG_LEVEL=debug, web app on :3000, a platform admin exists
+# API (default MAIL_MAILER=failover: Mailpit if running, else the log), web app on :3000, a platform admin exists
 cd e2e
 npm install && npx playwright install chromium
 ADMIN_EMAIL=admin@giftcardpro.test ADMIN_PASSWORD='Password123!' npm test
@@ -18,7 +18,8 @@ ADMIN_EMAIL=admin@giftcardpro.test ADMIN_PASSWORD='Password123!' npm test
 |---|---|
 | `BASE_URL` | `http://localhost:3000` |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | demo admin |
-| `LARAVEL_LOG_DIR` | `../backend/storage/logs/` (invitation links are read from the log mailer) |
+| `MAILPIT_URL` | `http://localhost:8025` (invitation links are read from Mailpit first) |
+| `LARAVEL_LOG_DIR` | `../backend/storage/logs/` (… or from the log when Mailpit is not running) |
 | `CHROMIUM_PATH` | Playwright's own Chromium |
 
 Each run creates a new restaurant with unique addresses, so it can run repeatedly against the same database.
@@ -29,7 +30,7 @@ Each run creates a new restaurant with unique addresses, so it can run repeatedl
 (Restaurant · Owner · Email · Status · Created · Actions), edits it, sends the invitation again with a corrected
 address, lets the owner accept, disables/enables, archives/restores, checks that a restaurant with gift cards
 cannot be deleted (with the demo data) and deletes the empty one after the typed confirmation, filters the
-audit log and scans the admin screens with axe. With the log mailer it expects "not delivered" messages.
+audit log and scans the admin screens with axe. It checks the delivered or (with `MAIL_MAILER=log`) "not delivered" behaviour, whichever the API reports.
 
 # Waiter app API — `waiter-api.mjs`
 

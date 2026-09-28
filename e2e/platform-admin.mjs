@@ -5,19 +5,19 @@
 //   delete refused for a restaurant with gift cards → delete an empty restaurant with typed confirmation →
 //   audit log filtered by restaurant → accessibility scan of the admin screens.
 //
-// Requirements: as pilot-journey.mjs (API + web app with MAIL_MAILER=log and LOG_LEVEL=debug, a platform
-// admin). With the log mailer the platform reports e-mails as "not delivered", which this test expects.
+// Requirements: as pilot-journey.mjs (API + web app, a platform admin). Works with every local mail setup: with
+// Mailpit (MAIL_MAILER=failover/smtp) invitations are delivered; with MAIL_MAILER=log the platform reports them as
+// "not delivered" — the test asks GET /admin/mail which one applies and checks the matching behaviour.
 //
 //   cd e2e && npm install && ADMIN_EMAIL=… ADMIN_PASSWORD=… npm run test:admin
 import { chromium } from 'playwright'
 import { AxeBuilder } from '@axe-core/playwright'
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
+import { invitationLink } from './lib/mail.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@giftcardpro.test'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Password123!'
-const LOG_DIR = process.env.LARAVEL_LOG_DIR ?? new URL('../backend/storage/logs/', import.meta.url).pathname
 const run = Date.now().toString(36)
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {})
@@ -32,14 +32,6 @@ async function newPage(who) {
   return page
 }
 
-function invitationLink(email) {
-  const text = fs.readdirSync(LOG_DIR).filter((f) => f.endsWith('.log')).map((f) => fs.readFileSync(LOG_DIR + f, 'utf8')).join('\n')
-  const re = /reset-password\?token=([a-f0-9]{64})&(?:amp;)?email=([^&\s"\]]+)/g
-  let token = null
-  for (let m; (m = re.exec(text)); ) if (decodeURIComponent(m[2]) === email) token = m[1]
-  assert.ok(token, `invitation e-mail for ${email} not found in ${LOG_DIR}`)
-  return `${BASE}/reset-password?token=${token}&email=${encodeURIComponent(email)}&invite=1`
-}
 
 async function signIn(page, email, password) {
   await page.goto(`${BASE}/login`)
@@ -70,28 +62,37 @@ const name = `Admin E2E ${run}`
 const typo = `ownr-${run}@admin.test`
 const owner = { name: 'Petra Pending', email: `owner-${run}@admin.test`, password: `Owner-${run}-2026` }
 
-// 1. Onboard: restaurant + owner account; the log mailer means "created, invitation not delivered".
+// 1. Onboard: restaurant + owner account, invitation e-mailed (or reported as not delivered with the log mailer).
 const admin = await newPage('admin')
 await signIn(admin, ADMIN_EMAIL, ADMIN_PASSWORD)
 await admin.goto(`${BASE}/admin`)
-await admin.getByRole('alert').filter({ hasText: 'E-mails are not delivered' }).waitFor()
+const mail = await admin.evaluate(async () => (await (await fetch('/api/v1/admin/mail', { headers: { Accept: 'application/json' } })).json()).data)
+const delivers = mail.delivers === true
+const banner = admin.getByRole('alert').filter({ hasText: 'E-mails are not delivered' })
+if (delivers) {
+  await admin.getByRole('button', { name: /Onboard restaurant/ }).first().waitFor()
+  assert.equal(await banner.count(), 0, `no mail warning with the ${mail.mailer} mailer`)
+} else {
+  await banner.waitFor()
+}
 await admin.getByRole('button', { name: /Onboard restaurant/ }).first().click()
 await admin.fill('#r-name', name)
 await admin.fill('#o-name', owner.name)
 await admin.fill('#o-email', typo)
 await admin.getByRole('button', { name: 'Create restaurant' }).click()
-await toast(admin, 'the invitation was not delivered')
+await toast(admin, delivers ? `invitation sent to ${typo}` : 'the invitation was not delivered')
 await admin.waitForURL('**/admin/restaurants/**')
 const restaurantUrl = admin.url()
-await admin.getByText('Invitation not delivered').first().waitFor()
-step(1, 'restaurant onboarded; undelivered invitation reported')
+const inviteBadge = delivers ? 'Invitation pending' : 'Invitation not delivered'
+await admin.getByText(inviteBadge).first().waitFor()
+step(1, `restaurant onboarded; invitation ${delivers ? `delivered (${mail.mailer})` : 'reported as not delivered (log mailer)'}`)
 
 // 2. List: Restaurant · Owner · Email · Status · Created · Actions.
 await openList(admin, name)
 const headers = (await admin.getByRole('columnheader').allInnerTexts()).map((h) => h.trim()).filter(Boolean)
 assert.deepEqual(headers, ['Restaurant', 'Owner', 'Email', 'Status', 'Created', 'Actions'])
 const cells = await row(admin, name).first().innerText()
-for (const text of [owner.name, typo, 'Active', 'Invitation not delivered']) assert.ok(cells.includes(text), `row shows "${text}": ${cells}`)
+for (const text of [owner.name, typo, 'Active', inviteBadge]) assert.ok(cells.includes(text), `row shows "${text}": ${cells}`)
 step(2, 'list shows owner, e-mail, status and invitation state')
 
 // 3. Edit.
@@ -111,7 +112,7 @@ await openList(admin, name)
 await menu(admin, name, 'Invite again')
 await admin.fill('#invite-email', owner.email)
 await admin.getByRole('button', { name: 'Send invitation' }).click()
-await toast(admin, 'MAIL_MAILER')
+await toast(admin, delivers ? `Invitation sent to ${owner.email}` : 'MAIL_MAILER')
 await admin.keyboard.press('Escape')
 await openList(admin, name)
 assert.ok((await row(admin, name).first().innerText()).includes(owner.email), 'corrected e-mail address shown')
@@ -119,7 +120,7 @@ step(4, 'invitation sent again to the corrected address')
 
 // 5. The owner accepts the newest link; the admin sees the account as active.
 const ownerPage = await newPage('owner')
-await ownerPage.goto(invitationLink(owner.email))
+await ownerPage.goto(await invitationLink(BASE, owner.email))
 await ownerPage.getByText('Welcome to GiftCard Pro').waitFor()
 await ownerPage.fill('#password', owner.password)
 await ownerPage.fill('#confirmation', owner.password)

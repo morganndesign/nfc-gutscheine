@@ -24,6 +24,14 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
+## Mailpit for local development; production readiness audit, 28 September 2026 (part of 1.4.2)
+
+| Change | Why |
+|---|---|
+| `backend/.env.example`: `MAIL_MAILER=failover` → Mailpit (SMTP 127.0.0.1:1025, inbox http://localhost:8025) when it runs, otherwise `storage/logs/laravel.log`; `config/mail.php` failover retries Mailpit on every e-mail. `docker-compose.dev.yml` Mailpit accepts any SMTP login and keeps 5 000 messages. Production is unchanged (`MAIL_MAILER=smtp` from Coolify). | Local e-mail works automatically in both setups (SQLite without Docker, or the Docker services) with no code or config change between environments. |
+| e2e: `e2e/lib/mail.mjs` reads invitation links from Mailpit's API, falling back to the log; `platform-admin.mjs` asks `GET /admin/mail` whether e-mail is delivered and checks the matching behaviour. | The journeys no longer assume the log mailer. |
+| `docs/reports/2026-09-28-production-readiness-audit.md`: full audit — 5 Critical, 17 High, ranked Medium/Low, execution plan, launch-readiness scores. | Launch gate. |
+
 ## Test e-mail recipient and German invitation e-mail, 28 September 2026 (part of 1.4.2)
 
 In production (SMTP working, invitations arriving in Gmail) **Send test e-mail** failed with

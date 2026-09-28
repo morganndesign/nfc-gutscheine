@@ -13,11 +13,11 @@ import { chromium, devices } from 'playwright'
 import { AxeBuilder } from '@axe-core/playwright'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
+import { invitationLink } from './lib/mail.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@giftcardpro.test'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Password123!'
-const LOG_DIR = process.env.LARAVEL_LOG_DIR ?? new URL('../backend/storage/logs/', import.meta.url).pathname
 const run = Date.now().toString(36)
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {})
@@ -31,14 +31,6 @@ async function newPage(options, who) {
   return page
 }
 
-function invitationLink(email) {
-  const text = fs.readdirSync(LOG_DIR).filter((f) => f.endsWith('.log')).map((f) => fs.readFileSync(LOG_DIR + f, 'utf8')).join('\n')
-  const re = /reset-password\?token=([a-f0-9]{64})&(?:amp;)?email=([^&\s"\]]+)/g
-  let token = null
-  for (let m; (m = re.exec(text)); ) if (decodeURIComponent(m[2]) === email) token = m[1]
-  assert.ok(token, `invitation e-mail for ${email} not found in ${LOG_DIR}`)
-  return `${BASE}/reset-password?token=${token}&email=${encodeURIComponent(email)}&invite=1`
-}
 
 async function signIn(page, email, password) {
   await page.goto(`${BASE}/login`)
@@ -49,7 +41,7 @@ async function signIn(page, email, password) {
 }
 
 async function acceptInvitation(page, email, password) {
-  await page.goto(invitationLink(email))
+  await page.goto(await invitationLink(BASE, email))
   await page.getByText('Welcome to GiftCard Pro').waitFor()
   await page.fill('#password', password)
   await page.fill('#confirmation', password)

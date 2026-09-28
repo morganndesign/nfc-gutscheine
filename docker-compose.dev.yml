@@ -25,9 +25,16 @@ services:
     image: redis:7.4-alpine
     ports: ["6379:6379"]
 
+  # Catches every e-mail of the local backend (MAIL_MAILER=failover → SMTP 127.0.0.1:1025). Inbox:
+  # http://localhost:8025. Accepts any SMTP login, so the same MAIL_* lines work with or without credentials.
   mailpit:
     image: axllent/mailpit:latest
     ports: ["1025:1025", "8025:8025"]
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+      MP_MAX_MESSAGES: "5000"
+    restart: unless-stopped
 
 volumes:
   mysql_dev:
