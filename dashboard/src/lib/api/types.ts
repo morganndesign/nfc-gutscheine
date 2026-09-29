@@ -21,6 +21,7 @@ export type Permission =
   | "vouchers.reinstate"
   | "vouchers.export"
   | "vouchers.refund"
+  | "vouchers.cancel_sale"
   | "cards.view"
   | "cards.receive"
   | "cards.bind"

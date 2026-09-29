@@ -19,14 +19,14 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useReinstateVoucher, useVoucher, useVoucherAction } from "@/lib/api/hooks"
+import { useCancelSale, useReinstateVoucher, useVoucher, useVoucherAction } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { Voucher } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate, formatDateTime, formatRelative, todayInput } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
 
-type DialogName = "reload" | "block" | "expire" | "reinstate" | "edit" | "refund" | null
+type DialogName = "reload" | "block" | "expire" | "reinstate" | "edit" | "refund" | "cancel" | null
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -103,6 +103,19 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
     }
   }
 
+  // A sale booked by mistake: unused and sold today (the server checks again, and who may cancel).
+  const salePayment = voucher.payments?.length === 1 ? voucher.payments[0] : undefined
+  const cancellable =
+    can("vouchers.cancel_sale") &&
+    voucher.status === "active" &&
+    voucher.total_redeemed === 0 &&
+    voucher.total_loaded === voucher.initial_value &&
+    !!salePayment &&
+    new Date(voucher.created_at).toDateString() === new Date().toDateString()
+  const needsStornoReference = salePayment?.method === "card_terminal" || salePayment?.method === "bank_transfer"
+  const [stornoReference, setStornoReference] = useState("")
+  const cancelSale = useCancelSale()
+
   const activeQr = voucher.media?.find((m) => m.type === "printable_qr" && m.status === "active")
   const activeCard = voucher.media?.find((m) => m.type === "nfc_card" && m.status === "active")
   const earlierCards = voucher.media?.filter((m) => m.type === "nfc_card" && m.status === "revoked") ?? []
@@ -147,6 +160,11 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
                 {can("vouchers.reinstate") && voucher.status === "expired" ? (
                   <DropdownMenuItem onSelect={() => setDialog("reinstate")}>
                     <RotateCcw /> Reinstate
+                  </DropdownMenuItem>
+                ) : null}
+                {cancellable ? (
+                  <DropdownMenuItem variant="destructive" onSelect={() => setDialog("cancel")}>
+                    <Undo2 /> Cancel sale…
                   </DropdownMenuItem>
                 ) : null}
                 {(voucher.refundable ?? 0) > 0 ? (
@@ -294,6 +312,36 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
       {dialog === "edit" ? <EditVoucherDialog voucher={voucher} open onOpenChange={(o) => setDialog(o ? "edit" : null)} /> : null}
       {dialog === "refund" ? <RefundDialog voucher={voucher} open onOpenChange={(o) => setDialog(o ? "refund" : null)} /> : null}
       {dialog === "reinstate" ? <ReinstateDialog voucher={voucher} open onOpenChange={(o) => setDialog(o ? "reinstate" : null)} /> : null}
+      <ReasonDialog
+        open={dialog === "cancel"}
+        onOpenChange={(o) => setDialog(o ? "cancel" : null)}
+        title="Cancel sale"
+        description={`The voucher is closed and ${formatMoney(voucher.balance, voucher.currency)} goes back the way it was paid${salePayment?.method === "complimentary" ? " (complimentary: nothing is paid out)" : ` (${salePayment?.method_label ?? ""})`}.`}
+        suggestions={["Wrong amount", "Wrong voucher type", "Guest changed their mind"]}
+        confirmLabel="Cancel sale"
+        destructive
+        pending={cancelSale.isPending}
+        onConfirm={async (reason) => {
+          if (needsStornoReference && stornoReference.trim() === "") {
+            toast.error("Enter the cancellation receipt or bank reference.")
+            return
+          }
+          try {
+            await cancelSale.mutateAsync({ voucherId: voucher.id, reason, reference: needsStornoReference ? stornoReference.trim() : null })
+            toast.success("Sale cancelled · voucher closed")
+            setDialog(null)
+          } catch (e) {
+            toast.error(errorMessage(e))
+          }
+        }}
+      >
+        {needsStornoReference ? (
+          <div className="space-y-2">
+            <Label htmlFor="storno-reference">{salePayment?.method === "card_terminal" ? "Terminal cancellation receipt" : "Bank reference of the repayment"}</Label>
+            <Input id="storno-reference" value={stornoReference} onChange={(e) => setStornoReference(e.target.value)} maxLength={120} />
+          </div>
+        ) : null}
+      </ReasonDialog>
       <ReasonDialog
         open={dialog === "block"}
         onOpenChange={(o) => setDialog(o ? "block" : null)}

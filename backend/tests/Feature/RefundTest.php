@@ -21,6 +21,7 @@ use App\Support\Actor;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\Sanctum;
 use Tests\Support\WithCards;
 use Tests\TestCase;
 
@@ -138,5 +139,59 @@ final class RefundTest extends TestCase
         } finally {
             $this->tearDownCardKeystore();
         }
+    }
+
+    private function cancel(Voucher $voucher, ?string $reference = null): TestResponse
+    {
+        return $this->postJson("/api/v1/vouchers/{$voucher->id}/cancellation", ['reason' => 'Wrong amount typed', 'reference' => $reference], $this->idempotency());
+    }
+
+    public function test_a_manager_cancels_a_mistaken_sale_and_the_money_goes_back_the_same_way(): void
+    {
+        $manager = $this->actingAsStaff($this->restaurant, RoleSlug::Manager);
+        $id = $this->postJson('/api/v1/vouchers', ['value' => 50000, 'form' => 'printable', 'payment' => ['method' => 'card_terminal', 'reference' => 'T-881']], $this->idempotency())
+            ->assertCreated()->json('data.id');
+        $voucher = Voucher::query()->findOrFail($id);
+
+        $this->cancel($voucher)->assertStatus(422);
+        $this->cancel($voucher, 'T-881-STORNO')->assertCreated()
+            ->assertJsonPath('data.voucher.status', 'refunded')
+            ->assertJsonPath('data.transaction.payment.method', 'card_terminal')
+            ->assertJsonPath('data.transaction.payment.direction', 'out')
+            ->assertJsonPath('data.transaction.payment.amount', 50000);
+        $this->assertSame(0, $this->getJson('/api/v1/dashboard/stats')->json('data.monthly_revenue'));
+        $this->assertLedgerConsistent($voucher);
+        $this->assertNotNull($manager);
+    }
+
+    public function test_a_used_old_or_own_late_sale_is_not_cancelled_by_the_same_person(): void
+    {
+        $seller = $this->staff($this->restaurant, RoleSlug::Manager);
+        $used = $this->sell($this->restaurant, 3000, $seller);
+        $late = $this->sell($this->restaurant, 2000, $seller);
+        $gift = $this->asTenant($this->restaurant, fn () => app(VoucherService::class)->sell(new Actor($this->staff($this->restaurant, RoleSlug::Owner)), new IssueVoucherData(
+            value: 1500, payment: new PaymentData(PaymentMethod::Complimentary, reason: 'Sorry for the wait'), idempotencyKey: (string) Str::uuid(),
+        )));
+        $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
+        $this->redeemWithQr($used->voucher, $used->printable->payload, 100)->assertCreated();
+
+        Sanctum::actingAs($seller, ['*']);
+        $this->cancel($used->voucher)->assertStatus(409)->assertJsonPath('context.reason', 'not_cancellable');
+        $this->travel(20)->minutes();
+        $this->cancel($late->voucher)->assertStatus(409)->assertJsonPath('context.reason', 'own_sale');
+
+        // A second manager may; a complimentary sale closes without a payout.
+        $this->actingAsStaff($this->restaurant, RoleSlug::Manager);
+        $this->cancel($late->voucher)->assertCreated()->assertJsonPath('data.transaction.payment.method', 'cash');
+        $this->cancel($gift->voucher)->assertCreated()->assertJsonPath('data.transaction.payment', null)->assertJsonPath('data.voucher.balance', 0);
+
+        // Tomorrow it is the owner's refund, not a cancellation.
+        $next = $this->sell($this->restaurant, 1000);
+        $this->travel(1)->days();
+        $this->cancel($next->voucher)->assertStatus(409)->assertJsonPath('context.reason', 'not_cancellable');
+        $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
+        $this->cancel($next->voucher)->assertForbidden();
+        $this->artisan('giftcard:seal-security-events')->assertSuccessful();
+        $this->artisan('giftcard:verify-chains')->assertSuccessful();
     }
 }

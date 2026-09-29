@@ -23,6 +23,8 @@ enum Permission: string
     case VouchersExport = 'vouchers.export';
     /** Pay the remaining balance back and close the voucher: owners only. */
     case VouchersRefund = 'vouchers.refund';
+    /** Cancel an unused sale of today (booked by mistake); the money goes back the way it came. */
+    case VouchersCancelSale = 'vouchers.cancel_sale';
 
     /** Physical cards of the restaurant: stock, lifecycle. */
     case CardsView = 'cards.view';

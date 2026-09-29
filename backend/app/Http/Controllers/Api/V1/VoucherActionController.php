@@ -10,6 +10,7 @@ use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Requests\ReasonRequest;
+use App\Http\Requests\Vouchers\CancelSaleRequest;
 use App\Http\Requests\Vouchers\RedeemVoucherRequest;
 use App\Http\Requests\Vouchers\RefundVoucherRequest;
 use App\Http\Requests\Vouchers\ReinstateVoucherRequest;
@@ -100,6 +101,21 @@ final class VoucherActionController extends Controller
             $voucher,
             PaymentData::fromArray($payment),
             (string) $request->validated('reason'),
+            (string) $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE),
+        );
+
+        return $this->moneyResponse($request, $result);
+    }
+
+    /** POST /vouchers/{voucher}/cancellation: cancels an unused sale of today (booked by mistake). */
+    public function cancelSale(CancelSaleRequest $request, Voucher $voucher): JsonResponse
+    {
+        $reference = $request->validated('reference');
+        $result = $this->vouchers->cancelSale(
+            Actor::fromRequest($request),
+            $voucher,
+            (string) $request->validated('reason'),
+            is_string($reference) ? $reference : null,
             (string) $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE),
         );
 

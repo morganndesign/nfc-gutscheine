@@ -1,7 +1,7 @@
 "use client"
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { api } from "@/lib/api/client"
+import { api, newIdempotencyKey } from "@/lib/api/client"
 import type {
   ApiToken,
   Card,
@@ -219,6 +219,19 @@ export function useRefundVoucher() {
       input: { payment: { method: "cash" | "card_terminal" | "bank_transfer"; reference?: string | null }; reason: string }
       idempotencyKey: string
     }) => api<MoneyResult>(`/vouchers/${voucherId}/refund`, { method: "POST", body: input, idempotencyKey }),
+    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+  })
+}
+
+/**
+ * Cancels an unused sale of today (booked by mistake). A second attempt after a lost answer is safe: the voucher is
+ * closed by the first one, so no second payout can happen.
+ */
+export function useCancelSale() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ voucherId, reason, reference }: { voucherId: string; reason: string; reference?: string | null }) =>
+      api<MoneyResult>(`/vouchers/${voucherId}/cancellation`, { method: "POST", body: { reason, reference: reference || null }, idempotencyKey: newIdempotencyKey() }),
     onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
   })
 }
