@@ -76,6 +76,9 @@ Route::prefix('v1')->group(function (): void {
                     Route::post('redemptions', 'redeem')->middleware('can:vouchers.redeem');
                     Route::post('reloads', 'reload')->middleware('can:vouchers.reload');
                 });
+                Route::get('redemptions/{idempotencyKey}', 'redemptionOutcome')
+                    ->where('idempotencyKey', '[A-Za-z0-9_-]{16,100}')
+                    ->middleware(['can:vouchers.redeem', 'throttle:voucher-operation']);
                 Route::post('block', 'block')->middleware('can:vouchers.block');
                 Route::post('unblock', 'unblock')->middleware('can:vouchers.unblock');
                 Route::post('expire', 'expire')->middleware('can:vouchers.expire');

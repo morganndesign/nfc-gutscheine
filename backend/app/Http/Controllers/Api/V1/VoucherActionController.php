@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Data\PaymentData;
 use App\Data\TransactionResult;
+use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Requests\ReasonRequest;
@@ -16,6 +17,7 @@ use App\Http\Resources\PresentedVoucherResource;
 use App\Http\Resources\TransactionResource;
 use App\Http\Resources\VoucherResource;
 use App\Models\Voucher;
+use App\Models\VoucherTransaction;
 use App\Services\Vouchers\VoucherHistoryService;
 use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
@@ -40,6 +42,33 @@ final class VoucherActionController extends Controller
         );
 
         return $this->moneyResponse($request, $result);
+    }
+
+    /**
+     * The outcome of one of the caller's own redemption attempts, by its Idempotency-Key. A till whose request
+     * went unanswered asks here instead of sending the debit again, so an unknown outcome is resolved without
+     * risking a second booking (audit M1, M2, M6). Only the caller's own attempts are visible. "not_booked" is
+     * final only once the attempt can no longer be running on the server; the client waits for that.
+     */
+    public function redemptionOutcome(Request $request, Voucher $voucher, string $idempotencyKey): JsonResponse
+    {
+        $transaction = VoucherTransaction::query()
+            ->where('restaurant_id', $voucher->restaurant_id)
+            ->where('voucher_id', $voucher->getKey())
+            ->where('idempotency_key', $idempotencyKey)
+            ->ofType(TransactionType::Redemption)
+            ->where('user_id', $this->user($request)->getKey())
+            ->first();
+
+        if ($transaction === null) {
+            return response()->json(['data' => ['status' => 'not_booked']])->header('Cache-Control', 'no-store, private');
+        }
+
+        return response()->json(['data' => [
+            'status' => 'booked',
+            'voucher' => PresentedVoucherResource::make($voucher->refresh())->resolve($request),
+            'transaction' => TransactionResource::make($transaction->loadMissing('payment'))->resolve($request),
+        ]])->header('Cache-Control', 'no-store, private');
     }
 
     public function reload(ReloadVoucherRequest $request, Voucher $voucher): JsonResponse

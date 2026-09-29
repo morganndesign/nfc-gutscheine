@@ -25,6 +25,8 @@ final class PresentmentResource extends JsonResource
             'method' => $presentment->method->value,
             'level' => $presentment->level,
             'expires_at' => $presentment->expires_at->toIso8601String(),
+            // Seconds left as seen by the server: clients count down from receipt, independent of their clock.
+            'expires_in' => max(0, (int) floor(now()->diffInSeconds($presentment->expires_at, false))),
             'voucher' => PresentedVoucherResource::make($presentment->voucher)->resolve($request),
         ];
     }

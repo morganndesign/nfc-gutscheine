@@ -79,7 +79,7 @@ final class PresentmentAbuseTest extends TestCase
         $restaurant = $this->restaurant();
         $sale = $this->sell($restaurant);
         $this->actingAsStaff($restaurant, RoleSlug::Waiter);
-        $presentment = $this->present($sale->printable->payload)->json('data.id');
+        $presentment = $this->present($sale->printable->payload)->assertJsonPath('data.expires_in', 60)->json('data.id');
 
         Carbon::setTestNow('2026-10-01 12:01:00');
         $this->withHeaders($this->idempotency())->postJson("/api/v1/vouchers/{$sale->voucher->id}/redemptions", ['amount' => 100, 'presentment_id' => $presentment])
@@ -112,6 +112,36 @@ final class PresentmentAbuseTest extends TestCase
 
         Sanctum::actingAs($waiterA, ['*']);
         $this->withHeaders(['X-Device-Id' => self::DEVICE_A] + $this->idempotency())->postJson($url, $body)->assertCreated();
+    }
+
+    public function test_an_unknown_outcome_is_resolved_by_key_without_sending_the_debit_again(): void
+    {
+        $restaurant = $this->restaurant();
+        $sale = $this->sell($restaurant);
+        $other = $this->sell($restaurant);
+        $waiterA = $this->staff($restaurant, RoleSlug::Waiter);
+        $waiterB = $this->staff($restaurant, RoleSlug::Waiter);
+        $key = (string) Str::uuid();
+        $url = fn (Voucher $v, string $k) => "/api/v1/vouchers/{$v->id}/redemptions/{$k}";
+
+        Sanctum::actingAs($waiterA, ['*']);
+        $this->getJson($url($sale->voucher, $key))->assertOk()->assertExactJson(['data' => ['status' => 'not_booked']]);
+
+        $this->redeemWithQr($sale->voucher, $sale->printable->payload, 1250, $key)->assertCreated();
+        $this->getJson($url($sale->voucher, $key))->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.status', 'booked')
+            ->assertJsonPath('data.transaction.amount', -1250)
+            ->assertJsonPath('data.voucher.balance', 3750);
+
+        // Only for the voucher it was booked on, and only for the user who booked it.
+        $this->getJson($url($other->voucher, $key))->assertOk()->assertJsonPath('data.status', 'not_booked');
+        Sanctum::actingAs($waiterB, ['*']);
+        $this->getJson($url($sale->voucher, $key))->assertOk()->assertJsonPath('data.status', 'not_booked');
+
+        // Asking never books anything.
+        $this->assertSame(1, VoucherTransaction::query()->where('voucher_id', $sale->voucher->id)->where('type', 'redemption')->count());
+        $this->assertSame(3750, $sale->voucher->refresh()->balance);
     }
 
     public function test_a_presentment_only_pays_for_its_own_voucher(): void

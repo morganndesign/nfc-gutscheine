@@ -20,10 +20,22 @@ const COPY = {
     noExpiry: "No expiry date",
     validUntil: "Valid until",
   },
+  bhs: {
+    voucher: "Vaučer",
+    for: "za",
+    howTo: "Molimo pokažite ovaj kôd prilikom plaćanja.",
+    keepSafe: "Čuvajte ga kao gotovinu: ko ima kôd, može iskoristiti vaučer.",
+    noExpiry: "Bez roka važenja",
+    validUntil: "Vrijedi do",
+  },
 } satisfies Record<string, Record<string, string>>
 
 export type GuestCopy = (typeof COPY)["de"]
 
+/** German, Bosnian/Croatian/Serbian or English, by the restaurant's locale (the waiter app uses the same rule). */
 export function guestCopy(locale: string | null | undefined): GuestCopy {
-  return (locale ?? "de-AT").toLowerCase().startsWith("de") ? COPY.de : COPY.en
+  const language = (locale ?? "de-AT").toLowerCase().slice(0, 2)
+  if (language === "de") return COPY.de
+  if (language === "bs" || language === "hr" || language === "sr") return COPY.bhs
+  return COPY.en
 }

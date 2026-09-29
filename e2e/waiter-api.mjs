@@ -133,6 +133,7 @@ await check("scanning the QR creates a single-use presentment", async () => {
   const res = await app("POST", "/presentments", { token, body: { purpose: "spend", method: "printable_qr", credential: qr } })
   assert.equal(res.status, 201, JSON.stringify(res.json))
   assert.equal(res.json.data.voucher.balance, 5000)
+  assert.ok(res.json.data.expires_in > 50 && res.json.data.expires_in <= 60, `expires_in ${res.json.data.expires_in}`)
   presentment = res.json.data.id
 })
 
@@ -150,6 +151,14 @@ await check("redeem € 12,50 is booked once, a retry with the same key is repla
   assert.equal(replay.status, 200)
   assert.equal(replay.json.replayed, true)
   assert.equal(replay.json.data.voucher.balance, 3750)
+
+  // An unknown outcome is asked for without sending the debit again.
+  const booked = await app("GET", `/vouchers/${voucher.id}/redemptions/${key}`, { token })
+  assert.equal(booked.status, 200)
+  assert.equal(booked.json.data.status, "booked")
+  assert.equal(booked.json.data.transaction.amount, -1250)
+  const unknown = await app("GET", `/vouchers/${voucher.id}/redemptions/${randomUUID()}`, { token })
+  assert.equal(unknown.json.data.status, "not_booked")
 })
 
 await check("the used presentment cannot pay again", async () => {

@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { ApiError, errorMessage } from "@/lib/api/client"
+import { errorMessage } from "@/lib/api/client"
 import { homeFor, safeRedirectPath, useAuth } from "@/lib/auth"
 
 const schema = z.object({
@@ -37,12 +37,8 @@ function LoginForm() {
     try {
       await login(values.email, values.password, values.remember)
     } catch (error) {
-      if (error instanceof ApiError && error.code === "ACCOUNT_LOCKED") {
-        const minutes = Math.ceil((error.body.retry_after ?? 900) / 60)
-        form.setError("root", { message: `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.` })
-      } else {
-        form.setError("root", { message: errorMessage(error) })
-      }
+      // Failed and locked sign-ins get the same answer from the server (audit S4).
+      form.setError("root", { message: errorMessage(error) })
     }
   })
 

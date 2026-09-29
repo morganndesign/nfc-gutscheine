@@ -100,6 +100,10 @@ final class WaiterAppTokenTest extends TestCase
             ->postJson("/api/v1/vouchers/{$voucher->id}/redemptions", $body)
             ->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('data.voucher.balance', 3750);
 
+        // After a lost answer the app asks for the key's outcome instead of sending the debit again.
+        $this->bearer($token)->getJson("/api/v1/vouchers/{$voucher->id}/redemptions/{$key}")
+            ->assertOk()->assertJsonPath('data.status', 'booked')->assertJsonPath('data.voucher.balance', 3750);
+
         $this->assertSame(3750, $voucher->refresh()->balance);
         $this->assertLedgerConsistent($voucher);
     }
@@ -116,6 +120,9 @@ final class WaiterAppTokenTest extends TestCase
         $this->bearer($token)->getJson('/api/v1/dashboard/stats')->assertForbidden();
         $this->bearer($token)->putJson('/api/v1/auth/profile', ['name' => 'Mallory'])->assertForbidden()->assertJsonPath('code', 'FORBIDDEN');
         $this->bearer($token)->getJson('/api/v1/devices/current')->assertOk();
+        // Method and path both count: the app never edits a voucher or reads its history.
+        $this->bearer($token)->patchJson("/api/v1/vouchers/{$voucher->id}", ['notes' => 'x'])->assertForbidden();
+        $this->bearer($token)->getJson("/api/v1/vouchers/{$voucher->id}/history")->assertForbidden();
     }
 
     public function test_token_is_rejected_from_another_device(): void
