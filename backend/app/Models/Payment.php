@@ -13,6 +13,7 @@ use App\Models\Contracts\HashChainedRecord;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -33,6 +34,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  * @property-read Voucher $voucher
  * @property-read User|null $receiver
+ * @property-read VoucherTransaction|null $transaction
  */
 class Payment extends Model implements HashChainedRecord
 {
@@ -67,6 +69,16 @@ class Payment extends Model implements HashChainedRecord
             'id', 'restaurant_id', 'voucher_id', 'method', 'direction', 'amount', 'currency', 'reference', 'approved_by', 'reason',
             'received_by', 'device_id', 'created_at',
         ];
+    }
+
+    /**
+     * The sale, reload or refund entry this payment belongs to.
+     *
+     * @return HasOne<VoucherTransaction, $this>
+     */
+    public function transaction(): HasOne
+    {
+        return $this->hasOne(VoucherTransaction::class);
     }
 
     /** @return BelongsTo<Voucher, $this> */

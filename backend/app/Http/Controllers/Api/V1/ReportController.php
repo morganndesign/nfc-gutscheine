@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Enums\PaymentDirection;
+use App\Http\Controllers\Controller;
+use App\Models\Payment;
+use App\Services\Exports\CsvExporter;
+use App\Services\Reports\CashUpService;
+use App\Support\VoucherNumber;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Symfony\Component\HttpFoundation\StreamedResponse;
+
+/** The restaurant's money reports: the daily cash-up and the payments ledger for the accountant. */
+final class ReportController extends Controller
+{
+    /** GET /reports/cash-up?date=Y-m-d (default today): money in and out per method and person, liability at close. */
+    public function cashUp(Request $request, CashUpService $cashUp): JsonResponse
+    {
+        $date = $request->validate(['date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today']])['date']
+            ?? Carbon::now($this->timezone())->toDateString();
+
+        return response()->json(['data' => $cashUp->day((string) $date)]);
+    }
+
+    /** GET /reports/payments/export?from=Y-m-d&to=Y-m-d: every payment received or paid out, one row each. */
+    public function paymentsExport(Request $request, CsvExporter $exporter): StreamedResponse
+    {
+        $v = $request->validate([
+            'from' => ['required', 'date_format:Y-m-d'],
+            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+        $restaurant = $this->tenant()->require();
+        $tz = $restaurant->timezone;
+        $money = static fn (int $cents): string => $exporter->amount($cents, $restaurant->locale);
+
+        return $exporter->stream(
+            Payment::query()->with(['voucher', 'receiver', 'transaction.reversal'])
+                ->where('created_at', '>=', $this->dayStart((string) $v['from']))
+                ->where('created_at', '<=', $this->dayEnd((string) $v['to']))
+                ->orderBy('created_at'),
+            [
+                'Date' => static fn (Payment $p): string => $p->created_at->timezone($tz)->format('Y-m-d H:i:s'),
+                'Payment ID' => static fn (Payment $p): string => $p->id,
+                'Direction' => static fn (Payment $p): string => $p->direction === PaymentDirection::Out ? 'Paid out' : 'Received',
+                'Method' => static fn (Payment $p): string => $p->method->label(),
+                'Amount' => static fn (Payment $p): string => $money($p->direction === PaymentDirection::Out ? -$p->amount : $p->amount),
+                'Currency' => static fn (Payment $p): string => $p->currency,
+                'Reference' => static fn (Payment $p): ?string => $p->reference,
+                'Voucher number' => static fn (Payment $p): string => VoucherNumber::format($p->voucher->voucher_number),
+                'Reason' => static fn (Payment $p): ?string => $p->reason,
+                'Staff' => static fn (Payment $p): ?string => $p->receiver?->name,
+                // A reload booked by mistake and reversed: the money was not kept.
+                'Reversed' => static fn (Payment $p): bool => $p->transaction?->isReversed() ?? false,
+            ],
+            'payments-'.$v['from'].'-'.$v['to'].'.csv',
+        );
+    }
+}

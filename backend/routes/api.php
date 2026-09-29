@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PresentmentController;
+use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\TransactionController;
@@ -112,6 +113,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('card-batches/{batch}/receipt', [CardController::class, 'receive'])->whereUuid('batch')->middleware(['can:cards.receive', 'throttle:voucher-operation']);
 
             Route::get('transactions/export', [TransactionController::class, 'export'])->middleware('can:transactions.export');
+            Route::get('reports/cash-up', [ReportController::class, 'cashUp'])->middleware('can:transactions.view');
+            Route::get('reports/payments/export', [ReportController::class, 'paymentsExport'])->middleware('can:transactions.export');
             Route::get('transactions', [TransactionController::class, 'index'])->middleware('can:transactions.view');
             Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->middleware('can:transactions.view');
             Route::post('transactions/{transaction}/reverse', [TransactionController::class, 'reverse'])->middleware('can:transactions.reverse');

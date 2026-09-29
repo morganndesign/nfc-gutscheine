@@ -298,6 +298,27 @@ export function useTransactions(filters: TransactionFilters) {
   })
 }
 
+export interface CashUp {
+  date: string
+  currency: string
+  methods: { method: PaymentMethod; received: number; paid_out: number; net: number; payments: number }[]
+  staff: { user: { id: string; name: string } | null; method: PaymentMethod; received: number; paid_out: number }[]
+  reversed_reloads: number
+  complimentary: number
+  total_received: number
+  total_paid_out: number
+  outstanding_end_of_day: number
+}
+
+/** The end-of-day cash-up of one local day. */
+export function useCashUp(date: string) {
+  return useQuery({
+    queryKey: ["cash-up", date],
+    queryFn: () => api<{ data: CashUp }>("/reports/cash-up", { query: { date } }),
+    select: (r) => r.data,
+  })
+}
+
 export function useReverseTransaction() {
   const qc = useQueryClient()
   return useMutation({
