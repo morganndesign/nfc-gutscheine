@@ -78,7 +78,7 @@ Das Kunstwort mit dem geringsten Markenrisiko und der Handlung im Namen: antippe
 |---|---|
 | Logo, Farben, Typografie | Bleiben. Das Logo-Konzept (Karte mit NFC-Bögen) ist namensunabhängig. |
 | Tarife Start, Pro, Gruppe | Bleiben. Das Problem „Pro Pro" entfällt. |
-| Domain und Karten-Link | **Kritisch:** Die Domain in `CARD_BASE_URL` steht auf jeder beschriebenen Karte. Der Name muss **vor** dem Druck der ersten Kundenkarten feststehen. Pilotkarten auf der Arbeitsdomain bleiben gültig, solange diese Domain weiter betrieben wird. |
+| Domain und Karten-Link | **Kritisch:** Die Domain in `TAP_URL` steht auf jeder beschriebenen Karte. Der Name muss **vor** dem Druck der ersten Kundenkarten feststehen. Pilotkarten auf der Arbeitsdomain bleiben gültig, solange diese Domain weiter betrieben wird. |
 | Texte und Unterlagen | Suchen und Ersetzen in allen Dokumenten, Oberfläche, E-Mail-Vorlagen, Rechtstexten. |
 | Firmenbuch, Impressum | Nur falls der Firmenname geändert wird. |
 

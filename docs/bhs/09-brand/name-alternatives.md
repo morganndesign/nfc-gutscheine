@@ -78,7 +78,7 @@ Izmišljena riječ s najmanjim rizikom za žig i s radnjom u nazivu: prisloniti.
 |---|---|
 | Logo, boje, tipografija | Ostaju. Koncept logotipa (kartica s NFC lukovima) ne zavisi od naziva. |
 | Paketi Start, Pro, Gruppe | Ostaju. Problem „Pro Pro" nestaje. |
-| Domen i link na kartici | **Kritično:** domen iz `CARD_BASE_URL` zapisan je na svakoj programiranoj kartici. Naziv mora biti odlučen **prije** štampe prvih kartica za klijente. Pilot kartice na radnom domenu ostaju važeće dok god taj domen radi. |
+| Domen i link na kartici | **Kritično:** domen iz `TAP_URL` zapisan je na svakoj programiranoj kartici. Naziv mora biti odlučen **prije** štampe prvih kartica za klijente. Pilot kartice na radnom domenu ostaju važeće dok god taj domen radi. |
 | Tekstovi i dokumenti | Pretraga i zamjena u svim dokumentima, sučelju, e-mail predlošcima, pravnim tekstovima. |
 | Sudski registar, impresum | Samo ako se mijenja naziv firme. |
 

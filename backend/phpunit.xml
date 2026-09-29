@@ -11,6 +11,9 @@
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>
+        <testsuite name="Stress">
+            <directory>tests/Stress</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>
@@ -30,10 +33,6 @@
         <env name="MAIL_VERIFY_DOMAINS" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
-        <env name="NTAG424_META_READ_KEY" value="0f1e2d3c4b5a69788796a5b4c3d2e1f0"/>
-        <env name="NTAG424_FILE_READ_KEY" value="f0e1d2c3b4a5968778695a4b3c2d1e0f"/>
-        <env name="NTAG424_DIVERSIFY_KEYS" value="true"/>
-        <env name="CARD_BASE_URL" value="https://app.giftcardpro.test"/>
         <env name="FRONTEND_URL" value="https://app.giftcardpro.test"/>
         <env name="LOG_CHANNEL" value="null"/>
         <env name="PULSE_ENABLED" value="false"/>

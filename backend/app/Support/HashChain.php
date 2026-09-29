@@ -8,6 +8,7 @@ use App\Models\Concerns\HashChained;
 use App\Models\Contracts\HashChainedRecord;
 use BackedEnum;
 use DateTimeInterface;
+use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use LogicException;
@@ -40,26 +41,26 @@ final class HashChain
         $chain = $model::chainName();
         $scope = self::scopeOf($model->getAttribute('restaurant_id'));
 
-        $connection->table('chain_heads')->insertOrIgnore([
-            'chain' => $chain,
-            'scope' => $scope,
-            'seq' => 0,
-            'head_hash' => self::GENESIS,
-            'updated_at' => Carbon::now(),
-        ]);
-
-        $head = $connection->table('chain_heads')
-            ->where('chain', $chain)
-            ->where('scope', $scope)
-            ->lockForUpdate()
-            ->first(['seq', 'head_hash']);
+        // Lock the head first. Only a chain's very first entry creates it: INSERT IGNORE on an existing row takes a
+        // shared lock, and two writers upgrading shared to exclusive deadlock each other (found by the MySQL stress test).
+        $head = $this->lockHead($connection, $chain, $scope);
+        if ($head === null) {
+            $connection->table('chain_heads')->insertOrIgnore([
+                'chain' => $chain,
+                'scope' => $scope,
+                'seq' => 0,
+                'head_hash' => self::GENESIS,
+                'updated_at' => Carbon::now(),
+            ]);
+            $head = $this->lockHead($connection, $chain, $scope);
+        }
 
         if ($head === null) {
             throw new LogicException("Chain head {$chain}/{$scope} is missing.");
         }
 
-        $seq = (int) $head->seq + 1;
-        $prev = (string) $head->head_hash;
+        $seq = $head['seq'] + 1;
+        $prev = $head['head_hash'];
 
         $model->setAttribute('chain_scope', $scope);
         $model->setAttribute('chain_seq', $seq);
@@ -70,6 +71,18 @@ final class HashChain
             ->where('chain', $chain)
             ->where('scope', $scope)
             ->update(['seq' => $seq, 'head_hash' => $model->getAttribute('entry_hash'), 'updated_at' => Carbon::now()]);
+    }
+
+    /** @return array{seq: int, head_hash: string}|null */
+    private function lockHead(ConnectionInterface $connection, string $chain, string $scope): ?array
+    {
+        $row = $connection->table('chain_heads')
+            ->where('chain', $chain)
+            ->where('scope', $scope)
+            ->lockForUpdate()
+            ->first(['seq', 'head_hash']);
+
+        return $row === null ? null : ['seq' => (int) $row->seq, 'head_hash' => (string) $row->head_hash];
     }
 
     public static function entryHash(Model&HashChainedRecord $model, string $chain, string $scope, int $seq, string $prev): string
