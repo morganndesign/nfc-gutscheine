@@ -157,9 +157,15 @@ configured at all.
 3. Resource → *Redeploy* (brings the app back up).
 4. *Terminal* → container **api** → `php artisan giftcard:verify-chains` (the restored chains and balances must verify).
 
-Test a restore once a month into a scratch database: in the backup container
-`mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE restore_test"`, restore into `restore_test`,
-check it, `DROP DATABASE restore_test`.
+**Restore drill** (once a month, and before the first real cards; nothing in production changes):
+1. Container **backup**:
+   `mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE restore_test; GRANT SELECT ON restore_test.* TO '<DB_USERNAME>'@'%'"`,
+   then `gunzip -c /backups/<newest>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" restore_test`.
+2. Container **api**: `DB_DATABASE=restore_test php artisan giftcard:verify-chains` → "All hash chains and voucher
+   balances are intact." (a one-off read-only command; the running services keep their database).
+3. Container **backup**: `mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE restore_test"`.
+Record date, dump file and result in the operations log. The same drill run on MySQL 8.4 with the demo data
+(2026-09-29): dump verified, 12 append-only triggers restored and enforcing, chains and balances intact.
 
 ## Operations
 
