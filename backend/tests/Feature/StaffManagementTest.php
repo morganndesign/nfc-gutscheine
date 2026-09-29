@@ -80,7 +80,7 @@ final class StaffManagementTest extends TestCase
         $token = null;
         Notification::assertSentTo($user, StaffInvitation::class, function (StaffInvitation $n) use ($user, &$token): bool {
             $url = $n->toMail($user)->actionUrl;
-            parse_str((string) parse_url($url, PHP_URL_QUERY), $query);
+            parse_str((string) parse_url($url, PHP_URL_FRAGMENT), $query);
             $token = $query['token'] ?? null;
 
             return ($query['invite'] ?? null) === '1';

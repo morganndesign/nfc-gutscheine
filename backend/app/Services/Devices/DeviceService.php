@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Services\Devices;
 
 use App\Enums\DeviceStatus;
+use App\Http\Middleware\TrackDevice;
 use App\Models\Device;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\AccessRevoker;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 
@@ -21,7 +23,10 @@ final class DeviceService
 {
     private const TOUCH_INTERVAL_SECONDS = 60;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly AccessRevoker $access,
+    ) {}
 
     /**
      * @param  string|null  $name  Name reported by a native app on first sign-in ("Pixel 7"); browsers get a name derived from the user agent.
@@ -68,6 +73,15 @@ final class DeviceService
         return $device;
     }
 
+    /** The registered device for this client id, without registering a new one. */
+    public function find(Restaurant $restaurant, string $deviceId): ?Device
+    {
+        /** @var Device|null */
+        return Device::query()->forRestaurant($restaurant)
+            ->where('fingerprint', hash('sha256', $restaurant->getKey().'|'.$deviceId))
+            ->first();
+    }
+
     /** @param array{name?: string, type?: string} $data */
     public function update(Actor $actor, Device $device, array $data): Device
     {
@@ -82,9 +96,20 @@ final class DeviceService
         return $device;
     }
 
+    /**
+     * A revoked device is locked out at once: its sessions (pinned to it), its waiter app tokens (bound to it)
+     * and the "remember me" cookies of the people who used it, which are rotated (audit S1). Remembered sign-ins
+     * are also bound to known devices ({@see TrackDevice}).
+     */
     public function revoke(Actor $actor, Device $device): Device
     {
         $device->forceFill(['status' => DeviceStatus::Revoked, 'revoked_at' => Carbon::now()])->save();
+
+        User::query()
+            ->whereKey(array_values(array_filter([$device->last_user_id, $device->registered_by])))
+            ->get()
+            ->each(fn (User $user) => $this->access->forgetRememberedBrowsers($user));
+
         $this->audit->log('device.revoked', $actor, $device, ['status' => DeviceStatus::Active], ['status' => DeviceStatus::Revoked]);
 
         return $device;

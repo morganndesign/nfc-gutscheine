@@ -54,8 +54,16 @@ final class AuthenticationTest extends TestCase
         }
 
         $this->assertTrue($user->refresh()->isLocked());
-        $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.9'])->login('luca@example.com')->assertStatus(423)->assertJsonPath('code', 'ACCOUNT_LOCKED');
+
+        // Audit S4: while locked, the right password gets exactly the answer of a wrong password or an unknown
+        // address, so the lockout cannot be used to confirm a guess or an account.
+        $locked = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.9'])->login('luca@example.com')->assertStatus(422);
+        $wrong = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.10'])->login('luca@example.com', 'nope')->assertStatus(422);
+        $unknown = $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.11'])->login('ghost@example.com', 'nope')->assertStatus(422);
+        $this->assertSame($unknown->json(), $locked->json());
+        $this->assertSame($unknown->json(), $wrong->json());
         $this->assertTrue(AuditLog::query()->where('action', 'auth.locked')->exists());
+        $this->assertTrue(AuditLog::query()->where('action', 'auth.locked_attempt')->exists());
     }
 
     public function test_login_is_rate_limited(): void

@@ -153,23 +153,30 @@ final class RestaurantController extends Controller
     }
 
     /**
-     * 200 when the e-mail went out; 422 INVITATION_NOT_DELIVERED when the mail server refused it or the
-     * platform only logs e-mails. Corrections are saved in every case; the admin can send it again.
+     * The invitation is sent from the queue (audit F3). 202 while it waits for the worker (the admin sees the
+     * delivery status in the user list), 200 when it already went out, 422 INVITATION_NOT_DELIVERED when the mail
+     * server refused it or the platform only logs e-mails. Corrections are saved in every case.
      */
     private function invitationResponse(User $user, NotificationLog $log): JsonResponse
     {
+        $log->refresh();
         $user->refresh()->load('role');
         $this->attachInvitations([$user]);
 
-        $status = $log->status === 'sent' ? 200 : 422;
+        $status = match ($log->status) {
+            'sent' => 200,
+            'queued' => 202,
+            default => 422,
+        };
 
         return response()->json(array_filter([
             'message' => match ($log->status) {
                 'sent' => "Invitation sent to {$user->email}.",
+                'queued' => "The invitation to {$user->email} is being sent.",
                 'logged' => $log->error,
                 default => "The invitation to {$user->email} could not be sent: {$log->error}",
             },
-            'code' => $status === 200 ? null : 'INVITATION_NOT_DELIVERED',
+            'code' => $status === 422 ? 'INVITATION_NOT_DELIVERED' : null,
             'data' => UserResource::make($user)->resolve(),
         ], static fn ($v): bool => $v !== null), $status);
     }

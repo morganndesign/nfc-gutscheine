@@ -20,6 +20,8 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Pinning matters for lost / stolen phones: after a manager revokes the device, a thief who keeps
  * the session cookie cannot simply send a fresh device id — the session is bound to the old one.
+ *
+ * Sign-ins restored from a "remember me" cookie are checked earlier, by BindRememberedSignIn.
  */
 final class TrackDevice
 {
@@ -59,6 +61,15 @@ final class TrackDevice
         return $next($request);
     }
 
+    private function signOut(Request $request): void
+    {
+        Auth::guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+    }
+
     private function pinSession(Request $request, ?string $deviceId): void
     {
         $session = $request->session();
@@ -74,9 +85,7 @@ final class TrackDevice
         }
 
         if (! is_string($fingerprint) || ! hash_equals((string) $pinned, $fingerprint)) {
-            Auth::guard('web')->logout();
-            $session->invalidate();
-            $session->regenerateToken();
+            $this->signOut($request);
 
             throw new AuthenticationException('This session belongs to another device. Please sign in again.');
         }

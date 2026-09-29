@@ -45,7 +45,7 @@ final class OwnerInvitationTest extends TestCase
     private function linkFrom(SentMessage $mail): string
     {
         $body = (string) $mail->getOriginalMessage()->getTextBody();
-        preg_match('~https://app\.example\.test/reset-password\?[^\s\]\)]+~', $body, $m);
+        preg_match('~https://app\.example\.test/reset-password#[^\s\]\)]+~', $body, $m);
         $this->assertNotEmpty($m, 'The invitation e-mail contains the password link.');
 
         return html_entity_decode($m[0]);
@@ -54,7 +54,7 @@ final class OwnerInvitationTest extends TestCase
     /** @return array{token: string, email: string, invite: string} */
     private function query(string $link): array
     {
-        parse_str((string) parse_url($link, PHP_URL_QUERY), $q);
+        parse_str((string) parse_url($link, PHP_URL_FRAGMENT), $q);
 
         /** @var array{token: string, email: string, invite: string} $q */
         return $q;

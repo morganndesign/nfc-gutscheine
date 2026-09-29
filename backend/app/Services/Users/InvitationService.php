@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Users;
 
 use App\Enums\RoleSlug;
+use App\Jobs\SendStaffInvitation;
 use App\Models\NotificationLog;
 use App\Models\Restaurant;
 use App\Models\SystemSetting;
@@ -32,6 +33,10 @@ final class InvitationService
     /** Mailers that accept a message without delivering it to the recipient. */
     private const NON_DELIVERING_MAILERS = ['log'];
 
+    /**
+     * Records the invitation and sends it from the queue. The returned log is `queued` until the worker has
+     * tried to deliver it (then `sent`, `logged` or `failed`).
+     */
     public function send(User $user, Restaurant $restaurant, ?string $invitedBy): NotificationLog
     {
         $log = NotificationLog::query()->create([
@@ -39,9 +44,17 @@ final class InvitationService
             'template_key' => self::TEMPLATE_KEY,
             'channel' => 'mail',
             'recipient' => $user->email,
-            'status' => 'pending',
+            'status' => 'queued',
         ]);
 
+        SendStaffInvitation::dispatch($user->getKey(), $restaurant->getKey(), $invitedBy, $log->getKey())->afterCommit();
+
+        return $log;
+    }
+
+    /** Creates a fresh single-use token (the previous one stops working) and sends the e-mail. Runs in the worker. */
+    public function deliver(User $user, Restaurant $restaurant, ?string $invitedBy, NotificationLog $log): void
+    {
         $support = SystemSetting::get('platform.support_email');
 
         try {
@@ -61,8 +74,6 @@ final class InvitationService
             report($e);
             $log->update(['status' => 'failed', 'error' => mb_substr($e->getMessage(), 0, 1000)]);
         }
-
-        return $log;
     }
 
     /**
@@ -99,7 +110,7 @@ final class InvitationService
      * Invitation state of each account, keyed by user id:
      *   status        accepted | pending | expired | not_sent
      *   expires_at    when the current link stops working (pending only)
-     *   last_sent_at, delivery (sent | logged | failed | pending), error   from the latest attempt
+     *   last_sent_at, delivery (queued | sent | logged | failed), error   from the latest attempt
      *
      * @param  iterable<User>  $users
      * @return array<string, array<string, mixed>>

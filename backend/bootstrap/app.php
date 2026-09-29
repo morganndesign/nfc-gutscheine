@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Exceptions\Domain\DomainException;
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\BindRememberedSignIn;
 use App\Http\Middleware\EnforceDeviceToken;
 use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Middleware\RequireTenant;
@@ -51,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.required' => RequireTenant::class,
             'device' => TrackDevice::class,
             'device.token' => EnforceDeviceToken::class,
+            'remembered' => BindRememberedSignIn::class,
             'idempotent' => RequireIdempotencyKey::class,
         ]);
 
@@ -60,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
             StartSession::class,
             EnsureFrontendRequestsAreStateful::class,
             AuthenticatesRequests::class,
+            BindRememberedSignIn::class,
             EnforceDeviceToken::class,
             ResolveTenant::class,
             RequireTenant::class,

@@ -73,7 +73,7 @@ final class InvitationEmailLocalizationTest extends TestCase
         $this->assertStringContainsString('Passwort festlegen', $html);
         $this->assertStringContainsString('gültig', $html);
         $this->assertStringContainsString('mailto:support@giftcardpro.at', $html);
-        $this->assertStringContainsString('https://app.example.test/reset-password?token=', $html);
+        $this->assertStringContainsString('https://app.example.test/reset-password#token=', $html);
         $this->assertStringContainsString('utf-8', strtolower((string) $mail->getHtmlCharset()));
 
         foreach (["If you're having trouble", 'Regards', 'Hello', 'Set your password', 'All rights reserved'] as $english) {

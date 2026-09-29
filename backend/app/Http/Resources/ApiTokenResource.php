@@ -31,6 +31,10 @@ final class ApiTokenResource extends JsonResource
                 'id' => $token->tokenable?->getKey(),
                 'name' => $token->tokenable?->getAttribute('name'),
             ]),
+            'kind' => $token->device_id !== null ? 'device' : 'integration',
+            'restaurant' => $this->whenLoaded('restaurant', static fn (): ?array => $token->restaurant !== null
+                ? ['id' => $token->restaurant->id, 'name' => $token->restaurant->name]
+                : null),
             'created_at' => $token->created_at?->toIso8601String(),
         ];
     }

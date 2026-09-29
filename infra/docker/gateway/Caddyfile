@@ -3,8 +3,8 @@
 #
 #   Internet ──HTTPS──▶ Coolify proxy (Traefik/Caddy, TLS certificates, domain)
 #            ──HTTP───▶ gateway:80 (this file)
-#                         ├─ /api/* /sanctum/* /up /reset-password/*  ─FastCGI─▶ api:9000 (Laravel, php-fpm)
-#                         └─ everything else                           ─HTTP────▶ web:3000 (Next.js)
+#                         ├─ /api/* /sanctum/* /up  ─FastCGI─▶ api:9000 (Laravel, php-fpm)
+#                         └─ everything else        ─HTTP────▶ web:3000 (Next.js)
 #
 # One origin for the whole product, so session cookies, CSRF and the waiter app's
 # API calls work exactly as designed. TLS is terminated by Coolify, not here.
@@ -17,6 +17,23 @@
 		# (scheme https, client IP) and pass them on to Laravel and Next.js.
 		trusted_proxies static private_ranges
 		client_ip_headers X-Forwarded-For X-Real-IP
+	}
+	# Caddy's own log (upstream errors also print the request): same redaction as the access log (audit L1).
+	log default {
+		output stderr
+		format filter {
+			wrap json
+			request>uri query {
+				delete token
+				delete email
+				delete e
+				delete m
+			}
+			request>headers>Cookie delete
+			request>headers>Authorization delete
+			request>headers>X-Device-Id delete
+			request>headers>Idempotency-Key delete
+		}
 	}
 }
 
@@ -35,9 +52,8 @@
 		respond "ok" 200
 	}
 
-	# Laravel: API, Sanctum CSRF cookie, health check (/up checks database + cache),
-	# password-reset redirect.
-	@laravel path /api/* /sanctum/* /up /reset-password/*
+	# Laravel: API, Sanctum CSRF cookie, health check (/up checks database + cache).
+	@laravel path /api/* /sanctum/* /up
 	handle @laravel {
 		# The API has no static files: every request goes to Laravel's front controller.
 		# REQUEST_URI keeps the original path and query, so Laravel routing works unchanged.
@@ -54,8 +70,24 @@
 		reverse_proxy {$WEB_UPSTREAM:web:3000}
 	}
 
+	# Access log without secrets (audit L1). Invitation and reset links carry their token in the URL fragment,
+	# which browsers never send; query parameters that could still carry personal data or card SUN values are
+	# removed anyway, and credentials in headers are never logged. Rotation: docker-compose logging options.
 	log {
 		output stdout
-		format json
+		format filter {
+			wrap json
+			request>uri query {
+				delete token
+				delete email
+				delete e
+				delete m
+			}
+			request>headers>Cookie delete
+			request>headers>Authorization delete
+			request>headers>X-Device-Id delete
+			request>headers>Idempotency-Key delete
+			resp_headers>Set-Cookie delete
+		}
 	}
 }

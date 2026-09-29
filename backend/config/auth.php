@@ -103,9 +103,10 @@ return [
             'throttle' => 60,
         ],
         // Invitations of new staff: the link stays valid for 72 hours (they may open it next day).
+        // Own table: a "forgot password" request can never replace or invalidate an invitation (audit S6).
         'invitations' => [
             'provider' => 'users',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+            'table' => 'invitation_tokens',
             'expire' => 60 * 72,
             'throttle' => 0,
         ],

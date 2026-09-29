@@ -25,6 +25,11 @@ final class ApiTokenService
      */
     public function create(Actor $actor, User $user, string $name, array $abilities, ?Carbon $expiresAt): NewAccessToken
     {
+        // Audit S2: a platform administrator's token would be a long-lived credential across every restaurant.
+        if ($user->isPlatformAdmin() || $user->restaurant_id === null) {
+            throw new RoleAssignmentException('Integration tokens belong to a restaurant. Platform administrators cannot create them.');
+        }
+
         $allowed = $user->role->permissionSlugs();
         $invalid = array_diff($abilities, $allowed);
         if ($invalid !== []) {

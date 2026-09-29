@@ -22,7 +22,7 @@
 #     ${VAR:?message}: if one is empty (gateway without a domain, or the file started
 #     with plain `docker compose` instead of by Coolify) Compose stops before creating
 #     any container, with the message, instead of starting MySQL/Laravel without them.
-# Optional settings (mail, keys, …): Coolify → Environment Variables. Reference list:
+# Optional settings (mail, limits, …): Coolify → Environment Variables. Reference list:
 # .env.production.example. Full instructions: docs/DEPLOYMENT.md.
 # =============================================================================
 
@@ -33,6 +33,12 @@ services:
       context: ./infra/docker/gateway
       dockerfile: ${GATEWAY_DOCKERFILE:-Dockerfile}
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       # Coolify routes the domain configured for this service to container port 80.
       SERVICE_URL_GATEWAY_80: ""
@@ -53,6 +59,12 @@ services:
       dockerfile: ${LARAVEL_DOCKERFILE:-backend/Dockerfile}
       target: production
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       CONTAINER_ROLE: app
       APP_NAME: "GiftCard Pro"
@@ -92,6 +104,7 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
       MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
@@ -118,6 +131,12 @@ services:
       dockerfile: ${LARAVEL_DOCKERFILE:-backend/Dockerfile}
       target: production
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     command: ["php", "artisan", "queue:work", "redis", "--queue=default,notifications", "--sleep=1", "--tries=5", "--max-time=3600", "--max-jobs=1000"]
     stop_grace_period: 60s
     environment:
@@ -159,6 +178,7 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
       MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
@@ -185,6 +205,12 @@ services:
       dockerfile: ${LARAVEL_DOCKERFILE:-backend/Dockerfile}
       target: production
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     command: ["php", "artisan", "schedule:work"]
     environment:
       CONTAINER_ROLE: scheduler
@@ -225,6 +251,7 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
       MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
       MAIL_PORT: ${MAIL_PORT:-587}
@@ -250,6 +277,12 @@ services:
       context: ./dashboard
       dockerfile: ${WEB_DOCKERFILE:-Dockerfile}
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     environment:
       NODE_ENV: production
       WAITER_IOS_APP_IDS: ${WAITER_IOS_APP_IDS:-}
@@ -266,6 +299,12 @@ services:
   mysql:
     image: mysql:8.4
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
@@ -292,6 +331,12 @@ services:
   redis:
     image: redis:7.4-alpine
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     command: ["sh", "-c", "exec redis-server --appendonly yes --maxmemory-policy noeviction --requirepass \"$$REDIS_PASSWORD\""]
     environment:
       REDIS_PASSWORD: ${SERVICE_PASSWORD_REDIS:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
@@ -308,6 +353,12 @@ services:
   backup:
     image: mysql:8.4
     restart: unless-stopped
+    # Bounded logs on the host (audit L1): Docker's default json-file driver never rotates.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     entrypoint: ["sh", "-c"]
     command:
       - |

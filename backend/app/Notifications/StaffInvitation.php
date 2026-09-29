@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Jobs\SendStaffInvitation;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -13,7 +14,8 @@ use Illuminate\Support\Str;
  * Invitation e-mail for a new account: restaurant owner (created by the platform) or staff (created by the
  * restaurant). All wording lives in lang/<locale>/invitation.php; the button fallback line and the footer come
  * from lang/<locale>.json (Laravel's notification template). The language is chosen by InvitationService via
- * Notification::locale(). Sent synchronously; the outcome is recorded in notification_logs.
+ * Notification::locale(). Sent from the queue ({@see SendStaffInvitation}); the outcome is recorded
+ * in notification_logs.
  */
 final class StaffInvitation extends Notification
 {
@@ -38,7 +40,9 @@ final class StaffInvitation extends Notification
 
     public function toMail(User $notifiable): MailMessage
     {
-        $url = config('giftcard.frontend_url').'/reset-password?'.http_build_query([
+        // Token in the URL fragment: browsers never send it to a server, so it cannot end up in access logs,
+        // proxies or Referer headers (audit L1).
+        $url = config('giftcard.frontend_url').'/reset-password#'.http_build_query([
             'token' => $this->token,
             'email' => $notifiable->email,
             'invite' => 1,

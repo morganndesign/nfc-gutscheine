@@ -8,6 +8,7 @@ use App\Enums\RoleSlug;
 use App\Enums\UserStatus;
 use App\Exceptions\Domain\InvalidVoucherStateException;
 use App\Exceptions\Domain\RoleAssignmentException;
+use App\Jobs\SendPasswordResetLink;
 use App\Models\Restaurant;
 use App\Models\Role;
 use App\Models\User;
@@ -138,11 +139,11 @@ final class UserService
             $user->forceFill([
                 'password' => Hash::make($newPassword),
                 'password_changed_at' => Carbon::now(),
-                'remember_token' => Str::random(60),
             ])->save();
 
-            // Other browser sessions are signed out by Sanctum's AuthenticateSession middleware, which
-            // compares the password hash stored in each session with the new one (works for every session driver).
+            // Other browser sessions are signed out by Sanctum's AuthenticateSession middleware, which compares the
+            // password hash stored in each session with the new one; tokens and remembered browsers are revoked by
+            // the caller (AccessRevoker).
             $this->audit->log('user.password_changed', $actor, $user);
         });
     }
@@ -161,7 +162,7 @@ final class UserService
             return;
         }
 
-        Password::broker()->sendResetLink(['email' => $user->email]);
+        SendPasswordResetLink::dispatch($user->email);
         $this->audit->log('user.password_reset_sent', $actor, $user);
     }
 

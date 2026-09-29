@@ -186,9 +186,9 @@ final class WaiterAppTokenTest extends TestCase
         $this->signIn('anna@example.com', ['password' => 'wrong'])->assertStatus(422)->assertJsonPath('code', 'VALIDATION_FAILED');
         $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.2'])->signIn('anna@example.com', ['password' => 'wrong']);
         $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.3'])->signIn('anna@example.com')
-            ->assertStatus(423)
-            ->assertJsonPath('code', 'ACCOUNT_LOCKED')
-            ->assertJsonPath('context.retry_after', fn (int $s): bool => $s > 0);
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'VALIDATION_FAILED');
+        $this->assertSame(0, PersonalAccessToken::query()->count());
 
         $this->signIn('anna@example.com', ['device_id' => 'short', 'platform' => 'windows'])
             ->assertStatus(422)->assertJsonValidationErrors(['device_id', 'platform']);

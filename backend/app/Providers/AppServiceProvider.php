@@ -86,9 +86,14 @@ final class AppServiceProvider extends ServiceProvider
 
             $user = $token->tokenable;
 
+            // Platform administrators never authenticate with a token (audit S2), only with a session.
+            if (! $user instanceof User || $user->isPlatformAdmin()) {
+                return false;
+            }
+
             // Waiter app tokens of a deactivated account still identify the caller, so EnforceDeviceToken can answer
             // 401 ACCOUNT_DEACTIVATED instead of a generic 401; permissions stay denied (Gate checks isActive()).
-            return $user instanceof User && ($user->isActive() || $token->device_id !== null);
+            return $user->isActive() || $token->device_id !== null;
         });
     }
 
@@ -141,7 +146,8 @@ final class AppServiceProvider extends ServiceProvider
             ? Password::min(12)->mixedCase()->numbers()->uncompromised()
             : Password::min(10)->mixedCase()->numbers());
 
+        // Token in the URL fragment: never sent to a server, so never in an access log or Referer (audit L1).
         ResetPassword::createUrlUsing(static fn (User $user, string $token): string => config('giftcard.frontend_url')
-            .'/reset-password?token='.urlencode($token).'&email='.urlencode($user->email));
+            .'/reset-password#'.http_build_query(['token' => $token, 'email' => $user->email]));
     }
 }

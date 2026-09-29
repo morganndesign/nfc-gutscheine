@@ -6,7 +6,6 @@ namespace App\Services\Auth;
 
 use App\Enums\RoleSlug;
 use App\Exceptions\Domain\AccountDeactivatedException;
-use App\Exceptions\Domain\AccountLockedException;
 use App\Exceptions\Domain\RestaurantSuspendedException;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
@@ -38,18 +37,22 @@ final class CredentialVerifier
         /** @var User|null $user */
         $user = User::query()->with(['role', 'restaurant'])->where('email', Str::lower($email))->first();
 
-        if ($user !== null && $user->isLocked()) {
-            throw new AccountLockedException((int) max(1, Carbon::now()->diffInSeconds($user->locked_until, true)));
-        }
-
+        // Always hash, and answer a locked account exactly like a wrong password: neither the response nor its
+        // timing may reveal whether the account exists, is locked, or whether a guess was right (audit S4).
         $valid = Hash::check($password, $user->password ?? self::DUMMY_HASH);
+
+        if ($user !== null && $user->isLocked()) {
+            $this->audit->log('auth.locked_attempt', $this->actor($request), $user, restaurantId: $user->restaurant_id);
+
+            throw $this->failed();
+        }
 
         if ($user === null || ! $valid) {
             if ($user !== null) {
                 $this->registerFailure($user, $request);
             }
 
-            throw ValidationException::withMessages(['email' => __('auth.failed')]);
+            throw $this->failed();
         }
 
         if (! $user->isActive()) {
@@ -75,6 +78,16 @@ final class CredentialVerifier
         return $user;
     }
 
+    private function failed(): ValidationException
+    {
+        return ValidationException::withMessages(['email' => 'The e-mail address or password is incorrect. After too many attempts the account is locked for a few minutes.']);
+    }
+
+    private function actor(Request $request): Actor
+    {
+        return new Actor(null, null, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'));
+    }
+
     private function registerFailure(User $user, Request $request): void
     {
         $threshold = (int) config('giftcard.security.login_lockout_threshold');
@@ -90,7 +103,7 @@ final class CredentialVerifier
 
         $this->audit->log(
             $attempts >= $threshold ? 'auth.locked' : 'auth.failed',
-            new Actor(null, null, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id')),
+            $this->actor($request),
             $user,
             metadata: ['attempts' => $attempts],
             restaurantId: $user->restaurant_id,

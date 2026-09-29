@@ -9,8 +9,10 @@ use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
 use App\Http\Requests\Auth\ResetPasswordRequest;
 use App\Http\Requests\Auth\UpdateProfileRequest;
+use App\Jobs\SendPasswordResetLink;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\AccessRevoker;
 use App\Services\Users\UserService;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
@@ -24,13 +26,18 @@ final class PasswordController extends Controller
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly UserService $users,
+        private readonly AccessRevoker $access,
     ) {}
+
+    /** The same answer for every failure, so the endpoint reveals neither accounts nor token state (audit S5). */
+    private const INVALID_LINK = 'This link is invalid or has expired. Please request a new one.';
 
     public function forgot(ForgotPasswordRequest $request): JsonResponse
     {
-        Password::broker()->sendResetLink(['email' => Str::lower((string) $request->validated('email'))]);
+        // Sent from the queue: the answer is immediate and identical for every address, and a slow or failing mail
+        // server can never delay it or turn it into an error (audit S5, F3, F3b).
+        SendPasswordResetLink::dispatch(Str::lower((string) $request->validated('email')));
 
-        // Always the same answer, so the endpoint cannot be used to enumerate accounts.
         return response()->json(['message' => 'If an account exists for this address, a password reset link has been sent.']);
     }
 
@@ -51,7 +58,6 @@ final class PasswordController extends Controller
             function (User $user, string $password) use ($request, $broker): void {
                 $user->forceFill([
                     'password' => $password,
-                    'remember_token' => Str::random(60),
                     'password_changed_at' => Carbon::now(),
                     'failed_login_attempts' => 0,
                     'locked_until' => null,
@@ -59,17 +65,21 @@ final class PasswordController extends Controller
                 ])->save();
 
                 // Choosing the first password activates an invited account.
+                $actor = new Actor($user, null, $request->ip(), (string) $request->userAgent());
                 $this->audit->log(
                     $broker === 'invitations' ? 'user.invitation_accepted' : 'auth.password_reset',
-                    new Actor($user, null, $request->ip(), (string) $request->userAgent()),
+                    $actor,
                     $user,
                     restaurantId: $user->restaurant_id,
                 );
+
+                // "My account may be compromised → reset the password" must lock the attacker out (audit S3).
+                $this->access->revokeEverywhere($user, $actor, $broker === 'invitations' ? 'invitation_accepted' : 'password_reset');
             },
         );
 
         if ($status !== Password::PASSWORD_RESET) {
-            throw ValidationException::withMessages(['email' => __($status)]);
+            throw ValidationException::withMessages(['email' => self::INVALID_LINK]);
         }
 
         return response()->json(['message' => __($status)]);
@@ -78,7 +88,9 @@ final class PasswordController extends Controller
     public function change(ChangePasswordRequest $request): JsonResponse
     {
         $user = $this->user($request);
-        $this->users->changePassword(Actor::fromRequest($request), $user, (string) $request->validated('password'));
+        $actor = Actor::fromRequest($request);
+        $this->users->changePassword($actor, $user, (string) $request->validated('password'));
+        $this->access->revokeEverywhere($user, $actor, 'password_changed');
 
         if ($request->hasSession()) {
             $request->session()->regenerate();

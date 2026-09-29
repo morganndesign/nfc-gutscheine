@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\Admin\ApiTokenController as AdminApiTokenController;
 use App\Http\Controllers\Api\V1\Admin\PlatformController;
 use App\Http\Controllers\Api\V1\Admin\RestaurantController;
 use App\Http\Controllers\Api\V1\ApiTokenController;
@@ -44,7 +45,7 @@ Route::prefix('v1')->group(function (): void {
     });
 
     // ---------------------------------------------------------- authenticated
-    Route::middleware(['auth:sanctum', 'device.token', 'tenant', 'throttle:api'])->group(function (): void {
+    Route::middleware(['auth:sanctum', 'remembered', 'device.token', 'tenant', 'throttle:api'])->group(function (): void {
         Route::prefix('auth')->group(function (): void {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
@@ -141,6 +142,9 @@ Route::prefix('v1')->group(function (): void {
             Route::post('restaurants/{restaurant}/invitation', [RestaurantController::class, 'resendOwnerInvitation']);
             Route::post('restaurants/{restaurant}/users/{user}/invitation', [RestaurantController::class, 'resendUserInvitation']);
             Route::get('audit-logs', [PlatformController::class, 'auditLogs'])->middleware('can:platform.audit.view');
+            // Incident response: list and revoke any restaurant's access tokens (audit S2).
+            Route::get('api-tokens', [AdminApiTokenController::class, 'index']);
+            Route::post('api-tokens/{token}/revoke', [AdminApiTokenController::class, 'revoke'])->whereUuid('token');
             Route::get('system-settings', [PlatformController::class, 'settings'])->middleware('can:platform.settings.manage');
             Route::put('system-settings', [PlatformController::class, 'updateSettings'])->middleware('can:platform.settings.manage');
             Route::get('mail', [PlatformController::class, 'mailStatus'])->middleware('can:platform.settings.manage');
