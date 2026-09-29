@@ -148,7 +148,13 @@ enum WaiterIcon {
   store('ic_store'),
 
   /// Account.
-  user('ic_user');
+  user('ic_user'),
+
+  /// Print the sold voucher (S20).
+  printer('ic_printer'),
+
+  /// Voucher: "Sell voucher" (S05, S20).
+  ticket('ic_ticket');
 
   const WaiterIcon(this.fileName);
 

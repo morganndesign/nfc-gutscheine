@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
@@ -16,15 +15,12 @@ import 'app_scope.dart';
 import 'session_sheet_host.dart';
 
 /// Root widget: theme, localisation, feedback and snackbar hosts, and the
-/// platform coordination that follows the app state — Android reader mode,
-/// keep-screen-on, lifecycle and incoming card links (09 §7).
+/// platform coordination that follows the app state — keep-screen-on and
+/// lifecycle (09 §7).
 class WaiterApp extends StatefulWidget {
-  const WaiterApp({required this.services, this.appLinks, super.key});
+  const WaiterApp({required this.services, super.key});
 
   final AppServices services;
-
-  /// Injected in tests; the real plugin otherwise.
-  final AppLinks? appLinks;
 
   @override
   State<WaiterApp> createState() => _WaiterAppState();
@@ -35,9 +31,7 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
 
   late final WaiterRouterDelegate _router = WaiterRouterDelegate(_s);
   bool _resumed = true;
-  bool? _readerMode;
   bool? _awake;
-  StreamSubscription<Uri>? _links;
 
   @override
   void initState() {
@@ -45,13 +39,7 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     final Listenable state = Listenable.merge(<Listenable>[_s.session, _s.loop, _s.settings]);
     state.addListener(_coordinate);
-    unawaited(_listenForLinks());
     unawaited(_s.session.start());
-  }
-
-  Future<void> _listenForLinks() async {
-    final AppLinks links = widget.appLinks ?? AppLinks();
-    _links = links.uriLinkStream.listen((Uri uri) => _s.loop.openLink(uri.toString()));
   }
 
   @override
@@ -60,7 +48,6 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
       case AppLifecycleState.resumed:
         _resumed = true;
         unawaited(_s.session.onForeground());
-        unawaited(_s.loop.refreshNfcAvailability());
       case AppLifecycleState.hidden || AppLifecycleState.paused:
         if (_resumed) _s.session.onBackground();
         _resumed = false;
@@ -70,13 +57,8 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
     _coordinate();
   }
 
-  /// Reader mode (02 §4.5.2) and keep-awake (09 §7.7) follow the state.
+  /// Keep-awake (09 §7.7) follows the state.
   void _coordinate() {
-    final bool reader = _resumed && _s.loop.wantsReaderMode;
-    if (reader != _readerMode) {
-      _readerMode = reader;
-      unawaited(_s.nfc.setReaderMode(enabled: reader).catchError((Object e) => _s.log.record('nfc.readerMode', '$e')));
-    }
     final bool awake =
         _resumed && _s.settings.keepScreenOn && _s.session.phase == AccessPhase.active && _s.loop.wantsKeepAwake;
     if (awake != _awake) {
@@ -88,7 +70,6 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    unawaited(_links?.cancel());
     _router.dispose();
     super.dispose();
   }

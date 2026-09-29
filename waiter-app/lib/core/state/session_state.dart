@@ -17,7 +17,7 @@ enum AccessPhase {
 }
 
 /// S15 full-screen variants (09 §5 `blocked/{variant}`).
-enum BlockedKind { forbidden, deviceRevoked, suspended, locked, deactivated }
+enum BlockedKind { forbidden, deviceRevoked, suspended, deactivated }
 
 /// Where the 401 happened decides where the waiter returns after signing in
 /// again (A01): lookup context → S05, redeem context → S07 with amount kept.

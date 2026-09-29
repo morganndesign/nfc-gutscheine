@@ -4,7 +4,7 @@ import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 
-import '../core/api/models.dart' show CardStatus;
+import '../core/api/models.dart' show VoucherStatus;
 import '../core/format/format.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -65,11 +65,11 @@ class BalanceCardData {
   /// Balance in cents.
   final int balanceCents;
 
-  /// Last four digits of the card number.
+  /// Last four digits of the voucher number.
   final String last4;
 
-  /// API status.
-  final CardStatus status;
+  /// Stored status (expired also when the date has passed).
+  final VoucherStatus status;
 
   /// Expiry date (restaurant-local), `null` = no expiry.
   final CalendarDate? expiresAt;
@@ -77,20 +77,19 @@ class BalanceCardData {
   /// Restaurant `brand_color` (`#RRGGBB`), `null` = `color.brand.ink`.
   final String? brandColor;
 
-  /// The badge shown on the card: none for an active card with a balance;
-  /// `redeemed` for a zero balance (05 §3.1 states).
-  CardStatus? get badge {
-    if (status == CardStatus.active) {
-      return balanceCents == 0 ? CardStatus.redeemed : null;
-    }
-    return status;
-  }
+  /// The badge shown on the card: none for an active voucher with a balance;
+  /// "used up" for a zero balance (05 §3.1 states).
+  BadgeStatus? get badge => switch (status) {
+    VoucherStatus.active => balanceCents == 0 ? BadgeStatus.usedUp : null,
+    VoucherStatus.blocked => BadgeStatus.blocked,
+    VoucherStatus.expired => BadgeStatus.expired,
+  };
 
-  /// Blocked, expired and replaced render 40 % desaturated.
-  bool get desaturated => isDesaturatedCardStatus(status.name);
+  /// Blocked and expired render 40 % desaturated.
+  bool get desaturated => isDesaturatedVoucherStatus(status.name);
 
-  /// The card's one accessibility label (05 §3.1, 07 §5.1): "Gift card
-  /// {restaurant}. Balance {spoken}. Card ending {6 4 8 8}. Valid until
+  /// The card's one accessibility label (05 §3.1, 07 §5.1): "Voucher
+  /// {restaurant}. Balance {spoken}. Voucher ending {6 4 8 8}. Valid until
   /// {long date}. {Status}."
   String semanticsLabel(AppLocalizations l10n, MoneyContext money) {
     final StringBuffer label = StringBuffer(
@@ -109,7 +108,7 @@ class BalanceCardData {
             : l10n.balanceCardValidUntil(money.longDate(expiry)),
       )
       ..write('.');
-    final CardStatus? status = badge;
+    final BadgeStatus? status = badge;
     if (status != null) label.write(' ${statusBadgeLabel(l10n, status)}.');
     return label.toString();
   }
@@ -139,7 +138,7 @@ class BalanceCardData {
 ///
 /// - Fill: `brand_color` with a 6 % sheen (flat in high contrast), text
 ///   colour and contrast fallback from `resolveBrandCardColors`; blocked,
-///   expired and replaced are 40 % desaturated; light theme glow
+///   expired are 40 % desaturated; light theme glow
 ///   `elev.card-brand` (`elev.2` when desaturated), dark theme a 1-px
 ///   `color.card.borderDark` outline. Continuous corners on iOS.
 /// - [data] `null` shows the card skeleton (brand colour known from the
@@ -431,7 +430,7 @@ class _CardFace extends StatelessWidget {
       SchedulerBinding.instance.addPostFrameCallback((_) => fallback());
     }
     final bool compact = density == BalanceCardDensity.compact;
-    final CardStatus? badgeStatus = data.badge;
+    final BadgeStatus? badgeStatus = data.badge;
     final Widget? badge = badgeStatus == null
         ? null
         : StatusBadge(status: badgeStatus, cardOutline: colors.badgeOutline);

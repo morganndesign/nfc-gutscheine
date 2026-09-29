@@ -51,7 +51,6 @@ const Map<String, String> lprojLanguage = <String, String>{
 
 /// §5.21 spec key → Info.plist key (09 §7.3).
 const Map<String, String> infoPlistKeyOf = <String, String>{
-  'nfc.purpose': 'NFCReaderUsageDescription',
   'camera.purpose': 'NSCameraUsageDescription',
   'faceId.purpose': 'NSFaceIDUsageDescription',
 };

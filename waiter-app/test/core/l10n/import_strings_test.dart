@@ -23,12 +23,11 @@ String doc(List<String> rows, {int? count, String aliasRow = ''}) {
   out
     ..writeln('\n### 5.21 OS usage strings\n')
     ..writeln('| Key | DE | EN | BHS | Notes |\n|---|---|---|---|---|')
-    ..writeln('| `nfc.purpose` | NFC DE. | NFC EN. | NFC BHS. | 03a |')
-    ..writeln('| `camera.purpose` | Kamera. | Camera. | Kamera. | 03a |')
+    ..writeln('| `camera.purpose` | Kamera DE. | Camera EN. | Kamera BHS. | 03a |')
     ..writeln(
       '| `faceId.purpose` | Face ID. | Face ID EN. | Face ID BHS. | 12 |',
     );
-  total += 3;
+  total += 2;
   out
     ..writeln('\n### 5.22 Key count and alias register\n')
     ..writeln('The table holds **${count ?? total} keys** (§5.1–5.21).\n')
@@ -73,7 +72,7 @@ void main() {
     expect(en, contains('"type": "int"'));
     expect(
       out['ios/Runner/de.lproj/InfoPlist.strings'],
-      contains('"NFCReaderUsageDescription" = "NFC DE.";'),
+      contains('"NSCameraUsageDescription" = "Kamera DE.";'),
     );
     expect(
       out['lib/core/l10n/pseudo_app_localizations.g.dart'],
@@ -185,10 +184,10 @@ void main() {
       expect(
         buildOutputs(
           doc(
-            <String>['| `qr.manual` | A | B | C | 12 | 12 |'],
+            <String>['| `camera.denied.action` | A | B | C | 12 | 12 |'],
             aliasRow:
-                '| `qr.manual` (03a) — kept as its own key, same text '
-                'as | `s2.key` |',
+                '| `camera.denied.action` (03a) — kept as its own key, same '
+                'text as | `s2.key` |',
           ),
         ),
         isNotEmpty,

@@ -1,13 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- NFC is a normal permission (no prompt, 09 §7.1). -->
-    <uses-permission android:name="android.permission.NFC" />
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- Tablets without NFC and devices without a camera must still install
-         (QR / manual entry, 09 §7.1, 08 §5). -->
-    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <!-- Devices without a camera still install: they sell vouchers and show Recent. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
@@ -39,8 +35,7 @@
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
-            <!-- Links reach Dart only through app_links; Flutter's own deep linking would
-                 additionally push the link path as a Navigator route. -->
+            <!-- The app opens no links: Flutter's deep linking stays off. -->
             <meta-data
                 android:name="flutter_deeplinking_enabled"
                 android:value="false" />
@@ -48,30 +43,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-
-            <!-- Background taps (09 §7.1): a card tapped while the app is not in the
-                 foreground opens the app WITH the tag. MainActivity turns the tag into
-                 a normal NFC `tag` event and strips the URI from the intent so the
-                 app_links plugin does not report it a second time as a link. -->
-            <intent-filter>
-                <action android:name="android.nfc.action.NDEF_DISCOVERED" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <data
-                    android:scheme="https"
-                    android:host="${cardHost}"
-                    android:pathPrefix="/c/" />
-            </intent-filter>
-
-            <!-- App Links for QR codes and links (09 §7.4); delivered to Dart by app_links. -->
-            <intent-filter android:autoVerify="true">
-                <action android:name="android.intent.action.VIEW" />
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="https"
-                    android:host="${cardHost}"
-                    android:pathPrefix="/c/" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

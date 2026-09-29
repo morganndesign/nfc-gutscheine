@@ -27,7 +27,6 @@ class SettingsStore extends ChangeNotifier {
   static const String _introDone = 'intro_done';
   static const String _installed = 'installed';
   static const String _lastEmail = 'last_email';
-  static const String _firstReadDay = 'first_read_day';
   static const String _apiServer = 'api_server_override';
   static const String _sessionServer = 'session_server';
 
@@ -67,14 +66,6 @@ class SettingsStore extends ChangeNotifier {
   String? get lastEmail => _prefs.getString(_lastEmail);
   set lastEmail(String? value) =>
       _set(() => value == null ? _prefs.remove(_lastEmail) : _prefs.setString(_lastEmail, value));
-
-  /// Business day of the first successful card read on this device (V8
-  /// first-card tip, 03a S05).
-  String? get firstReadDay => _prefs.getString(_firstReadDay);
-  set firstReadDay(String? value) {
-    if (value == firstReadDay) return;
-    _set(() => value == null ? _prefs.remove(_firstReadDay) : _prefs.setString(_firstReadDay, value));
-  }
 
   /// Server address chosen in a development or staging build (never read in
   /// production builds). Null = the address compiled into the build.

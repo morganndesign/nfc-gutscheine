@@ -19,23 +19,14 @@ const double _headerHeight = 72;
 
 /// S14 · Menu (03a §9): account, restaurant, device, appearance, sounds,
 /// haptics, keep screen on, sign out and version. Deliberately short —
-/// nothing here affects cards or money. Android reader mode is paused while
-/// it is open (09 §5).
-Future<void> showMenuSheet(BuildContext context) async {
-  final AppServices services = context.services;
-  services.loop.setSheetOpen(true);
-  try {
-    await showWaiterSheet<void>(
-      context: context,
-      title: AppLocalizations.of(context).menuAccount,
-      edgeToEdge: true,
-      barrierLabel: AppLocalizations.of(context).menuClose,
-      builder: (BuildContext sheetContext) => const _MenuBody(),
-    );
-  } finally {
-    services.loop.setSheetOpen(false);
-  }
-}
+/// nothing here affects vouchers or money (09 §5).
+Future<void> showMenuSheet(BuildContext context) => showWaiterSheet<void>(
+  context: context,
+  title: AppLocalizations.of(context).menuAccount,
+  edgeToEdge: true,
+  barrierLabel: AppLocalizations.of(context).menuClose,
+  builder: (BuildContext sheetContext) => const _MenuBody(),
+);
 
 class _MenuBody extends StatefulWidget {
   const _MenuBody();

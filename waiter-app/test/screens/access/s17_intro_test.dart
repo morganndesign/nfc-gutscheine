@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/session_state.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
@@ -18,16 +17,11 @@ import 'access_support.dart';
 Future<TestApp> _openIntro(
   WidgetTester tester, {
   bool isIos = false,
-  bool noNfc = false,
   Locale locale = const Locale('en'),
   Size size = const Size(393, 852),
   Map<String, Object> prefs = const <String, Object>{},
 }) async {
   final TestApp app = await TestApp.create(signedIn: false, introDone: false, isIos: isIos, prefs: prefs);
-  if (noNfc) {
-    app.nfc.value = NfcAvailability.unsupported;
-    unawaited(app.loop.refreshNfcAvailability());
-  }
   app.backend
     ..on('POST', '/auth/token', FakeReply(201, Payloads.token()))
     ..on('GET', '/auth/me', meReply());
@@ -43,6 +37,12 @@ Future<TestApp> _openIntro(
 
 Finder get _button => find.byType(PrimaryButton);
 
+/// Card 1's `scan-qr-code` icon (no illustration).
+Finder get _qrIcon => find.byWidgetPredicate((Widget w) => w is WaiterIconView && w.icon == WaiterIcon.scanQrCode);
+
+/// The square slot card 1's icon sits in (160 pt, 120 pt compact).
+Finder get _slot => find.ancestor(of: _qrIcon, matching: find.byType(SizedBox)).first;
+
 String _label(WidgetTester tester) => tester.widget<PrimaryButton>(_button).label;
 
 int _haptics(TestApp app) => app.feedbackCalls.where((MethodCall c) => c.method == 'haptic').length;
@@ -53,23 +53,27 @@ Future<void> _next(WidgetTester tester) async {
 }
 
 void main() {
-  testWidgets('Android: three cards, Next → Next → Start', (WidgetTester tester) async {
+  testWidgets('three cards, Next → Next → Start', (WidgetTester tester) async {
     final TestApp app = await _openIntro(tester);
 
     // The "shown" flag is written as soon as card 1 renders.
     expect(app.services.settings.introDone, isTrue);
     expect(app.session.phase, AccessPhase.onboardingIntro);
-    expect(text(en.intro1TitleAndroid), findsOneWidget);
-    expect(text(en.intro1BodyAndroid), findsOneWidget);
+    expect(text(en.intro1Title), findsOneWidget);
+    expect(text(en.intro1Body), findsOneWidget);
     expect(text(en.introSkip), findsOneWidget);
     expect(_label(tester), en.introNext);
-    expect(tester.widget<IllustrationView>(find.byType(IllustrationView)).illustration, WaiterIllustration.introTap);
-    expect(tester.getSize(find.byType(IllustrationView)), const Size(160, 160));
+    expect(find.byType(IllustrationView), findsNothing, reason: 'card 1 has the scan-QR icon, no illustration');
+    expect(_qrIcon, findsOneWidget);
+    expect(tester.widget<WaiterIconView>(_qrIcon).dimension, IconSize.s48.size);
+    expect(tester.getSize(_slot), const Size(160, 160));
 
     final int haptics = _haptics(app);
     await _next(tester);
     expect(text(en.intro2Title), findsOneWidget);
     expect(find.textContaining('100,00', findRichText: true), findsOneWidget);
+    expect(tester.widget<IllustrationView>(find.byType(IllustrationView)).illustration, WaiterIllustration.introAmount);
+    expect(tester.getSize(find.byType(IllustrationView)), const Size(160, 160));
     expect(_haptics(app), haptics + 1);
 
     await _next(tester);
@@ -114,7 +118,7 @@ void main() {
 
     unawaited(tester.binding.handlePopRoute());
     await settle(tester, 10);
-    expect(text(en.intro1TitleAndroid), findsOneWidget);
+    expect(text(en.intro1Title), findsOneWidget);
     expect(app.session.phase, AccessPhase.onboardingIntro);
 
     unawaited(tester.binding.handlePopRoute());
@@ -123,20 +127,13 @@ void main() {
     await finishApp(tester, app);
   });
 
-  testWidgets('iPhone card 1', (WidgetTester tester) async {
+  testWidgets('iPhone: the same card 1 with the scan-QR icon', (WidgetTester tester) async {
     final TestApp app = await _openIntro(tester, isIos: true);
-    expect(text(en.intro1TitleIos), findsOneWidget);
-    expect(text(en.intro1BodyIos), findsOneWidget);
-    await finishApp(tester, app);
-  });
-
-  testWidgets('no-NFC card 1 uses the QR icon in the 160-pt slot', (WidgetTester tester) async {
-    final TestApp app = await _openIntro(tester, noNfc: true);
-    expect(text(en.intro1TitleNoNfc), findsOneWidget);
-    expect(text(en.intro1BodyNoNfc), findsOneWidget);
-    final Finder icon = find.byWidgetPredicate((Widget w) => w is WaiterIconView && w.icon == WaiterIcon.scanQrCode);
-    expect(icon, findsOneWidget);
-    expect(tester.getSize(find.ancestor(of: icon, matching: find.byType(SizedBox)).first), const Size(160, 160));
+    expect(text(en.intro1Title), findsOneWidget);
+    expect(text(en.intro1Body), findsOneWidget);
+    expect(_qrIcon, findsOneWidget);
+    expect(find.byType(IllustrationView), findsNothing);
+    expect(find.textContaining('NFC', findRichText: true), findsNothing);
     await finishApp(tester, app);
   });
 
@@ -144,7 +141,7 @@ void main() {
     final SemanticsHandle semantics = tester.ensureSemantics();
     final TestApp app = await _openIntro(tester);
     expect(
-      find.bySemanticsLabel('${en.introPage(1)}. ${en.intro1TitleAndroid}. ${en.intro1BodyAndroid}'),
+      find.bySemanticsLabel('${en.introPage(1)}. ${en.intro1Title}. ${en.intro1Body}'),
       findsOneWidget,
     );
     await _next(tester);
@@ -155,7 +152,7 @@ void main() {
 
   testWidgets('iPhone SE: 120-pt art, everything fits, button in the thumb zone', (WidgetTester tester) async {
     final TestApp app = await _openIntro(tester, size: const Size(375, 667));
-    expect(tester.getSize(find.byType(IllustrationView)), const Size(120, 120));
+    expect(tester.getSize(_slot), const Size(120, 120));
     expect(tester.getSize(_button).height, 56);
     // Bottom padding 20 without a home indicator (04 §4.4).
     expect(tester.getTopLeft(_button).dy, 667 - 20 - 56);
@@ -166,6 +163,7 @@ void main() {
     for (int i = 0; i < 2; i++) {
       await _next(tester);
       expect(tester.takeException(), isNull);
+      expect(tester.getSize(find.byType(IllustrationView)), const Size(120, 120));
     }
     await finishApp(tester, app);
   });
@@ -174,14 +172,18 @@ void main() {
     tester.platformDispatcher.textScaleFactorTestValue = 1.5;
     addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     final TestApp app = await _openIntro(tester);
+    expect(tester.getSize(_slot), const Size(120, 120));
+    await _next(tester);
     expect(tester.getSize(find.byType(IllustrationView)), const Size(120, 120));
     await finishApp(tester, app);
 
     tester.platformDispatcher.textScaleFactorTestValue = 2;
     final TestApp compact = await _openIntro(tester, size: const Size(375, 667));
-    expect(find.byType(IllustrationView), findsNothing);
+    expect(_qrIcon, findsNothing);
     expect(tester.takeException(), isNull);
     await _next(tester);
+    expect(find.byType(IllustrationView), findsNothing);
+    expect(tester.takeException(), isNull);
     await _next(tester);
     expect(tester.takeException(), isNull);
     await finishApp(tester, compact);
@@ -196,17 +198,21 @@ void main() {
     expect(text(en.intro2Title), findsOneWidget);
     await tester.fling(find.byType(IntroScreen), const Offset(300, 0), 1000);
     await settle(tester);
-    expect(text(en.intro1TitleAndroid), findsOneWidget);
+    expect(text(en.intro1Title), findsOneWidget);
     await finishApp(tester, app);
   });
 
-  testWidgets('tablet landscape: illustration left, text right', (WidgetTester tester) async {
+  testWidgets('tablet landscape: icon / illustration left, text right', (WidgetTester tester) async {
     final TestApp app = await _openIntro(tester, size: const Size(1180, 820));
-    final Rect art = tester.getRect(find.byType(IllustrationView));
-    final Rect title = tester.getRect(text(en.intro1TitleAndroid));
+    final Rect art = tester.getRect(_slot);
+    final Rect title = tester.getRect(text(en.intro1Title));
     expect(art.size, const Size(160, 160));
     expect(art.right, lessThan(title.left));
     expect(tester.getRect(_button).left, greaterThanOrEqualTo(art.right));
+    await _next(tester);
+    final Rect illustration = tester.getRect(find.byType(IllustrationView));
+    expect(illustration.size, const Size(160, 160));
+    expect(illustration.right, lessThan(tester.getRect(text(en.intro2Title)).left));
     expect(tester.takeException(), isNull);
     await finishApp(tester, app);
   });
@@ -215,7 +221,7 @@ void main() {
     testWidgets('renders in ${locale.languageCode} (dark)', (WidgetTester tester) async {
       final AppLocalizations l = lookupAppLocalizations(locale);
       final TestApp app = await _openIntro(tester, locale: locale, prefs: const <String, Object>{'theme': 'dark'});
-      expect(text(l.intro1TitleAndroid), findsOneWidget);
+      expect(text(l.intro1Title), findsOneWidget);
       expect(text(l.introSkip), findsOneWidget);
       expect(_label(tester), l.introNext);
       await _next(tester);

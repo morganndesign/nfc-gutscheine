@@ -35,12 +35,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get commonScanAgain => pseudoLocalize(base.commonScanAgain);
 
   @override
-  String get commonEnterNumber => pseudoLocalize(base.commonEnterNumber);
-
-  @override
-  String get commonEditNumber => pseudoLocalize(base.commonEditNumber);
-
-  @override
   String get commonOpenSettings => pseudoLocalize(base.commonOpenSettings);
 
   @override
@@ -267,6 +261,13 @@ class PseudoAppLocalizations extends AppLocalizations {
   );
 
   @override
+  String signInRetryIn(String time) =>
+      pseudoLocalize(base.signInRetryIn(pseudoMarker(0)), <String>[time]);
+
+  @override
+  String get signInAvailable => pseudoLocalize(base.signInAvailable);
+
+  @override
   String get signInErrorServer => pseudoLocalize(base.signInErrorServer);
 
   @override
@@ -345,9 +346,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get unlockLockedOut => pseudoLocalize(base.unlockLockedOut);
 
   @override
-  String get unlockPendingCard => pseudoLocalize(base.unlockPendingCard);
-
-  @override
   String get topBarRecent => pseudoLocalize(base.topBarRecent);
 
   @override
@@ -355,44 +353,37 @@ class PseudoAppLocalizations extends AppLocalizations {
       pseudoLocalize(base.topBarMenu(pseudoMarker(0)), <String>[name]);
 
   @override
-  String get readyAndroidTitle => pseudoLocalize(base.readyAndroidTitle);
+  String get readyTitle => pseudoLocalize(base.readyTitle);
 
   @override
-  String get readyAndroidHint => pseudoLocalize(base.readyAndroidHint);
+  String get readyHint => pseudoLocalize(base.readyHint);
 
   @override
-  String get readyIosButton => pseudoLocalize(base.readyIosButton);
+  String get readyScan => pseudoLocalize(base.readyScan);
 
   @override
-  String get readyIosHint => pseudoLocalize(base.readyIosHint);
+  String get readySell => pseudoLocalize(base.readySell);
 
   @override
-  String get readyIosTimeout => pseudoLocalize(base.readyIosTimeout);
+  String get readyPendingTitle => pseudoLocalize(base.readyPendingTitle);
 
   @override
-  String get readyManual => pseudoLocalize(base.readyManual);
+  String readyPendingBody(String amount, String last4) => pseudoLocalize(
+    base.readyPendingBody(pseudoMarker(0), pseudoMarker(1)),
+    <String>[amount, last4],
+  );
 
   @override
-  String get readyQr => pseudoLocalize(base.readyQr);
+  String readyPendingBooked(String amount) => pseudoLocalize(
+    base.readyPendingBooked(pseudoMarker(0)),
+    <String>[amount],
+  );
 
   @override
-  String get readyFirstCardTipAndroid =>
-      pseudoLocalize(base.readyFirstCardTipAndroid);
-
-  @override
-  String get readyFirstCardTipIos => pseudoLocalize(base.readyFirstCardTipIos);
-
-  @override
-  String get readyNoNfcTitle => pseudoLocalize(base.readyNoNfcTitle);
-
-  @override
-  String get readyNoNfcHint => pseudoLocalize(base.readyNoNfcHint);
-
-  @override
-  String get readyNoNfcButton => pseudoLocalize(base.readyNoNfcButton);
-
-  @override
-  String get readyOfflineTap => pseudoLocalize(base.readyOfflineTap);
+  String readyPendingNotBooked(String amount) => pseudoLocalize(
+    base.readyPendingNotBooked(pseudoMarker(0)),
+    <String>[amount],
+  );
 
   @override
   String get readyOnline => pseudoLocalize(base.readyOnline);
@@ -410,153 +401,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get maintenanceDismiss => pseudoLocalize(base.maintenanceDismiss);
 
   @override
-  String get readyNewCard => pseudoLocalize(base.readyNewCard);
-
-  @override
-  String get issueTitle => pseudoLocalize(base.issueTitle);
-
-  @override
-  String get issueAmountLabel => pseudoLocalize(base.issueAmountLabel);
-
-  @override
-  String get issueEmailLabel => pseudoLocalize(base.issueEmailLabel);
-
-  @override
-  String get issueEmailHelper => pseudoLocalize(base.issueEmailHelper);
-
-  @override
-  String get issueEmailInvalid => pseudoLocalize(base.issueEmailInvalid);
-
-  @override
-  String issueAmountRange(String min, String max) => pseudoLocalize(
-    base.issueAmountRange(pseudoMarker(0), pseudoMarker(1)),
-    <String>[min, max],
-  );
-
-  @override
-  String issueCreate(String amount) =>
-      pseudoLocalize(base.issueCreate(pseudoMarker(0)), <String>[amount]);
-
-  @override
-  String get issueCreating => pseudoLocalize(base.issueCreating);
-
-  @override
-  String get issueProgramTitle => pseudoLocalize(base.issueProgramTitle);
-
-  @override
-  String get issueProgramBody => pseudoLocalize(base.issueProgramBody);
-
-  @override
-  String get issueProgramRetap => pseudoLocalize(base.issueProgramRetap);
-
-  @override
-  String get issueStepCheck => pseudoLocalize(base.issueStepCheck);
-
-  @override
-  String get issueStepWrite => pseudoLocalize(base.issueStepWrite);
-
-  @override
-  String get issueStepVerify => pseudoLocalize(base.issueStepVerify);
-
-  @override
-  String get issueStepSave => pseudoLocalize(base.issueStepSave);
-
-  @override
-  String issueCard(String number) =>
-      pseudoLocalize(base.issueCard(pseudoMarker(0)), <String>[number]);
-
-  @override
-  String get issueSuccessTitle => pseudoLocalize(base.issueSuccessTitle);
-
-  @override
-  String issueSuccessBalance(String amount) => pseudoLocalize(
-    base.issueSuccessBalance(pseudoMarker(0)),
-    <String>[amount],
-  );
-
-  @override
-  String get issueSuccessVerified => pseudoLocalize(base.issueSuccessVerified);
-
-  @override
-  String get issueSuccessNoTag => pseudoLocalize(base.issueSuccessNoTag);
-
-  @override
-  String get issueSuccessAnother => pseudoLocalize(base.issueSuccessAnother);
-
-  @override
-  String get issueLater => pseudoLocalize(base.issueLater);
-
-  @override
-  String get issueNfcOff => pseudoLocalize(base.issueNfcOff);
-
-  @override
-  String get issueCreateFailedTitle =>
-      pseudoLocalize(base.issueCreateFailedTitle);
-
-  @override
-  String get issueCreateFailedBody =>
-      pseudoLocalize(base.issueCreateFailedBody);
-
-  @override
-  String get issueCreateUncertainBody =>
-      pseudoLocalize(base.issueCreateUncertainBody);
-
-  @override
-  String get issueNotAllowedTitle => pseudoLocalize(base.issueNotAllowedTitle);
-
-  @override
-  String get issueNotAllowedBody => pseudoLocalize(base.issueNotAllowedBody);
-
-  @override
-  String get issueTagFailedTitle => pseudoLocalize(base.issueTagFailedTitle);
-
-  @override
-  String issueTagOtherCard(String number) =>
-      pseudoLocalize(base.issueTagOtherCard(pseudoMarker(0)), <String>[number]);
-
-  @override
-  String get issueTagRefused => pseudoLocalize(base.issueTagRefused);
-
-  @override
-  String get issueTagUnsupported => pseudoLocalize(base.issueTagUnsupported);
-
-  @override
-  String get issueTagReadOnly => pseudoLocalize(base.issueTagReadOnly);
-
-  @override
-  String get issueTagMoved => pseudoLocalize(base.issueTagMoved);
-
-  @override
-  String get issueTagVerifyFailed => pseudoLocalize(base.issueTagVerifyFailed);
-
-  @override
-  String get issueTagNetwork => pseudoLocalize(base.issueTagNetwork);
-
-  @override
-  String get iosSheetAlert => pseudoLocalize(base.iosSheetAlert);
-
-  @override
-  String get iosSheetFound => pseudoLocalize(base.iosSheetFound);
-
-  @override
-  String get iosSheetReadFailed => pseudoLocalize(base.iosSheetReadFailed);
-
-  @override
-  String get iosSheetMultiple => pseudoLocalize(base.iosSheetMultiple);
-
-  @override
-  String get iosSheetTimeoutSoon => pseudoLocalize(base.iosSheetTimeoutSoon);
-
-  @override
-  String get scanNotCard => pseudoLocalize(base.scanNotCard);
-
-  @override
-  String get scanReadFailedTitle => pseudoLocalize(base.scanReadFailedTitle);
-
-  @override
-  String get scanReadFailedBody => pseudoLocalize(base.scanReadFailedBody);
-
-  @override
   String get scanDetected => pseudoLocalize(base.scanDetected);
 
   @override
@@ -564,9 +408,6 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get scanSlow => pseudoLocalize(base.scanSlow);
-
-  @override
-  String get scanUnavailable => pseudoLocalize(base.scanUnavailable);
 
   @override
   String get balanceCardOverline => pseudoLocalize(base.balanceCardOverline);
@@ -595,8 +436,8 @@ class PseudoAppLocalizations extends AppLocalizations {
   );
 
   @override
-  String chargeCardNumberA11y(String number) => pseudoLocalize(
-    base.chargeCardNumberA11y(pseudoMarker(0)),
+  String chargeVoucherNumberA11y(String number) => pseudoLocalize(
+    base.chargeVoucherNumberA11y(pseudoMarker(0)),
     <String>[number],
   );
 
@@ -663,19 +504,25 @@ class PseudoAppLocalizations extends AppLocalizations {
       pseudoLocalize(base.chargeRateLimited(seconds), <String>[]);
 
   @override
-  String get chargeSwitchCardMessage =>
-      pseudoLocalize(base.chargeSwitchCardMessage);
+  String chargeDailyLimit(String amount) =>
+      pseudoLocalize(base.chargeDailyLimit(pseudoMarker(0)), <String>[amount]);
 
   @override
-  String get chargeSwitchCardAction =>
-      pseudoLocalize(base.chargeSwitchCardAction);
+  String get chargePresentmentExpired =>
+      pseudoLocalize(base.chargePresentmentExpired);
 
   @override
-  String get chargeSwitchCardKeep => pseudoLocalize(base.chargeSwitchCardKeep);
+  String get chargePendingTitle => pseudoLocalize(base.chargePendingTitle);
 
   @override
-  String get chargeSwitchCardDialogTitle =>
-      pseudoLocalize(base.chargeSwitchCardDialogTitle);
+  String chargePendingBody(String amount) =>
+      pseudoLocalize(base.chargePendingBody(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String chargeEarlierBooked(String amount) => pseudoLocalize(
+    base.chargeEarlierBooked(pseudoMarker(0)),
+    <String>[amount],
+  );
 
   @override
   String get keypadDoubleZero => pseudoLocalize(base.keypadDoubleZero);
@@ -696,10 +543,7 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get badgeActive => pseudoLocalize(base.badgeActive);
 
   @override
-  String get badgeInactive => pseudoLocalize(base.badgeInactive);
-
-  @override
-  String get badgeRedeemed => pseudoLocalize(base.badgeRedeemed);
+  String get badgeUsedUp => pseudoLocalize(base.badgeUsedUp);
 
   @override
   String get badgeBlocked => pseudoLocalize(base.badgeBlocked);
@@ -708,39 +552,26 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get badgeExpired => pseudoLocalize(base.badgeExpired);
 
   @override
-  String get badgeReplaced => pseudoLocalize(base.badgeReplaced);
+  String get voucherBlocked => pseudoLocalize(base.voucherBlocked);
 
   @override
-  String get cardBlocked => pseudoLocalize(base.cardBlocked);
+  String voucherBlockedReason(String reason) => pseudoLocalize(
+    base.voucherBlockedReason(pseudoMarker(0)),
+    <String>[reason],
+  );
 
   @override
-  String cardBlockedReason(String reason) =>
-      pseudoLocalize(base.cardBlockedReason(pseudoMarker(0)), <String>[reason]);
+  String get voucherExpired => pseudoLocalize(base.voucherExpired);
 
   @override
-  String get cardExpired => pseudoLocalize(base.cardExpired);
+  String voucherExpiredBody(String date) =>
+      pseudoLocalize(base.voucherExpiredBody(pseudoMarker(0)), <String>[date]);
 
   @override
-  String cardExpiredBody(String date) =>
-      pseudoLocalize(base.cardExpiredBody(pseudoMarker(0)), <String>[date]);
+  String get voucherEmpty => pseudoLocalize(base.voucherEmpty);
 
   @override
-  String get cardInactive => pseudoLocalize(base.cardInactive);
-
-  @override
-  String get cardInactiveBody => pseudoLocalize(base.cardInactiveBody);
-
-  @override
-  String get cardReplaced => pseudoLocalize(base.cardReplaced);
-
-  @override
-  String get cardReplacedBody => pseudoLocalize(base.cardReplacedBody);
-
-  @override
-  String get cardEmpty => pseudoLocalize(base.cardEmpty);
-
-  @override
-  String get cardEmptyBody => pseudoLocalize(base.cardEmptyBody);
+  String get voucherEmptyBody => pseudoLocalize(base.voucherEmptyBody);
 
   @override
   String get redeemSlow => pseudoLocalize(base.redeemSlow);
@@ -775,9 +606,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   );
 
   @override
-  String get redeemTapAgain => pseudoLocalize(base.redeemTapAgain);
-
-  @override
   String get successTitle => pseudoLocalize(base.successTitle);
 
   @override
@@ -788,10 +616,7 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get successEmpty => pseudoLocalize(base.successEmpty);
 
   @override
-  String get successNextIos => pseudoLocalize(base.successNextIos);
-
-  @override
-  String get successNextAndroid => pseudoLocalize(base.successNextAndroid);
+  String get successNext => pseudoLocalize(base.successNext);
 
   @override
   String get successShowGuest => pseudoLocalize(base.successShowGuest);
@@ -810,26 +635,12 @@ class PseudoAppLocalizations extends AppLocalizations {
   );
 
   @override
-  String get problemNotFoundTitle => pseudoLocalize(base.problemNotFoundTitle);
+  String get problemNotRecognizedTitle =>
+      pseudoLocalize(base.problemNotRecognizedTitle);
 
   @override
-  String get problemNotFoundBody => pseudoLocalize(base.problemNotFoundBody);
-
-  @override
-  String get problemNotFoundBodyManual =>
-      pseudoLocalize(base.problemNotFoundBodyManual);
-
-  @override
-  String get problemForeignTitle => pseudoLocalize(base.problemForeignTitle);
-
-  @override
-  String get problemForeignBody => pseudoLocalize(base.problemForeignBody);
-
-  @override
-  String get problemVerifyTitle => pseudoLocalize(base.problemVerifyTitle);
-
-  @override
-  String get problemVerifyBody => pseudoLocalize(base.problemVerifyBody);
+  String get problemNotRecognizedBody =>
+      pseudoLocalize(base.problemNotRecognizedBody);
 
   @override
   String get problemThrottledTitle =>
@@ -852,23 +663,123 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get problemServerBody => pseudoLocalize(base.problemServerBody);
 
   @override
-  String get manualTitle => pseudoLocalize(base.manualTitle);
+  String get saleTitle => pseudoLocalize(base.saleTitle);
 
   @override
-  String get manualHelper => pseudoLocalize(base.manualHelper);
+  String get saleAmountLabel => pseudoLocalize(base.saleAmountLabel);
 
   @override
-  String manualCounter(int count) =>
-      pseudoLocalize(base.manualCounter(count), <String>[]);
+  String saleAmountRange(String min, String max) => pseudoLocalize(
+    base.saleAmountRange(pseudoMarker(0), pseudoMarker(1)),
+    <String>[min, max],
+  );
 
   @override
-  String get manualSubmit => pseudoLocalize(base.manualSubmit);
+  String saleContinue(String amount) =>
+      pseudoLocalize(base.saleContinue(pseudoMarker(0)), <String>[amount]);
 
   @override
-  String get manualErrorInvalid => pseudoLocalize(base.manualErrorInvalid);
+  String get salePaymentLabel => pseudoLocalize(base.salePaymentLabel);
 
   @override
-  String get manualErrorPaste => pseudoLocalize(base.manualErrorPaste);
+  String get salePaymentCash => pseudoLocalize(base.salePaymentCash);
+
+  @override
+  String get salePaymentCardTerminal =>
+      pseudoLocalize(base.salePaymentCardTerminal);
+
+  @override
+  String get salePaymentBankTransfer =>
+      pseudoLocalize(base.salePaymentBankTransfer);
+
+  @override
+  String get salePaymentComplimentary =>
+      pseudoLocalize(base.salePaymentComplimentary);
+
+  @override
+  String get saleReferenceLabel => pseudoLocalize(base.saleReferenceLabel);
+
+  @override
+  String get saleReferenceRequired =>
+      pseudoLocalize(base.saleReferenceRequired);
+
+  @override
+  String get saleReasonLabel => pseudoLocalize(base.saleReasonLabel);
+
+  @override
+  String get saleReasonRequired => pseudoLocalize(base.saleReasonRequired);
+
+  @override
+  String get saleEmailLabel => pseudoLocalize(base.saleEmailLabel);
+
+  @override
+  String get saleEmailHelper => pseudoLocalize(base.saleEmailHelper);
+
+  @override
+  String get saleEmailHelperNoMail =>
+      pseudoLocalize(base.saleEmailHelperNoMail);
+
+  @override
+  String get saleEmailInvalid => pseudoLocalize(base.saleEmailInvalid);
+
+  @override
+  String saleSubmit(String amount) =>
+      pseudoLocalize(base.saleSubmit(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get saleSubmitting => pseudoLocalize(base.saleSubmitting);
+
+  @override
+  String get saleFailedTitle => pseudoLocalize(base.saleFailedTitle);
+
+  @override
+  String get saleFailedBody => pseudoLocalize(base.saleFailedBody);
+
+  @override
+  String get saleUncertainTitle => pseudoLocalize(base.saleUncertainTitle);
+
+  @override
+  String get saleUncertainBody => pseudoLocalize(base.saleUncertainBody);
+
+  @override
+  String get saleNotAllowedTitle => pseudoLocalize(base.saleNotAllowedTitle);
+
+  @override
+  String get saleNotAllowedBody => pseudoLocalize(base.saleNotAllowedBody);
+
+  @override
+  String get saleDoneTitle => pseudoLocalize(base.saleDoneTitle);
+
+  @override
+  String saleDoneValue(String amount) =>
+      pseudoLocalize(base.saleDoneValue(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get saleDoneBody => pseudoLocalize(base.saleDoneBody);
+
+  @override
+  String get salePrint => pseudoLocalize(base.salePrint);
+
+  @override
+  String get salePrinted => pseudoLocalize(base.salePrinted);
+
+  @override
+  String get salePrintFailed => pseudoLocalize(base.salePrintFailed);
+
+  @override
+  String get saleAnother => pseudoLocalize(base.saleAnother);
+
+  @override
+  String get saleLeaveTitle => pseudoLocalize(base.saleLeaveTitle);
+
+  @override
+  String get saleLeaveBody => pseudoLocalize(base.saleLeaveBody);
+
+  @override
+  String get saleLeaveConfirm => pseudoLocalize(base.saleLeaveConfirm);
+
+  @override
+  String get saleQrA11y => pseudoLocalize(base.saleQrA11y);
 
   @override
   String get qrTitle => pseudoLocalize(base.qrTitle);
@@ -877,7 +788,7 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get qrHint => pseudoLocalize(base.qrHint);
 
   @override
-  String get qrNotCard => pseudoLocalize(base.qrNotCard);
+  String get qrNotVoucher => pseudoLocalize(base.qrNotVoucher);
 
   @override
   String get qrDark => pseudoLocalize(base.qrDark);
@@ -887,9 +798,6 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get qrTorchOff => pseudoLocalize(base.qrTorchOff);
-
-  @override
-  String get qrManual => pseudoLocalize(base.qrManual);
 
   @override
   String get recentTitle => pseudoLocalize(base.recentTitle);
@@ -944,7 +852,7 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get recentDetailTime => pseudoLocalize(base.recentDetailTime);
 
   @override
-  String get recentDetailCard => pseudoLocalize(base.recentDetailCard);
+  String get recentDetailVoucher => pseudoLocalize(base.recentDetailVoucher);
 
   @override
   String get recentDetailAmount => pseudoLocalize(base.recentDetailAmount);
@@ -1065,20 +973,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get suspendedBody => pseudoLocalize(base.suspendedBody);
 
   @override
-  String get lockedTitle => pseudoLocalize(base.lockedTitle);
-
-  @override
-  String lockedBody(String time) =>
-      pseudoLocalize(base.lockedBody(pseudoMarker(0)), <String>[time]);
-
-  @override
-  String lockedButton(String time) =>
-      pseudoLocalize(base.lockedButton(pseudoMarker(0)), <String>[time]);
-
-  @override
-  String get lockedOver => pseudoLocalize(base.lockedOver);
-
-  @override
   String get deactivatedTitle => pseudoLocalize(base.deactivatedTitle);
 
   @override
@@ -1092,18 +986,6 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get updateAction => pseudoLocalize(base.updateAction);
-
-  @override
-  String get nfcOffTitle => pseudoLocalize(base.nfcOffTitle);
-
-  @override
-  String get nfcOffBody => pseudoLocalize(base.nfcOffBody);
-
-  @override
-  String get nfcOffAction => pseudoLocalize(base.nfcOffAction);
-
-  @override
-  String get nfcOffOn => pseudoLocalize(base.nfcOffOn);
 
   @override
   String get cameraDeniedTitle => pseudoLocalize(base.cameraDeniedTitle);
@@ -1138,22 +1020,10 @@ class PseudoAppLocalizations extends AppLocalizations {
   String introPage(int n) => pseudoLocalize(base.introPage(n), <String>[]);
 
   @override
-  String get intro1TitleAndroid => pseudoLocalize(base.intro1TitleAndroid);
+  String get intro1Title => pseudoLocalize(base.intro1Title);
 
   @override
-  String get intro1BodyAndroid => pseudoLocalize(base.intro1BodyAndroid);
-
-  @override
-  String get intro1TitleIos => pseudoLocalize(base.intro1TitleIos);
-
-  @override
-  String get intro1BodyIos => pseudoLocalize(base.intro1BodyIos);
-
-  @override
-  String get intro1TitleNoNfc => pseudoLocalize(base.intro1TitleNoNfc);
-
-  @override
-  String get intro1BodyNoNfc => pseudoLocalize(base.intro1BodyNoNfc);
+  String get intro1Body => pseudoLocalize(base.intro1Body);
 
   @override
   String get intro2Title => pseudoLocalize(base.intro2Title);
@@ -1175,9 +1045,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   );
 
   @override
-  String a11yCardLoaded(String restaurant, String spokenAmount) =>
+  String a11yVoucherLoaded(String restaurant, String spokenAmount) =>
       pseudoLocalize(
-        base.a11yCardLoaded(pseudoMarker(0), pseudoMarker(1)),
+        base.a11yVoucherLoaded(pseudoMarker(0), pseudoMarker(1)),
         <String>[restaurant, spokenAmount],
       );
 

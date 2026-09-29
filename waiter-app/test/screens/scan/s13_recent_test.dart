@@ -100,7 +100,7 @@ void main() {
       expect(text('19:42'), findsOneWidget);
       expect(text('19:00'), findsOneWidget);
       expect(text('18:00'), findsOneWidget);
-      expect(text('Card now empty'), findsOneWidget);
+      expect(text('Voucher now empty'), findsOneWidget);
       expect(
         tester.getTopLeft(text('19:42')).dy,
         lessThan(tester.getTopLeft(text('19:05')).dy),
@@ -159,7 +159,9 @@ void main() {
         text('Wrong amount? A manager can reverse it in the dashboard.'),
         findsOneWidget,
       );
-      expect(find.byType(PrimaryButton), findsNothing);
+      // No actions in the sheet (S05's own button stays underneath).
+      expect(find.byType(PrimaryButton), findsOneWidget);
+      expect(tester.widget<PrimaryButton>(find.byType(PrimaryButton)).label, 'Scan voucher');
 
       await tester.longPress(text('5E12C0'));
       await settle(tester);
@@ -239,7 +241,7 @@ void main() {
   );
 
   testWidgets(
-    'row semantics speak the time, the card ending and both amounts',
+    'row semantics speak the time, the voucher ending and both amounts',
     (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
       final TestApp app = await TestApp.create();
@@ -250,7 +252,7 @@ void main() {
       await _openRecent(tester);
       expect(
         find.bySemanticsLabel(
-          RegExp(r'^19:42, card ending 6 4 8 8, 24 euros 90 redeemed'),
+          RegExp(r'^19:42, voucher ending 6 4 8 8, 24 euros 90 redeemed'),
         ),
         findsOneWidget,
       );

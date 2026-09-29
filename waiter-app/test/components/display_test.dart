@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/api/models.dart' show CardStatus;
 import 'package:giftcard_waiter/core/theme/theme.dart';
 
 import 'harness.dart';
@@ -34,14 +33,14 @@ void main() {
 
   group('StatusBadge', () {
     for (final Brightness b in bothThemes) {
-      testWidgets('6 statuses, icon + text, 24 pt ($b)', (
+      testWidgets('4 statuses, icon + text, 24 pt ($b)', (
         WidgetTester tester,
       ) async {
         await pumpComponent(
           tester,
           Wrap(
             children: <Widget>[
-              for (final CardStatus s in CardStatus.values)
+              for (final BadgeStatus s in BadgeStatus.values)
                 StatusBadge(status: s),
             ],
           ),
@@ -49,15 +48,13 @@ void main() {
         );
         for (final String label in <String>[
           'Active',
-          'Not activated',
           'Used up',
           'Blocked',
           'Expired',
-          'Replaced',
         ]) {
           expect(find.text(label, findRichText: true), findsOneWidget);
         }
-        expect(find.byType(WaiterIconView), findsNWidgets(6));
+        expect(find.byType(WaiterIconView), findsNWidgets(4));
         for (final Element e in find.byType(StatusBadge).evaluate()) {
           expect(tester.getSize(find.byWidget(e.widget)).height, 24);
         }
@@ -69,7 +66,7 @@ void main() {
     ) async {
       await pumpComponent(
         tester,
-        const StatusBadge(status: CardStatus.blocked),
+        const StatusBadge(status: BadgeStatus.blocked),
         highContrast: true,
       );
       final Container box = tester.widget<Container>(
@@ -264,59 +261,6 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await tester.pump(const Duration(milliseconds: 200));
       expect(find.text('content'), findsOneWidget);
-    });
-  });
-
-  group('NfcScanAnimation', () {
-    for (final Brightness b in bothThemes) {
-      testWidgets('176 × 120 canvas, hidden from semantics ($b)', (
-        WidgetTester tester,
-      ) async {
-        final SemanticsHandle handle = tester.ensureSemantics();
-        await pumpComponent(
-          tester,
-          const NfcScanAnimation(state: NfcScanState.listening),
-          brightness: b,
-        );
-        await tester.pump(const Duration(milliseconds: 1200));
-        expect(
-          tester.getSize(find.byType(NfcScanAnimation)),
-          const Size(176, 120),
-        );
-        expect(
-          find.descendant(
-            of: find.byType(NfcScanAnimation),
-            matching: find.byType(ExcludeSemantics),
-          ),
-          findsOneWidget,
-        );
-        handle.dispose();
-      });
-    }
-
-    testWidgets('states retarget without errors; Reduce Motion is static', (
-      WidgetTester tester,
-    ) async {
-      for (final NfcScanState s in <NfcScanState>[
-        NfcScanState.listening,
-        NfcScanState.reading,
-        NfcScanState.success,
-        NfcScanState.error,
-        NfcScanState.idle,
-        NfcScanState.disabled,
-      ]) {
-        await pumpComponent(tester, NfcScanAnimation(state: s));
-        await tester.pump(const Duration(milliseconds: 300));
-      }
-      await tester.pump(const Duration(milliseconds: 500));
-      await pumpComponent(
-        tester,
-        const NfcScanAnimation(state: NfcScanState.listening),
-        reduceMotion: true,
-      );
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(tester.hasRunningAnimations, isFalse, reason: 'no breathing');
-      expect(tester.takeException(), isNull);
     });
   });
 

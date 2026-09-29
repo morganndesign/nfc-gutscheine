@@ -1,5 +1,4 @@
 {
   "APP_ENV": "staging",
-  "API_BASE_URL": "",
-  "CARD_DOMAINS": ""
+  "API_BASE_URL": ""
 }

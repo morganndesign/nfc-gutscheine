@@ -8,7 +8,6 @@ import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/core/l10n/l10n.dart';
 import 'package:giftcard_waiter/core/platform/channels.dart';
 import 'package:giftcard_waiter/core/platform/feedback_scope.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/screens/scan/qr_camera.dart';
 
@@ -19,16 +18,6 @@ const Size iphoneFrame = Size(393, 852);
 const Size androidFrame = Size(412, 915);
 const Size compactFrame = Size(375, 667);
 const Size tabletLandscape = Size(1180, 820);
-
-/// A card URL of another domain (bank / transit cards land here, L10).
-const String foreignUrl = 'https://bank.example.com/pay/1234';
-
-/// UID of the sample NTAG.
-const String sampleUid = '04:A2:3F:1B:6C:80:12';
-
-/// Android: a card is held to the phone and read completely.
-void tapCard(TestApp app, {String? url, String uid = sampleUid}) =>
-    app.nfc.emit(NfcTagRead(uid: uid, url: url ?? Payloads.cardUrl()));
 
 /// Records method calls on the app's system channel (open app settings).
 List<MethodCall> recordSystemChannel() {

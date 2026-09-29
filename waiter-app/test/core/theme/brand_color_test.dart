@@ -124,7 +124,7 @@ void main() {
     expect(c.shadows.single.color.a, closeTo(0.28, 1e-6));
   });
 
-  group('desaturated states (blocked, expired, replaced)', () {
+  group('desaturated states (blocked, expired)', () {
     test('a borderline colour that fails after desaturation falls back', () {
       final BrandCardColors c = resolve('#DC2626', desaturated: true);
       expect(c.isContrastFallback, isTrue);
@@ -133,12 +133,9 @@ void main() {
     });
 
     test('status mapping', () {
-      expect(isDesaturatedCardStatus('blocked'), isTrue);
-      expect(isDesaturatedCardStatus('expired'), isTrue);
-      expect(isDesaturatedCardStatus('replaced'), isTrue);
-      expect(isDesaturatedCardStatus('inactive'), isFalse);
-      expect(isDesaturatedCardStatus('redeemed'), isFalse);
-      expect(isDesaturatedCardStatus('active'), isFalse);
+      expect(isDesaturatedVoucherStatus('blocked'), isTrue);
+      expect(isDesaturatedVoucherStatus('expired'), isTrue);
+      expect(isDesaturatedVoucherStatus('active'), isFalse);
     });
 
     test('chroma −40 % keeps lightness and hue, grey stays grey', () {

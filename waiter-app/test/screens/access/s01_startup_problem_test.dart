@@ -16,15 +16,11 @@ import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
 import 'access_support.dart';
 
-const AppEnvironment _production = AppEnvironment(
-  apiBaseUrl: 'https://app.giftcardpro.at/api/v1',
-  cardDomains: <String>['app.giftcardpro.at'],
-);
+const AppEnvironment _production = AppEnvironment(apiBaseUrl: 'https://app.giftcardpro.at/api/v1');
 
 final AppEnvironment _development = AppEnvironment.resolve(<String, String>{
   'APP_ENV': 'development',
   'API_BASE_URL': 'http://10.0.2.2:8000/api/v1',
-  'CARD_DOMAINS': 'localhost',
 });
 
 void main() {

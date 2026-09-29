@@ -2,21 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/screens/charge/uncertain_panel.dart';
+import 'package:giftcard_waiter/screens/s05_ready.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
 import 'charge_harness.dart';
 
 /// S08 in-place states (03b §3) and the S07 notices after a definitive
-/// answer (12 §3.2 R05–R16).
+/// answer to `POST /vouchers/{id}/redemptions` (12 §3.2 R05–R16).
 void main() {
   Future<TestApp> typed(
     WidgetTester tester,
     List<FakeReply> replies, {
     String digits = '2490',
-    Map<String, Object?>? scan,
+    Map<String, Object?>? presentment,
   }) async {
-    final TestApp app = await openCharge(tester, scan: scan);
+    final TestApp app = await openCharge(tester, presentment: presentment);
     for (final FakeReply reply in replies) {
       app.backend.on('POST', redeemPath, reply);
     }
@@ -33,6 +34,19 @@ void main() {
       .to('POST', redeemPath)
       .map((RecordedRequest r) => r.header('Idempotency-Key'))
       .toList();
+
+  /// Runs the automatic retries out to the final uncertain state.
+  Future<void> toFinal(WidgetTester tester) async {
+    for (int i = 0; i < 4; i++) {
+      await tester.pump(const Duration(seconds: 2));
+      await settle(tester);
+    }
+  }
+
+  Finder checkAgain() => find.ancestor(
+    of: rich('Check again'),
+    matching: find.byType(PrimaryButton),
+  );
 
   group('S08 Redeeming', () {
     testWidgets('submitting: label kept for 150 ms, then the spinner; keypad, '
@@ -63,7 +77,12 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       expect(app.loop.state, isA<SuccessState>());
-      expect(app.backend.to('POST', redeemPath), hasLength(1));
+      final RecordedRequest redeem = app.backend.to('POST', redeemPath).single;
+      expect(redeem.body, <String, Object?>{
+        'amount': 2490,
+        'presentment_id': Payloads.presentmentId,
+      });
+      expect(redeem.header('Idempotency-Key'), isNotNull);
       await finishApp(tester, app);
     });
 
@@ -84,7 +103,7 @@ void main() {
       await settle(tester);
       expect(chargeOf(app).phase, RedeemPhase.slow);
       expect(rich('Connection slow – retrying'), findsOneWidget);
-      expect(rich('Checking … Nothing is ever booked twice.'), findsOne);
+      expect(rich('Nothing is ever booked twice.'), findsOne);
 
       await tester.pump(const Duration(seconds: 8));
       await settle(tester);
@@ -107,10 +126,8 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('final: "Try again" reuses the key, "Cancel" keeps card and '
-        'amount with the unconfirmed banner (AC-S08-8/10/11)', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('final: "Check again" and "Cancel"; Cancel returns to S05 and '
+        'keeps the attempt (AC-S08-8/10/11)', (WidgetTester tester) async {
       final TestApp app = await typed(tester, <FakeReply>[
         FakeReply.transport(),
       ]);
@@ -118,52 +135,90 @@ void main() {
       await tapRedeem(tester);
       await settle(tester);
       expect(chargeOf(app).phase, RedeemPhase.uncertainAuto);
-      for (int i = 0; i < 4; i++) {
-        await tester.pump(const Duration(seconds: 2));
-        await settle(tester);
-      }
+      await toFinal(tester);
       expect(chargeOf(app).phase, RedeemPhase.uncertainFinal);
-      expect(rich('Not confirmed yet. Try again'), findsOneWidget);
+      expect(rich('Not confirmed yet. Check again'), findsOneWidget);
       expect(rich('Code '), findsOneWidget);
-      expect(rich('Try again'), findsWidgets);
+      expect(checkAgain(), findsOneWidget);
       expect(rich('Cancel'), findsOneWidget);
       expect(
         said.where(((String, bool) a) => a.$1.startsWith('Connection')),
         isNotEmpty,
       );
       expect(rich('nothing was charged'), findsNothing);
+      final String key = app.pending.entries.single.key;
 
+      // Asked about in the background once S05 shows: still possibly
+      // running, so it stays stored.
+      app.backend.on(
+        'GET',
+        '$redeemPath/$key',
+        FakeReply(200, Payloads.outcome()),
+      );
       await tester.tap(rich('Cancel'));
       await settle(tester);
-      expect(chargeOf(app).phase, RedeemPhase.entering);
-      expect(chargeOf(app).amount, 2490);
-      expect(chargeOf(app).card.balance, 5000);
-      expect(rich('Not confirmed. Scan the card again'), findsOneWidget);
-      expect(find.byType(Keypad), findsOneWidget);
+      expect(app.loop.state, isA<ReadyState>());
+      expect(find.byType(ReadyScreen), findsOneWidget);
+      expect(rich('Not confirmed. It is checked automatically'), findsOne);
+      expect(app.pending.entries.single.key, key, reason: 'kept');
+      expect(app.pending.entries.single.amount, 2490);
+      expect(keys(app).toSet(), <String>{key});
+      await finishApp(tester, app);
+    });
 
-      // Redeem again with the same amount: same key; this time "Try again".
+    testWidgets('final: "Check again" re-sends with the same key and lands on '
+        'S09', (WidgetTester tester) async {
+      final TestApp app = await typed(tester, <FakeReply>[
+        FakeReply.transport(),
+      ]);
       await tapRedeem(tester);
-      for (int i = 0; i < 4; i++) {
-        await tester.pump(const Duration(seconds: 2));
-        await settle(tester);
-      }
+      await settle(tester);
+      await toFinal(tester);
       expect(chargeOf(app).phase, RedeemPhase.uncertainFinal);
-      app.backend.on(
+      final int sent = keys(app).length;
+
+      app.backend.only(
         'POST',
         redeemPath,
-        FakeReply(201, Payloads.redeemed(amount: 2490, balanceAfter: 2510)),
-      );
-      await tester.tap(
-        find.ancestor(
-          of: rich('Try again'),
-          matching: find.byType(PrimaryButton),
+        FakeReply(
+          200,
+          Payloads.redeemed(amount: 2490, balanceAfter: 2510, replayed: true),
         ),
       );
+      await tester.tap(checkAgain());
       await settle(tester);
       await tester.pump(const Duration(seconds: 1));
       await settle(tester);
       expect(app.loop.state, isA<SuccessState>());
+      expect(keys(app), hasLength(sent + 1));
       expect(keys(app).toSet(), hasLength(1));
+      expect(app.backend.to('POST', redeemPath).last.body, <String, Object?>{
+        'amount': 2490,
+        'presentment_id': Payloads.presentmentId,
+      });
+      expect(app.pending.entries, isEmpty);
+      await finishApp(tester, app);
+    });
+
+    testWidgets('idempotency conflict: the key is asked about, never a new key '
+        '(R13, AC-S08-13)', (WidgetTester tester) async {
+      final TestApp app = await typed(tester, <FakeReply>[
+        FakeReply(409, Payloads.error('IDEMPOTENCY_CONFLICT')),
+      ]);
+      app.backend.onPrefix(
+        'GET',
+        '$redeemPath/',
+        FakeReply(200, Payloads.outcome(amount: 1000, balanceAfter: 4000)),
+      );
+      await tapRedeem(tester);
+      await settle(tester);
+      expect(app.backend.requests.where((RecordedRequest r) => r.method == 'GET' && r.path.startsWith('$redeemPath/')), isNotEmpty, reason: 'resolved by asking');
+      expect(chargeOf(app).phase, RedeemPhase.entering);
+      expect(chargeOf(app).notice, isA<EarlierBookedNotice>());
+      expect(chargeOf(app).voucher.balance, 4000);
+      expect(app.pending.entries, isEmpty);
+      await tester.pump(const Duration(seconds: 5));
+      expect(app.backend.to('POST', redeemPath), hasLength(1), reason: 'never a second debit');
       await finishApp(tester, app);
     });
   });
@@ -182,7 +237,7 @@ void main() {
       final List<(String, bool)> said = recordAnnouncements(tester);
       await tapRedeem(tester);
       await settle(tester);
-      expect(chargeOf(app).card.balance, 2000);
+      expect(chargeOf(app).voucher.balance, 2000);
       expect(rich('Balance changed: now € 20,00'), findsOneWidget);
       expect(rich('Use balance · € 20,00'), findsOneWidget);
       expect(
@@ -192,6 +247,7 @@ void main() {
           '4 euros 90 more than the balance. Redeem not available.',
         ),
       );
+      expect(app.pending.entries, isEmpty);
       await tester.pump(const Duration(seconds: 4));
       await settle(tester);
       expect(rich('Balance changed'), findsNothing);
@@ -199,20 +255,22 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('max single redemption from the server: message, "Use '
+    testWidgets('max per redemption from the server: message, "Use '
         'maximum", checked client-side afterwards (R10)', (
       WidgetTester tester,
     ) async {
       final TestApp app = await typed(tester, <FakeReply>[
         FakeReply(
           422,
-          Payloads.error('INVALID_AMOUNT', <String, Object?>{
-            'max_single_redemption': 1500,
+          Payloads.error('DEBIT_LIMIT_EXCEEDED', <String, Object?>{
+            'limit': 'per_transaction',
+            'max': 1500,
           }),
         ),
       ]);
       await tapRedeem(tester);
       await settle(tester);
+      expect(chargeOf(app).notice, isA<MaxSingleNotice>());
       expect(rich('Max. € 15,00 per redemption'), findsOneWidget);
       expect(rich('Use maximum · € 15,00'), findsOneWidget);
       await tester.tap(find.byType(QuickAmountChip));
@@ -221,6 +279,36 @@ void main() {
       await typeDigits(tester, '1');
       expect(rich('Max. € 15,00 per redemption'), findsOneWidget);
       expect(app.backend.to('POST', redeemPath), hasLength(1));
+      await finishApp(tester, app);
+    });
+
+    testWidgets('daily limit of the voucher: what is left today (R10)', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await typed(tester, <FakeReply>[
+        FakeReply(
+          422,
+          Payloads.error('DEBIT_LIMIT_EXCEEDED', <String, Object?>{
+            'limit': 'per_voucher_per_day',
+            'max': 10000,
+            'remaining': 1000,
+          }),
+        ),
+      ]);
+      final List<(String, bool)> said = recordAnnouncements(tester);
+      await tapRedeem(tester);
+      await settle(tester);
+      expect(chargeOf(app).notice, isA<DailyLimitNotice>());
+      expect(
+        rich('At most € 10,00 more with this voucher today'),
+        findsOneWidget,
+      );
+      expect(
+        said,
+        contains(('At most 10 euros more with this voucher today', true)),
+      );
+      expect(chargeOf(app).amount, 2490, reason: 'the amount stays');
+      expect(app.pending.entries, isEmpty);
       await finishApp(tester, app);
     });
 
@@ -246,21 +334,91 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('card blocked meanwhile: blocked variant with "Nothing was '
+    testWidgets('voucher blocked meanwhile: blocked variant with "Nothing was '
         'booked." (R07)', (WidgetTester tester) async {
       final TestApp app = await typed(tester, <FakeReply>[
-        FakeReply(422, Payloads.error('CARD_BLOCKED')),
+        FakeReply(422, Payloads.error('VOUCHER_BLOCKED')),
       ]);
       await tapRedeem(tester);
       await settle(tester);
-      expect(chargeOf(app).condition, CardCondition.blocked);
+      expect(chargeOf(app).condition, VoucherCondition.blocked);
       expect(rich('Nothing was booked.'), findsOneWidget);
-      expect(rich('Card blocked'), findsOneWidget);
+      expect(rich('Voucher blocked'), findsOneWidget);
       expect(rich('Reason:'), findsNothing, reason: 'AC-S07-22');
       expect(find.byType(Keypad), findsNothing);
+      expect(soundCount(app, 'gcw_error'), 1);
       await tester.pump(const Duration(seconds: 4));
       await settle(tester);
       expect(rich('Nothing was booked.'), findsNothing);
+      await finishApp(tester, app);
+    });
+
+    testWidgets('voucher expired meanwhile: expired variant (R07)', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await typed(tester, <FakeReply>[
+        FakeReply(422, Payloads.error('VOUCHER_EXPIRED')),
+      ]);
+      await tapRedeem(tester);
+      await settle(tester);
+      expect(chargeOf(app).condition, VoucherCondition.expired);
+      expect(rich('Nothing was booked.'), findsOneWidget);
+      expect(rich('Voucher expired'), findsOneWidget);
+      expect(find.byType(Keypad), findsNothing);
+      await finishApp(tester, app);
+    });
+
+    testWidgets('voucher no longer redeemable without a status: empty '
+        'variant (R07)', (WidgetTester tester) async {
+      final TestApp app = await typed(tester, <FakeReply>[
+        FakeReply(422, Payloads.error('VOUCHER_NOT_REDEEMABLE')),
+      ]);
+      await tapRedeem(tester);
+      await settle(tester);
+      expect(chargeOf(app).condition, VoucherCondition.empty);
+      expect(rich('Nothing was booked.'), findsOneWidget);
+      expect(rich('No balance left'), findsOneWidget);
+      await tester.tap(rich('Done'));
+      await settle(tester);
+      expect(app.loop.state, isA<ReadyState>());
+      await finishApp(tester, app);
+    });
+
+    testWidgets('refused presentment: "Nothing was booked." and "Scan '
+        'again" with the amount kept', (WidgetTester tester) async {
+      final TestApp app = await typed(tester, <FakeReply>[
+        FakeReply(
+          422,
+          Payloads.error('PRESENTMENT_INVALID', <String, Object?>{
+            'reason': 'expired',
+          }),
+        ),
+      ]);
+      await tapRedeem(tester);
+      await settle(tester);
+      expect(chargeOf(app).presentmentExpired, isTrue);
+      expect(
+        rich('Nothing was booked. Scan the voucher again to redeem.'),
+        findsOneWidget,
+      );
+      final PrimaryButton rescan = tester.widget(find.byType(PrimaryButton));
+      expect(rescan.label, 'Scan again');
+      expect(app.pending.entries, isEmpty);
+
+      app.backend.only(
+        'POST',
+        '/presentments',
+        FakeReply(201, Payloads.presentment(id: 'p-2')),
+      );
+      await tester.tap(find.byType(PrimaryButton));
+      await settle(tester);
+      expect(app.loop.state, isA<QrScanState>());
+      app.loop.qrDetected(Payloads.qr);
+      await settle(tester);
+      expect(chargeOf(app).amount, 2490);
+      expect(chargeOf(app).presentmentId, 'p-2');
+      expect(rich('Redeem € 24,90'), findsOneWidget);
+      expect(app.backend.to('POST', redeemPath), hasLength(1));
       await finishApp(tester, app);
     });
 
@@ -277,19 +435,6 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('idempotency conflict: "Please tap Redeem again." and no '
-        'resubmit (R13, AC-S08-13)', (WidgetTester tester) async {
-      final TestApp app = await typed(tester, <FakeReply>[
-        FakeReply(409, Payloads.error('IDEMPOTENCY_CONFLICT')),
-      ]);
-      await tapRedeem(tester);
-      await settle(tester);
-      expect(rich('Please tap Redeem again.'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 5));
-      expect(app.backend.to('POST', redeemPath), hasLength(1));
-      await finishApp(tester, app);
-    });
-
     testWidgets('velocity limit without a time: banner with "Please get a '
         'manager" (R14)', (WidgetTester tester) async {
       final TestApp app = await typed(tester, <FakeReply>[
@@ -298,7 +443,7 @@ void main() {
       await tapRedeem(tester);
       await settle(tester);
       expect(find.byType(StatusBanner), findsOneWidget);
-      expect(rich('Limit for this card reached'), findsOneWidget);
+      expect(rich('Limit for this voucher reached'), findsOneWidget);
       expect(rich('Please get a manager'), findsOneWidget);
       expect(rich('fraud'), findsNothing, reason: 'AC-S07-30');
       expect(
@@ -312,19 +457,24 @@ void main() {
     testWidgets('velocity limit with a time counts in minutes (R14)', (
       WidgetTester tester,
     ) async {
-      final TestApp app = await typed(tester, <FakeReply>[
-        FakeReply(
-          429,
-          Payloads.error('VELOCITY_LIMIT_EXCEEDED', <String, Object?>{
-            'retry_after': 720,
-          }),
-        ),
-      ]);
+      final TestApp app = await typed(
+        tester,
+        <FakeReply>[
+          FakeReply(
+            429,
+            Payloads.error('VELOCITY_LIMIT_EXCEEDED', <String, Object?>{
+              'retry_after': 720,
+            }),
+          ),
+        ],
+        // Long enough that the countdown, not the presentment, decides.
+        presentment: Payloads.presentment(expiresIn: 3600),
+      );
       await tapRedeem(tester);
       await settle(tester);
-      expect(rich('Possible again in 12 min'), findsOneWidget);
+      expect(rich('Possible again in 12'), findsOneWidget);
       await tester.pump(const Duration(seconds: 61));
-      expect(rich('Possible again in 11 min'), findsOneWidget);
+      expect(rich('Possible again in 11'), findsOneWidget);
       await tester.pump(const Duration(minutes: 11));
       await settle(tester);
       expect(find.byType(StatusBanner), findsNothing);
@@ -347,13 +497,13 @@ void main() {
       ]);
       await tapRedeem(tester);
       await settle(tester);
-      expect(rich('possible again in 30 s'), findsOneWidget);
+      expect(rich('possible again in 30'), findsOneWidget);
       expect(
         tester.widget<PrimaryButton>(find.byType(PrimaryButton)).onPressed,
         isNull,
       );
       await tester.pump(const Duration(seconds: 10));
-      expect(rich('possible again in 20 s'), findsOneWidget);
+      expect(rich('possible again in 20'), findsOneWidget);
 
       final List<(String, bool)> said = recordAnnouncements(tester);
       await tester.pump(const Duration(seconds: 20));

@@ -10,6 +10,7 @@ import '../diagnostics/diagnostic_log.dart';
 import '../format/support_code.dart';
 import '../platform/biometrics_service.dart';
 import '../platform/feedback_service.dart';
+import '../storage/pending_redemptions.dart';
 import '../storage/recent_store.dart';
 import '../storage/secure_store.dart';
 import '../storage/settings_store.dart';
@@ -38,7 +39,7 @@ typedef BiometricPromptTexts = ({String reason, String androidTitle, String andr
 
 /// Access, session and account state (02 §4.3, §4.5; 03a S01–S04, S15, S17;
 /// 09 §7.5–§7.6; 12 §3.3). Global handlers for 401, device revoked,
-/// restaurant suspended, forbidden, locked and deactivated live here and can
+/// restaurant suspended, forbidden and deactivated live here and can
 /// interrupt any state of the loop.
 class SessionController extends ChangeNotifier {
   SessionController({
@@ -46,6 +47,7 @@ class SessionController extends ChangeNotifier {
     required SecretStore secrets,
     required SettingsStore settings,
     required RecentStore recent,
+    required PendingRedemptionStore pending,
     required BiometricsService biometrics,
     required FeedbackService feedback,
     required AppClientIdentity identity,
@@ -59,6 +61,7 @@ class SessionController extends ChangeNotifier {
         _secrets = secrets,
         _settings = settings,
         _recent = recent,
+        _pending = pending,
         _biometrics = biometrics,
         _feedback = feedback,
         _identity = identity,
@@ -79,13 +82,11 @@ class SessionController extends ChangeNotifier {
   /// `/app/config` is refreshed at most this often on resume (09 §9.2).
   static const Duration configInterval = Duration(minutes: 5);
 
-  /// A link opened while signed out or locked is kept this long (02 §4.3).
-  static const Duration pendingLinkLifetime = Duration(seconds: 120);
-
   final WaiterApi _api;
   final SecretStore _secrets;
   final SettingsStore _settings;
   final RecentStore _recent;
+  final PendingRedemptionStore _pending;
   final BiometricsService _biometrics;
   final FeedbackService _feedback;
   final AppClientIdentity _identity;
@@ -116,11 +117,6 @@ class SessionController extends ChangeNotifier {
   /// Full `X-Request-Id` behind [blockedSupportCode] (long-press copy).
   String? get blockedRequestId => _blockedRequestId;
 
-  Duration? _lockedUntil;
-
-  /// A06 countdown end (monotonic); null when not locked.
-  Duration? get lockedUntil => _lockedUntil;
-
   SessionContext? _expired;
 
   /// Non-null while the S15 session sheet is shown over the current layer.
@@ -140,9 +136,6 @@ class SessionController extends ChangeNotifier {
   BiometricKind get biometricKind => _biometricKind;
 
   bool _deferredIntro = false;
-
-  String? _pendingLink;
-  Duration? _pendingLinkAt;
 
   Duration? _backgroundAt;
   Duration? _configAt;
@@ -356,10 +349,6 @@ class SessionController extends ChangeNotifier {
         case 'RESTAURANT_SUSPENDED':
           _block(BlockedKind.suspended, e.requestId);
           return const SignInBlocked();
-        case 'ACCOUNT_LOCKED':
-          _lockedUntil = _clock.now() + (e.retryAfter ?? const Duration(minutes: 15));
-          _block(BlockedKind.locked, e.requestId);
-          return const SignInBlocked();
         case 'FORBIDDEN':
           _feedback.haptic(HapticToken.error);
           return const SignInNoPermission();
@@ -415,10 +404,6 @@ class SessionController extends ChangeNotifier {
 
   void _afterBiometricsStep() {
     if (_settings.introDone) {
-      _go(AccessPhase.active);
-    } else if (hasPendingLink) {
-      // 02 §4.3: S17 is deferred to the next time S05 is shown.
-      _deferredIntro = true;
       _go(AccessPhase.active);
     } else {
       _go(AccessPhase.onboardingIntro);
@@ -480,8 +465,10 @@ class SessionController extends ChangeNotifier {
 
   // -------------------------------------------------------------- sign-out
 
-  /// S14 sign-out, confirmed in the dialog (E65). Token, Recent and pending
-  /// attempts are deleted even if the request fails (09 §9.2).
+  /// S14 sign-out, confirmed in the dialog (E65). Token and Recent are
+  /// deleted even if the request fails (09 §9.2). Unresolved redemption
+  /// attempts stay stored for this user's next sign-in: only they can ask for
+  /// the outcome.
   Future<void> signOut() async {
     try {
       await _api.signOut();
@@ -505,6 +492,7 @@ class SessionController extends ChangeNotifier {
     await _secrets.delete(_tokenKey);
     await _secrets.delete(_profileKey);
     await _recent.clear();
+    _pending.detach();
     await _settings.resetAccount();
     _signals.add(SessionSignal.signedOut);
   }
@@ -532,23 +520,22 @@ class SessionController extends ChangeNotifier {
     }
   }
 
-  /// S15 "Sign in" / "Back to sign in" (device revoked, locked over,
-  /// deactivated, forbidden).
+  /// S15 "Sign in" / "Back to sign in" (device revoked, deactivated,
+  /// forbidden).
   Future<void> leaveBlocked() async {
     _blocked = null;
     _blockedSupportCode = null;
     _blockedRequestId = null;
-    _lockedUntil = null;
     await _signOutLocally();
   }
 
   void _block(BlockedKind kind, String requestId, {bool clear = false}) {
     _blocked = kind;
-    final bool withCode = kind != BlockedKind.locked && requestId.isNotEmpty;
+    final bool withCode = requestId.isNotEmpty;
     _blockedSupportCode = withCode ? SupportCode.fromRequestId(requestId) : null;
     _blockedRequestId = withCode ? requestId : null;
     _expired = null;
-    // E03 / E08: account locked, revoked, suspended, forbidden, deactivated.
+    // E03 / E08: revoked, suspended, forbidden, deactivated.
     _feedback.haptic(HapticToken.error);
     if (clear) {
       _identity.token = null;
@@ -556,6 +543,7 @@ class SessionController extends ChangeNotifier {
       unawaited(_secrets.delete(_tokenKey));
       unawaited(_secrets.delete(_profileKey));
       unawaited(_recent.clear());
+      _pending.detach();
     }
     _signals.add(SessionSignal.signedOut);
     _go(AccessPhase.blocked);
@@ -579,7 +567,7 @@ class SessionController extends ChangeNotifier {
           }
         }
         return true;
-      case ApiRejected(:final String code, :final String requestId, :final Duration? retryAfter):
+      case ApiRejected(:final String code, :final String requestId):
         switch (code) {
           case 'DEVICE_REVOKED':
             _block(BlockedKind.deviceRevoked, requestId, clear: true);
@@ -589,10 +577,6 @@ class SessionController extends ChangeNotifier {
             return true;
           case 'FORBIDDEN':
             _block(BlockedKind.forbidden, requestId);
-            return true;
-          case 'ACCOUNT_LOCKED':
-            _lockedUntil = _clock.now() + (retryAfter ?? const Duration(minutes: 15));
-            _block(BlockedKind.locked, requestId);
             return true;
         }
         return false;
@@ -673,26 +657,6 @@ class SessionController extends ChangeNotifier {
     notifyListeners();
   }
 
-  // ------------------------------------------------------------------ links
-
-  /// A card link while signed out or locked is kept for 120 s (02 §4.3).
-  void keepLink(String url) {
-    _pendingLink = url;
-    _pendingLinkAt = _clock.now();
-    notifyListeners();
-  }
-
-  bool get hasPendingLink =>
-      _pendingLink != null && _pendingLinkAt != null && _clock.now() - _pendingLinkAt! <= pendingLinkLifetime;
-
-  /// The pending link, once, if it is still fresh.
-  String? takePendingLink() {
-    final String? link = hasPendingLink ? _pendingLink : null;
-    _pendingLink = null;
-    _pendingLinkAt = null;
-    return link;
-  }
-
   // ------------------------------------------------------------ business day
 
   /// Current business-day key in the restaurant zone.
@@ -707,6 +671,7 @@ class SessionController extends ChangeNotifier {
     final SessionUser? user = _user;
     if (user == null) return;
     await _recent.load(userId: user.id, businessDay: businessDayKey());
+    await _pending.load(user.id);
     _scheduleRollover();
   }
 
@@ -717,7 +682,8 @@ class SessionController extends ChangeNotifier {
     _rolloverTimer = Timer(until + const Duration(seconds: 1), () => unawaited(_rolloverIfNeeded()));
   }
 
-  /// 04:00 rollover (09 §4.5): Recent cleared, pending attempts discarded.
+  /// 04:00 rollover (09 §4.5): Recent cleared. Unresolved redemption
+  /// attempts are kept until the server answered for them.
   Future<void> _rolloverIfNeeded() async {
     if (_user == null) return;
     final String day = businessDayKey();

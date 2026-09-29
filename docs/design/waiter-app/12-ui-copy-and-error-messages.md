@@ -420,8 +420,6 @@ Single source for every UI string. **Max** = character limit (§1.8) for the lon
 | `common.done` | Fertig | Done | Gotovo | 12 | 03b |
 | `common.tryAgain` | Erneut versuchen | Try again | Pokušaj ponovo | 24 | 03b · §2.7 |
 | `common.scanAgain` | Erneut scannen | Scan again | Skeniraj ponovo | 24 | 03b · §2.7 |
-| `common.enterNumber` | Kartennummer eingeben | Enter card number | Unesi broj kartice | 24 | 03b · opens S11 |
-| `common.editNumber` | Nummer bearbeiten | Edit number | Uredi broj | 24 | 03b · S11 prefilled |
 | `common.openSettings` | Einstellungen öffnen | Open Settings | Otvori postavke | 24 | 12 · = `camera.denied.action` (alias) |
 | `common.backToSignIn` | Zur Anmeldung | Back to sign in | Nazad na prijavu | 24 | 03a |
 | `common.checkAgain` | Erneut prüfen | Check again | Provjeri ponovo | 24 | 12 · alias `suspended.retry` (03a) |
@@ -495,9 +493,11 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `signIn.noAccess` | Kein Zugang? Die Betriebsleitung legt ihn im Dashboard an. | No login? A manager creates it in the dashboard. | Nemate pristup? Menadžer ga kreira u dashboardu. | 90 | 12 · caption |
 | `signIn.error.required` | Pflichtfeld | Required | Obavezno polje | 24 | 12 · inline |
 | `signIn.error.emailFormat` | E-Mail-Adresse prüfen | Check the e-mail address | Provjerite e-mail adresu | 32 | 03a |
-| `signIn.error.invalid` | E-Mail oder Passwort stimmt nicht. Bitte prüfen und erneut versuchen. | E-mail or password is incorrect. Check both and try again. | E-mail ili lozinka nisu ispravni. Provjerite i pokušajte ponovo. | 90 | 03a · A07 |
-| `signIn.error.noPermission` | Dieses Konto kann keine Karten einlösen. Bitte Betriebsleitung holen. | This account can't redeem cards. Please get a manager. | Ovaj račun ne može iskorištavati kartice. Molimo pozovite menadžera. | 90 | 03a · A02 |
+| `signIn.error.invalid` | E-Mail oder Passwort ist falsch. Nach zu vielen Versuchen ist die Anmeldung einige Minuten gesperrt. | E-mail or password is incorrect. After too many attempts, sign-in is paused for a few minutes. | E-mail ili lozinka nisu ispravni. Nakon previše pokušaja prijava je blokirana nekoliko minuta. | 120 | 03a · ADR-002: one answer for wrong and locked (audit S4) |
+| `signIn.error.noPermission` | Dieses Konto kann keine Gutscheine einlösen. Bitte Betriebsleitung holen. | This account can't redeem vouchers. Please get a manager. | Ovaj račun ne može iskorištavati vaučere. Molimo pozovite menadžera. | 90 | 03a · A02 |
 | `signIn.error.throttled` | Zu viele Versuche. Erneut möglich in {time}. | Too many attempts. Try again in {time}. | Previše pokušaja. Ponovo za {time}. | 48 | 03a · A08 |
+| `signIn.retryIn` | Erneut in {time} | Try again in {time} | Ponovo za {time} | 24 | 03a · disabled sign-in button during the 429 wait (S02, S15 sheet) |
+| `signIn.available` | Anmelden ist wieder möglich | You can sign in again | Prijava je ponovo moguća | — | 03a · (a11y) end of the wait |
 | `signIn.error.server` | Anmelden gerade nicht möglich. Gleich noch einmal versuchen. | Can't sign in right now. Try again in a moment. | Prijava trenutno nije moguća. Pokušajte ponovo za trenutak. | 90 | 03a · A09 · support code below |
 | `signIn.offline.body` | Anmelden braucht eine Internetverbindung. | Signing in needs a connection. | Za prijavu je potrebna veza. | 48 | 03a · A09 |
 
@@ -530,7 +530,6 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `unlock.usePassword` | Passwort verwenden | Use password | Koristi lozinku | 24 | 03a · **B** wording |
 | `unlock.changed` | Biometrie wurde auf diesem Gerät geändert. Bitte mit Passwort anmelden. | Biometrics changed on this device. Sign in with your password. | Biometrija je promijenjena na ovom uređaju. Prijavite se lozinkom. | 90 | 03a · P13 |
 | `unlock.lockedOut` | Zu viele Versuche. Passwort verwenden. | Too many attempts. Use the password. | Previše pokušaja. Koristite lozinku. | 48 | 12 · P12 |
-| `unlock.pendingCard` | Die Karte wird nach dem Entsperren geöffnet. | The card opens after unlocking. | Kartica se otvara nakon otključavanja. | 48 | 03a · deep link waiting |
 
 ### 5.6 S05 Ready, TopBar, offline, maintenance
 
@@ -538,92 +537,39 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 |---|---|---|---|---|---|
 | `topBar.recent` | Verlauf | Recent | Nedavno | — | 03a · (a11y) |
 | `topBar.menu` | Menü, {name} | Menu, {name} | Meni, {name} | — | 03a · (a11y) |
-| `ready.android.title` | Karte an das Handy halten | Hold the card to the phone | Prislonite karticu uz telefon | 32 | **B** |
-| `ready.android.hint` | Die Karte wird automatisch erkannt | The card is detected automatically | Kartica se automatski prepoznaje | 40 | 03a |
-| `ready.ios.button` | Karte scannen | Scan card | Skeniraj karticu | 24 | **B** |
-| `ready.ios.hint` | Nach dem Tippen die Karte oben an das iPhone halten | After tapping, hold the card near the top of the iPhone | Nakon dodira prislonite karticu na vrh iPhonea | 60 | 03a · 2 lines |
-| `ready.ios.timeout` | Keine Karte erkannt. Zum Wiederholen „Karte scannen" tippen. | No card detected. Tap "Scan card" to try again. | Kartica nije prepoznata. Dodirnite „Skeniraj karticu" za novi pokušaj. | 90 | 03a · P08 |
-| `ready.manual` | Kartennummer | Card number | Broj kartice | 16 | 03a · icon + noun (exception to verb + object, §1.2) |
-| `ready.qr` | QR-Code | QR code | QR kôd | 16 | 03a · icon + noun |
-| `ready.firstCardTip.android` | Tipp: Die NFC-Antenne sitzt meist hinten oben, nahe der Kamera. | Tip: the NFC antenna is usually at the top of the back, near the camera. | Savjet: NFC antena je obično gore na poleđini, blizu kamere. | 90 | 03a |
-| `ready.firstCardTip.ios` | Tipp: Die Karte flach an die Oberkante halten, nahe der Kamera. | Tip: hold the card flat against the top edge, near the camera. | Savjet: držite karticu ravno uz gornji rub, blizu kamere. | 90 | 03a |
-| `ready.noNfc.title` | QR-Code auf der Karte scannen | Scan the QR code on the card | Skenirajte QR kôd na kartici | 32 | 03a · P02 |
-| `ready.noNfc.hint` | Dieses Gerät hat kein NFC. QR-Code oder Kartennummer verwenden. | This device has no NFC. Use the QR code or the card number. | Ovaj uređaj nema NFC. Koristite QR kôd ili broj kartice. | 90 | 03a |
-| `ready.noNfc.button` | QR-Code scannen | Scan QR code | Skeniraj QR kôd | 24 | 03a |
-| `ready.offline.tap` | Keine Verbindung – Karte kann nicht geprüft werden | No connection – the card can't be checked | Nema veze – kartica se ne može provjeriti | 60 | 03a · L09 · harmonised (EN en dash) |
+| `ready.title` | Gutschein scannen | Scan the voucher | Skenirajte vaučer | 32 | ADR-002 |
+| `ready.hint` | Kamera auf den QR-Code des Gutscheins richten – gedruckt oder am Handy des Gastes. | Point the camera at the voucher's QR code – printed or on the guest's phone. | Usmjerite kameru na QR kôd vaučera – ispisan ili na telefonu gosta. | 90 | ADR-002 |
+| `ready.scan` | Gutschein scannen | Scan voucher | Skeniraj vaučer | 24 | ADR-002 · primary |
+| `ready.sell` | Gutschein verkaufen | Sell voucher | Prodaj vaučer | 24 | ADR-002 · opens S20; only with `vouchers.sell` |
+| `ready.pending.title` | Einlösung noch nicht bestätigt | Redemption not confirmed yet | Iskorištavanje još nije potvrđeno | 32 | ADR-002 · banner while an attempt is unresolved (audit M1, M2, M6) |
+| `ready.pending.body` | {amount} auf Gutschein •••• {last4}. Wird automatisch geprüft – es wird nie doppelt gebucht. | {amount} on voucher •••• {last4}. Checked automatically – nothing is ever booked twice. | {amount} na vaučeru •••• {last4}. Provjerava se automatski – ništa se ne knjiži dvaput. | 90 | ADR-002 |
+| `ready.pending.booked` | Die unbestätigte Einlösung über {amount} wurde gebucht. | The unconfirmed redemption of {amount} was booked. | Nepotvrđeno iskorištavanje od {amount} je knjiženo. | 60 | ADR-002 · snackbar; the row appears in Recent |
+| `ready.pending.notBooked` | Die unbestätigte Einlösung über {amount} wurde nicht gebucht. | The unconfirmed redemption of {amount} was not booked. | Nepotvrđeno iskorištavanje od {amount} nije knjiženo. | 60 | ADR-002 · snackbar |
 | `ready.online` | Wieder verbunden | Connected again | Veza je ponovo uspostavljena | 32 | 03a · snackbar / announcement |
 | `offline.title` | Keine Verbindung | No connection | Nema veze | 28 | **B** · also S10 network title |
 | `offline.body` | Einlösen braucht Internet, damit nie doppelt gebucht wird. | Redeeming needs a connection so nothing is ever booked twice. | Za iskorištavanje je potrebna veza, da se ništa ne knjiži dvaput. | 90 | **B** |
 | `maintenance.default` | Geplante Wartung: Einlösen kann kurz nicht möglich sein. | Scheduled maintenance: redeeming may be briefly unavailable. | Planirano održavanje: iskorištavanje može kratko biti nedostupno. | 90 | 03a · A12 fallback when the server text is missing |
 | `maintenance.dismiss` | Hinweis schließen | Dismiss notice | Zatvori obavijest | — | 03a · (a11y) |
-| `ready.newCard` | Neue Gutscheinkarte | New gift card | Nova poklon kartica | 24 | S20 · managers and owners only · button on S05 |
-| `issue.title` | Neue Gutscheinkarte | New gift card | Nova poklon kartica | 24 | S20 · screen title |
-| `issue.amount.label` | Kartenwert | Card value | Vrijednost kartice | 24 | S20 · above the amount |
-| `issue.email.label` | E-Mail des Gastes (optional) | Guest e-mail (optional) | E-mail gosta (neobavezno) | 32 | S20 |
-| `issue.email.helper` | Der Gast erhält eine Bestätigung. | The guest receives a confirmation. | Gost dobija potvrdu. | 60 | S20 |
-| `issue.email.invalid` | Bitte eine gültige E-Mail-Adresse eingeben. | Enter a valid e-mail address. | Unesite ispravnu e-mail adresu. | 60 | S20 · field error |
-| `issue.amount.range` | Der Kartenwert muss zwischen {min} und {max} liegen. | The card value must be between {min} and {max}. | Vrijednost kartice mora biti između {min} i {max}. | 60 | S20 · server INVALID_AMOUNT |
-| `issue.create` | Karte anlegen · {amount} | Create card · {amount} | Kreiraj karticu · {amount} | 32 | S20 · primary |
-| `issue.creating` | Karte wird angelegt … | Creating card … | Kartica se kreira … | 32 | S20 · button progress |
-| `issue.program.title` | Leere Karte an das Handy halten | Hold a blank card to the phone | Prislonite praznu karticu uz telefon | 36 | S20 · programming |
-| `issue.program.body` | Ruhig an die Rückseite halten, bis das Häkchen erscheint. | Keep it still on the back of the phone until the check mark appears. | Držite je mirno na poleđini telefona dok se ne pojavi kvačica. | 90 | S20 |
-| `issue.program.retap` | Karte kurz abheben und erneut anhalten. | Lift the card and hold it to the phone again. | Podignite karticu i ponovo je prislonite. | 60 | S20 · hint |
-| `issue.step.check` | Chip prüfen | Check tag | Provjera čipa | 24 | S20 · step |
-| `issue.step.write` | Kartenlink schreiben | Write card link | Upis linka kartice | 24 | S20 · step |
-| `issue.step.verify` | Zurücklesen und prüfen | Read back and verify | Očitavanje i provjera | 24 | S20 · step |
-| `issue.step.save` | Chip der Karte zuordnen | Save chip to card | Spremanje čipa uz karticu | 28 | S20 · step |
-| `issue.card` | Karte {number} | Card {number} | Kartica {number} | 32 | S20 · card number, grouped |
-| `issue.success.title` | Karte bereit | Card ready | Kartica spremna | 20 | S20 |
-| `issue.success.balance` | Guthaben {amount} | Balance {amount} | Stanje {amount} | 32 | S20 |
-| `issue.success.verified` | NFC-Chip beschrieben und geprüft | NFC tag written and verified | NFC čip upisan i provjeren | 40 | S20 |
-| `issue.success.noTag` | Noch kein Chip. Später im Dashboard beschreiben. | No tag yet. Program it later in the dashboard. | Još nema čipa. Upišite ga kasnije na kontrolnoj ploči. | 60 | S20 · after “Program later” |
-| `issue.success.another` | Weitere Karte verkaufen | Sell another card | Prodaj još jednu karticu | 28 | S20 · secondary |
-| `issue.later` | Später beschreiben | Program later | Upiši kasnije | 24 | S20 · keeps the card without a tag |
-| `issue.nfcOff` | NFC einschalten, um den Chip zu beschreiben. | Turn on NFC to program the tag. | Uključite NFC da biste upisali čip. | 60 | S20 |
-| `issue.createFailed.title` | Karte nicht angelegt | Card not created | Kartica nije kreirana | 28 | S20 |
-| `issue.createFailed.body` | Es wurde keine Karte angelegt. Verbindung prüfen und erneut versuchen. | No card was created. Check the connection and try again. | Nijedna kartica nije kreirana. Provjerite vezu i pokušajte ponovo. | 90 | S20 · definitive answer |
-| `issue.createUncertain.body` | Die Antwort kam nicht an. Erneut versuchen, die Karte wird nicht doppelt angelegt. | The answer did not arrive. Try again, the card will not be created twice. | Odgovor nije stigao. Pokušajte ponovo, kartica se neće kreirati dvaput. | 90 | S20 · same idempotency key |
-| `issue.notAllowed.title` | Nicht erlaubt | Not allowed | Nije dozvoljeno | 28 | S20 · 403 |
-| `issue.notAllowed.body` | Dieses Konto kann auf diesem Handy keine Karten verkaufen. Ab- und wieder anmelden oder das Dashboard verwenden. | This account cannot sell cards on this phone. Sign out and in again, or use the dashboard. | Ovaj račun ne može prodavati kartice na ovom telefonu. Odjavite se i ponovo prijavite ili koristite kontrolnu ploču. | 120 | S20 · 403 |
-| `issue.tagFailed.title` | Chip nicht beschrieben | Tag not programmed | Čip nije upisan | 28 | S20 · the card exists, nothing was saved to it |
-| `issue.tag.otherCard` | Dieser Chip gehört zur Karte {number}. Bitte einen leeren Chip verwenden. | This tag belongs to card {number}. Use a blank tag. | Ovaj čip pripada kartici {number}. Koristite prazan čip. | 90 | S20 · check refused, conflict |
-| `issue.tag.refused` | Dieser Chip kann für diese Karte nicht verwendet werden. Bitte einen leeren Chip verwenden. | This tag cannot be used for this card. Use a blank tag. | Ovaj čip se ne može koristiti za ovu karticu. Koristite prazan čip. | 90 | S20 · check refused |
-| `issue.tag.unsupported` | Dieser Chiptyp wird nicht unterstützt. Bitte NTAG213, 215 oder 216 verwenden. | This tag type is not supported. Use NTAG213, 215 or 216. | Ovaj tip čipa nije podržan. Koristite NTAG213, 215 ili 216. | 90 | S20 |
-| `issue.tag.readOnly` | Dieser Chip ist gesperrt und kann nicht beschrieben werden. | This tag is locked and cannot be written. | Ovaj čip je zaključan i ne može se upisati. | 90 | S20 |
-| `issue.tag.moved` | Der Chip wurde bewegt. Ruhig halten und erneut versuchen. | The tag moved away. Hold it still and try again. | Čip se pomjerio. Držite ga mirno i pokušajte ponovo. | 90 | S20 · write / read failed, timeout |
-| `issue.tag.verifyFailed` | Der Chip konnte nicht geprüft werden. Mit demselben Chip erneut versuchen. | The tag could not be verified. Try again with the same tag. | Čip nije moguće provjeriti. Pokušajte ponovo s istim čipom. | 90 | S20 · read-back mismatch |
-| `issue.tag.network` | Keine Verbindung zum Server. Erneut versuchen. | No connection to the server. Try again. | Nema veze sa serverom. Pokušajte ponovo. | 90 | S20 · check / save without answer |
 
-Rows marked **S20** belong to *New gift card* (managers and owners only, see [02 §4.4a](02-information-architecture-and-journey.md)); waiters never see them.
-
-### 5.7 S06 Scanning and iOS system sheet
+### 5.7 S06 Scanning
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
-| `ios.sheet.alert` | Karte oben an das iPhone halten | Hold the card near the top of the iPhone | Prislonite karticu na vrh iPhonea | 48 | **B** |
-| `ios.sheet.found` | Karte gefunden | Card found | Kartica pronađena | 48 | 03a · **B** wording |
-| `ios.sheet.readFailed` | Karte nicht gelesen. Erneut versuchen. | Couldn't read the card. Try again. | Kartica nije pročitana. Pokušajte ponovo. | 48 | 03a |
-| `ios.sheet.multiple` | Mehrere Karten erkannt. Nur eine Karte halten. | More than one card detected. Hold only one. | Prepoznato više kartica. Držite samo jednu. | 48 | 03a · P06 |
-| `ios.sheet.timeoutSoon` | Noch keine Karte. Karte flach oben an das iPhone halten. | No card yet. Hold it flat near the top of the iPhone. | Još nema kartice. Prislonite je ravno na vrh iPhonea. | 60 | 03a · P07 |
-| `scan.notCard` | Keine Gutscheinkarte | This is not a gift card | Ovo nije poklon kartica | 32 | 03a · harmonised ("Gutscheinkarte", "poklon kartica", §1.3) · L10 |
-| `scan.readFailed.title` | Karte konnte nicht gelesen werden | Couldn't read the card | Kartica nije pročitana | 32 | 03a · L11 |
-| `scan.readFailed.body` | Karte eine Sekunde ruhig halten. | Hold it still for a second. | Držite je mirno jednu sekundu. | 48 | 03a |
-| `scan.detected` | Karte erkannt | Card detected | Kartica prepoznata | — | 03a · (a11y) announcement |
-| `scan.lookingUp` | Karte wird gesucht … | Looking up card … | Tražimo karticu … | 32 | 03a |
-| `scan.slow` | Suche dauert länger … | Still looking … | Još tražimo … | 32 | 03a · L08 · alias `lookup.stillLooking` (03b) |
-| `scan.unavailable` | NFC gerade nicht verfügbar. Kartennummer oder QR-Code verwenden. | NFC isn't available right now. Use the card number or QR code. | NFC trenutno nije dostupan. Koristite broj kartice ili QR kôd. | 90 | 03a · P09 |
+| `scan.detected` | Gutschein erkannt | Voucher detected | Vaučer prepoznat | — | 03a · (a11y) announcement |
+| `scan.lookingUp` | Gutschein wird geprüft … | Checking voucher … | Provjeravamo vaučer … | 32 | 03a |
+| `scan.slow` | Prüfung dauert länger … | Still checking … | Još provjeravamo … | 32 | 03a · L08 · alias `lookup.stillLooking` (03b) |
 
 ### 5.8 S07 Charge — balance card, keypad, amount
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
-| `balanceCard.overline` | Gutscheinkarte | Gift card | Poklon kartica | 16 | 12 · uppercased by style |
+| `balanceCard.overline` | Gutschein | Voucher | Vaučer | 16 | 12 · uppercased by style · ADR-002 |
 | `balanceCard.validUntil` | Gültig bis {date} | Valid until {date} | Vrijedi do {date} | 24 | 12 |
 | `balanceCard.noExpiry` | Ohne Ablaufdatum | No expiry date | Bez roka važenja | 24 | 12 · `expires_at` null |
 | `balanceCard.masked` | •••• {last4} | •••• {last4} | •••• {last4} | 9 | 12 |
-| `balanceCard.a11y` | Gutscheinkarte {restaurant}. Guthaben {spokenAmount}. Karte endet auf {last4}. | Gift card {restaurant}. Balance {spokenAmount}. Card ending {last4}. | Poklon kartica {restaurant}. Stanje {spokenAmount}. Kartica završava na {last4}. | — | 12 · (a11y) · validity and status appended |
-| `charge.cardNumber.a11y` | Kartennummer {number} | Card number {number} | Broj kartice {number} | — | 12 · (a11y) |
-| `a11y.charge.close` | Karte schließen | Close card | Zatvori karticu | — | 03b · (a11y) |
+| `balanceCard.a11y` | Gutschein {restaurant}. Guthaben {spokenAmount}. Gutschein endet auf {last4}. | Voucher {restaurant}. Balance {spokenAmount}. Voucher ending {last4}. | Vaučer {restaurant}. Stanje {spokenAmount}. Vaučer završava na {last4}. | — | 12 · (a11y) · validity and status appended |
+| `charge.voucherNumber.a11y` | Gutscheinnummer {number} | Voucher number {number} | Broj vaučera {number} | — | 12 · (a11y) |
+| `a11y.charge.close` | Gutschein schließen | Close voucher | Zatvori vaučer | — | 03b · (a11y) |
 | `a11y.amount` | Betrag {spokenAmount} | Amount {spokenAmount} | Iznos {spokenAmount} | — | 03b · (a11y) AmountDisplay |
 | `charge.enterAmount` | Betrag eingeben | Enter amount | Unesi iznos | 24 | 03b · disabled button at € 0,00 |
 | `charge.redeem` | {amount} einlösen | Redeem {amount} | Iskoristi {amount} | 26+amt | **B** (§4.2 clarification) |
@@ -637,13 +583,14 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | `charge.useMax` | Maximum verwenden · {amount} | Use maximum · {amount} | Iskoristi maksimum · {amount} | 20+amt | 03b · R10 |
 | `charge.maxSingle` | Max. {amount} pro Einlösung | Max. {amount} per redemption | Najviše {amount} po iskorištavanju | 40 | 03b · R10 |
 | `charge.fullOnly` | Hier ist nur das gesamte Guthaben einlösbar. | Only the full balance can be redeemed here. | Ovdje se može iskoristiti samo cijelo stanje. | 90 | 03b · partial disabled, R11 |
-| `charge.velocity.title` | Limit für diese Karte erreicht | Limit for this card reached | Dosegnut je limit za ovu karticu | 32 | 03b · R14 |
+| `charge.velocity.title` | Limit für diesen Gutschein erreicht | Limit for this voucher reached | Dosegnut je limit za ovaj vaučer | 32 | 03b · R14 |
 | `charge.velocity.bodyTime` | Wieder möglich in {minutes} min. Oder Betriebsleitung holen. | Possible again in {minutes} min. Or get a manager. | Ponovo moguće za {minutes} min. Ili pozovite menadžera. | 90 | 03b · harmonised ("min" without period) |
 | `charge.rateLimited` | Zu viele Anfragen – wieder möglich in {seconds} s | Too many requests – possible again in {seconds} s | Previše zahtjeva – ponovo moguće za {seconds} s | 60 | 03b · R15 · harmonised (EN en dash) |
-| `charge.switchCard.message` | Andere Karte erkannt – wechseln? | Different card detected – Switch? | Prepoznata je druga kartica – zamijeniti? | 48 | 03b · **B** EN wording (brief §2) · P14 |
-| `charge.switchCard.action` | Wechseln | Switch | Zamijeni | 12 | 03b · **B** |
-| `charge.switchCard.keep` | Behalten | Keep | Zadrži | 12 | 03b |
-| `charge.switchCard.dialogTitle` | Andere Karte erkannt | Different card detected | Prepoznata je druga kartica | 32 | 12 · Dialog fallback with screen reader ([03b §2.18](03b-screens-charge-redeem-success-problems.md)) |
+| `charge.dailyLimit` | Heute noch höchstens {amount} mit diesem Gutschein | At most {amount} more with this voucher today | Danas još najviše {amount} ovim vaučerom | 60 | ADR-002 · per-day limit of the restaurant |
+| `charge.presentment.expired` | Zum Einlösen den Gutschein erneut scannen. | Scan the voucher again to redeem. | Za iskorištavanje ponovo skenirajte vaučer. | 60 | ADR-002 · the 60-s proof ran out; the amount is kept |
+| `charge.pending.title` | Frühere Einlösung wird geprüft | Checking an earlier redemption | Provjerava se ranije iskorištavanje | 36 | ADR-002 · an unresolved attempt on this voucher |
+| `charge.pending.body` | {amount} wurde vielleicht schon eingelöst. Einlösen ist erst nach der Prüfung möglich. | {amount} may already have been redeemed. Redeeming is possible once this is checked. | {amount} je možda već iskorišteno. Iskorištavanje je moguće nakon provjere. | 90 | ADR-002 |
+| `charge.earlierBooked` | Die frühere Einlösung über {amount} wurde gebucht. Guthaben aktualisiert. | The earlier redemption of {amount} was booked. Balance updated. | Ranije iskorištavanje od {amount} je knjiženo. Stanje ažurirano. | 90 | ADR-002 |
 | `keypad.doubleZero` | Doppelnull | Double zero | Dvije nule | — | 03a · (a11y) · alias `a11y.keypad.doubleZero` (03b) |
 | `keypad.delete` | Löschen | Delete | Obriši | — | 03a · (a11y) · alias `a11y.keypad.delete` (03b) |
 | `keypad.delete.hint` | Lange drücken, um alles zu löschen | Long press to clear | Dugo pritisnite za brisanje svega | — | 03a · (a11y) · alias `a11y.keypad.deleteHint` (03b) |
@@ -655,21 +602,15 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
 | `badge.active` | Aktiv | Active | Aktivna | 16 | 12 · a11y only (active cards show no badge) |
-| `badge.inactive` | Nicht aktiviert | Not activated | Nije aktivirana | 16 | 12 |
-| `badge.redeemed` | Aufgebraucht | Used up | Potrošena | 16 | 12 · status `redeemed` or balance 0 |
+| `badge.usedUp` | Aufgebraucht | Used up | Potrošeno | 16 | 12 · status `redeemed` or balance 0 |
 | `badge.blocked` | Gesperrt | Blocked | Blokirana | 16 | 12 |
 | `badge.expired` | Abgelaufen | Expired | Istekla | 16 | 12 |
-| `badge.replaced` | Ersetzt | Replaced | Zamijenjena | 16 | 12 |
-| `card.blocked` | Karte gesperrt | Card blocked | Kartica blokirana | 28 | **B** · danger · body = `getManager` |
-| `card.blocked.reason` | Grund: {reason} | Reason: {reason} | Razlog: {reason} | 90 | 03b · only if `blocked_reason` present |
-| `card.expired` | Karte abgelaufen | Card expired | Kartica istekla | 28 | **B** · warning |
-| `card.expired.body` | Abgelaufen am {date}. Bitte Betriebsleitung holen. | Expired on {date}. Please get a manager. | Istekla {date}. Molimo pozovite menadžera. | 90 | 03b · harmonised (escalation wording §2.6) |
-| `card.inactive` | Karte noch nicht aktiviert | Card not activated yet | Kartica još nije aktivirana | 28 | **B** · warning |
-| `card.inactive.body` | Erst nach der Aktivierung einlösbar. Bitte Betriebsleitung holen. | It can be redeemed once activated. Please get a manager. | Može se iskoristiti tek nakon aktivacije. Molimo pozovite menadžera. | 90 | 03b |
-| `card.replaced` | Karte wurde ersetzt | Card was replaced | Kartica je zamijenjena | 28 | **B** · warning |
-| `card.replaced.body` | Das Guthaben ist auf der neuen Karte. Gast nach der neuen Karte fragen. | The balance is on the new card. Ask the guest for the new card. | Stanje je na novoj kartici. Zamolite gosta za novu karticu. | 90 | 03b |
-| `card.empty` | Kein Guthaben mehr | No balance left | Nema više stanja | 28 | **B** · warning |
-| `card.empty.body` | Diese Karte ist vollständig eingelöst. | This card has been fully used. | Ova kartica je potpuno iskorištena. | 90 | 03b |
+| `voucher.blocked` | Gutschein gesperrt | Voucher blocked | Vaučer blokiran | 28 | **B** · danger · body = `getManager` |
+| `voucher.blocked.reason` | Grund: {reason} | Reason: {reason} | Razlog: {reason} | 90 | 03b · only if `blocked_reason` present |
+| `voucher.expired` | Gutschein abgelaufen | Voucher expired | Vaučer je istekao | 28 | **B** · warning |
+| `voucher.expired.body` | Abgelaufen am {date}. Bitte Betriebsleitung holen. | Expired on {date}. Please get a manager. | Istekao {date}. Molimo pozovite menadžera. | 90 | 03b · harmonised (escalation wording §2.6) |
+| `voucher.empty` | Kein Guthaben mehr | No balance left | Nema preostalog stanja | 28 | **B** · warning |
+| `voucher.empty.body` | Dieser Gutschein ist vollständig eingelöst. | This voucher has been fully used. | Ovaj vaučer je potpuno iskorišten. | 90 | 03b |
 
 ### 5.10 S08 Redeeming
 
@@ -680,11 +621,10 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | `uncertain.body` | Wird geprüft … Es wird nie doppelt gebucht. | Checking … Nothing is ever booked twice. | Provjeravamo … Ništa se ne knjiži dvaput. | 90 | **B** · also the helper in R02 |
 | `uncertain.retrying` | Versuch {n} von 3 | Attempt {n} of 3 | Pokušaj {n} od 3 | 20 | 03b |
 | `uncertain.guestHint` | Dem Gast sagen: „Einen Moment bitte, die Einlösung wird bestätigt." | Tell the guest: "One moment please, the redemption is being confirmed." | Recite gostu: „Trenutak, molim, iskorištavanje se potvrđuje." | 90 | 03b · **harmonised** (never "Zahlung / payment / plaćanje", §1.3) |
-| `uncertain.failedBody` | Noch nicht bestätigt. Erneut versuchen – es wird nie doppelt gebucht. | Not confirmed yet. Try again – nothing is ever booked twice. | Još nije potvrđeno. Pokušajte ponovo – ništa se ne knjiži dvaput. | 90 | 03b · R04 |
-| `uncertain.cancelled` | Nicht bestätigt. Vor dem nächsten Einlösen die Karte erneut scannen. | Not confirmed. Scan the card again before redeeming. | Nije potvrđeno. Prije novog iskorištavanja ponovo skenirajte karticu. | 90 | 03b · R05 · **harmonised** (no "charging / terećenje") |
-| `uncertain.cancelledGuestHint` | Dem Gast sagen: „Die Einlösung ist noch nicht bestätigt. Wir prüfen das Guthaben, bevor neu eingelöst wird." | Tell the guest: "The redemption isn't confirmed yet. We'll check the balance before redeeming again." | Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo stanje prije novog iskorištavanja." | 120 | 03b · **harmonised** (vocabulary); 3 lines allowed (quoted speech) |
+| `uncertain.failedBody` | Noch nicht bestätigt. Erneut prüfen – es wird nie doppelt gebucht. | Not confirmed yet. Check again – nothing is ever booked twice. | Još nije potvrđeno. Provjerite ponovo – ništa se ne knjiži dvaput. | 90 | 03b · R04 · ADR-002: "Check again" resends the same key |
+| `uncertain.cancelled` | Nicht bestätigt. Wird automatisch geprüft, bevor dieser Gutschein wieder eingelöst werden kann. | Not confirmed. It is checked automatically before this voucher can be redeemed again. | Nije potvrđeno. Provjerava se automatski prije nego što se ovaj vaučer može ponovo iskoristiti. | 120 | 03b · R05 · ADR-002 · snackbar on S05 after Cancel |
+| `uncertain.cancelledGuestHint` | Dem Gast sagen: „Die Einlösung ist noch nicht bestätigt. Wir prüfen das, bevor neu eingelöst wird." | Tell the guest: "The redemption isn't confirmed yet. We'll check it before redeeming again." | Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo to prije novog iskorištavanja." | 120 | 03b · **harmonised** (vocabulary); 3 lines allowed (quoted speech) |
 | `redeem.balanceChanged` | Guthaben hat sich geändert: jetzt {amount} | Balance changed: now {amount} | Stanje se promijenilo: sada {amount} | 48 | 03b · R06 |
-| `redeem.tapAgain` | Bitte noch einmal einlösen. | Please tap Redeem again. | Molimo ponovo dodirnite Iskoristi. | 48 | 03b · R13 |
 
 ### 5.11 S09 Success
 
@@ -692,11 +632,10 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 |---|---|---|---|---|---|
 | `success.title` | Eingelöst | Redeemed | Iskorišteno | 20 | **B** |
 | `success.remaining` | Restguthaben {amount} | Remaining balance {amount} | Preostalo stanje {amount} | 36 | **B** |
-| `success.empty` | Karte ist jetzt leer | Card is now empty | Kartica je sada prazna | 28 | 03b · replaces the remaining line at 0 |
-| `success.next.ios` | Nächste Karte scannen | Scan next card | Skeniraj sljedeću karticu | 24 | **B** |
-| `success.next.android` | Nächste Karte einfach antippen | Just tap the next card | Samo prislonite sljedeću karticu | 32 | **B** |
+| `success.empty` | Gutschein ist jetzt leer | Voucher is now empty | Vaučer je sada prazan | 28 | 03b · replaces the remaining line at 0 |
+| `success.next` | Nächsten Gutschein scannen | Scan next voucher | Skeniraj sljedeći vaučer | 24 | **B** · ADR-002 wording |
 | `success.showGuest` | Dem Gast zeigen | Show guest | Pokaži gostu | 24 | 03b · presentation mode |
-| `success.card` | Karte •••• {last4} | Card •••• {last4} | Kartica •••• {last4} | 20 | 12 · caption |
+| `success.card` | Gutschein •••• {last4} | Voucher •••• {last4} | Vaučer •••• {last4} | 20 | 12 · caption |
 | `guest.remaining.label` | Restguthaben | Remaining balance | Preostalo stanje | 20 | 03b · Show-guest mode |
 | `a11y.success` | Eingelöst {amount}, Restguthaben {balance} | Redeemed {amount}, remaining balance {balance} | Iskorišteno {amount}, preostalo stanje {balance} | — | 03b · (a11y) assertive; amounts in spoken form |
 
@@ -704,42 +643,68 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
-| `problem.notFound.title` | Karte nicht gefunden | Card not found | Kartica nije pronađena | 32 | **B** · L01/L02 |
-| `problem.notFound.body` | Diese Karte ist nicht im System. Karte prüfen oder nach einer anderen fragen. | This card is not in the system. Check the card or ask the guest for another one. | Ova kartica nije u sistemu. Provjerite karticu ili zamolite drugu. | 90 | 03b |
-| `problem.notFound.bodyManual` | Keine Karte mit dieser Nummer. Ziffern prüfen. | No card with this number. Check the digits. | Nema kartice s ovim brojem. Provjerite cifre. | 90 | 03b |
-| `problem.foreign.title` | Karte eines anderen Lokals | Card from another restaurant | Kartica drugog restorana | 32 | **B** · L03 |
-| `problem.foreign.body` | Sie ist nur im ausstellenden Lokal einlösbar. | It can only be redeemed at the restaurant that issued it. | Može se iskoristiti samo u restoranu koji ju je izdao. | 90 | 03b |
-| `problem.verify.title` | Karte konnte nicht geprüft werden | Card could not be verified | Kartica nije mogla biti provjerena | 32 (2 lines) | **B** · L04 |
-| `problem.verify.body` | Karte vorerst nicht annehmen. Bitte Betriebsleitung holen. | Do not accept this card for now. Please get a manager. | Zasad ne prihvatajte ovu karticu. Molimo pozovite menadžera. | 90 | 03b · harmonised (escalation wording §2.6) |
+| `problem.notRecognized.title` | Kein Gutschein dieses Lokals | Not a voucher of this restaurant | Nije vaučer ovog restorana | 32 | ADR-002 · unknown, revoked or foreign code |
+| `problem.notRecognized.body` | Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder Betriebsleitung holen. | This code is not valid here. Ask the guest for another voucher or get a manager. | Ovaj kôd ovdje ne važi. Zatražite od gosta drugi vaučer ili pozovite menadžera. | 90 | ADR-002 |
 | `problem.throttled.title` | Zu viele Scans | Too many scans | Previše skeniranja | 32 | 03b · L05 |
 | `problem.throttled.body` | Scannen ist in Kürze wieder möglich. | Scanning is possible again shortly. | Skeniranje će uskoro ponovo biti moguće. | 90 | 03b |
 | `problem.scanAgainIn` | Erneut scannen · {time} | Scan again · {time} | Skeniraj ponovo · {time} | 24 | 03b · disabled countdown button |
-| `problem.network.body` | Karte konnte nicht geprüft werden. WLAN oder mobile Daten prüfen, dann erneut versuchen. | The card could not be checked. Check Wi-Fi or mobile data, then try again. | Kartica nije provjerena. Provjerite Wi-Fi ili mobilne podatke, pa pokušajte ponovo. | 90 | 03b · L06 (title = `offline.title`) |
+| `problem.network.body` | Der Gutschein konnte nicht geprüft werden. WLAN oder mobile Daten prüfen, dann erneut versuchen. | The voucher could not be checked. Check Wi-Fi or mobile data, then try again. | Vaučer nije provjeren. Provjerite Wi-Fi ili mobilne podatke, pa pokušajte ponovo. | 90 | 03b · L06 (title = `offline.title`) |
 | `problem.server.title` | Dienst gerade nicht erreichbar | Service not available right now | Servis trenutno nije dostupan | 32 | 03b · **harmonised** (title states what happened, §2.1) |
-| `problem.server.body` | Das Problem liegt nicht an der Karte. Gleich erneut versuchen. | The problem is not the card. Try again in a moment. | Problem nije do kartice. Pokušajte ponovo za trenutak. | 90 | 03b · **harmonised** (no "wir/uns" in the UI, §1.2) |
+| `problem.server.body` | Das Problem liegt nicht am Gutschein. Gleich erneut versuchen. | The problem is not the voucher. Try again in a moment. | Problem nije do vaučera. Pokušajte ponovo za trenutak. | 90 | 03b · **harmonised** (no "wir/uns" in the UI, §1.2) |
 
-### 5.13 S11 Manual entry
+### 5.13 S20 Sell voucher
+
+Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed sheet itself follows the restaurant language, not the UI language, and is not part of this table (guest copy, as in the dashboard).
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
-| `manual.title` | Kartennummer | Card number | Broj kartice | 28 | 03a |
-| `manual.helper` | 16 Ziffern auf der Rückseite der Karte | 16 digits on the back of the card | 16 cifara na poleđini kartice | 40 | 03a |
-| `manual.counter` | {count} von 16 | {count} of 16 | {count} od 16 | 12 | 03a · tabular figures |
-| `manual.submit` | Karte suchen | Look up card | Pronađi karticu | 24 | 03a · enabled at 16 digits |
-| `manual.error.invalid` | Kartennummer prüfen | Check the card number | Provjerite broj kartice | 32 | 03a |
-| `manual.error.paste` | Keine gültige Kartennummer zum Einfügen | No valid card number to paste | Nema ispravnog broja kartice za lijepljenje | 48 | 03a |
+| `sale.title` | Gutschein verkaufen | Sell voucher | Prodaja vaučera | 24 | ADR-002 · screen title |
+| `sale.amount.label` | Gutscheinwert | Voucher value | Vrijednost vaučera | 24 | ADR-002 · above the amount |
+| `sale.amount.range` | Der Wert muss zwischen {min} und {max} liegen. | The value must be between {min} and {max}. | Vrijednost mora biti između {min} i {max}. | 60 | ADR-002 · restaurant limits / INVALID_AMOUNT |
+| `sale.continue` | Weiter · {amount} | Continue · {amount} | Dalje · {amount} | 24+amt | ADR-002 · amount step → payment step |
+| `sale.payment.label` | Bezahlt mit | Paid with | Plaćeno | 24 | ADR-002 · the guest pays for the voucher (§1.3 "payment" rule is about redeeming) |
+| `sale.payment.cash` | Bar | Cash | Gotovina | 16 | ADR-002 · choice |
+| `sale.payment.cardTerminal` | Kartenterminal | Card terminal | POS terminal | 16 | ADR-002 · choice |
+| `sale.payment.bankTransfer` | Überweisung | Bank transfer | Bankovni transfer | 16 | ADR-002 · choice |
+| `sale.payment.complimentary` | Gratis | Complimentary | Besplatno | 16 | ADR-002 · choice · only with `vouchers.sell_complimentary` |
+| `sale.reference.label` | Beleg- oder Referenznummer | Receipt or reference number | Broj potvrde ili reference | 32 | ADR-002 · card terminal / bank transfer |
+| `sale.reference.required` | Beleg- oder Referenznummer eingeben. | Enter the receipt or reference number. | Unesite broj potvrde ili reference. | 60 | ADR-002 · field error |
+| `sale.reason.label` | Grund | Reason | Razlog | 24 | ADR-002 · complimentary |
+| `sale.reason.required` | Grund eingeben (mindestens 3 Zeichen). | Enter a reason (at least 3 characters). | Unesite razlog (najmanje 3 znaka). | 60 | ADR-002 · field error |
+| `sale.email.label` | E-Mail des Gastes (optional) | Guest e-mail (optional) | E-mail gosta (neobavezno) | 32 | ADR-002 |
+| `sale.email.helper` | Der Gast erhält eine Bestätigung. | The guest receives a confirmation. | Gost dobija potvrdu. | 60 | ADR-002 · when the restaurant sends guest e-mails |
+| `sale.email.helperNoMail` | Wird beim Gutschein gespeichert. | Saved with the voucher. | Sprema se uz vaučer. | 60 | ADR-002 · when it does not |
+| `sale.email.invalid` | Bitte eine gültige E-Mail-Adresse eingeben. | Enter a valid e-mail address. | Unesite ispravnu e-mail adresu. | 60 | ADR-002 · field error |
+| `sale.submit` | Gutschein verkaufen · {amount} | Sell voucher · {amount} | Prodaj vaučer · {amount} | 24+amt | ADR-002 · primary |
+| `sale.submitting` | Gutschein wird verkauft … | Selling voucher … | Vaučer se prodaje … | 32 | ADR-002 · button progress |
+| `sale.failed.title` | Gutschein nicht verkauft | Voucher not sold | Vaučer nije prodan | 28 | ADR-002 · definitive answer |
+| `sale.failed.body` | Es wurde kein Gutschein verkauft. Verbindung prüfen und erneut versuchen. | No voucher was sold. Check the connection and try again. | Nijedan vaučer nije prodan. Provjerite vezu i pokušajte ponovo. | 90 | ADR-002 |
+| `sale.uncertain.title` | Verkauf nicht bestätigt | Sale not confirmed | Prodaja nije potvrđena | 28 | ADR-002 · no answer |
+| `sale.uncertain.body` | Die Antwort kam nicht an. Erneut versuchen – der Gutschein wird nicht doppelt verkauft. | The answer did not arrive. Try again – the voucher will not be sold twice. | Odgovor nije stigao. Pokušajte ponovo – vaučer se neće prodati dvaput. | 90 | ADR-002 · same idempotency key |
+| `sale.notAllowed.title` | Nicht erlaubt | Not allowed | Nije dozvoljeno | 28 | ADR-002 · 403 |
+| `sale.notAllowed.body` | Dieses Konto kann auf diesem Handy keine Gutscheine verkaufen. Bitte Betriebsleitung holen. | This account cannot sell vouchers on this phone. Please get a manager. | Ovaj račun ne može prodavati vaučere na ovom telefonu. Molimo pozovite menadžera. | 90 | ADR-002 · 403 |
+| `sale.done.title` | Gutschein verkauft | Voucher sold | Vaučer prodan | 28 | ADR-002 |
+| `sale.done.value` | Wert {amount} | Value {amount} | Vrijednost {amount} | 32 | ADR-002 |
+| `sale.done.body` | Den QR-Code für den Gast drucken. Er wird nur jetzt angezeigt. | Print the QR code for the guest. It is shown only now. | Ispišite QR kôd za gosta. Prikazuje se samo sada. | 90 | ADR-002 · the QR is returned once |
+| `sale.print` | Gutschein drucken | Print voucher | Ispiši vaučer | 24 | ADR-002 · primary · system print dialog |
+| `sale.printed` | An den Drucker gesendet | Sent to the printer | Poslano na pisač | 32 | ADR-002 · after the print dialog finished |
+| `sale.printFailed` | Drucken hat nicht geklappt. Erneut versuchen. | Printing did not work. Try again. | Ispis nije uspio. Pokušajte ponovo. | 60 | ADR-002 |
+| `sale.another` | Weiteren Gutschein verkaufen | Sell another voucher | Prodaj još jedan vaučer | 28 | ADR-002 · secondary |
+| `sale.leave.title` | Ohne Drucken schließen? | Close without printing? | Zatvoriti bez ispisa? | 28 | ADR-002 · Dialog |
+| `sale.leave.body` | Der QR-Code kann nicht erneut angezeigt werden. Ohne ihn kann der Gast den Gutschein nicht einlösen. | The QR code cannot be shown again. Without it the guest cannot redeem the voucher. | QR kôd se ne može ponovo prikazati. Bez njega gost ne može iskoristiti vaučer. | 120 | ADR-002 · Dialog |
+| `sale.leave.confirm` | Trotzdem schließen | Close anyway | Ipak zatvori | 24 | ADR-002 · DangerButton (cancel = `common.cancel`) |
+| `sale.qr.a11y` | QR-Code des Gutscheins | QR code of the voucher | QR kôd vaučera | — | ADR-002 · (a11y) |
 
 ### 5.14 S12 QR scan
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
-| `qr.title` | QR-Code scannen | Scan QR code | Skeniraj QR kôd | 28 | 03a |
-| `qr.hint` | Kamera auf den QR-Code der Karte richten | Point the camera at the QR code on the card | Usmjerite kameru na QR kôd kartice | 48 | 03a |
-| `qr.notCard` | Dieser QR-Code gehört zu keiner Gutscheinkarte | This QR code isn't a gift card | Ovaj QR kôd nije poklon kartica | 48 | 03a · harmonised (vocabulary) · L10 |
+| `qr.title` | Gutschein scannen | Scan voucher | Skeniraj vaučer | 28 | 03a |
+| `qr.hint` | Kamera auf den QR-Code des Gutscheins richten | Point the camera at the voucher's QR code | Usmjerite kameru na QR kôd vaučera | 48 | 03a |
+| `qr.notVoucher` | Dieser QR-Code ist kein Gutschein | This QR code isn't a voucher | Ovaj QR kôd nije vaučer | 48 | 03a · ADR-002 · L10 |
 | `qr.dark` | Zu dunkel? Licht einschalten. | Too dark? Turn on the light. | Pretamno? Uključite svjetlo. | 32 | 03a |
 | `qr.torchOn` | Licht einschalten | Turn on light | Uključi svjetlo | — | 03a · (a11y) |
 | `qr.torchOff` | Licht ausschalten | Turn off light | Isključi svjetlo | — | 03a · (a11y) |
-| `qr.manual` | Kartennummer eingeben | Enter card number | Unesi broj kartice | 24 | 03a · = `common.enterNumber` (alias) |
 
 ### 5.15 S13 Recent and Recent detail
 
@@ -748,15 +713,15 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | `recent.title` | Verlauf | Recent | Nedavno | 28 | 03b · harmonised (DE = `topBar.recent`) |
 | `recent.summary` | {count, plural, one {# Einlösung} other {# Einlösungen}} · {amount} heute | {count, plural, one {# redemption} other {# redemptions}} · {amount} today | {count, plural, one {# iskorištavanje} few {# iskorištavanja} other {# iskorištavanja}} · {amount} danas | 40 | 03b · HistoryCard |
 | `recent.row.remaining` | Rest {amount} | Left {amount} | Ostatak {amount} | 20 | 03b |
-| `recent.row.empty` | Karte jetzt leer | Card now empty | Kartica sada prazna | 20 | 03b |
-| `recent.row.a11y` | {time}, Karte endet auf {last4}, {amount} eingelöst, Restguthaben {balance} | {time}, card ending {last4}, {amount} redeemed, remaining balance {balance} | {time}, kartica završava na {last4}, iskorišteno {amount}, preostalo stanje {balance} | — | 12 · (a11y) |
+| `recent.row.empty` | Gutschein jetzt leer | Voucher now empty | Vaučer sada prazan | 20 | 03b |
+| `recent.row.a11y` | {time}, Gutschein endet auf {last4}, {amount} eingelöst, Restguthaben {balance} | {time}, voucher ending {last4}, {amount} redeemed, remaining balance {balance} | {time}, vaučer završava na {last4}, iskorišteno {amount}, preostalo stanje {balance} | — | 12 · (a11y) |
 | `recent.empty.title` | Noch keine Einlösungen | No redemptions yet | Još nema iskorištavanja | 32 | 03b |
 | `recent.empty.body` | Einlösungen von diesem Handy erscheinen hier bis 04:00 Uhr. | Redemptions from this phone appear here until 04:00. | Iskorištavanja s ovog telefona prikazuju se ovdje do 04:00 h. | 90 | 03b · harmonised (time format §1.5) |
 | `recent.footer` | Nur dieses Handy · wird um 04:00 Uhr geleert | This phone only · cleared at 04:00 | Samo ovaj telefon · briše se u 04:00 h | 48 | 03b · harmonised (time format) |
 | `recent.limit` | Die letzten 200 Einlösungen | Latest 200 redemptions | Posljednjih 200 iskorištavanja | 40 | 03b |
 | `recent.detail.title` | Einlösung | Redemption | Iskorištavanje | 28 | 03b |
 | `recent.detail.time` | Zeit | Time | Vrijeme | 20 | 03b |
-| `recent.detail.card` | Karte | Card | Kartica | 20 | 03b |
+| `recent.detail.voucher` | Gutschein | Voucher | Vaučer | 20 | 03b |
 | `recent.detail.amount` | Betrag | Amount | Iznos | 20 | 03b |
 | `recent.detail.remaining` | Restguthaben | Remaining balance | Preostalo stanje | 20 | 03b |
 | `recent.detail.transaction` | Buchung | Transaction | Transakcija | 20 | 03b · value: last 6 chars of the transaction id |
@@ -797,16 +762,12 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | `session.expired.body` | Zum Weitermachen erneut anmelden. | Sign in again to continue. | Prijavite se ponovo za nastavak. | 90 | 03a |
 | `session.expired.action` | Erneut anmelden | Sign in again | Ponovo se prijavi | 24 | 03a |
 | `forbidden.title` | Keine Berechtigung zum Einlösen | No permission to redeem | Nema dozvole za iskorištavanje | 32 | 12 · A03 |
-| `forbidden.body` | Dieses Konto kann keine Karten mehr einlösen. Bitte Betriebsleitung holen. | This account can no longer redeem cards. Please get a manager. | Ovaj račun više ne može iskorištavati kartice. Molimo pozovite menadžera. | 90 | 12 |
+| `forbidden.body` | Dieses Konto kann keine Gutscheine mehr einlösen. Bitte Betriebsleitung holen. | This account can no longer redeem vouchers. Please get a manager. | Ovaj račun više ne može iskorištavati vaučere. Molimo pozovite menadžera. | 90 | 12 |
 | `deviceRevoked.title` | Gerät wurde entfernt | This device was removed | Uređaj je uklonjen | 32 | 03a · A04 |
 | `deviceRevoked.body` | Das Gerät ist nicht mehr für dieses Lokal freigegeben. Bitte Betriebsleitung holen. | It's no longer allowed for this restaurant. Please get a manager. | Uređaj više nije odobren za ovaj restoran. Molimo pozovite menadžera. | 90 | 03a · harmonised (escalation wording §2.6) |
 | `deviceRevoked.action` | Anmelden | Sign in | Prijavi se | 24 | 03a |
 | `suspended.title` | Einlösen ist pausiert | Redeeming is paused | Iskorištavanje je pauzirano | 32 | 03a · A05 |
 | `suspended.body` | Das Konto des Lokals ist pausiert. Bitte Betriebsleitung holen. | The restaurant's account is paused. Please get a manager. | Račun restorana je pauziran. Molimo pozovite menadžera. | 90 | 03a |
-| `locked.title` | Konto vorübergehend gesperrt | Account temporarily locked | Račun je privremeno zaključan | 32 | 03a · A06 |
-| `locked.body` | Zu viele Anmeldeversuche. Erneut möglich in {time}. | Too many sign-in attempts. Try again in {time}. | Previše pokušaja prijave. Ponovo za {time}. | 90 | 03a |
-| `locked.button` | Erneut in {time} | Try again in {time} | Ponovo za {time} | 24 | 03a · disabled |
-| `locked.over` | Anmelden ist wieder möglich | You can sign in again | Prijava je ponovo moguća | — | 03a · (a11y) |
 | `deactivated.title` | Konto deaktiviert | Account deactivated | Račun je deaktiviran | 32 | 03a · A10 |
 | `deactivated.body` | Dieses Konto kann nicht mehr verwendet werden. Bitte Betriebsleitung holen. | This account can no longer be used. Please get a manager. | Ovaj račun se više ne može koristiti. Molimo pozovite menadžera. | 90 | 03a |
 | `update.title` | Update erforderlich | Update required | Potrebno ažuriranje | 32 | 03a · A11 |
@@ -817,16 +778,12 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
-| `nfcOff.title` | NFC ist aus | NFC is off | NFC je isključen | 32 | 03a · P01 |
-| `nfcOff.body` | NFC einschalten, um Karten zu scannen. | Turn on NFC to scan cards. | Uključite NFC za skeniranje kartica. | 90 | 03a |
-| `nfcOff.action` | NFC einschalten | Turn on NFC | Uključi NFC | 24 | 03a |
-| `nfcOff.on` | NFC ist an. Bereit zum Scannen. | NFC is on. Ready to scan. | NFC je uključen. Spremno za skeniranje. | — | 03a · (a11y) |
 | `camera.denied.title` | Kamerazugriff ist aus | Camera access is off | Pristup kameri je isključen | 32 | 03a · P03 |
 | `camera.denied.body` | Kamera in den Einstellungen erlauben, um QR-Codes zu scannen. | Allow camera access in Settings to scan QR codes. | Dozvolite pristup kameri u postavkama za skeniranje QR kodova. | 90 | 03a |
 | `camera.denied.action` | Einstellungen öffnen | Open Settings | Otvori postavke | 24 | 03a |
-| `camera.restricted.body` | Die Kamera ist auf diesem Gerät gesperrt. Kartennummer verwenden. | The camera is restricted on this device. Use the card number. | Kamera je ograničena na ovom uređaju. Koristite broj kartice. | 90 | 03a · P04 |
+| `camera.restricted.body` | Die Kamera ist auf diesem Gerät gesperrt. Bitte Betriebsleitung holen. | The camera is restricted on this device. Please get a manager. | Kamera je ograničena na ovom uređaju. Molimo pozovite menadžera. | 90 | 03a · P04 |
 | `camera.unavailable.title` | Kamera nicht verfügbar | Camera not available | Kamera nije dostupna | 32 | 12 · P05 |
-| `camera.unavailable.body` | Andere Apps mit Kamera schließen oder Kartennummer eingeben. | Close other apps using the camera or enter the card number. | Zatvorite druge aplikacije s kamerom ili unesite broj kartice. | 90 | 12 |
+| `camera.unavailable.body` | Andere Apps mit Kamera schließen, dann erneut versuchen. | Close other apps using the camera, then try again. | Zatvorite druge aplikacije koje koriste kameru, pa pokušajte ponovo. | 90 | 12 |
 
 ### 5.19 S17 First-run intro
 
@@ -836,12 +793,8 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | `intro.next` | Weiter | Next | Dalje | 24 | 03a |
 | `intro.start` | Loslegen | Start | Počni | 24 | 03a |
 | `intro.page` | Seite {n} von 3 | Page {n} of 3 | Stranica {n} od 3 | — | 03a · (a11y) |
-| `intro.1.title.android` | Karte antippen | Tap the card | Prislonite karticu | 28 | 03a |
-| `intro.1.body.android` | Die Karte an die Rückseite halten. Das Guthaben erscheint in unter einer Sekunde. | Hold the card to the back of the phone. The balance appears in under a second. | Prislonite karticu na poleđinu telefona. Stanje se pojavi za manje od sekunde. | 90 | 03a · **harmonised** (brand guide: "unter einer Sekunde" instead of "sofort") |
-| `intro.1.title.ios` | Scannen, dann Karte halten | Tap Scan, then hold the card | Skenirajte, pa prislonite karticu | 32 | 03a |
-| `intro.1.body.ios` | „Karte scannen" tippen, dann die Karte oben an das iPhone halten. | Tap "Scan card", then hold the card near the top of the iPhone. | Dodirnite „Skeniraj karticu", zatim prislonite karticu na vrh iPhonea. | 90 | 03a |
-| `intro.1.title.noNfc` | QR-Code scannen | Scan the QR code | Skenirajte QR kôd | 28 | 03a |
-| `intro.1.body.noNfc` | Kamera auf den QR-Code richten oder die Kartennummer eingeben. | Point the camera at the QR code or type the card number. | Usmjerite kameru na QR kôd ili unesite broj kartice. | 90 | 03a |
+| `intro.1.title` | Gutschein scannen | Scan the voucher | Skenirajte vaučer | 28 | ADR-002 |
+| `intro.1.body` | Kamera auf den QR-Code richten. Das Guthaben erscheint sofort. | Point the camera at the QR code. The balance appears right away. | Usmjerite kameru na QR kôd. Stanje se odmah pojavi. | 90 | ADR-002 |
 | `intro.2.title` | Betrag eingeben, einlösen | Type the amount, redeem | Unesite iznos, iskoristite | 32 | 03a |
 | `intro.2.body` | Guthaben sehen, Betrag tippen, fertig. Ab {threshold} zum Bestätigen gedrückt halten. | See the balance, type the amount, done. From {threshold}, press and hold to confirm. | Pogledajte stanje, unesite iznos, gotovo. Od {threshold} držite za potvrdu. | 90 | 03a |
 | `intro.3.title` | Nie doppelt gebucht | Never booked twice | Nikad dvaput knjiženo | 28 | 03a |
@@ -852,13 +805,13 @@ Rows marked **S20** belong to *New gift card* (managers and owners only, see [02
 | Key | DE | EN | BHS | Politeness | Notes |
 |---|---|---|---|---|---|
 | `a11y.spokenAmount` | {euros} Euro {cents} | {euros, plural, one {# euro} other {# euros}} {cents} | {euros, plural, one {# euro} few {# eura} other {# eura}} {cents} | — | 12 · cents omitted when 0; "{cents} Cent / cents / centi" when euros = 0 (§1.4) |
-| `a11y.cardLoaded` | {restaurant}. Guthaben {spokenAmount}. | {restaurant}. Balance {spokenAmount}. | {restaurant}. Stanje {spokenAmount}. | assertive | 12 · S07 opened; status appended if not active |
+| `a11y.voucherLoaded` | {restaurant}. Guthaben {spokenAmount}. | {restaurant}. Balance {spokenAmount}. | {restaurant}. Stanje {spokenAmount}. | assertive | 12 · S07 opened; status appended if not active |
 | `a11y.problem` | {title}. {body} | {title}. {body} | {title}. {body} | assertive | 12 · every S10/S15 screen and banner |
-| `a11y.ready` | Bereit für die nächste Karte | Ready for the next card | Spremno za sljedeću karticu | polite | 12 · return to S05 |
+| `a11y.ready` | Bereit für den nächsten Gutschein | Ready for the next voucher | Spremno za sljedeći vaučer | polite | 12 · return to S05 |
 | `a11y.scanAvailable` | Scannen wieder möglich | Scanning available again | Skeniranje ponovo moguće | polite | 12 · throttle end ([03b §5.2](03b-screens-charge-redeem-success-problems.md)) |
 | `a11y.redeemAvailable` | Einlösen wieder möglich | Redeem available again | Iskorištavanje ponovo moguće | polite | 12 · rate/velocity countdown end |
 
-Other announcements use the visible string: `scan.detected`, `a11y.success`, `ready.online`, `locked.over`, `nfcOff.on`, `keypad.cleared`, `keypad.maxReached`.
+Other announcements use the visible string: `scan.detected`, `a11y.success`, `ready.online`, `keypad.cleared`, `keypad.maxReached`.
 
 ### 5.21 OS usage strings
 
@@ -866,13 +819,12 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 | Key | DE | EN | BHS | Notes |
 |---|---|---|---|---|
-| `nfc.purpose` | NFC wird zum Lesen von Gutscheinkarten verwendet. | NFC is used to read gift cards. | NFC se koristi za čitanje poklon kartica. | 03a · harmonised (vocabulary) · NFC reader usage (iOS) |
-| `camera.purpose` | Die Kamera wird nur zum Scannen von QR-Codes auf Gutscheinkarten verwendet. | The camera is only used to scan QR codes on gift cards. | Kamera se koristi samo za skeniranje QR kodova na poklon karticama. | 03a · harmonised (vocabulary) · camera usage |
+| `camera.purpose` | Die Kamera wird nur zum Scannen der QR-Codes von Gutscheinen verwendet. | The camera is only used to scan the QR codes of vouchers. | Kamera se koristi samo za skeniranje QR kodova vaučera. | 03a · ADR-002 · camera usage |
 | `faceId.purpose` | Face ID wird nur zum Entsperren der App verwendet. | Face ID is only used to unlock the app. | Face ID se koristi samo za otključavanje aplikacije. | 12 · Face ID usage (iOS) |
 
 ### 5.22 Key count and alias register
 
-The table holds **348 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **300 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|
@@ -881,7 +833,6 @@ The table holds **348 keys** (§5.1–5.21) — the single list to implement. Al
 | `problem.supportCode` (03b) | `common.supportCode` |
 | `suspended.retry` (03a) | `common.checkAgain` |
 | `camera.denied.action` (03a) — kept as its own key for S16 layout, same text as | `common.openSettings` |
-| `qr.manual` (03a) — kept as its own key, same text as | `common.enterNumber` |
 
 ---
 

@@ -156,10 +156,6 @@ class _UnlockScreenState extends State<UnlockScreen> with WidgetsBindingObserver
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        if (session.hasPendingLink) ...<Widget>[
-          StatusBanner(tone: BannerTone.info, title: l.unlockPendingCard),
-          const SizedBox(height: Space.s4),
-        ],
         // Not interactive while the OS prompt is up (no double prompts).
         AbsorbPointer(
           absorbing: _prompting,

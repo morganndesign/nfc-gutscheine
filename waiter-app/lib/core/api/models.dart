@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart' show StringCharacters;
 
-/// Typed views of the API payloads the waiter app uses (09 §9.2). Parsing is
-/// strict: a missing required field throws [FormatException], which the client
-/// reports as a server fault instead of rendering half a card.
+/// Typed views of the API payloads the waiter app uses. Parsing is strict: a
+/// missing required field throws [FormatException], which the client reports
+/// as a server fault instead of rendering half a voucher.
 
 Map<String, Object?> _map(Object? value, String field) {
   if (value is Map<String, Object?>) return value;
@@ -45,7 +45,7 @@ DateTime? _dateOrNull(Map<String, Object?> json, String field) {
   return value == null ? null : DateTime.parse(value).toUtc();
 }
 
-/// `GET /app/config` (prerequisite 4).
+/// `GET /app/config`.
 @immutable
 class AppConfigData {
   const AppConfigData({
@@ -68,40 +68,53 @@ class AppConfigData {
   final String? supportEmail;
 }
 
-/// Restaurant rules the app enforces client-side before the server does.
+/// The restaurant rules the app checks before the server does (the server
+/// always decides).
 @immutable
 class RestaurantSettings {
   const RestaurantSettings({
     required this.allowPartialRedemption,
-    required this.maxSingleRedemption,
+    required this.maxDebitPerTransaction,
     required this.brandColor,
-    this.lockTagsAfterWrite = false,
+    this.minVoucherValue,
+    this.maxVoucherBalance,
+    this.sendCustomerEmails = false,
   });
 
   factory RestaurantSettings.fromJson(Map<String, Object?> json) => RestaurantSettings(
-        allowPartialRedemption: _bool(json, 'allow_partial_redemption', fallback: true),
-        maxSingleRedemption: _intOrNull(json, 'max_single_redemption'),
-        brandColor: _stringOrNull(json, 'brand_color'),
-        lockTagsAfterWrite: _bool(json, 'lock_nfc_tags_after_write'),
-      );
+    allowPartialRedemption: _bool(json, 'allow_partial_redemption', fallback: true),
+    maxDebitPerTransaction: _intOrNull(json, 'max_debit_per_transaction'),
+    brandColor: _stringOrNull(json, 'brand_color'),
+    minVoucherValue: _intOrNull(json, 'min_voucher_value'),
+    maxVoucherBalance: _intOrNull(json, 'max_voucher_balance'),
+    sendCustomerEmails: _bool(json, 'send_customer_emails'),
+  );
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'allow_partial_redemption': allowPartialRedemption,
-        'max_single_redemption': maxSingleRedemption,
-        'brand_color': brandColor,
-        'lock_nfc_tags_after_write': lockTagsAfterWrite,
-      };
-
-  /// S20: make a verified tag read-only (restaurant setting, same as the dashboard).
-  final bool lockTagsAfterWrite;
+    'allow_partial_redemption': allowPartialRedemption,
+    'max_debit_per_transaction': maxDebitPerTransaction,
+    'brand_color': brandColor,
+    'min_voucher_value': minVoucherValue,
+    'max_voucher_balance': maxVoucherBalance,
+    'send_customer_emails': sendCustomerEmails,
+  };
 
   final bool allowPartialRedemption;
 
-  /// Cents, or null when the restaurant has no cap.
-  final int? maxSingleRedemption;
+  /// Cents per redemption, or null when unknown.
+  final int? maxDebitPerTransaction;
 
-  /// `#RRGGBB` or null (→ `color.brand.ink`, 04 §8.6).
+  /// `#RRGGBB` or null (→ `color.brand.ink`).
   final String? brandColor;
+
+  /// Smallest value of a sold voucher, in cents.
+  final int? minVoucherValue;
+
+  /// Largest balance a voucher may hold, in cents.
+  final int? maxVoucherBalance;
+
+  /// Whether the guest gets a confirmation e-mail after a sale.
+  final bool sendCustomerEmails;
 }
 
 @immutable
@@ -116,33 +129,42 @@ class Restaurant {
   });
 
   factory Restaurant.fromJson(Map<String, Object?> json) => Restaurant(
-        id: _string(json, 'id'),
-        name: _string(json, 'name'),
-        currency: _stringOrNull(json, 'currency') ?? 'EUR',
-        timezone: _stringOrNull(json, 'timezone') ?? 'Europe/Vienna',
-        locale: _stringOrNull(json, 'locale') ?? 'de_AT',
-        settings: RestaurantSettings.fromJson(_map(json['settings'], 'settings')),
-      );
+    id: _string(json, 'id'),
+    name: _string(json, 'name'),
+    currency: _stringOrNull(json, 'currency') ?? 'EUR',
+    timezone: _stringOrNull(json, 'timezone') ?? 'Europe/Vienna',
+    locale: _stringOrNull(json, 'locale') ?? 'de_AT',
+    settings: RestaurantSettings.fromJson(_map(json['settings'], 'settings')),
+  );
 
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'name': name,
-        'currency': currency,
-        'timezone': timezone,
-        'locale': locale,
-        'settings': settings.toJson(),
-      };
+    'id': id,
+    'name': name,
+    'currency': currency,
+    'timezone': timezone,
+    'locale': locale,
+    'settings': settings.toJson(),
+  };
 
   final String id;
   final String name;
   final String currency;
 
-  /// IANA zone, e.g. `Europe/Vienna` — business day and times (09 §4.5).
+  /// IANA zone, e.g. `Europe/Vienna` — business day and times.
   final String timezone;
 
-  /// e.g. `de_AT` — money and date formatting (12 §1.4).
+  /// e.g. `de_AT` — money and date formatting, and the language of the
+  /// printed voucher.
   final String locale;
   final RestaurantSettings settings;
+}
+
+/// Permissions the app acts on. The server checks every request; these only
+/// decide what is shown.
+abstract final class Permissions {
+  static const String redeem = 'vouchers.redeem';
+  static const String sell = 'vouchers.sell';
+  static const String sellComplimentary = 'vouchers.sell_complimentary';
 }
 
 /// `/auth/me` and the `user` part of `POST /auth/token`.
@@ -177,18 +199,18 @@ class SessionUser {
   final List<String> permissions;
   final Restaurant? restaurant;
 
-  /// `owner`, `manager` or `waiter` (null in profiles cached by older versions).
+  /// `owner`, `manager` or `waiter`.
   final String? roleSlug;
 
   /// Cached so S05 can render before `/auth/me` answers (offline start).
   Map<String, Object?> toJson() => <String, Object?>{
-        'id': id,
-        'name': name,
-        'email': email,
-        'permissions': permissions,
-        'restaurant': restaurant?.toJson(),
-        if (roleSlug != null) 'role': <String, Object?>{'slug': roleSlug},
-      };
+    'id': id,
+    'name': name,
+    'email': email,
+    'permissions': permissions,
+    'restaurant': restaurant?.toJson(),
+    if (roleSlug != null) 'role': <String, Object?>{'slug': roleSlug},
+  };
 
   /// Waiter initials for the `Avatar` (max. two letters).
   String get initials {
@@ -199,14 +221,13 @@ class SessionUser {
     return (first + last).toUpperCase();
   }
 
-  bool get canRedeem => permissions.contains('cards.scan') && permissions.contains('cards.redeem');
+  bool get canRedeem => permissions.contains(Permissions.redeem);
 
-  /// "New gift card" (S20): managers and owners whose sign-in carries both abilities. Only decides what is
-  /// shown; the server checks role and token on every request.
-  bool get canIssueCards =>
-      (roleSlug == 'manager' || roleSlug == 'owner') &&
-      permissions.contains('cards.create') &&
-      permissions.contains('cards.write_nfc');
+  /// "Sell voucher" (S20).
+  bool get canSell => permissions.contains(Permissions.sell);
+
+  /// The complimentary payment method (owners).
+  bool get canSellComplimentary => permissions.contains(Permissions.sellComplimentary);
 }
 
 /// Result of `POST /auth/token`.
@@ -226,21 +247,32 @@ class SignInResult {
   final SessionUser user;
 }
 
-enum CardStatus { active, inactive, blocked, expired, redeemed, replaced }
+/// Stored voucher states. "Empty" is not a state: an active voucher with
+/// balance 0 is shown as used up.
+enum VoucherStatus { active, blocked, expired }
 
-CardStatus _status(String value) => CardStatus.values.firstWhere(
-      (CardStatus s) => s.name == value,
-      orElse: () => throw FormatException('Unknown card status "$value".'),
-    );
+VoucherStatus _status(String value) => VoucherStatus.values.firstWhere(
+  (VoucherStatus s) => s.name == value,
+  orElse: () => throw FormatException('Unknown voucher status "$value".'),
+);
 
-/// The waiter view of a card (`POST /scan`, and `data.card` of a redeem for a
-/// token without `cards.view`). No customer data exists in it (brief §0).
+/// How a voucher reaches the guest: a card (NFC) or a digital voucher (QR).
+enum VoucherKind { card, digital }
+
+VoucherKind _kind(String value) => VoucherKind.values.firstWhere(
+  (VoucherKind k) => k.name == value,
+  orElse: () => throw FormatException('Unknown voucher kind "$value".'),
+);
+
+/// What the till sees of a presented voucher (`PresentedVoucherResource`).
+/// No customer data.
 @immutable
-class ScannedCard {
-  const ScannedCard({
+class PresentedVoucher {
+  const PresentedVoucher({
     required this.id,
+    required this.kind,
     required this.restaurantName,
-    required this.cardNumber,
+    required this.voucherNumber,
     required this.status,
     required this.currency,
     required this.balance,
@@ -248,15 +280,17 @@ class ScannedCard {
     required this.isExpired,
     required this.blockedReason,
     required this.allowPartialRedemption,
+    required this.maxDebitPerTransaction,
     required this.canRedeem,
   });
 
-  factory ScannedCard.fromJson(Map<String, Object?> json) {
+  factory PresentedVoucher.fromJson(Map<String, Object?> json) {
     final Object? actions = json['actions'];
-    return ScannedCard(
+    return PresentedVoucher(
       id: _string(json, 'id'),
+      kind: _kind(_string(json, 'kind')),
       restaurantName: _string(json, 'restaurant_name'),
-      cardNumber: _string(json, 'card_number').replaceAll(RegExp(r'\D'), ''),
+      voucherNumber: _string(json, 'voucher_number').replaceAll(RegExp(r'\D'), ''),
       status: _status(_string(json, 'status')),
       currency: _stringOrNull(json, 'currency') ?? 'EUR',
       balance: _int(json, 'balance'),
@@ -264,16 +298,19 @@ class ScannedCard {
       isExpired: _bool(json, 'is_expired'),
       blockedReason: _stringOrNull(json, 'blocked_reason'),
       allowPartialRedemption: _bool(json, 'allow_partial_redemption', fallback: true),
+      maxDebitPerTransaction: _intOrNull(json, 'max_debit_per_transaction'),
       canRedeem: actions is Map && actions['redeem'] == true,
     );
   }
 
   final String id;
+  final VoucherKind kind;
   final String restaurantName;
 
-  /// 16 digits, no spaces.
-  final String cardNumber;
-  final CardStatus status;
+  /// Internal voucher number (digits only), shown to staff — never a
+  /// credential.
+  final String voucherNumber;
+  final VoucherStatus status;
   final String currency;
 
   /// Cents.
@@ -282,14 +319,19 @@ class ScannedCard {
   final bool isExpired;
   final String? blockedReason;
   final bool allowPartialRedemption;
+
+  /// Cents per redemption, or null when the restaurant sets none.
+  final int? maxDebitPerTransaction;
   final bool canRedeem;
 
-  String get last4 => cardNumber.substring(cardNumber.length - 4);
+  String get last4 => voucherNumber.length <= 4 ? voucherNumber : voucherNumber.substring(voucherNumber.length - 4);
 
-  ScannedCard copyWith({CardStatus? status, int? balance, bool? isExpired, bool? allowPartialRedemption}) => ScannedCard(
+  PresentedVoucher copyWith({VoucherStatus? status, int? balance, bool? isExpired, bool? allowPartialRedemption}) =>
+      PresentedVoucher(
         id: id,
+        kind: kind,
         restaurantName: restaurantName,
-        cardNumber: cardNumber,
+        voucherNumber: voucherNumber,
         status: status ?? this.status,
         currency: currency,
         balance: balance ?? this.balance,
@@ -297,8 +339,32 @@ class ScannedCard {
         isExpired: isExpired ?? this.isExpired,
         blockedReason: blockedReason,
         allowPartialRedemption: allowPartialRedemption ?? this.allowPartialRedemption,
+        maxDebitPerTransaction: maxDebitPerTransaction,
         canRedeem: canRedeem,
       );
+}
+
+/// `POST /presentments` → 201: single use, valid for [expiresIn] from receipt,
+/// bound to this user, this phone and [voucher].
+@immutable
+class Presentment {
+  const Presentment({required this.id, required this.expiresIn, required this.voucher});
+
+  factory Presentment.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    return Presentment(
+      id: _string(data, 'id'),
+      expiresIn: Duration(seconds: _int(data, 'expires_in')),
+      voucher: PresentedVoucher.fromJson(_map(data['voucher'], 'voucher')),
+    );
+  }
+
+  final String id;
+
+  /// Validity left when the server answered (counted down from receipt, so the
+  /// phone's clock does not matter).
+  final Duration expiresIn;
+  final PresentedVoucher voucher;
 }
 
 /// A booked redemption (`data.transaction`).
@@ -312,12 +378,12 @@ class RedeemedTransaction {
   });
 
   factory RedeemedTransaction.fromJson(Map<String, Object?> json) => RedeemedTransaction(
-        id: _string(json, 'id'),
-        // Redemptions are stored as negative ledger amounts.
-        amount: _int(json, 'amount').abs(),
-        balanceAfter: _int(json, 'balance_after'),
-        createdAt: DateTime.parse(_string(json, 'created_at')).toUtc(),
-      );
+    id: _string(json, 'id'),
+    // Redemptions are stored as negative ledger amounts.
+    amount: _int(json, 'amount').abs(),
+    balanceAfter: _int(json, 'balance_after'),
+    createdAt: DateTime.parse(_string(json, 'created_at')).toUtc(),
+  );
 
   final String id;
 
@@ -327,27 +393,132 @@ class RedeemedTransaction {
   final DateTime createdAt;
 }
 
-/// `POST /cards/{id}/redeem` → 201, or 200 with `replayed: true`.
+/// `POST /vouchers/{id}/redemptions` → 201, or 200 with `replayed: true`.
 @immutable
 class RedeemResult {
-  const RedeemResult({required this.card, required this.transaction, required this.replayed, this.requestId = ''});
+  const RedeemResult({required this.transaction, required this.replayed, this.requestId = ''});
 
   factory RedeemResult.fromJson(Map<String, Object?> json, {String requestId = ''}) {
     final Map<String, Object?> data = _map(json['data'], 'data');
     return RedeemResult(
-      card: ScannedCard.fromJson(_map(data['card'], 'card')),
       transaction: RedeemedTransaction.fromJson(_map(data['transaction'], 'transaction')),
       replayed: json['replayed'] == true,
       requestId: requestId,
     );
   }
 
-  final ScannedCard card;
   final RedeemedTransaction transaction;
   final bool replayed;
 
   /// `X-Request-Id` of the answered attempt (Recent detail support code).
   final String requestId;
+}
+
+/// `GET /vouchers/{id}/redemptions/{key}`: the outcome of one of this user's
+/// own attempts, asked for without sending the debit again.
+@immutable
+sealed class RedemptionOutcome {
+  const RedemptionOutcome();
+
+  factory RedemptionOutcome.fromJson(Map<String, Object?> json, {String requestId = ''}) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    return switch (_string(data, 'status')) {
+      'booked' => RedemptionBooked(
+        voucher: PresentedVoucher.fromJson(_map(data['voucher'], 'voucher')),
+        transaction: RedeemedTransaction.fromJson(_map(data['transaction'], 'transaction')),
+        requestId: requestId,
+      ),
+      'not_booked' => const RedemptionNotBooked(),
+      final String other => throw FormatException('Unknown outcome "$other".'),
+    };
+  }
+}
+
+final class RedemptionBooked extends RedemptionOutcome {
+  const RedemptionBooked({required this.voucher, required this.transaction, this.requestId = ''});
+
+  final PresentedVoucher voucher;
+  final RedeemedTransaction transaction;
+  final String requestId;
+}
+
+/// Not booked (yet): final only once the attempt can no longer be running on
+/// the server.
+final class RedemptionNotBooked extends RedemptionOutcome {
+  const RedemptionNotBooked();
+}
+
+/// How the guest paid for a sold voucher.
+enum PaymentMethod {
+  cash('cash'),
+  cardTerminal('card_terminal'),
+  bankTransfer('bank_transfer'),
+  complimentary('complimentary');
+
+  const PaymentMethod(this.wire);
+
+  final String wire;
+
+  /// Terminal receipt or bank reference required.
+  bool get needsReference => this == cardTerminal || this == bankTransfer;
+
+  /// A reason is required (and the owner's permission).
+  bool get needsReason => this == complimentary;
+}
+
+/// The `payment` object of a sale.
+@immutable
+class PaymentInput {
+  const PaymentInput({required this.method, this.reference, this.reason});
+
+  final PaymentMethod method;
+  final String? reference;
+  final String? reason;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'method': method.wire,
+    if (method.needsReference) 'reference': reference,
+    if (method.needsReason) 'reason': reason,
+  };
+}
+
+/// `POST /vouchers` → 201, or 200 with `replayed: true` (a retry within the
+/// server's window re-issues a fresh QR and revokes the unseen one).
+@immutable
+class SoldVoucher {
+  const SoldVoucher({
+    required this.id,
+    required this.value,
+    required this.currency,
+    required this.printablePayload,
+    required this.replayed,
+    this.expiresAt,
+  });
+
+  factory SoldVoucher.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Map<String, Object?> printable = _map(json['printable'], 'printable');
+    return SoldVoucher(
+      id: _string(data, 'id'),
+      value: _int(data, 'balance'),
+      currency: _stringOrNull(data, 'currency') ?? 'EUR',
+      expiresAt: _dateOrNull(data, 'expires_at'),
+      printablePayload: _string(printable, 'payload'),
+      replayed: json['replayed'] == true,
+    );
+  }
+
+  final String id;
+
+  /// Cents.
+  final int value;
+  final String currency;
+  final DateTime? expiresAt;
+
+  /// The QR text (`GCPV1.` + 43 characters). Returned once; it lives in
+  /// memory only until the sale screen closes.
+  final String printablePayload;
+  final bool replayed;
 }
 
 /// `GET /devices/current` (S14 device name).
@@ -361,74 +532,4 @@ class CurrentDevice {
   }
 
   final String name;
-}
-
-/// `POST /cards` (S20): the sold card and the link its tag must carry.
-@immutable
-class IssuedCard {
-  const IssuedCard({
-    required this.id,
-    required this.cardNumber,
-    required this.balance,
-    required this.currency,
-    required this.url,
-    required this.replayed,
-  });
-
-  factory IssuedCard.fromJson(Map<String, Object?> json) {
-    final Map<String, Object?> data = _map(json['data'], 'data');
-    final Map<String, Object?> nfc = _map(json['nfc'], 'nfc');
-    return IssuedCard(
-      id: _string(data, 'id'),
-      cardNumber: _stringOrNull(data, 'card_number_formatted') ?? _string(data, 'card_number'),
-      balance: _int(data, 'balance'),
-      currency: _stringOrNull(data, 'currency') ?? 'EUR',
-      url: _string(nfc, 'url'),
-      replayed: json['replayed'] == true,
-    );
-  }
-
-  final String id;
-
-  /// Grouped for reading aloud, e.g. `1268 8343 1352 0042`.
-  final String cardNumber;
-
-  /// Cents.
-  final int balance;
-  final String currency;
-
-  /// The card URL, written verbatim to the tag and compared verbatim on read-back.
-  final String url;
-  final bool replayed;
-}
-
-/// `POST /cards/{id}/nfc/check` (S20, same contract as the dashboard).
-@immutable
-class NfcCheckResult {
-  const NfcCheckResult({
-    required this.status,
-    required this.expectedUrl,
-    this.reason,
-    this.conflictCardNumber,
-    this.locked = false,
-  });
-
-  factory NfcCheckResult.fromJson(Map<String, Object?> json) {
-    final Map<String, Object?> data = _map(json['data'], 'data');
-    final Object? conflict = data['conflict'];
-    return NfcCheckResult(
-      status: _string(data, 'status'),
-      expectedUrl: _string(data, 'expected_url'),
-      reason: _stringOrNull(data, 'reason'),
-      conflictCardNumber: conflict is Map ? _stringOrNull(conflict.cast<String, Object?>(), 'card_number') : null,
-      locked: data['locked'] == true,
-    );
-  }
-
-  /// `available`, `already_programmed` or `refused`.
-  final String status;
-  final String expectedUrl;
-  final String? reason;
-  final String? conflictCardNumber;
-  final bool locked;
 }

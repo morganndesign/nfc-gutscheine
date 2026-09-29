@@ -45,10 +45,6 @@ class EnvironmentController extends ChangeNotifier {
     if (override == null) return build;
     final String? url = AppEnvironment.normalizeApiUrl(override, allowHttp: build.allowsHttp).url;
     if (url == null || url == build.apiBaseUrl) return build;
-    final String host = Uri.parse(url).host.toLowerCase();
-    return build.copyWith(
-      apiBaseUrl: url,
-      cardDomains: List<String>.unmodifiable(<String>{...build.cardDomains, host}),
-    );
+    return build.copyWith(apiBaseUrl: url);
   }
 }

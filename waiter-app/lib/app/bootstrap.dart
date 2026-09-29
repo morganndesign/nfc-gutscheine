@@ -15,7 +15,6 @@ import '../core/l10n/l10n.dart';
 import '../core/platform/biometrics_service.dart';
 import '../core/platform/connectivity_service.dart';
 import '../core/platform/feedback_service.dart';
-import '../core/platform/nfc_service.dart';
 import '../core/platform/system_service.dart';
 import '../core/state/business_calendar.dart';
 import '../core/state/client_identity.dart';
@@ -23,6 +22,7 @@ import '../core/state/clock.dart';
 import '../core/state/loop_controller.dart';
 import '../core/state/session_controller.dart';
 import '../core/state/session_isolation.dart';
+import '../core/storage/pending_redemptions.dart';
 import '../core/storage/recent_store.dart';
 import '../core/storage/secure_store.dart';
 import '../core/storage/settings_store.dart';
@@ -83,10 +83,10 @@ Future<AppServices> bootstrap() async {
 
   final FeedbackService feedback = FeedbackService(settings: settings, log: log);
   unawaited(feedback.preload());
-  final NfcService nfc = PlatformNfcService();
   final ConnectivityService connectivity = ConnectivityService();
   await connectivity.start();
   final RecentStore recent = RecentStore(secrets);
+  final PendingRedemptionStore pending = PendingRedemptionStore(secrets);
   final MonotonicClock clock = SystemMonotonicClock();
 
   final SessionController session = SessionController(
@@ -94,6 +94,7 @@ Future<AppServices> bootstrap() async {
     secrets: secrets,
     settings: settings,
     recent: recent,
+    pending: pending,
     biometrics: BiometricsService(system: system),
     feedback: feedback,
     identity: identity,
@@ -107,25 +108,19 @@ Future<AppServices> bootstrap() async {
   final LoopController loop = LoopController(
     session: session,
     api: api,
-    nfc: nfc,
     feedback: feedback,
     recent: recent,
+    pending: pending,
     connectivity: connectivity,
-    settings: settings,
     clock: clock,
-    cardDomains: environment.cardDomains,
-    allowHttpLinks: environment.allowsHttp,
-    isIos: isIos,
     log: log,
   );
   // A server chosen in the app (development / staging) takes effect at once.
   environments.addListener(() {
     client.baseUrl = environments.current.apiBaseUrl;
-    loop.cardDomains = environments.current.cardDomains;
     settings.sessionServer = environments.current.apiBaseUrl;
     log.record('environment', environments.current.apiBaseUrl);
   });
-  await loop.refreshNfcAvailability();
 
   return AppServices(
     environmentController: environments,
@@ -133,8 +128,8 @@ Future<AppServices> bootstrap() async {
     loop: loop,
     settings: settings,
     recent: recent,
+    pending: pending,
     feedback: feedback,
-    nfc: nfc,
     system: system,
     connectivity: connectivity,
     identity: identity,

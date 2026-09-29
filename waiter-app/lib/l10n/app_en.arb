@@ -28,14 +28,6 @@
   "@commonScanAgain": {
     "description": "Spec key: common.scanAgain (12 §5.1) · Max: 24 · Notes: 03b · §2.7"
   },
-  "commonEnterNumber": "Enter card number",
-  "@commonEnterNumber": {
-    "description": "Spec key: common.enterNumber (12 §5.1) · Max: 24 · Notes: 03b · opens S11"
-  },
-  "commonEditNumber": "Edit number",
-  "@commonEditNumber": {
-    "description": "Spec key: common.editNumber (12 §5.1) · Max: 24 · Notes: 03b · S11 prefilled"
-  },
   "commonOpenSettings": "Open Settings",
   "@commonOpenSettings": {
     "description": "Spec key: common.openSettings (12 §5.1) · Max: 24 · Notes: 12 · = camera.denied.action (alias)"
@@ -351,11 +343,11 @@
   "@signInErrorEmailFormat": {
     "description": "Spec key: signIn.error.emailFormat (12 §5.3) · Max: 32 · Notes: 03a"
   },
-  "signInErrorInvalid": "E-mail or password is incorrect. Check both and try again.",
+  "signInErrorInvalid": "E-mail or password is incorrect. After too many attempts, sign-in is paused for a few minutes.",
   "@signInErrorInvalid": {
-    "description": "Spec key: signIn.error.invalid (12 §5.3) · Max: 90 · Notes: 03a · A07"
+    "description": "Spec key: signIn.error.invalid (12 §5.3) · Max: 120 · Notes: 03a · ADR-002: one answer for wrong and locked (audit S4)"
   },
-  "signInErrorNoPermission": "This account can't redeem cards. Please get a manager.",
+  "signInErrorNoPermission": "This account can't redeem vouchers. Please get a manager.",
   "@signInErrorNoPermission": {
     "description": "Spec key: signIn.error.noPermission (12 §5.3) · Max: 90 · Notes: 03a · A02"
   },
@@ -367,6 +359,19 @@
         "type": "String"
       }
     }
+  },
+  "signInRetryIn": "Try again in {time}",
+  "@signInRetryIn": {
+    "description": "Spec key: signIn.retryIn (12 §5.3) · Max: 24 · Notes: 03a · disabled sign-in button during the 429 wait (S02, S15 sheet)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "signInAvailable": "You can sign in again",
+  "@signInAvailable": {
+    "description": "Spec key: signIn.available (12 §5.3) · Max: — · Notes: 03a · (a11y) end of the wait"
   },
   "signInErrorServer": "Can't sign in right now. Try again in a moment.",
   "@signInErrorServer": {
@@ -461,10 +466,6 @@
   "@unlockLockedOut": {
     "description": "Spec key: unlock.lockedOut (12 §5.5) · Max: 48 · Notes: 12 · P12"
   },
-  "unlockPendingCard": "The card opens after unlocking.",
-  "@unlockPendingCard": {
-    "description": "Spec key: unlock.pendingCard (12 §5.5) · Max: 48 · Notes: 03a · deep link waiting"
-  },
   "topBarRecent": "Recent",
   "@topBarRecent": {
     "description": "Spec key: topBar.recent (12 §5.6) · Max: — · Notes: 03a · (a11y)"
@@ -478,57 +479,55 @@
       }
     }
   },
-  "readyAndroidTitle": "Hold the card to the phone",
-  "@readyAndroidTitle": {
-    "description": "Spec key: ready.android.title (12 §5.6) · Max: 32 · Notes: B"
+  "readyTitle": "Scan the voucher",
+  "@readyTitle": {
+    "description": "Spec key: ready.title (12 §5.6) · Max: 32 · Notes: ADR-002"
   },
-  "readyAndroidHint": "The card is detected automatically",
-  "@readyAndroidHint": {
-    "description": "Spec key: ready.android.hint (12 §5.6) · Max: 40 · Notes: 03a"
+  "readyHint": "Point the camera at the voucher's QR code – printed or on the guest's phone.",
+  "@readyHint": {
+    "description": "Spec key: ready.hint (12 §5.6) · Max: 90 · Notes: ADR-002"
   },
-  "readyIosButton": "Scan card",
-  "@readyIosButton": {
-    "description": "Spec key: ready.ios.button (12 §5.6) · Max: 24 · Notes: B"
+  "readyScan": "Scan voucher",
+  "@readyScan": {
+    "description": "Spec key: ready.scan (12 §5.6) · Max: 24 · Notes: ADR-002 · primary"
   },
-  "readyIosHint": "After tapping, hold the card near the top of the iPhone",
-  "@readyIosHint": {
-    "description": "Spec key: ready.ios.hint (12 §5.6) · Max: 60 · Notes: 03a · 2 lines"
+  "readySell": "Sell voucher",
+  "@readySell": {
+    "description": "Spec key: ready.sell (12 §5.6) · Max: 24 · Notes: ADR-002 · opens S20; only with vouchers.sell"
   },
-  "readyIosTimeout": "No card detected. Tap \"Scan card\" to try again.",
-  "@readyIosTimeout": {
-    "description": "Spec key: ready.ios.timeout (12 §5.6) · Max: 90 · Notes: 03a · P08"
+  "readyPendingTitle": "Redemption not confirmed yet",
+  "@readyPendingTitle": {
+    "description": "Spec key: ready.pending.title (12 §5.6) · Max: 32 · Notes: ADR-002 · banner while an attempt is unresolved (audit M1, M2, M6)"
   },
-  "readyManual": "Card number",
-  "@readyManual": {
-    "description": "Spec key: ready.manual (12 §5.6) · Max: 16 · Notes: 03a · icon + noun (exception to verb + object, §1.2)"
+  "readyPendingBody": "{amount} on voucher ••••\u00a0{last4}. Checked automatically – nothing is ever booked twice.",
+  "@readyPendingBody": {
+    "description": "Spec key: ready.pending.body (12 §5.6) · Max: 90 · Notes: ADR-002",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "last4": {
+        "type": "String"
+      }
+    }
   },
-  "readyQr": "QR code",
-  "@readyQr": {
-    "description": "Spec key: ready.qr (12 §5.6) · Max: 16 · Notes: 03a · icon + noun"
+  "readyPendingBooked": "The unconfirmed redemption of {amount} was booked.",
+  "@readyPendingBooked": {
+    "description": "Spec key: ready.pending.booked (12 §5.6) · Max: 60 · Notes: ADR-002 · snackbar; the row appears in Recent",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
-  "readyFirstCardTipAndroid": "Tip: the NFC antenna is usually at the top of the back, near the camera.",
-  "@readyFirstCardTipAndroid": {
-    "description": "Spec key: ready.firstCardTip.android (12 §5.6) · Max: 90 · Notes: 03a"
-  },
-  "readyFirstCardTipIos": "Tip: hold the card flat against the top edge, near the camera.",
-  "@readyFirstCardTipIos": {
-    "description": "Spec key: ready.firstCardTip.ios (12 §5.6) · Max: 90 · Notes: 03a"
-  },
-  "readyNoNfcTitle": "Scan the QR code on the card",
-  "@readyNoNfcTitle": {
-    "description": "Spec key: ready.noNfc.title (12 §5.6) · Max: 32 · Notes: 03a · P02"
-  },
-  "readyNoNfcHint": "This device has no NFC. Use the QR code or the card number.",
-  "@readyNoNfcHint": {
-    "description": "Spec key: ready.noNfc.hint (12 §5.6) · Max: 90 · Notes: 03a"
-  },
-  "readyNoNfcButton": "Scan QR code",
-  "@readyNoNfcButton": {
-    "description": "Spec key: ready.noNfc.button (12 §5.6) · Max: 24 · Notes: 03a"
-  },
-  "readyOfflineTap": "No connection – the card can't be checked",
-  "@readyOfflineTap": {
-    "description": "Spec key: ready.offline.tap (12 §5.6) · Max: 60 · Notes: 03a · L09 · harmonised (EN en dash)"
+  "readyPendingNotBooked": "The unconfirmed redemption of {amount} was not booked.",
+  "@readyPendingNotBooked": {
+    "description": "Spec key: ready.pending.notBooked (12 §5.6) · Max: 60 · Notes: ADR-002 · snackbar",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "readyOnline": "Connected again",
   "@readyOnline": {
@@ -550,233 +549,21 @@
   "@maintenanceDismiss": {
     "description": "Spec key: maintenance.dismiss (12 §5.6) · Max: — · Notes: 03a · (a11y)"
   },
-  "readyNewCard": "New gift card",
-  "@readyNewCard": {
-    "description": "Spec key: ready.newCard (12 §5.6) · Max: 24 · Notes: S20 · managers and owners only · button on S05"
-  },
-  "issueTitle": "New gift card",
-  "@issueTitle": {
-    "description": "Spec key: issue.title (12 §5.6) · Max: 24 · Notes: S20 · screen title"
-  },
-  "issueAmountLabel": "Card value",
-  "@issueAmountLabel": {
-    "description": "Spec key: issue.amount.label (12 §5.6) · Max: 24 · Notes: S20 · above the amount"
-  },
-  "issueEmailLabel": "Guest e-mail (optional)",
-  "@issueEmailLabel": {
-    "description": "Spec key: issue.email.label (12 §5.6) · Max: 32 · Notes: S20"
-  },
-  "issueEmailHelper": "The guest receives a confirmation.",
-  "@issueEmailHelper": {
-    "description": "Spec key: issue.email.helper (12 §5.6) · Max: 60 · Notes: S20"
-  },
-  "issueEmailInvalid": "Enter a valid e-mail address.",
-  "@issueEmailInvalid": {
-    "description": "Spec key: issue.email.invalid (12 §5.6) · Max: 60 · Notes: S20 · field error"
-  },
-  "issueAmountRange": "The card value must be between {min} and {max}.",
-  "@issueAmountRange": {
-    "description": "Spec key: issue.amount.range (12 §5.6) · Max: 60 · Notes: S20 · server INVALID_AMOUNT",
-    "placeholders": {
-      "min": {
-        "type": "String"
-      },
-      "max": {
-        "type": "String"
-      }
-    }
-  },
-  "issueCreate": "Create card · {amount}",
-  "@issueCreate": {
-    "description": "Spec key: issue.create (12 §5.6) · Max: 32 · Notes: S20 · primary",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "issueCreating": "Creating card\u00a0…",
-  "@issueCreating": {
-    "description": "Spec key: issue.creating (12 §5.6) · Max: 32 · Notes: S20 · button progress"
-  },
-  "issueProgramTitle": "Hold a blank card to the phone",
-  "@issueProgramTitle": {
-    "description": "Spec key: issue.program.title (12 §5.6) · Max: 36 · Notes: S20 · programming"
-  },
-  "issueProgramBody": "Keep it still on the back of the phone until the check mark appears.",
-  "@issueProgramBody": {
-    "description": "Spec key: issue.program.body (12 §5.6) · Max: 90 · Notes: S20"
-  },
-  "issueProgramRetap": "Lift the card and hold it to the phone again.",
-  "@issueProgramRetap": {
-    "description": "Spec key: issue.program.retap (12 §5.6) · Max: 60 · Notes: S20 · hint"
-  },
-  "issueStepCheck": "Check tag",
-  "@issueStepCheck": {
-    "description": "Spec key: issue.step.check (12 §5.6) · Max: 24 · Notes: S20 · step"
-  },
-  "issueStepWrite": "Write card link",
-  "@issueStepWrite": {
-    "description": "Spec key: issue.step.write (12 §5.6) · Max: 24 · Notes: S20 · step"
-  },
-  "issueStepVerify": "Read back and verify",
-  "@issueStepVerify": {
-    "description": "Spec key: issue.step.verify (12 §5.6) · Max: 24 · Notes: S20 · step"
-  },
-  "issueStepSave": "Save chip to card",
-  "@issueStepSave": {
-    "description": "Spec key: issue.step.save (12 §5.6) · Max: 28 · Notes: S20 · step"
-  },
-  "issueCard": "Card {number}",
-  "@issueCard": {
-    "description": "Spec key: issue.card (12 §5.6) · Max: 32 · Notes: S20 · card number, grouped",
-    "placeholders": {
-      "number": {
-        "type": "String"
-      }
-    }
-  },
-  "issueSuccessTitle": "Card ready",
-  "@issueSuccessTitle": {
-    "description": "Spec key: issue.success.title (12 §5.6) · Max: 20 · Notes: S20"
-  },
-  "issueSuccessBalance": "Balance {amount}",
-  "@issueSuccessBalance": {
-    "description": "Spec key: issue.success.balance (12 §5.6) · Max: 32 · Notes: S20",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "issueSuccessVerified": "NFC tag written and verified",
-  "@issueSuccessVerified": {
-    "description": "Spec key: issue.success.verified (12 §5.6) · Max: 40 · Notes: S20"
-  },
-  "issueSuccessNoTag": "No tag yet. Program it later in the dashboard.",
-  "@issueSuccessNoTag": {
-    "description": "Spec key: issue.success.noTag (12 §5.6) · Max: 60 · Notes: S20 · after “Program later”"
-  },
-  "issueSuccessAnother": "Sell another card",
-  "@issueSuccessAnother": {
-    "description": "Spec key: issue.success.another (12 §5.6) · Max: 28 · Notes: S20 · secondary"
-  },
-  "issueLater": "Program later",
-  "@issueLater": {
-    "description": "Spec key: issue.later (12 §5.6) · Max: 24 · Notes: S20 · keeps the card without a tag"
-  },
-  "issueNfcOff": "Turn on NFC to program the tag.",
-  "@issueNfcOff": {
-    "description": "Spec key: issue.nfcOff (12 §5.6) · Max: 60 · Notes: S20"
-  },
-  "issueCreateFailedTitle": "Card not created",
-  "@issueCreateFailedTitle": {
-    "description": "Spec key: issue.createFailed.title (12 §5.6) · Max: 28 · Notes: S20"
-  },
-  "issueCreateFailedBody": "No card was created. Check the connection and try again.",
-  "@issueCreateFailedBody": {
-    "description": "Spec key: issue.createFailed.body (12 §5.6) · Max: 90 · Notes: S20 · definitive answer"
-  },
-  "issueCreateUncertainBody": "The answer did not arrive. Try again, the card will not be created twice.",
-  "@issueCreateUncertainBody": {
-    "description": "Spec key: issue.createUncertain.body (12 §5.6) · Max: 90 · Notes: S20 · same idempotency key"
-  },
-  "issueNotAllowedTitle": "Not allowed",
-  "@issueNotAllowedTitle": {
-    "description": "Spec key: issue.notAllowed.title (12 §5.6) · Max: 28 · Notes: S20 · 403"
-  },
-  "issueNotAllowedBody": "This account cannot sell cards on this phone. Sign out and in again, or use the dashboard.",
-  "@issueNotAllowedBody": {
-    "description": "Spec key: issue.notAllowed.body (12 §5.6) · Max: 120 · Notes: S20 · 403"
-  },
-  "issueTagFailedTitle": "Tag not programmed",
-  "@issueTagFailedTitle": {
-    "description": "Spec key: issue.tagFailed.title (12 §5.6) · Max: 28 · Notes: S20 · the card exists, nothing was saved to it"
-  },
-  "issueTagOtherCard": "This tag belongs to card {number}. Use a blank tag.",
-  "@issueTagOtherCard": {
-    "description": "Spec key: issue.tag.otherCard (12 §5.6) · Max: 90 · Notes: S20 · check refused, conflict",
-    "placeholders": {
-      "number": {
-        "type": "String"
-      }
-    }
-  },
-  "issueTagRefused": "This tag cannot be used for this card. Use a blank tag.",
-  "@issueTagRefused": {
-    "description": "Spec key: issue.tag.refused (12 §5.6) · Max: 90 · Notes: S20 · check refused"
-  },
-  "issueTagUnsupported": "This tag type is not supported. Use NTAG213, 215 or 216.",
-  "@issueTagUnsupported": {
-    "description": "Spec key: issue.tag.unsupported (12 §5.6) · Max: 90 · Notes: S20"
-  },
-  "issueTagReadOnly": "This tag is locked and cannot be written.",
-  "@issueTagReadOnly": {
-    "description": "Spec key: issue.tag.readOnly (12 §5.6) · Max: 90 · Notes: S20"
-  },
-  "issueTagMoved": "The tag moved away. Hold it still and try again.",
-  "@issueTagMoved": {
-    "description": "Spec key: issue.tag.moved (12 §5.6) · Max: 90 · Notes: S20 · write / read failed, timeout"
-  },
-  "issueTagVerifyFailed": "The tag could not be verified. Try again with the same tag.",
-  "@issueTagVerifyFailed": {
-    "description": "Spec key: issue.tag.verifyFailed (12 §5.6) · Max: 90 · Notes: S20 · read-back mismatch"
-  },
-  "issueTagNetwork": "No connection to the server. Try again.",
-  "@issueTagNetwork": {
-    "description": "Spec key: issue.tag.network (12 §5.6) · Max: 90 · Notes: S20 · check / save without answer"
-  },
-  "iosSheetAlert": "Hold the card near the top of the iPhone",
-  "@iosSheetAlert": {
-    "description": "Spec key: ios.sheet.alert (12 §5.7) · Max: 48 · Notes: B"
-  },
-  "iosSheetFound": "Card found",
-  "@iosSheetFound": {
-    "description": "Spec key: ios.sheet.found (12 §5.7) · Max: 48 · Notes: 03a · B wording"
-  },
-  "iosSheetReadFailed": "Couldn't read the card. Try again.",
-  "@iosSheetReadFailed": {
-    "description": "Spec key: ios.sheet.readFailed (12 §5.7) · Max: 48 · Notes: 03a"
-  },
-  "iosSheetMultiple": "More than one card detected. Hold only one.",
-  "@iosSheetMultiple": {
-    "description": "Spec key: ios.sheet.multiple (12 §5.7) · Max: 48 · Notes: 03a · P06"
-  },
-  "iosSheetTimeoutSoon": "No card yet. Hold it flat near the top of the iPhone.",
-  "@iosSheetTimeoutSoon": {
-    "description": "Spec key: ios.sheet.timeoutSoon (12 §5.7) · Max: 60 · Notes: 03a · P07"
-  },
-  "scanNotCard": "This is not a gift card",
-  "@scanNotCard": {
-    "description": "Spec key: scan.notCard (12 §5.7) · Max: 32 · Notes: 03a · harmonised (\"Gutscheinkarte\", \"poklon kartica\", §1.3) · L10"
-  },
-  "scanReadFailedTitle": "Couldn't read the card",
-  "@scanReadFailedTitle": {
-    "description": "Spec key: scan.readFailed.title (12 §5.7) · Max: 32 · Notes: 03a · L11"
-  },
-  "scanReadFailedBody": "Hold it still for a second.",
-  "@scanReadFailedBody": {
-    "description": "Spec key: scan.readFailed.body (12 §5.7) · Max: 48 · Notes: 03a"
-  },
-  "scanDetected": "Card detected",
+  "scanDetected": "Voucher detected",
   "@scanDetected": {
     "description": "Spec key: scan.detected (12 §5.7) · Max: — · Notes: 03a · (a11y) announcement"
   },
-  "scanLookingUp": "Looking up card\u00a0…",
+  "scanLookingUp": "Checking voucher\u00a0…",
   "@scanLookingUp": {
     "description": "Spec key: scan.lookingUp (12 §5.7) · Max: 32 · Notes: 03a"
   },
-  "scanSlow": "Still looking\u00a0…",
+  "scanSlow": "Still checking\u00a0…",
   "@scanSlow": {
     "description": "Spec key: scan.slow (12 §5.7) · Max: 32 · Notes: 03a · L08 · alias lookup.stillLooking (03b)"
   },
-  "scanUnavailable": "NFC isn't available right now. Use the card number or QR code.",
-  "@scanUnavailable": {
-    "description": "Spec key: scan.unavailable (12 §5.7) · Max: 90 · Notes: 03a · P09"
-  },
-  "balanceCardOverline": "Gift card",
+  "balanceCardOverline": "Voucher",
   "@balanceCardOverline": {
-    "description": "Spec key: balanceCard.overline (12 §5.8) · Max: 16 · Notes: 12 · uppercased by style"
+    "description": "Spec key: balanceCard.overline (12 §5.8) · Max: 16 · Notes: 12 · uppercased by style · ADR-002"
   },
   "balanceCardValidUntil": "Valid until {date}",
   "@balanceCardValidUntil": {
@@ -800,7 +587,7 @@
       }
     }
   },
-  "balanceCardA11y": "Gift card {restaurant}. Balance {spokenAmount}. Card ending {last4}.",
+  "balanceCardA11y": "Voucher {restaurant}. Balance {spokenAmount}. Voucher ending {last4}.",
   "@balanceCardA11y": {
     "description": "Spec key: balanceCard.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y) · validity and status appended",
     "placeholders": {
@@ -815,16 +602,16 @@
       }
     }
   },
-  "chargeCardNumberA11y": "Card number {number}",
-  "@chargeCardNumberA11y": {
-    "description": "Spec key: charge.cardNumber.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y)",
+  "chargeVoucherNumberA11y": "Voucher number {number}",
+  "@chargeVoucherNumberA11y": {
+    "description": "Spec key: charge.voucherNumber.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y)",
     "placeholders": {
       "number": {
         "type": "String"
       }
     }
   },
-  "a11yChargeClose": "Close card",
+  "a11yChargeClose": "Close voucher",
   "@a11yChargeClose": {
     "description": "Spec key: a11y.charge.close (12 §5.8) · Max: — · Notes: 03b · (a11y)"
   },
@@ -925,7 +712,7 @@
   "@chargeFullOnly": {
     "description": "Spec key: charge.fullOnly (12 §5.8) · Max: 90 · Notes: 03b · partial disabled, R11"
   },
-  "chargeVelocityTitle": "Limit for this card reached",
+  "chargeVelocityTitle": "Limit for this voucher reached",
   "@chargeVelocityTitle": {
     "description": "Spec key: charge.velocity.title (12 §5.8) · Max: 32 · Notes: 03b · R14"
   },
@@ -947,21 +734,40 @@
       }
     }
   },
-  "chargeSwitchCardMessage": "Different card detected – Switch?",
-  "@chargeSwitchCardMessage": {
-    "description": "Spec key: charge.switchCard.message (12 §5.8) · Max: 48 · Notes: 03b · B EN wording (brief §2) · P14"
+  "chargeDailyLimit": "At most {amount} more with this voucher today",
+  "@chargeDailyLimit": {
+    "description": "Spec key: charge.dailyLimit (12 §5.8) · Max: 60 · Notes: ADR-002 · per-day limit of the restaurant",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
-  "chargeSwitchCardAction": "Switch",
-  "@chargeSwitchCardAction": {
-    "description": "Spec key: charge.switchCard.action (12 §5.8) · Max: 12 · Notes: 03b · B"
+  "chargePresentmentExpired": "Scan the voucher again to redeem.",
+  "@chargePresentmentExpired": {
+    "description": "Spec key: charge.presentment.expired (12 §5.8) · Max: 60 · Notes: ADR-002 · the 60-s proof ran out; the amount is kept"
   },
-  "chargeSwitchCardKeep": "Keep",
-  "@chargeSwitchCardKeep": {
-    "description": "Spec key: charge.switchCard.keep (12 §5.8) · Max: 12 · Notes: 03b"
+  "chargePendingTitle": "Checking an earlier redemption",
+  "@chargePendingTitle": {
+    "description": "Spec key: charge.pending.title (12 §5.8) · Max: 36 · Notes: ADR-002 · an unresolved attempt on this voucher"
   },
-  "chargeSwitchCardDialogTitle": "Different card detected",
-  "@chargeSwitchCardDialogTitle": {
-    "description": "Spec key: charge.switchCard.dialogTitle (12 §5.8) · Max: 32 · Notes: 12 · Dialog fallback with screen reader (03b §2.18)"
+  "chargePendingBody": "{amount} may already have been redeemed. Redeeming is possible once this is checked.",
+  "@chargePendingBody": {
+    "description": "Spec key: charge.pending.body (12 §5.8) · Max: 90 · Notes: ADR-002",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "chargeEarlierBooked": "The earlier redemption of {amount} was booked. Balance updated.",
+  "@chargeEarlierBooked": {
+    "description": "Spec key: charge.earlierBooked (12 §5.8) · Max: 90 · Notes: ADR-002",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
   "keypadDoubleZero": "Double zero",
   "@keypadDoubleZero": {
@@ -987,13 +793,9 @@
   "@badgeActive": {
     "description": "Spec key: badge.active (12 §5.9) · Max: 16 · Notes: 12 · a11y only (active cards show no badge)"
   },
-  "badgeInactive": "Not activated",
-  "@badgeInactive": {
-    "description": "Spec key: badge.inactive (12 §5.9) · Max: 16 · Notes: 12"
-  },
-  "badgeRedeemed": "Used up",
-  "@badgeRedeemed": {
-    "description": "Spec key: badge.redeemed (12 §5.9) · Max: 16 · Notes: 12 · status redeemed or balance 0"
+  "badgeUsedUp": "Used up",
+  "@badgeUsedUp": {
+    "description": "Spec key: badge.usedUp (12 §5.9) · Max: 16 · Notes: 12 · status redeemed or balance 0"
   },
   "badgeBlocked": "Blocked",
   "@badgeBlocked": {
@@ -1003,59 +805,39 @@
   "@badgeExpired": {
     "description": "Spec key: badge.expired (12 §5.9) · Max: 16 · Notes: 12"
   },
-  "badgeReplaced": "Replaced",
-  "@badgeReplaced": {
-    "description": "Spec key: badge.replaced (12 §5.9) · Max: 16 · Notes: 12"
+  "voucherBlocked": "Voucher blocked",
+  "@voucherBlocked": {
+    "description": "Spec key: voucher.blocked (12 §5.9) · Max: 28 · Notes: B · danger · body = getManager"
   },
-  "cardBlocked": "Card blocked",
-  "@cardBlocked": {
-    "description": "Spec key: card.blocked (12 §5.9) · Max: 28 · Notes: B · danger · body = getManager"
-  },
-  "cardBlockedReason": "Reason: {reason}",
-  "@cardBlockedReason": {
-    "description": "Spec key: card.blocked.reason (12 §5.9) · Max: 90 · Notes: 03b · only if blocked_reason present",
+  "voucherBlockedReason": "Reason: {reason}",
+  "@voucherBlockedReason": {
+    "description": "Spec key: voucher.blocked.reason (12 §5.9) · Max: 90 · Notes: 03b · only if blocked_reason present",
     "placeholders": {
       "reason": {
         "type": "String"
       }
     }
   },
-  "cardExpired": "Card expired",
-  "@cardExpired": {
-    "description": "Spec key: card.expired (12 §5.9) · Max: 28 · Notes: B · warning"
+  "voucherExpired": "Voucher expired",
+  "@voucherExpired": {
+    "description": "Spec key: voucher.expired (12 §5.9) · Max: 28 · Notes: B · warning"
   },
-  "cardExpiredBody": "Expired on {date}. Please get a manager.",
-  "@cardExpiredBody": {
-    "description": "Spec key: card.expired.body (12 §5.9) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)",
+  "voucherExpiredBody": "Expired on {date}. Please get a manager.",
+  "@voucherExpiredBody": {
+    "description": "Spec key: voucher.expired.body (12 §5.9) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)",
     "placeholders": {
       "date": {
         "type": "String"
       }
     }
   },
-  "cardInactive": "Card not activated yet",
-  "@cardInactive": {
-    "description": "Spec key: card.inactive (12 §5.9) · Max: 28 · Notes: B · warning"
+  "voucherEmpty": "No balance left",
+  "@voucherEmpty": {
+    "description": "Spec key: voucher.empty (12 §5.9) · Max: 28 · Notes: B · warning"
   },
-  "cardInactiveBody": "It can be redeemed once activated. Please get a manager.",
-  "@cardInactiveBody": {
-    "description": "Spec key: card.inactive.body (12 §5.9) · Max: 90 · Notes: 03b"
-  },
-  "cardReplaced": "Card was replaced",
-  "@cardReplaced": {
-    "description": "Spec key: card.replaced (12 §5.9) · Max: 28 · Notes: B · warning"
-  },
-  "cardReplacedBody": "The balance is on the new card. Ask the guest for the new card.",
-  "@cardReplacedBody": {
-    "description": "Spec key: card.replaced.body (12 §5.9) · Max: 90 · Notes: 03b"
-  },
-  "cardEmpty": "No balance left",
-  "@cardEmpty": {
-    "description": "Spec key: card.empty (12 §5.9) · Max: 28 · Notes: B · warning"
-  },
-  "cardEmptyBody": "This card has been fully used.",
-  "@cardEmptyBody": {
-    "description": "Spec key: card.empty.body (12 §5.9) · Max: 90 · Notes: 03b"
+  "voucherEmptyBody": "This voucher has been fully used.",
+  "@voucherEmptyBody": {
+    "description": "Spec key: voucher.empty.body (12 §5.9) · Max: 90 · Notes: 03b"
   },
   "redeemSlow": "Connection slow – retrying",
   "@redeemSlow": {
@@ -1082,15 +864,15 @@
   "@uncertainGuestHint": {
     "description": "Spec key: uncertain.guestHint (12 §5.10) · Max: 90 · Notes: 03b · harmonised (never \"Zahlung / payment / plaćanje\", §1.3)"
   },
-  "uncertainFailedBody": "Not confirmed yet. Try again – nothing is ever booked twice.",
+  "uncertainFailedBody": "Not confirmed yet. Check again – nothing is ever booked twice.",
   "@uncertainFailedBody": {
-    "description": "Spec key: uncertain.failedBody (12 §5.10) · Max: 90 · Notes: 03b · R04"
+    "description": "Spec key: uncertain.failedBody (12 §5.10) · Max: 90 · Notes: 03b · R04 · ADR-002: \"Check again\" resends the same key"
   },
-  "uncertainCancelled": "Not confirmed. Scan the card again before redeeming.",
+  "uncertainCancelled": "Not confirmed. It is checked automatically before this voucher can be redeemed again.",
   "@uncertainCancelled": {
-    "description": "Spec key: uncertain.cancelled (12 §5.10) · Max: 90 · Notes: 03b · R05 · harmonised (no \"charging / terećenje\")"
+    "description": "Spec key: uncertain.cancelled (12 §5.10) · Max: 120 · Notes: 03b · R05 · ADR-002 · snackbar on S05 after Cancel"
   },
-  "uncertainCancelledGuestHint": "Tell the guest: \"The redemption isn't confirmed yet. We'll check the balance before redeeming again.\"",
+  "uncertainCancelledGuestHint": "Tell the guest: \"The redemption isn't confirmed yet. We'll check it before redeeming again.\"",
   "@uncertainCancelledGuestHint": {
     "description": "Spec key: uncertain.cancelledGuestHint (12 §5.10) · Max: 120 · Notes: 03b · harmonised (vocabulary); 3 lines allowed (quoted speech)"
   },
@@ -1102,10 +884,6 @@
         "type": "String"
       }
     }
-  },
-  "redeemTapAgain": "Please tap Redeem again.",
-  "@redeemTapAgain": {
-    "description": "Spec key: redeem.tapAgain (12 §5.10) · Max: 48 · Notes: 03b · R13"
   },
   "successTitle": "Redeemed",
   "@successTitle": {
@@ -1120,23 +898,19 @@
       }
     }
   },
-  "successEmpty": "Card is now empty",
+  "successEmpty": "Voucher is now empty",
   "@successEmpty": {
     "description": "Spec key: success.empty (12 §5.11) · Max: 28 · Notes: 03b · replaces the remaining line at 0"
   },
-  "successNextIos": "Scan next card",
-  "@successNextIos": {
-    "description": "Spec key: success.next.ios (12 §5.11) · Max: 24 · Notes: B"
-  },
-  "successNextAndroid": "Just tap the next card",
-  "@successNextAndroid": {
-    "description": "Spec key: success.next.android (12 §5.11) · Max: 32 · Notes: B"
+  "successNext": "Scan next voucher",
+  "@successNext": {
+    "description": "Spec key: success.next (12 §5.11) · Max: 24 · Notes: B · ADR-002 wording"
   },
   "successShowGuest": "Show guest",
   "@successShowGuest": {
     "description": "Spec key: success.showGuest (12 §5.11) · Max: 24 · Notes: 03b · presentation mode"
   },
-  "successCard": "Card ••••\u00a0{last4}",
+  "successCard": "Voucher ••••\u00a0{last4}",
   "@successCard": {
     "description": "Spec key: success.card (12 §5.11) · Max: 20 · Notes: 12 · caption",
     "placeholders": {
@@ -1161,33 +935,13 @@
       }
     }
   },
-  "problemNotFoundTitle": "Card not found",
-  "@problemNotFoundTitle": {
-    "description": "Spec key: problem.notFound.title (12 §5.12) · Max: 32 · Notes: B · L01/L02"
+  "problemNotRecognizedTitle": "Not a voucher of this restaurant",
+  "@problemNotRecognizedTitle": {
+    "description": "Spec key: problem.notRecognized.title (12 §5.12) · Max: 32 · Notes: ADR-002 · unknown, revoked or foreign code"
   },
-  "problemNotFoundBody": "This card is not in the system. Check the card or ask the guest for another one.",
-  "@problemNotFoundBody": {
-    "description": "Spec key: problem.notFound.body (12 §5.12) · Max: 90 · Notes: 03b"
-  },
-  "problemNotFoundBodyManual": "No card with this number. Check the digits.",
-  "@problemNotFoundBodyManual": {
-    "description": "Spec key: problem.notFound.bodyManual (12 §5.12) · Max: 90 · Notes: 03b"
-  },
-  "problemForeignTitle": "Card from another restaurant",
-  "@problemForeignTitle": {
-    "description": "Spec key: problem.foreign.title (12 §5.12) · Max: 32 · Notes: B · L03"
-  },
-  "problemForeignBody": "It can only be redeemed at the restaurant that issued it.",
-  "@problemForeignBody": {
-    "description": "Spec key: problem.foreign.body (12 §5.12) · Max: 90 · Notes: 03b"
-  },
-  "problemVerifyTitle": "Card could not be verified",
-  "@problemVerifyTitle": {
-    "description": "Spec key: problem.verify.title (12 §5.12) · Max: 32 (2 lines) · Notes: B · L04"
-  },
-  "problemVerifyBody": "Do not accept this card for now. Please get a manager.",
-  "@problemVerifyBody": {
-    "description": "Spec key: problem.verify.body (12 §5.12) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)"
+  "problemNotRecognizedBody": "This code is not valid here. Ask the guest for another voucher or get a manager.",
+  "@problemNotRecognizedBody": {
+    "description": "Spec key: problem.notRecognized.body (12 §5.12) · Max: 90 · Notes: ADR-002"
   },
   "problemThrottledTitle": "Too many scans",
   "@problemThrottledTitle": {
@@ -1206,7 +960,7 @@
       }
     }
   },
-  "problemNetworkBody": "The card could not be checked. Check Wi-Fi or mobile data, then try again.",
+  "problemNetworkBody": "The voucher could not be checked. Check Wi-Fi or mobile data, then try again.",
   "@problemNetworkBody": {
     "description": "Spec key: problem.network.body (12 §5.12) · Max: 90 · Notes: 03b · L06 (title = offline.title)"
   },
@@ -1214,50 +968,188 @@
   "@problemServerTitle": {
     "description": "Spec key: problem.server.title (12 §5.12) · Max: 32 · Notes: 03b · harmonised (title states what happened, §2.1)"
   },
-  "problemServerBody": "The problem is not the card. Try again in a moment.",
+  "problemServerBody": "The problem is not the voucher. Try again in a moment.",
   "@problemServerBody": {
     "description": "Spec key: problem.server.body (12 §5.12) · Max: 90 · Notes: 03b · harmonised (no \"wir/uns\" in the UI, §1.2)"
   },
-  "manualTitle": "Card number",
-  "@manualTitle": {
-    "description": "Spec key: manual.title (12 §5.13) · Max: 28 · Notes: 03a"
+  "saleTitle": "Sell voucher",
+  "@saleTitle": {
+    "description": "Spec key: sale.title (12 §5.13) · Max: 24 · Notes: ADR-002 · screen title"
   },
-  "manualHelper": "16 digits on the back of the card",
-  "@manualHelper": {
-    "description": "Spec key: manual.helper (12 §5.13) · Max: 40 · Notes: 03a"
+  "saleAmountLabel": "Voucher value",
+  "@saleAmountLabel": {
+    "description": "Spec key: sale.amount.label (12 §5.13) · Max: 24 · Notes: ADR-002 · above the amount"
   },
-  "manualCounter": "{count} of 16",
-  "@manualCounter": {
-    "description": "Spec key: manual.counter (12 §5.13) · Max: 12 · Notes: 03a · tabular figures",
+  "saleAmountRange": "The value must be between {min} and {max}.",
+  "@saleAmountRange": {
+    "description": "Spec key: sale.amount.range (12 §5.13) · Max: 60 · Notes: ADR-002 · restaurant limits / INVALID_AMOUNT",
     "placeholders": {
-      "count": {
-        "type": "int"
+      "min": {
+        "type": "String"
+      },
+      "max": {
+        "type": "String"
       }
     }
   },
-  "manualSubmit": "Look up card",
-  "@manualSubmit": {
-    "description": "Spec key: manual.submit (12 §5.13) · Max: 24 · Notes: 03a · enabled at 16 digits"
+  "saleContinue": "Continue · {amount}",
+  "@saleContinue": {
+    "description": "Spec key: sale.continue (12 §5.13) · Max: 24+amt · Notes: ADR-002 · amount step → payment step",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
   },
-  "manualErrorInvalid": "Check the card number",
-  "@manualErrorInvalid": {
-    "description": "Spec key: manual.error.invalid (12 §5.13) · Max: 32 · Notes: 03a"
+  "salePaymentLabel": "Paid with",
+  "@salePaymentLabel": {
+    "description": "Spec key: sale.payment.label (12 §5.13) · Max: 24 · Notes: ADR-002 · the guest pays for the voucher (§1.3 \"payment\" rule is about redeeming)"
   },
-  "manualErrorPaste": "No valid card number to paste",
-  "@manualErrorPaste": {
-    "description": "Spec key: manual.error.paste (12 §5.13) · Max: 48 · Notes: 03a"
+  "salePaymentCash": "Cash",
+  "@salePaymentCash": {
+    "description": "Spec key: sale.payment.cash (12 §5.13) · Max: 16 · Notes: ADR-002 · choice"
   },
-  "qrTitle": "Scan QR code",
+  "salePaymentCardTerminal": "Card terminal",
+  "@salePaymentCardTerminal": {
+    "description": "Spec key: sale.payment.cardTerminal (12 §5.13) · Max: 16 · Notes: ADR-002 · choice"
+  },
+  "salePaymentBankTransfer": "Bank transfer",
+  "@salePaymentBankTransfer": {
+    "description": "Spec key: sale.payment.bankTransfer (12 §5.13) · Max: 16 · Notes: ADR-002 · choice"
+  },
+  "salePaymentComplimentary": "Complimentary",
+  "@salePaymentComplimentary": {
+    "description": "Spec key: sale.payment.complimentary (12 §5.13) · Max: 16 · Notes: ADR-002 · choice · only with vouchers.sell_complimentary"
+  },
+  "saleReferenceLabel": "Receipt or reference number",
+  "@saleReferenceLabel": {
+    "description": "Spec key: sale.reference.label (12 §5.13) · Max: 32 · Notes: ADR-002 · card terminal / bank transfer"
+  },
+  "saleReferenceRequired": "Enter the receipt or reference number.",
+  "@saleReferenceRequired": {
+    "description": "Spec key: sale.reference.required (12 §5.13) · Max: 60 · Notes: ADR-002 · field error"
+  },
+  "saleReasonLabel": "Reason",
+  "@saleReasonLabel": {
+    "description": "Spec key: sale.reason.label (12 §5.13) · Max: 24 · Notes: ADR-002 · complimentary"
+  },
+  "saleReasonRequired": "Enter a reason (at least 3 characters).",
+  "@saleReasonRequired": {
+    "description": "Spec key: sale.reason.required (12 §5.13) · Max: 60 · Notes: ADR-002 · field error"
+  },
+  "saleEmailLabel": "Guest e-mail (optional)",
+  "@saleEmailLabel": {
+    "description": "Spec key: sale.email.label (12 §5.13) · Max: 32 · Notes: ADR-002"
+  },
+  "saleEmailHelper": "The guest receives a confirmation.",
+  "@saleEmailHelper": {
+    "description": "Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · when the restaurant sends guest e-mails"
+  },
+  "saleEmailHelperNoMail": "Saved with the voucher.",
+  "@saleEmailHelperNoMail": {
+    "description": "Spec key: sale.email.helperNoMail (12 §5.13) · Max: 60 · Notes: ADR-002 · when it does not"
+  },
+  "saleEmailInvalid": "Enter a valid e-mail address.",
+  "@saleEmailInvalid": {
+    "description": "Spec key: sale.email.invalid (12 §5.13) · Max: 60 · Notes: ADR-002 · field error"
+  },
+  "saleSubmit": "Sell voucher · {amount}",
+  "@saleSubmit": {
+    "description": "Spec key: sale.submit (12 §5.13) · Max: 24+amt · Notes: ADR-002 · primary",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "saleSubmitting": "Selling voucher\u00a0…",
+  "@saleSubmitting": {
+    "description": "Spec key: sale.submitting (12 §5.13) · Max: 32 · Notes: ADR-002 · button progress"
+  },
+  "saleFailedTitle": "Voucher not sold",
+  "@saleFailedTitle": {
+    "description": "Spec key: sale.failed.title (12 §5.13) · Max: 28 · Notes: ADR-002 · definitive answer"
+  },
+  "saleFailedBody": "No voucher was sold. Check the connection and try again.",
+  "@saleFailedBody": {
+    "description": "Spec key: sale.failed.body (12 §5.13) · Max: 90 · Notes: ADR-002"
+  },
+  "saleUncertainTitle": "Sale not confirmed",
+  "@saleUncertainTitle": {
+    "description": "Spec key: sale.uncertain.title (12 §5.13) · Max: 28 · Notes: ADR-002 · no answer"
+  },
+  "saleUncertainBody": "The answer did not arrive. Try again – the voucher will not be sold twice.",
+  "@saleUncertainBody": {
+    "description": "Spec key: sale.uncertain.body (12 §5.13) · Max: 90 · Notes: ADR-002 · same idempotency key"
+  },
+  "saleNotAllowedTitle": "Not allowed",
+  "@saleNotAllowedTitle": {
+    "description": "Spec key: sale.notAllowed.title (12 §5.13) · Max: 28 · Notes: ADR-002 · 403"
+  },
+  "saleNotAllowedBody": "This account cannot sell vouchers on this phone. Please get a manager.",
+  "@saleNotAllowedBody": {
+    "description": "Spec key: sale.notAllowed.body (12 §5.13) · Max: 90 · Notes: ADR-002 · 403"
+  },
+  "saleDoneTitle": "Voucher sold",
+  "@saleDoneTitle": {
+    "description": "Spec key: sale.done.title (12 §5.13) · Max: 28 · Notes: ADR-002"
+  },
+  "saleDoneValue": "Value {amount}",
+  "@saleDoneValue": {
+    "description": "Spec key: sale.done.value (12 §5.13) · Max: 32 · Notes: ADR-002",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "saleDoneBody": "Print the QR code for the guest. It is shown only now.",
+  "@saleDoneBody": {
+    "description": "Spec key: sale.done.body (12 §5.13) · Max: 90 · Notes: ADR-002 · the QR is returned once"
+  },
+  "salePrint": "Print voucher",
+  "@salePrint": {
+    "description": "Spec key: sale.print (12 §5.13) · Max: 24 · Notes: ADR-002 · primary · system print dialog"
+  },
+  "salePrinted": "Sent to the printer",
+  "@salePrinted": {
+    "description": "Spec key: sale.printed (12 §5.13) · Max: 32 · Notes: ADR-002 · after the print dialog finished"
+  },
+  "salePrintFailed": "Printing did not work. Try again.",
+  "@salePrintFailed": {
+    "description": "Spec key: sale.printFailed (12 §5.13) · Max: 60 · Notes: ADR-002"
+  },
+  "saleAnother": "Sell another voucher",
+  "@saleAnother": {
+    "description": "Spec key: sale.another (12 §5.13) · Max: 28 · Notes: ADR-002 · secondary"
+  },
+  "saleLeaveTitle": "Close without printing?",
+  "@saleLeaveTitle": {
+    "description": "Spec key: sale.leave.title (12 §5.13) · Max: 28 · Notes: ADR-002 · Dialog"
+  },
+  "saleLeaveBody": "The QR code cannot be shown again. Without it the guest cannot redeem the voucher.",
+  "@saleLeaveBody": {
+    "description": "Spec key: sale.leave.body (12 §5.13) · Max: 120 · Notes: ADR-002 · Dialog"
+  },
+  "saleLeaveConfirm": "Close anyway",
+  "@saleLeaveConfirm": {
+    "description": "Spec key: sale.leave.confirm (12 §5.13) · Max: 24 · Notes: ADR-002 · DangerButton (cancel = common.cancel)"
+  },
+  "saleQrA11y": "QR code of the voucher",
+  "@saleQrA11y": {
+    "description": "Spec key: sale.qr.a11y (12 §5.13) · Max: — · Notes: ADR-002 · (a11y)"
+  },
+  "qrTitle": "Scan voucher",
   "@qrTitle": {
     "description": "Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a"
   },
-  "qrHint": "Point the camera at the QR code on the card",
+  "qrHint": "Point the camera at the voucher's QR code",
   "@qrHint": {
     "description": "Spec key: qr.hint (12 §5.14) · Max: 48 · Notes: 03a"
   },
-  "qrNotCard": "This QR code isn't a gift card",
-  "@qrNotCard": {
-    "description": "Spec key: qr.notCard (12 §5.14) · Max: 48 · Notes: 03a · harmonised (vocabulary) · L10"
+  "qrNotVoucher": "This QR code isn't a voucher",
+  "@qrNotVoucher": {
+    "description": "Spec key: qr.notVoucher (12 §5.14) · Max: 48 · Notes: 03a · ADR-002 · L10"
   },
   "qrDark": "Too dark? Turn on the light.",
   "@qrDark": {
@@ -1270,10 +1162,6 @@
   "qrTorchOff": "Turn off light",
   "@qrTorchOff": {
     "description": "Spec key: qr.torchOff (12 §5.14) · Max: — · Notes: 03a · (a11y)"
-  },
-  "qrManual": "Enter card number",
-  "@qrManual": {
-    "description": "Spec key: qr.manual (12 §5.14) · Max: 24 · Notes: 03a · = common.enterNumber (alias)"
   },
   "recentTitle": "Recent",
   "@recentTitle": {
@@ -1300,11 +1188,11 @@
       }
     }
   },
-  "recentRowEmpty": "Card now empty",
+  "recentRowEmpty": "Voucher now empty",
   "@recentRowEmpty": {
     "description": "Spec key: recent.row.empty (12 §5.15) · Max: 20 · Notes: 03b"
   },
-  "recentRowA11y": "{time}, card ending {last4}, {amount} redeemed, remaining balance {balance}",
+  "recentRowA11y": "{time}, voucher ending {last4}, {amount} redeemed, remaining balance {balance}",
   "@recentRowA11y": {
     "description": "Spec key: recent.row.a11y (12 §5.15) · Max: — · Notes: 12 · (a11y)",
     "placeholders": {
@@ -1346,9 +1234,9 @@
   "@recentDetailTime": {
     "description": "Spec key: recent.detail.time (12 §5.15) · Max: 20 · Notes: 03b"
   },
-  "recentDetailCard": "Card",
-  "@recentDetailCard": {
-    "description": "Spec key: recent.detail.card (12 §5.15) · Max: 20 · Notes: 03b"
+  "recentDetailVoucher": "Voucher",
+  "@recentDetailVoucher": {
+    "description": "Spec key: recent.detail.voucher (12 §5.15) · Max: 20 · Notes: 03b"
   },
   "recentDetailAmount": "Amount",
   "@recentDetailAmount": {
@@ -1475,7 +1363,7 @@
   "@forbiddenTitle": {
     "description": "Spec key: forbidden.title (12 §5.17) · Max: 32 · Notes: 12 · A03"
   },
-  "forbiddenBody": "This account can no longer redeem cards. Please get a manager.",
+  "forbiddenBody": "This account can no longer redeem vouchers. Please get a manager.",
   "@forbiddenBody": {
     "description": "Spec key: forbidden.body (12 §5.17) · Max: 90 · Notes: 12"
   },
@@ -1499,32 +1387,6 @@
   "@suspendedBody": {
     "description": "Spec key: suspended.body (12 §5.17) · Max: 90 · Notes: 03a"
   },
-  "lockedTitle": "Account temporarily locked",
-  "@lockedTitle": {
-    "description": "Spec key: locked.title (12 §5.17) · Max: 32 · Notes: 03a · A06"
-  },
-  "lockedBody": "Too many sign-in attempts. Try again in {time}.",
-  "@lockedBody": {
-    "description": "Spec key: locked.body (12 §5.17) · Max: 90 · Notes: 03a",
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "lockedButton": "Try again in {time}",
-  "@lockedButton": {
-    "description": "Spec key: locked.button (12 §5.17) · Max: 24 · Notes: 03a · disabled",
-    "placeholders": {
-      "time": {
-        "type": "String"
-      }
-    }
-  },
-  "lockedOver": "You can sign in again",
-  "@lockedOver": {
-    "description": "Spec key: locked.over (12 §5.17) · Max: — · Notes: 03a · (a11y)"
-  },
   "deactivatedTitle": "Account deactivated",
   "@deactivatedTitle": {
     "description": "Spec key: deactivated.title (12 §5.17) · Max: 32 · Notes: 03a · A10"
@@ -1545,22 +1407,6 @@
   "@updateAction": {
     "description": "Spec key: update.action (12 §5.17) · Max: 24 · Notes: 03a"
   },
-  "nfcOffTitle": "NFC is off",
-  "@nfcOffTitle": {
-    "description": "Spec key: nfcOff.title (12 §5.18) · Max: 32 · Notes: 03a · P01"
-  },
-  "nfcOffBody": "Turn on NFC to scan cards.",
-  "@nfcOffBody": {
-    "description": "Spec key: nfcOff.body (12 §5.18) · Max: 90 · Notes: 03a"
-  },
-  "nfcOffAction": "Turn on NFC",
-  "@nfcOffAction": {
-    "description": "Spec key: nfcOff.action (12 §5.18) · Max: 24 · Notes: 03a"
-  },
-  "nfcOffOn": "NFC is on. Ready to scan.",
-  "@nfcOffOn": {
-    "description": "Spec key: nfcOff.on (12 §5.18) · Max: — · Notes: 03a · (a11y)"
-  },
   "cameraDeniedTitle": "Camera access is off",
   "@cameraDeniedTitle": {
     "description": "Spec key: camera.denied.title (12 §5.18) · Max: 32 · Notes: 03a · P03"
@@ -1573,7 +1419,7 @@
   "@cameraDeniedAction": {
     "description": "Spec key: camera.denied.action (12 §5.18) · Max: 24 · Notes: 03a"
   },
-  "cameraRestrictedBody": "The camera is restricted on this device. Use the card number.",
+  "cameraRestrictedBody": "The camera is restricted on this device. Please get a manager.",
   "@cameraRestrictedBody": {
     "description": "Spec key: camera.restricted.body (12 §5.18) · Max: 90 · Notes: 03a · P04"
   },
@@ -1581,7 +1427,7 @@
   "@cameraUnavailableTitle": {
     "description": "Spec key: camera.unavailable.title (12 §5.18) · Max: 32 · Notes: 12 · P05"
   },
-  "cameraUnavailableBody": "Close other apps using the camera or enter the card number.",
+  "cameraUnavailableBody": "Close other apps using the camera, then try again.",
   "@cameraUnavailableBody": {
     "description": "Spec key: camera.unavailable.body (12 §5.18) · Max: 90 · Notes: 12"
   },
@@ -1606,29 +1452,13 @@
       }
     }
   },
-  "intro1TitleAndroid": "Tap the card",
-  "@intro1TitleAndroid": {
-    "description": "Spec key: intro.1.title.android (12 §5.19) · Max: 28 · Notes: 03a"
+  "intro1Title": "Scan the voucher",
+  "@intro1Title": {
+    "description": "Spec key: intro.1.title (12 §5.19) · Max: 28 · Notes: ADR-002"
   },
-  "intro1BodyAndroid": "Hold the card to the back of the phone. The balance appears in under a second.",
-  "@intro1BodyAndroid": {
-    "description": "Spec key: intro.1.body.android (12 §5.19) · Max: 90 · Notes: 03a · harmonised (brand guide: \"unter einer Sekunde\" instead of \"sofort\")"
-  },
-  "intro1TitleIos": "Tap Scan, then hold the card",
-  "@intro1TitleIos": {
-    "description": "Spec key: intro.1.title.ios (12 §5.19) · Max: 32 · Notes: 03a"
-  },
-  "intro1BodyIos": "Tap \"Scan card\", then hold the card near the top of the iPhone.",
-  "@intro1BodyIos": {
-    "description": "Spec key: intro.1.body.ios (12 §5.19) · Max: 90 · Notes: 03a"
-  },
-  "intro1TitleNoNfc": "Scan the QR code",
-  "@intro1TitleNoNfc": {
-    "description": "Spec key: intro.1.title.noNfc (12 §5.19) · Max: 28 · Notes: 03a"
-  },
-  "intro1BodyNoNfc": "Point the camera at the QR code or type the card number.",
-  "@intro1BodyNoNfc": {
-    "description": "Spec key: intro.1.body.noNfc (12 §5.19) · Max: 90 · Notes: 03a"
+  "intro1Body": "Point the camera at the QR code. The balance appears right away.",
+  "@intro1Body": {
+    "description": "Spec key: intro.1.body (12 §5.19) · Max: 90 · Notes: ADR-002"
   },
   "intro2Title": "Type the amount, redeem",
   "@intro2Title": {
@@ -1663,9 +1493,9 @@
       }
     }
   },
-  "a11yCardLoaded": "{restaurant}. Balance {spokenAmount}.",
-  "@a11yCardLoaded": {
-    "description": "Spec key: a11y.cardLoaded (12 §5.20) · Politeness: assertive · Notes: 12 · S07 opened; status appended if not active",
+  "a11yVoucherLoaded": "{restaurant}. Balance {spokenAmount}.",
+  "@a11yVoucherLoaded": {
+    "description": "Spec key: a11y.voucherLoaded (12 §5.20) · Politeness: assertive · Notes: 12 · S07 opened; status appended if not active",
     "placeholders": {
       "restaurant": {
         "type": "String"
@@ -1687,7 +1517,7 @@
       }
     }
   },
-  "a11yReady": "Ready for the next card",
+  "a11yReady": "Ready for the next voucher",
   "@a11yReady": {
     "description": "Spec key: a11y.ready (12 §5.20) · Politeness: polite · Notes: 12 · return to S05"
   },

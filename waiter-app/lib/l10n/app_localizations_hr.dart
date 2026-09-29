@@ -30,12 +30,6 @@ class AppLocalizationsHr extends AppLocalizations {
   String get commonScanAgain => 'Skeniraj ponovo';
 
   @override
-  String get commonEnterNumber => 'Unesi broj kartice';
-
-  @override
-  String get commonEditNumber => 'Uredi broj';
-
-  @override
   String get commonOpenSettings => 'Otvori postavke';
 
   @override
@@ -253,16 +247,24 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get signInErrorInvalid =>
-      'E-mail ili lozinka nisu ispravni. Provjerite i pokušajte ponovo.';
+      'E-mail ili lozinka nisu ispravni. Nakon previše pokušaja prijava je blokirana nekoliko minuta.';
 
   @override
   String get signInErrorNoPermission =>
-      'Ovaj račun ne može iskorištavati kartice. Molimo pozovite menadžera.';
+      'Ovaj račun ne može iskorištavati vaučere. Molimo pozovite menadžera.';
 
   @override
   String signInErrorThrottled(String time) {
     return 'Previše pokušaja. Ponovo za $time.';
   }
+
+  @override
+  String signInRetryIn(String time) {
+    return 'Ponovo za $time';
+  }
+
+  @override
+  String get signInAvailable => 'Prijava je ponovo moguća';
 
   @override
   String get signInErrorServer =>
@@ -339,9 +341,6 @@ class AppLocalizationsHr extends AppLocalizations {
   String get unlockLockedOut => 'Previše pokušaja. Koristite lozinku.';
 
   @override
-  String get unlockPendingCard => 'Kartica se otvara nakon otključavanja.';
-
-  @override
   String get topBarRecent => 'Nedavno';
 
   @override
@@ -350,47 +349,35 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get readyAndroidTitle => 'Prislonite karticu uz telefon';
+  String get readyTitle => 'Skenirajte vaučer';
 
   @override
-  String get readyAndroidHint => 'Kartica se automatski prepoznaje';
+  String get readyHint =>
+      'Usmjerite kameru na QR kôd vaučera – ispisan ili na telefonu gosta.';
 
   @override
-  String get readyIosButton => 'Skeniraj karticu';
+  String get readyScan => 'Skeniraj vaučer';
 
   @override
-  String get readyIosHint => 'Nakon dodira prislonite karticu na vrh iPhonea';
+  String get readySell => 'Prodaj vaučer';
 
   @override
-  String get readyIosTimeout =>
-      'Kartica nije prepoznata. Dodirnite „Skeniraj karticu\" za novi pokušaj.';
+  String get readyPendingTitle => 'Iskorištavanje još nije potvrđeno';
 
   @override
-  String get readyManual => 'Broj kartice';
+  String readyPendingBody(String amount, String last4) {
+    return '$amount na vaučeru •••• $last4. Provjerava se automatski – ništa se ne knjiži dvaput.';
+  }
 
   @override
-  String get readyQr => 'QR kôd';
+  String readyPendingBooked(String amount) {
+    return 'Nepotvrđeno iskorištavanje od $amount je knjiženo.';
+  }
 
   @override
-  String get readyFirstCardTipAndroid =>
-      'Savjet: NFC antena je obično gore na poleđini, blizu kamere.';
-
-  @override
-  String get readyFirstCardTipIos =>
-      'Savjet: držite karticu ravno uz gornji rub, blizu kamere.';
-
-  @override
-  String get readyNoNfcTitle => 'Skenirajte QR kôd na kartici';
-
-  @override
-  String get readyNoNfcHint =>
-      'Ovaj uređaj nema NFC. Koristite QR kôd ili broj kartice.';
-
-  @override
-  String get readyNoNfcButton => 'Skeniraj QR kôd';
-
-  @override
-  String get readyOfflineTap => 'Nema veze – kartica se ne može provjeriti';
+  String readyPendingNotBooked(String amount) {
+    return 'Nepotvrđeno iskorištavanje od $amount nije knjiženo.';
+  }
 
   @override
   String get readyOnline => 'Veza je ponovo uspostavljena';
@@ -410,175 +397,16 @@ class AppLocalizationsHr extends AppLocalizations {
   String get maintenanceDismiss => 'Zatvori obavijest';
 
   @override
-  String get readyNewCard => 'Nova poklon kartica';
+  String get scanDetected => 'Vaučer prepoznat';
 
   @override
-  String get issueTitle => 'Nova poklon kartica';
+  String get scanLookingUp => 'Provjeravamo vaučer …';
 
   @override
-  String get issueAmountLabel => 'Vrijednost kartice';
+  String get scanSlow => 'Još provjeravamo …';
 
   @override
-  String get issueEmailLabel => 'E-mail gosta (neobavezno)';
-
-  @override
-  String get issueEmailHelper => 'Gost dobija potvrdu.';
-
-  @override
-  String get issueEmailInvalid => 'Unesite ispravnu e-mail adresu.';
-
-  @override
-  String issueAmountRange(String min, String max) {
-    return 'Vrijednost kartice mora biti između $min i $max.';
-  }
-
-  @override
-  String issueCreate(String amount) {
-    return 'Kreiraj karticu · $amount';
-  }
-
-  @override
-  String get issueCreating => 'Kartica se kreira …';
-
-  @override
-  String get issueProgramTitle => 'Prislonite praznu karticu uz telefon';
-
-  @override
-  String get issueProgramBody =>
-      'Držite je mirno na poleđini telefona dok se ne pojavi kvačica.';
-
-  @override
-  String get issueProgramRetap => 'Podignite karticu i ponovo je prislonite.';
-
-  @override
-  String get issueStepCheck => 'Provjera čipa';
-
-  @override
-  String get issueStepWrite => 'Upis linka kartice';
-
-  @override
-  String get issueStepVerify => 'Očitavanje i provjera';
-
-  @override
-  String get issueStepSave => 'Spremanje čipa uz karticu';
-
-  @override
-  String issueCard(String number) {
-    return 'Kartica $number';
-  }
-
-  @override
-  String get issueSuccessTitle => 'Kartica spremna';
-
-  @override
-  String issueSuccessBalance(String amount) {
-    return 'Stanje $amount';
-  }
-
-  @override
-  String get issueSuccessVerified => 'NFC čip upisan i provjeren';
-
-  @override
-  String get issueSuccessNoTag =>
-      'Još nema čipa. Upišite ga kasnije na kontrolnoj ploči.';
-
-  @override
-  String get issueSuccessAnother => 'Prodaj još jednu karticu';
-
-  @override
-  String get issueLater => 'Upiši kasnije';
-
-  @override
-  String get issueNfcOff => 'Uključite NFC da biste upisali čip.';
-
-  @override
-  String get issueCreateFailedTitle => 'Kartica nije kreirana';
-
-  @override
-  String get issueCreateFailedBody =>
-      'Nijedna kartica nije kreirana. Provjerite vezu i pokušajte ponovo.';
-
-  @override
-  String get issueCreateUncertainBody =>
-      'Odgovor nije stigao. Pokušajte ponovo, kartica se neće kreirati dvaput.';
-
-  @override
-  String get issueNotAllowedTitle => 'Nije dozvoljeno';
-
-  @override
-  String get issueNotAllowedBody =>
-      'Ovaj račun ne može prodavati kartice na ovom telefonu. Odjavite se i ponovo prijavite ili koristite kontrolnu ploču.';
-
-  @override
-  String get issueTagFailedTitle => 'Čip nije upisan';
-
-  @override
-  String issueTagOtherCard(String number) {
-    return 'Ovaj čip pripada kartici $number. Koristite prazan čip.';
-  }
-
-  @override
-  String get issueTagRefused =>
-      'Ovaj čip se ne može koristiti za ovu karticu. Koristite prazan čip.';
-
-  @override
-  String get issueTagUnsupported =>
-      'Ovaj tip čipa nije podržan. Koristite NTAG213, 215 ili 216.';
-
-  @override
-  String get issueTagReadOnly => 'Ovaj čip je zaključan i ne može se upisati.';
-
-  @override
-  String get issueTagMoved =>
-      'Čip se pomjerio. Držite ga mirno i pokušajte ponovo.';
-
-  @override
-  String get issueTagVerifyFailed =>
-      'Čip nije moguće provjeriti. Pokušajte ponovo s istim čipom.';
-
-  @override
-  String get issueTagNetwork => 'Nema veze sa serverom. Pokušajte ponovo.';
-
-  @override
-  String get iosSheetAlert => 'Prislonite karticu na vrh iPhonea';
-
-  @override
-  String get iosSheetFound => 'Kartica pronađena';
-
-  @override
-  String get iosSheetReadFailed => 'Kartica nije pročitana. Pokušajte ponovo.';
-
-  @override
-  String get iosSheetMultiple => 'Prepoznato više kartica. Držite samo jednu.';
-
-  @override
-  String get iosSheetTimeoutSoon =>
-      'Još nema kartice. Prislonite je ravno na vrh iPhonea.';
-
-  @override
-  String get scanNotCard => 'Ovo nije poklon kartica';
-
-  @override
-  String get scanReadFailedTitle => 'Kartica nije pročitana';
-
-  @override
-  String get scanReadFailedBody => 'Držite je mirno jednu sekundu.';
-
-  @override
-  String get scanDetected => 'Kartica prepoznata';
-
-  @override
-  String get scanLookingUp => 'Tražimo karticu …';
-
-  @override
-  String get scanSlow => 'Još tražimo …';
-
-  @override
-  String get scanUnavailable =>
-      'NFC trenutno nije dostupan. Koristite broj kartice ili QR kôd.';
-
-  @override
-  String get balanceCardOverline => 'Poklon kartica';
+  String get balanceCardOverline => 'Vaučer';
 
   @override
   String balanceCardValidUntil(String date) {
@@ -595,16 +423,16 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String balanceCardA11y(String restaurant, String spokenAmount, String last4) {
-    return 'Poklon kartica $restaurant. Stanje $spokenAmount. Kartica završava na $last4.';
+    return 'Vaučer $restaurant. Stanje $spokenAmount. Vaučer završava na $last4.';
   }
 
   @override
-  String chargeCardNumberA11y(String number) {
-    return 'Broj kartice $number';
+  String chargeVoucherNumberA11y(String number) {
+    return 'Broj vaučera $number';
   }
 
   @override
-  String get a11yChargeClose => 'Zatvori karticu';
+  String get a11yChargeClose => 'Zatvori vaučer';
 
   @override
   String a11yAmount(String spokenAmount) {
@@ -664,7 +492,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get chargeFullOnly => 'Ovdje se može iskoristiti samo cijelo stanje.';
 
   @override
-  String get chargeVelocityTitle => 'Dosegnut je limit za ovu karticu';
+  String get chargeVelocityTitle => 'Dosegnut je limit za ovaj vaučer';
 
   @override
   String chargeVelocityBodyTime(int minutes) {
@@ -677,17 +505,26 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get chargeSwitchCardMessage =>
-      'Prepoznata je druga kartica – zamijeniti?';
+  String chargeDailyLimit(String amount) {
+    return 'Danas još najviše $amount ovim vaučerom';
+  }
 
   @override
-  String get chargeSwitchCardAction => 'Zamijeni';
+  String get chargePresentmentExpired =>
+      'Za iskorištavanje ponovo skenirajte vaučer.';
 
   @override
-  String get chargeSwitchCardKeep => 'Zadrži';
+  String get chargePendingTitle => 'Provjerava se ranije iskorištavanje';
 
   @override
-  String get chargeSwitchCardDialogTitle => 'Prepoznata je druga kartica';
+  String chargePendingBody(String amount) {
+    return '$amount je možda već iskorišteno. Iskorištavanje je moguće nakon provjere.';
+  }
+
+  @override
+  String chargeEarlierBooked(String amount) {
+    return 'Ranije iskorištavanje od $amount je knjiženo. Stanje ažurirano.';
+  }
 
   @override
   String get keypadDoubleZero => 'Dvije nule';
@@ -708,10 +545,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get badgeActive => 'Aktivna';
 
   @override
-  String get badgeInactive => 'Nije aktivirana';
-
-  @override
-  String get badgeRedeemed => 'Potrošena';
+  String get badgeUsedUp => 'Potrošeno';
 
   @override
   String get badgeBlocked => 'Blokirana';
@@ -720,43 +554,26 @@ class AppLocalizationsHr extends AppLocalizations {
   String get badgeExpired => 'Istekla';
 
   @override
-  String get badgeReplaced => 'Zamijenjena';
+  String get voucherBlocked => 'Vaučer blokiran';
 
   @override
-  String get cardBlocked => 'Kartica blokirana';
-
-  @override
-  String cardBlockedReason(String reason) {
+  String voucherBlockedReason(String reason) {
     return 'Razlog: $reason';
   }
 
   @override
-  String get cardExpired => 'Kartica istekla';
+  String get voucherExpired => 'Vaučer je istekao';
 
   @override
-  String cardExpiredBody(String date) {
-    return 'Istekla $date. Molimo pozovite menadžera.';
+  String voucherExpiredBody(String date) {
+    return 'Istekao $date. Molimo pozovite menadžera.';
   }
 
   @override
-  String get cardInactive => 'Kartica još nije aktivirana';
+  String get voucherEmpty => 'Nema preostalog stanja';
 
   @override
-  String get cardInactiveBody =>
-      'Može se iskoristiti tek nakon aktivacije. Molimo pozovite menadžera.';
-
-  @override
-  String get cardReplaced => 'Kartica je zamijenjena';
-
-  @override
-  String get cardReplacedBody =>
-      'Stanje je na novoj kartici. Zamolite gosta za novu karticu.';
-
-  @override
-  String get cardEmpty => 'Nema više stanja';
-
-  @override
-  String get cardEmptyBody => 'Ova kartica je potpuno iskorištena.';
+  String get voucherEmptyBody => 'Ovaj vaučer je potpuno iskorišten.';
 
   @override
   String get redeemSlow => 'Spora veza – ponovni pokušaj';
@@ -778,23 +595,20 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get uncertainFailedBody =>
-      'Još nije potvrđeno. Pokušajte ponovo – ništa se ne knjiži dvaput.';
+      'Još nije potvrđeno. Provjerite ponovo – ništa se ne knjiži dvaput.';
 
   @override
   String get uncertainCancelled =>
-      'Nije potvrđeno. Prije novog iskorištavanja ponovo skenirajte karticu.';
+      'Nije potvrđeno. Provjerava se automatski prije nego što se ovaj vaučer može ponovo iskoristiti.';
 
   @override
   String get uncertainCancelledGuestHint =>
-      'Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo stanje prije novog iskorištavanja.\"';
+      'Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo to prije novog iskorištavanja.\"';
 
   @override
   String redeemBalanceChanged(String amount) {
     return 'Stanje se promijenilo: sada $amount';
   }
-
-  @override
-  String get redeemTapAgain => 'Molimo ponovo dodirnite Iskoristi.';
 
   @override
   String get successTitle => 'Iskorišteno';
@@ -805,20 +619,17 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get successEmpty => 'Kartica je sada prazna';
+  String get successEmpty => 'Vaučer je sada prazan';
 
   @override
-  String get successNextIos => 'Skeniraj sljedeću karticu';
-
-  @override
-  String get successNextAndroid => 'Samo prislonite sljedeću karticu';
+  String get successNext => 'Skeniraj sljedeći vaučer';
 
   @override
   String get successShowGuest => 'Pokaži gostu';
 
   @override
   String successCard(String last4) {
-    return 'Kartica •••• $last4';
+    return 'Vaučer •••• $last4';
   }
 
   @override
@@ -830,29 +641,11 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get problemNotFoundTitle => 'Kartica nije pronađena';
+  String get problemNotRecognizedTitle => 'Nije vaučer ovog restorana';
 
   @override
-  String get problemNotFoundBody =>
-      'Ova kartica nije u sistemu. Provjerite karticu ili zamolite drugu.';
-
-  @override
-  String get problemNotFoundBodyManual =>
-      'Nema kartice s ovim brojem. Provjerite cifre.';
-
-  @override
-  String get problemForeignTitle => 'Kartica drugog restorana';
-
-  @override
-  String get problemForeignBody =>
-      'Može se iskoristiti samo u restoranu koji ju je izdao.';
-
-  @override
-  String get problemVerifyTitle => 'Kartica nije mogla biti provjerena';
-
-  @override
-  String get problemVerifyBody =>
-      'Zasad ne prihvatajte ovu karticu. Molimo pozovite menadžera.';
+  String get problemNotRecognizedBody =>
+      'Ovaj kôd ovdje ne važi. Zatražite od gosta drugi vaučer ili pozovite menadžera.';
 
   @override
   String get problemThrottledTitle => 'Previše skeniranja';
@@ -867,43 +660,144 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get problemNetworkBody =>
-      'Kartica nije provjerena. Provjerite Wi-Fi ili mobilne podatke, pa pokušajte ponovo.';
+      'Vaučer nije provjeren. Provjerite Wi-Fi ili mobilne podatke, pa pokušajte ponovo.';
 
   @override
   String get problemServerTitle => 'Servis trenutno nije dostupan';
 
   @override
   String get problemServerBody =>
-      'Problem nije do kartice. Pokušajte ponovo za trenutak.';
+      'Problem nije do vaučera. Pokušajte ponovo za trenutak.';
 
   @override
-  String get manualTitle => 'Broj kartice';
+  String get saleTitle => 'Prodaja vaučera';
 
   @override
-  String get manualHelper => '16 cifara na poleđini kartice';
+  String get saleAmountLabel => 'Vrijednost vaučera';
 
   @override
-  String manualCounter(int count) {
-    return '$count od 16';
+  String saleAmountRange(String min, String max) {
+    return 'Vrijednost mora biti između $min i $max.';
   }
 
   @override
-  String get manualSubmit => 'Pronađi karticu';
+  String saleContinue(String amount) {
+    return 'Dalje · $amount';
+  }
 
   @override
-  String get manualErrorInvalid => 'Provjerite broj kartice';
+  String get salePaymentLabel => 'Plaćeno';
 
   @override
-  String get manualErrorPaste => 'Nema ispravnog broja kartice za lijepljenje';
+  String get salePaymentCash => 'Gotovina';
 
   @override
-  String get qrTitle => 'Skeniraj QR kôd';
+  String get salePaymentCardTerminal => 'POS terminal';
 
   @override
-  String get qrHint => 'Usmjerite kameru na QR kôd kartice';
+  String get salePaymentBankTransfer => 'Bankovni transfer';
 
   @override
-  String get qrNotCard => 'Ovaj QR kôd nije poklon kartica';
+  String get salePaymentComplimentary => 'Besplatno';
+
+  @override
+  String get saleReferenceLabel => 'Broj potvrde ili reference';
+
+  @override
+  String get saleReferenceRequired => 'Unesite broj potvrde ili reference.';
+
+  @override
+  String get saleReasonLabel => 'Razlog';
+
+  @override
+  String get saleReasonRequired => 'Unesite razlog (najmanje 3 znaka).';
+
+  @override
+  String get saleEmailLabel => 'E-mail gosta (neobavezno)';
+
+  @override
+  String get saleEmailHelper => 'Gost dobija potvrdu.';
+
+  @override
+  String get saleEmailHelperNoMail => 'Sprema se uz vaučer.';
+
+  @override
+  String get saleEmailInvalid => 'Unesite ispravnu e-mail adresu.';
+
+  @override
+  String saleSubmit(String amount) {
+    return 'Prodaj vaučer · $amount';
+  }
+
+  @override
+  String get saleSubmitting => 'Vaučer se prodaje …';
+
+  @override
+  String get saleFailedTitle => 'Vaučer nije prodan';
+
+  @override
+  String get saleFailedBody =>
+      'Nijedan vaučer nije prodan. Provjerite vezu i pokušajte ponovo.';
+
+  @override
+  String get saleUncertainTitle => 'Prodaja nije potvrđena';
+
+  @override
+  String get saleUncertainBody =>
+      'Odgovor nije stigao. Pokušajte ponovo – vaučer se neće prodati dvaput.';
+
+  @override
+  String get saleNotAllowedTitle => 'Nije dozvoljeno';
+
+  @override
+  String get saleNotAllowedBody =>
+      'Ovaj račun ne može prodavati vaučere na ovom telefonu. Molimo pozovite menadžera.';
+
+  @override
+  String get saleDoneTitle => 'Vaučer prodan';
+
+  @override
+  String saleDoneValue(String amount) {
+    return 'Vrijednost $amount';
+  }
+
+  @override
+  String get saleDoneBody =>
+      'Ispišite QR kôd za gosta. Prikazuje se samo sada.';
+
+  @override
+  String get salePrint => 'Ispiši vaučer';
+
+  @override
+  String get salePrinted => 'Poslano na pisač';
+
+  @override
+  String get salePrintFailed => 'Ispis nije uspio. Pokušajte ponovo.';
+
+  @override
+  String get saleAnother => 'Prodaj još jedan vaučer';
+
+  @override
+  String get saleLeaveTitle => 'Zatvoriti bez ispisa?';
+
+  @override
+  String get saleLeaveBody =>
+      'QR kôd se ne može ponovo prikazati. Bez njega gost ne može iskoristiti vaučer.';
+
+  @override
+  String get saleLeaveConfirm => 'Ipak zatvori';
+
+  @override
+  String get saleQrA11y => 'QR kôd vaučera';
+
+  @override
+  String get qrTitle => 'Skeniraj vaučer';
+
+  @override
+  String get qrHint => 'Usmjerite kameru na QR kôd vaučera';
+
+  @override
+  String get qrNotVoucher => 'Ovaj QR kôd nije vaučer';
 
   @override
   String get qrDark => 'Pretamno? Uključite svjetlo.';
@@ -913,9 +807,6 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get qrTorchOff => 'Isključi svjetlo';
-
-  @override
-  String get qrManual => 'Unesi broj kartice';
 
   @override
   String get recentTitle => 'Nedavno';
@@ -938,7 +829,7 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get recentRowEmpty => 'Kartica sada prazna';
+  String get recentRowEmpty => 'Vaučer sada prazan';
 
   @override
   String recentRowA11y(
@@ -947,7 +838,7 @@ class AppLocalizationsHr extends AppLocalizations {
     String amount,
     String balance,
   ) {
-    return '$time, kartica završava na $last4, iskorišteno $amount, preostalo stanje $balance';
+    return '$time, vaučer završava na $last4, iskorišteno $amount, preostalo stanje $balance';
   }
 
   @override
@@ -970,7 +861,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get recentDetailTime => 'Vrijeme';
 
   @override
-  String get recentDetailCard => 'Kartica';
+  String get recentDetailVoucher => 'Vaučer';
 
   @override
   String get recentDetailAmount => 'Iznos';
@@ -1068,7 +959,7 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get forbiddenBody =>
-      'Ovaj račun više ne može iskorištavati kartice. Molimo pozovite menadžera.';
+      'Ovaj račun više ne može iskorištavati vaučere. Molimo pozovite menadžera.';
 
   @override
   String get deviceRevokedTitle => 'Uređaj je uklonjen';
@@ -1088,22 +979,6 @@ class AppLocalizationsHr extends AppLocalizations {
       'Račun restorana je pauziran. Molimo pozovite menadžera.';
 
   @override
-  String get lockedTitle => 'Račun je privremeno zaključan';
-
-  @override
-  String lockedBody(String time) {
-    return 'Previše pokušaja prijave. Ponovo za $time.';
-  }
-
-  @override
-  String lockedButton(String time) {
-    return 'Ponovo za $time';
-  }
-
-  @override
-  String get lockedOver => 'Prijava je ponovo moguća';
-
-  @override
   String get deactivatedTitle => 'Račun je deaktiviran';
 
   @override
@@ -1121,18 +996,6 @@ class AppLocalizationsHr extends AppLocalizations {
   String get updateAction => 'Ažuriraj sada';
 
   @override
-  String get nfcOffTitle => 'NFC je isključen';
-
-  @override
-  String get nfcOffBody => 'Uključite NFC za skeniranje kartica.';
-
-  @override
-  String get nfcOffAction => 'Uključi NFC';
-
-  @override
-  String get nfcOffOn => 'NFC je uključen. Spremno za skeniranje.';
-
-  @override
   String get cameraDeniedTitle => 'Pristup kameri je isključen';
 
   @override
@@ -1144,14 +1007,14 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get cameraRestrictedBody =>
-      'Kamera je ograničena na ovom uređaju. Koristite broj kartice.';
+      'Kamera je ograničena na ovom uređaju. Molimo pozovite menadžera.';
 
   @override
   String get cameraUnavailableTitle => 'Kamera nije dostupna';
 
   @override
   String get cameraUnavailableBody =>
-      'Zatvorite druge aplikacije s kamerom ili unesite broj kartice.';
+      'Zatvorite druge aplikacije koje koriste kameru, pa pokušajte ponovo.';
 
   @override
   String get introSkip => 'Preskoči';
@@ -1168,25 +1031,11 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get intro1TitleAndroid => 'Prislonite karticu';
+  String get intro1Title => 'Skenirajte vaučer';
 
   @override
-  String get intro1BodyAndroid =>
-      'Prislonite karticu na poleđinu telefona. Stanje se pojavi za manje od sekunde.';
-
-  @override
-  String get intro1TitleIos => 'Skenirajte, pa prislonite karticu';
-
-  @override
-  String get intro1BodyIos =>
-      'Dodirnite „Skeniraj karticu\", zatim prislonite karticu na vrh iPhonea.';
-
-  @override
-  String get intro1TitleNoNfc => 'Skenirajte QR kôd';
-
-  @override
-  String get intro1BodyNoNfc =>
-      'Usmjerite kameru na QR kôd ili unesite broj kartice.';
+  String get intro1Body =>
+      'Usmjerite kameru na QR kôd. Stanje se odmah pojavi.';
 
   @override
   String get intro2Title => 'Unesite iznos, iskoristite';
@@ -1216,7 +1065,7 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String a11yCardLoaded(String restaurant, String spokenAmount) {
+  String a11yVoucherLoaded(String restaurant, String spokenAmount) {
     return '$restaurant. Stanje $spokenAmount.';
   }
 
@@ -1226,7 +1075,7 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get a11yReady => 'Spremno za sljedeću karticu';
+  String get a11yReady => 'Spremno za sljedeći vaučer';
 
   @override
   String get a11yScanAvailable => 'Skeniranje ponovo moguće';

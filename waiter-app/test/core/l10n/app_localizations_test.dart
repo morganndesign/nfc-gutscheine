@@ -12,16 +12,16 @@ Future<AppLocalizations> load(String code) =>
 void main() {
   test('loads for de, en, bs, hr, sr', () async {
     final Map<String, String> titles = <String, String>{
-      'de': 'Karte an das Handy halten',
-      'en': 'Hold the card to the phone',
-      'bs': 'Prislonite karticu uz telefon',
-      'hr': 'Prislonite karticu uz telefon',
-      'sr': 'Prislonite karticu uz telefon',
+      'de': 'Gutschein scannen',
+      'en': 'Scan the voucher',
+      'bs': 'Skenirajte vaučer',
+      'hr': 'Skenirajte vaučer',
+      'sr': 'Skenirajte vaučer',
     };
     for (final MapEntry<String, String> e in titles.entries) {
       final AppLocalizations l = await load(e.key);
       expect(l.localeName, e.key);
-      expect(l.readyAndroidTitle, e.value);
+      expect(l.readyTitle, e.value);
       expect(l.getManager, isNotEmpty);
     }
   });
@@ -97,7 +97,7 @@ void main() {
 
   test('typography rules survive the import (12 §1.4, §1.7)', () async {
     final AppLocalizations de = await load('de');
-    expect(de.scanLookingUp, 'Karte wird gesucht\u00A0…');
+    expect(de.scanLookingUp, 'Gutschein wird geprüft\u00A0…');
     expect(de.balanceCardMasked('6488'), '••••\u00A06488');
     expect(
       de.chargeRateLimited(42),

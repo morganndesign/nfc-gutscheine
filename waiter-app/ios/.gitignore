@@ -25,7 +25,6 @@ Flutter/app.zip
 Flutter/flutter_assets/
 Flutter/flutter_export_environment.sh
 Flutter/Team.xcconfig
-Flutter/Environment.xcconfig
 ServiceDefinitions.json
 Runner/GeneratedPluginRegistrant.*
 

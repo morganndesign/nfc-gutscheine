@@ -65,18 +65,18 @@ void main() {
     });
   });
 
-  group('Spoken characters and card numbers', () {
-    test('card ending read digit by digit (12 §1.10)', () {
+  group('Spoken characters and voucher numbers', () {
+    test('voucher ending read digit by digit (12 §1.10)', () {
       expect(Spoken.characters('6488'), '6 4 8 8');
     });
 
-    test('full and partial card number in groups (07 §5.2, 05 §2.5)', () {
+    test('full and partial voucher number in groups (07 §5.2, 05 §2.5)', () {
       expect(
-        Spoken.cardNumber('5285105870986488'),
+        Spoken.voucherNumber('5285105870986488'),
         '5 2 8 5, 1 0 5 8, 7 0 9 8, 6 4 8 8',
       );
-      expect(Spoken.cardNumber('5285105870'), '5 2 8 5, 1 0 5 8, 7 0');
-      expect(Spoken.cardNumber(''), '');
+      expect(Spoken.voucherNumber('5285105870'), '5 2 8 5, 1 0 5 8, 7 0');
+      expect(Spoken.voucherNumber(''), '');
     });
   });
 

@@ -1,19 +1,18 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/screens/s09_success.dart';
+import 'package:giftcard_waiter/screens/s12_qr_scan.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
 import 'charge_harness.dart';
 
-/// S09 Success and "Show guest" (03b §4).
+/// S09 Success and "Show guest" (03b §4) — the same on Android and iPhone.
 void main() {
   Future<(TestApp, List<(String, bool)>)> redeemed(
     WidgetTester tester, {
-    bool isIos = false,
     int amount = 2490,
     int balanceAfter = 2510,
     Locale locale = const Locale('en'),
@@ -22,7 +21,6 @@ void main() {
   }) async {
     final TestApp app = await openCharge(
       tester,
-      isIos: isIos,
       locale: locale,
       size: size,
       prefs: prefs,
@@ -48,8 +46,8 @@ void main() {
     return (app, said);
   }
 
-  testWidgets('Android: result, remaining balance, hint, "Show guest" and '
-      '"Done"; announced at t = 0; the chime plays once', (
+  testWidgets('result, remaining balance, "Show guest" and "Scan next '
+      'voucher"; announced at t = 0; the chime plays once', (
     WidgetTester tester,
   ) async {
     final (TestApp app, List<(String, bool)> said) = await redeemed(tester);
@@ -60,11 +58,14 @@ void main() {
     expect(rich('Redeemed'), findsOneWidget);
     expect(rich('24,90'), findsWidgets);
     expect(rich('Remaining balance € 25,10'), findsOneWidget);
-    expect(rich('Card •••• 6488'), findsOneWidget);
-    expect(rich('Just tap the next card'), findsOneWidget);
+    expect(rich('Voucher •••• 6488'), findsOneWidget);
+    expect(find.byType(TertiaryButton), findsOneWidget);
     expect(rich('Show guest'), findsOneWidget);
-    expect(rich('Done'), findsOneWidget);
-    expect(rich('Scan next card'), findsNothing);
+    expect(
+      tester.widget<PrimaryButton>(find.byType(PrimaryButton)).label,
+      'Scan next voucher',
+    );
+    expect(rich('Done'), findsNothing);
     expect(
       said,
       contains(('Redeemed 24 euros 90, remaining balance 25 euros 10', true)),
@@ -105,20 +106,31 @@ void main() {
     await finishApp(tester, app);
   });
 
-  testWidgets('a tap anywhere returns at once (AC-S09-4); "Done" too', (
+  testWidgets('a tap anywhere returns at once (AC-S09-4)', (
     WidgetTester tester,
   ) async {
-    TestApp app;
-    (app, _) = await redeemed(tester);
+    final (TestApp app, _) = await redeemed(tester);
     await tester.tapAt(const Offset(200, 150));
     await tester.pump();
     expect(app.loop.state, isA<ReadyState>());
     await finishApp(tester, app);
+  });
 
-    (app, _) = await redeemed(tester);
-    await tester.tap(rich('Done'));
-    await tester.pump();
-    expect(app.loop.state, isA<ReadyState>());
+  testWidgets('"Scan next voucher" opens the QR scanner (AC-S09-5)', (
+    WidgetTester tester,
+  ) async {
+    final (TestApp app, _) = await redeemed(tester);
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.tap(find.byType(PrimaryButton));
+    await settle(tester);
+    expect(app.loop.state, isA<QrScanState>());
+    expect(find.byType(QrScanScreen), findsOneWidget);
+    await tester.pump(const Duration(seconds: 5));
+    expect(
+      app.loop.state,
+      isA<QrScanState>(),
+      reason: 'the automatic return is cancelled',
+    );
     await finishApp(tester, app);
   });
 
@@ -131,6 +143,7 @@ void main() {
     expect(find.byType(CountdownHairline), findsNothing);
     expect(find.byType(PrimaryButton), findsNothing);
     expect(find.byType(SecondaryButton), findsNothing);
+    expect(find.byType(TertiaryButton), findsNothing);
     expect(rich('Remaining balance'), findsOneWidget);
     expect(rich('Trattoria Bella Vista · •••• 6488'), findsOneWidget);
     final double balanceSize = tester
@@ -156,7 +169,7 @@ void main() {
     await finishApp(tester, app);
   });
 
-  testWidgets('full balance: "Card is now empty", no 0,00 (AC-S09-8)', (
+  testWidgets('full balance: "Voucher is now empty", no 0,00 (AC-S09-8)', (
     WidgetTester tester,
   ) async {
     final (TestApp app, List<(String, bool)> said) = await redeemed(
@@ -165,44 +178,17 @@ void main() {
       balanceAfter: 0,
     );
     await tester.pump(const Duration(milliseconds: 600));
-    expect(rich('Card is now empty'), findsOneWidget);
+    expect(rich('Voucher is now empty'), findsOneWidget);
     expect(
       find.textContaining(RegExp(r'(^|\s)0,00'), findRichText: true),
       findsNothing,
     );
-    expect(find.byType(StatusBadge), findsOneWidget);
-    expect(said, contains(('Redeemed 50 euros. Card is now empty.', true)));
-    await finishApp(tester, app);
-  });
-
-  testWidgets('iPhone: "Scan next card" opens the NFC sheet (AC-S09-5)', (
-    WidgetTester tester,
-  ) async {
-    final (TestApp app, _) = await redeemed(tester, isIos: true);
-    await tester.pump(const Duration(milliseconds: 600));
-    expect(rich('Just tap the next card'), findsNothing);
-    expect(rich('Show guest'), findsOneWidget);
-    final int sessions = app.nfc.calls
-        .where((String c) => c == 'startSession')
-        .length;
-    await tester.tap(rich('Scan next card'));
-    await settle(tester);
     expect(
-      app.nfc.calls.where((String c) => c == 'startSession').length,
-      sessions + 1,
+      tester.widget<StatusBadge>(find.byType(StatusBadge)).status,
+      BadgeStatus.usedUp,
     );
-    expect(app.loop.state, isA<ScanningState>());
-    await finishApp(tester, app);
-  });
-
-  testWidgets('Android: a new card during the countdown opens S07 for it '
-      '(AC-S09-6)', (WidgetTester tester) async {
-    final (TestApp app, _) = await redeemed(tester);
-    app.nfc.emit(
-      NfcTagRead(uid: '04:00:00:00:00:00:09', url: Payloads.cardUrl()),
-    );
-    await settle(tester);
-    expect(app.loop.state, isA<ChargeState>());
+    expect(rich('Used up'), findsOneWidget);
+    expect(said, contains(('Redeemed 50 euros. Voucher is now empty.', true)));
     await finishApp(tester, app);
   });
 

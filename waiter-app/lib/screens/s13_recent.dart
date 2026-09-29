@@ -8,7 +8,6 @@ import '../app/money.dart';
 import '../components/components.dart';
 import '../components/support/text_emphasis.dart';
 import '../core/format/format.dart';
-import '../core/state/loop_controller.dart';
 import '../core/storage/recent_store.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -22,22 +21,12 @@ const int _transactionIdChars = 6;
 
 /// S13 · Recent (03b §6): the shift history of this device and waiter since
 /// 04:00, newest first, grouped by clock hour in the restaurant time zone.
-/// Opens at the medium detent from the S05 TopBar; Android reader mode is
-/// paused while it is open (09 §5).
-Future<void> showRecentSheet(BuildContext context) async {
-  final LoopController loop = context.services.loop;
-  loop.setSheetOpen(true);
-  try {
-    await showWaiterScrollSheet<void>(
-      context: context,
-      title: AppLocalizations.of(context).recentTitle,
-      builder: (BuildContext sheetContext, ScrollController controller) =>
-          _RecentBody(controller: controller),
-    );
-  } finally {
-    loop.setSheetOpen(false);
-  }
-}
+/// Opens at the medium detent from the S05 TopBar (09 §5).
+Future<void> showRecentSheet(BuildContext context) => showWaiterScrollSheet<void>(
+  context: context,
+  title: AppLocalizations.of(context).recentTitle,
+  builder: (BuildContext sheetContext, ScrollController controller) => _RecentBody(controller: controller),
+);
 
 class _RecentBody extends StatelessWidget {
   const _RecentBody({required this.controller});
@@ -286,8 +275,8 @@ class _RecentDetail extends StatelessWidget {
         const SizedBox(height: Space.s6),
         FactRow(label: l10n.recentDetailTime, value: money.time(time)),
         FactRow(
-          label: l10n.recentDetailCard,
-          value: CardNumber.masked(entry.last4),
+          label: l10n.recentDetailVoucher,
+          value: VoucherNumber.masked(entry.last4),
           spokenValue: Spoken.characters(entry.last4),
         ),
         FactRow(

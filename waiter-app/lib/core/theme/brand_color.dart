@@ -142,10 +142,9 @@ Color desaturateOklch(Color color, double reduction) {
   );
 }
 
-/// Whether an API card status renders desaturated: blocked, expired and
-/// replaced do; inactive and zero balance do not (04 §8.6, brief §5).
-bool isDesaturatedCardStatus(String status) =>
-    status == 'blocked' || status == 'expired' || status == 'replaced';
+/// Whether a voucher status renders desaturated: blocked and expired do; a
+/// zero balance does not (04 §8.6, brief §5).
+bool isDesaturatedVoucherStatus(String status) => status == 'blocked' || status == 'expired';
 
 /// Everything the BalanceCard paints, resolved from `brand_color`
 /// (04 §8.6, 05 §3.1).
@@ -251,8 +250,8 @@ _TextChoice? _chooseText(Color start, Color end) {
 /// Resolves the BalanceCard colours (04 §8.6 steps 1–9, desaturation,
 /// shadow and dark-theme rules).
 ///
-/// [desaturated] is true for blocked, expired and replaced cards (see
-/// [isDesaturatedCardStatus]).
+/// [desaturated] is true for blocked and expired vouchers (see
+/// [isDesaturatedVoucherStatus]).
 BrandCardColors resolveBrandCardColors({
   required String? brandColor,
   required WaiterColors colors,

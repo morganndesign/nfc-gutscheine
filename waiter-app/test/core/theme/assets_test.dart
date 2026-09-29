@@ -8,8 +8,8 @@ import 'package:giftcard_waiter/core/theme/theme.dart';
 /// Icons (10 §3, 04 §11) and illustrations (10 §4).
 void main() {
   group('icons', () {
-    test('46 icons: every file exists and follows the grid rules', () {
-      expect(WaiterIcon.values, hasLength(46));
+    test('48 icons: every file exists and follows the grid rules', () {
+      expect(WaiterIcon.values, hasLength(48));
       final Set<String> files = Directory('assets/icons')
           .listSync()
           .whereType<File>()
@@ -104,8 +104,8 @@ void main() {
   });
 
   group('illustrations', () {
-    test('10 illustrations with roles and budget', () {
-      expect(WaiterIllustration.values, hasLength(10));
+    test('8 illustrations with roles and budget', () {
+      expect(WaiterIllustration.values, hasLength(8));
       int total = 0;
       for (final WaiterIllustration ill in WaiterIllustration.values) {
         final File file = File(ill.assetName);
@@ -152,7 +152,7 @@ void main() {
       expect(IllustrationUse.empty.sizeFor(at(667)), 96);
       expect(IllustrationUse.intro.sizeFor(at(844)), 160);
       expect(IllustrationUse.intro.sizeFor(at(667)), 120);
-      expect(WaiterIllustration.introTap.use, IllustrationUse.intro);
+      expect(WaiterIllustration.introAmount.use, IllustrationUse.intro);
       expect(WaiterIllustration.recentEmpty.artboard, 96);
     });
 

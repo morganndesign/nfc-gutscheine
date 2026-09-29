@@ -30,12 +30,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonScanAgain => 'Scan again';
 
   @override
-  String get commonEnterNumber => 'Enter card number';
-
-  @override
-  String get commonEditNumber => 'Edit number';
-
-  @override
   String get commonOpenSettings => 'Open Settings';
 
   @override
@@ -253,16 +247,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signInErrorInvalid =>
-      'E-mail or password is incorrect. Check both and try again.';
+      'E-mail or password is incorrect. After too many attempts, sign-in is paused for a few minutes.';
 
   @override
   String get signInErrorNoPermission =>
-      'This account can\'t redeem cards. Please get a manager.';
+      'This account can\'t redeem vouchers. Please get a manager.';
 
   @override
   String signInErrorThrottled(String time) {
     return 'Too many attempts. Try again in $time.';
   }
+
+  @override
+  String signInRetryIn(String time) {
+    return 'Try again in $time';
+  }
+
+  @override
+  String get signInAvailable => 'You can sign in again';
 
   @override
   String get signInErrorServer =>
@@ -339,9 +341,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unlockLockedOut => 'Too many attempts. Use the password.';
 
   @override
-  String get unlockPendingCard => 'The card opens after unlocking.';
-
-  @override
   String get topBarRecent => 'Recent';
 
   @override
@@ -350,48 +349,35 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get readyAndroidTitle => 'Hold the card to the phone';
+  String get readyTitle => 'Scan the voucher';
 
   @override
-  String get readyAndroidHint => 'The card is detected automatically';
+  String get readyHint =>
+      'Point the camera at the voucher\'s QR code – printed or on the guest\'s phone.';
 
   @override
-  String get readyIosButton => 'Scan card';
+  String get readyScan => 'Scan voucher';
 
   @override
-  String get readyIosHint =>
-      'After tapping, hold the card near the top of the iPhone';
+  String get readySell => 'Sell voucher';
 
   @override
-  String get readyIosTimeout =>
-      'No card detected. Tap \"Scan card\" to try again.';
+  String get readyPendingTitle => 'Redemption not confirmed yet';
 
   @override
-  String get readyManual => 'Card number';
+  String readyPendingBody(String amount, String last4) {
+    return '$amount on voucher •••• $last4. Checked automatically – nothing is ever booked twice.';
+  }
 
   @override
-  String get readyQr => 'QR code';
+  String readyPendingBooked(String amount) {
+    return 'The unconfirmed redemption of $amount was booked.';
+  }
 
   @override
-  String get readyFirstCardTipAndroid =>
-      'Tip: the NFC antenna is usually at the top of the back, near the camera.';
-
-  @override
-  String get readyFirstCardTipIos =>
-      'Tip: hold the card flat against the top edge, near the camera.';
-
-  @override
-  String get readyNoNfcTitle => 'Scan the QR code on the card';
-
-  @override
-  String get readyNoNfcHint =>
-      'This device has no NFC. Use the QR code or the card number.';
-
-  @override
-  String get readyNoNfcButton => 'Scan QR code';
-
-  @override
-  String get readyOfflineTap => 'No connection – the card can\'t be checked';
+  String readyPendingNotBooked(String amount) {
+    return 'The unconfirmed redemption of $amount was not booked.';
+  }
 
   @override
   String get readyOnline => 'Connected again';
@@ -411,176 +397,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get maintenanceDismiss => 'Dismiss notice';
 
   @override
-  String get readyNewCard => 'New gift card';
+  String get scanDetected => 'Voucher detected';
 
   @override
-  String get issueTitle => 'New gift card';
+  String get scanLookingUp => 'Checking voucher …';
 
   @override
-  String get issueAmountLabel => 'Card value';
+  String get scanSlow => 'Still checking …';
 
   @override
-  String get issueEmailLabel => 'Guest e-mail (optional)';
-
-  @override
-  String get issueEmailHelper => 'The guest receives a confirmation.';
-
-  @override
-  String get issueEmailInvalid => 'Enter a valid e-mail address.';
-
-  @override
-  String issueAmountRange(String min, String max) {
-    return 'The card value must be between $min and $max.';
-  }
-
-  @override
-  String issueCreate(String amount) {
-    return 'Create card · $amount';
-  }
-
-  @override
-  String get issueCreating => 'Creating card …';
-
-  @override
-  String get issueProgramTitle => 'Hold a blank card to the phone';
-
-  @override
-  String get issueProgramBody =>
-      'Keep it still on the back of the phone until the check mark appears.';
-
-  @override
-  String get issueProgramRetap =>
-      'Lift the card and hold it to the phone again.';
-
-  @override
-  String get issueStepCheck => 'Check tag';
-
-  @override
-  String get issueStepWrite => 'Write card link';
-
-  @override
-  String get issueStepVerify => 'Read back and verify';
-
-  @override
-  String get issueStepSave => 'Save chip to card';
-
-  @override
-  String issueCard(String number) {
-    return 'Card $number';
-  }
-
-  @override
-  String get issueSuccessTitle => 'Card ready';
-
-  @override
-  String issueSuccessBalance(String amount) {
-    return 'Balance $amount';
-  }
-
-  @override
-  String get issueSuccessVerified => 'NFC tag written and verified';
-
-  @override
-  String get issueSuccessNoTag =>
-      'No tag yet. Program it later in the dashboard.';
-
-  @override
-  String get issueSuccessAnother => 'Sell another card';
-
-  @override
-  String get issueLater => 'Program later';
-
-  @override
-  String get issueNfcOff => 'Turn on NFC to program the tag.';
-
-  @override
-  String get issueCreateFailedTitle => 'Card not created';
-
-  @override
-  String get issueCreateFailedBody =>
-      'No card was created. Check the connection and try again.';
-
-  @override
-  String get issueCreateUncertainBody =>
-      'The answer did not arrive. Try again, the card will not be created twice.';
-
-  @override
-  String get issueNotAllowedTitle => 'Not allowed';
-
-  @override
-  String get issueNotAllowedBody =>
-      'This account cannot sell cards on this phone. Sign out and in again, or use the dashboard.';
-
-  @override
-  String get issueTagFailedTitle => 'Tag not programmed';
-
-  @override
-  String issueTagOtherCard(String number) {
-    return 'This tag belongs to card $number. Use a blank tag.';
-  }
-
-  @override
-  String get issueTagRefused =>
-      'This tag cannot be used for this card. Use a blank tag.';
-
-  @override
-  String get issueTagUnsupported =>
-      'This tag type is not supported. Use NTAG213, 215 or 216.';
-
-  @override
-  String get issueTagReadOnly => 'This tag is locked and cannot be written.';
-
-  @override
-  String get issueTagMoved =>
-      'The tag moved away. Hold it still and try again.';
-
-  @override
-  String get issueTagVerifyFailed =>
-      'The tag could not be verified. Try again with the same tag.';
-
-  @override
-  String get issueTagNetwork => 'No connection to the server. Try again.';
-
-  @override
-  String get iosSheetAlert => 'Hold the card near the top of the iPhone';
-
-  @override
-  String get iosSheetFound => 'Card found';
-
-  @override
-  String get iosSheetReadFailed => 'Couldn\'t read the card. Try again.';
-
-  @override
-  String get iosSheetMultiple => 'More than one card detected. Hold only one.';
-
-  @override
-  String get iosSheetTimeoutSoon =>
-      'No card yet. Hold it flat near the top of the iPhone.';
-
-  @override
-  String get scanNotCard => 'This is not a gift card';
-
-  @override
-  String get scanReadFailedTitle => 'Couldn\'t read the card';
-
-  @override
-  String get scanReadFailedBody => 'Hold it still for a second.';
-
-  @override
-  String get scanDetected => 'Card detected';
-
-  @override
-  String get scanLookingUp => 'Looking up card …';
-
-  @override
-  String get scanSlow => 'Still looking …';
-
-  @override
-  String get scanUnavailable =>
-      'NFC isn\'t available right now. Use the card number or QR code.';
-
-  @override
-  String get balanceCardOverline => 'Gift card';
+  String get balanceCardOverline => 'Voucher';
 
   @override
   String balanceCardValidUntil(String date) {
@@ -597,16 +423,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String balanceCardA11y(String restaurant, String spokenAmount, String last4) {
-    return 'Gift card $restaurant. Balance $spokenAmount. Card ending $last4.';
+    return 'Voucher $restaurant. Balance $spokenAmount. Voucher ending $last4.';
   }
 
   @override
-  String chargeCardNumberA11y(String number) {
-    return 'Card number $number';
+  String chargeVoucherNumberA11y(String number) {
+    return 'Voucher number $number';
   }
 
   @override
-  String get a11yChargeClose => 'Close card';
+  String get a11yChargeClose => 'Close voucher';
 
   @override
   String a11yAmount(String spokenAmount) {
@@ -666,7 +492,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chargeFullOnly => 'Only the full balance can be redeemed here.';
 
   @override
-  String get chargeVelocityTitle => 'Limit for this card reached';
+  String get chargeVelocityTitle => 'Limit for this voucher reached';
 
   @override
   String chargeVelocityBodyTime(int minutes) {
@@ -679,16 +505,25 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get chargeSwitchCardMessage => 'Different card detected – Switch?';
+  String chargeDailyLimit(String amount) {
+    return 'At most $amount more with this voucher today';
+  }
 
   @override
-  String get chargeSwitchCardAction => 'Switch';
+  String get chargePresentmentExpired => 'Scan the voucher again to redeem.';
 
   @override
-  String get chargeSwitchCardKeep => 'Keep';
+  String get chargePendingTitle => 'Checking an earlier redemption';
 
   @override
-  String get chargeSwitchCardDialogTitle => 'Different card detected';
+  String chargePendingBody(String amount) {
+    return '$amount may already have been redeemed. Redeeming is possible once this is checked.';
+  }
+
+  @override
+  String chargeEarlierBooked(String amount) {
+    return 'The earlier redemption of $amount was booked. Balance updated.';
+  }
 
   @override
   String get keypadDoubleZero => 'Double zero';
@@ -709,10 +544,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgeActive => 'Active';
 
   @override
-  String get badgeInactive => 'Not activated';
-
-  @override
-  String get badgeRedeemed => 'Used up';
+  String get badgeUsedUp => 'Used up';
 
   @override
   String get badgeBlocked => 'Blocked';
@@ -721,43 +553,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get badgeExpired => 'Expired';
 
   @override
-  String get badgeReplaced => 'Replaced';
+  String get voucherBlocked => 'Voucher blocked';
 
   @override
-  String get cardBlocked => 'Card blocked';
-
-  @override
-  String cardBlockedReason(String reason) {
+  String voucherBlockedReason(String reason) {
     return 'Reason: $reason';
   }
 
   @override
-  String get cardExpired => 'Card expired';
+  String get voucherExpired => 'Voucher expired';
 
   @override
-  String cardExpiredBody(String date) {
+  String voucherExpiredBody(String date) {
     return 'Expired on $date. Please get a manager.';
   }
 
   @override
-  String get cardInactive => 'Card not activated yet';
+  String get voucherEmpty => 'No balance left';
 
   @override
-  String get cardInactiveBody =>
-      'It can be redeemed once activated. Please get a manager.';
-
-  @override
-  String get cardReplaced => 'Card was replaced';
-
-  @override
-  String get cardReplacedBody =>
-      'The balance is on the new card. Ask the guest for the new card.';
-
-  @override
-  String get cardEmpty => 'No balance left';
-
-  @override
-  String get cardEmptyBody => 'This card has been fully used.';
+  String get voucherEmptyBody => 'This voucher has been fully used.';
 
   @override
   String get redeemSlow => 'Connection slow – retrying';
@@ -779,23 +594,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get uncertainFailedBody =>
-      'Not confirmed yet. Try again – nothing is ever booked twice.';
+      'Not confirmed yet. Check again – nothing is ever booked twice.';
 
   @override
   String get uncertainCancelled =>
-      'Not confirmed. Scan the card again before redeeming.';
+      'Not confirmed. It is checked automatically before this voucher can be redeemed again.';
 
   @override
   String get uncertainCancelledGuestHint =>
-      'Tell the guest: \"The redemption isn\'t confirmed yet. We\'ll check the balance before redeeming again.\"';
+      'Tell the guest: \"The redemption isn\'t confirmed yet. We\'ll check it before redeeming again.\"';
 
   @override
   String redeemBalanceChanged(String amount) {
     return 'Balance changed: now $amount';
   }
-
-  @override
-  String get redeemTapAgain => 'Please tap Redeem again.';
 
   @override
   String get successTitle => 'Redeemed';
@@ -806,20 +618,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get successEmpty => 'Card is now empty';
+  String get successEmpty => 'Voucher is now empty';
 
   @override
-  String get successNextIos => 'Scan next card';
-
-  @override
-  String get successNextAndroid => 'Just tap the next card';
+  String get successNext => 'Scan next voucher';
 
   @override
   String get successShowGuest => 'Show guest';
 
   @override
   String successCard(String last4) {
-    return 'Card •••• $last4';
+    return 'Voucher •••• $last4';
   }
 
   @override
@@ -831,29 +640,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get problemNotFoundTitle => 'Card not found';
+  String get problemNotRecognizedTitle => 'Not a voucher of this restaurant';
 
   @override
-  String get problemNotFoundBody =>
-      'This card is not in the system. Check the card or ask the guest for another one.';
-
-  @override
-  String get problemNotFoundBodyManual =>
-      'No card with this number. Check the digits.';
-
-  @override
-  String get problemForeignTitle => 'Card from another restaurant';
-
-  @override
-  String get problemForeignBody =>
-      'It can only be redeemed at the restaurant that issued it.';
-
-  @override
-  String get problemVerifyTitle => 'Card could not be verified';
-
-  @override
-  String get problemVerifyBody =>
-      'Do not accept this card for now. Please get a manager.';
+  String get problemNotRecognizedBody =>
+      'This code is not valid here. Ask the guest for another voucher or get a manager.';
 
   @override
   String get problemThrottledTitle => 'Too many scans';
@@ -868,43 +659,144 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get problemNetworkBody =>
-      'The card could not be checked. Check Wi-Fi or mobile data, then try again.';
+      'The voucher could not be checked. Check Wi-Fi or mobile data, then try again.';
 
   @override
   String get problemServerTitle => 'Service not available right now';
 
   @override
   String get problemServerBody =>
-      'The problem is not the card. Try again in a moment.';
+      'The problem is not the voucher. Try again in a moment.';
 
   @override
-  String get manualTitle => 'Card number';
+  String get saleTitle => 'Sell voucher';
 
   @override
-  String get manualHelper => '16 digits on the back of the card';
+  String get saleAmountLabel => 'Voucher value';
 
   @override
-  String manualCounter(int count) {
-    return '$count of 16';
+  String saleAmountRange(String min, String max) {
+    return 'The value must be between $min and $max.';
   }
 
   @override
-  String get manualSubmit => 'Look up card';
+  String saleContinue(String amount) {
+    return 'Continue · $amount';
+  }
 
   @override
-  String get manualErrorInvalid => 'Check the card number';
+  String get salePaymentLabel => 'Paid with';
 
   @override
-  String get manualErrorPaste => 'No valid card number to paste';
+  String get salePaymentCash => 'Cash';
 
   @override
-  String get qrTitle => 'Scan QR code';
+  String get salePaymentCardTerminal => 'Card terminal';
 
   @override
-  String get qrHint => 'Point the camera at the QR code on the card';
+  String get salePaymentBankTransfer => 'Bank transfer';
 
   @override
-  String get qrNotCard => 'This QR code isn\'t a gift card';
+  String get salePaymentComplimentary => 'Complimentary';
+
+  @override
+  String get saleReferenceLabel => 'Receipt or reference number';
+
+  @override
+  String get saleReferenceRequired => 'Enter the receipt or reference number.';
+
+  @override
+  String get saleReasonLabel => 'Reason';
+
+  @override
+  String get saleReasonRequired => 'Enter a reason (at least 3 characters).';
+
+  @override
+  String get saleEmailLabel => 'Guest e-mail (optional)';
+
+  @override
+  String get saleEmailHelper => 'The guest receives a confirmation.';
+
+  @override
+  String get saleEmailHelperNoMail => 'Saved with the voucher.';
+
+  @override
+  String get saleEmailInvalid => 'Enter a valid e-mail address.';
+
+  @override
+  String saleSubmit(String amount) {
+    return 'Sell voucher · $amount';
+  }
+
+  @override
+  String get saleSubmitting => 'Selling voucher …';
+
+  @override
+  String get saleFailedTitle => 'Voucher not sold';
+
+  @override
+  String get saleFailedBody =>
+      'No voucher was sold. Check the connection and try again.';
+
+  @override
+  String get saleUncertainTitle => 'Sale not confirmed';
+
+  @override
+  String get saleUncertainBody =>
+      'The answer did not arrive. Try again – the voucher will not be sold twice.';
+
+  @override
+  String get saleNotAllowedTitle => 'Not allowed';
+
+  @override
+  String get saleNotAllowedBody =>
+      'This account cannot sell vouchers on this phone. Please get a manager.';
+
+  @override
+  String get saleDoneTitle => 'Voucher sold';
+
+  @override
+  String saleDoneValue(String amount) {
+    return 'Value $amount';
+  }
+
+  @override
+  String get saleDoneBody =>
+      'Print the QR code for the guest. It is shown only now.';
+
+  @override
+  String get salePrint => 'Print voucher';
+
+  @override
+  String get salePrinted => 'Sent to the printer';
+
+  @override
+  String get salePrintFailed => 'Printing did not work. Try again.';
+
+  @override
+  String get saleAnother => 'Sell another voucher';
+
+  @override
+  String get saleLeaveTitle => 'Close without printing?';
+
+  @override
+  String get saleLeaveBody =>
+      'The QR code cannot be shown again. Without it the guest cannot redeem the voucher.';
+
+  @override
+  String get saleLeaveConfirm => 'Close anyway';
+
+  @override
+  String get saleQrA11y => 'QR code of the voucher';
+
+  @override
+  String get qrTitle => 'Scan voucher';
+
+  @override
+  String get qrHint => 'Point the camera at the voucher\'s QR code';
+
+  @override
+  String get qrNotVoucher => 'This QR code isn\'t a voucher';
 
   @override
   String get qrDark => 'Too dark? Turn on the light.';
@@ -914,9 +806,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qrTorchOff => 'Turn off light';
-
-  @override
-  String get qrManual => 'Enter card number';
 
   @override
   String get recentTitle => 'Recent';
@@ -938,7 +827,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get recentRowEmpty => 'Card now empty';
+  String get recentRowEmpty => 'Voucher now empty';
 
   @override
   String recentRowA11y(
@@ -947,7 +836,7 @@ class AppLocalizationsEn extends AppLocalizations {
     String amount,
     String balance,
   ) {
-    return '$time, card ending $last4, $amount redeemed, remaining balance $balance';
+    return '$time, voucher ending $last4, $amount redeemed, remaining balance $balance';
   }
 
   @override
@@ -970,7 +859,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recentDetailTime => 'Time';
 
   @override
-  String get recentDetailCard => 'Card';
+  String get recentDetailVoucher => 'Voucher';
 
   @override
   String get recentDetailAmount => 'Amount';
@@ -1068,7 +957,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get forbiddenBody =>
-      'This account can no longer redeem cards. Please get a manager.';
+      'This account can no longer redeem vouchers. Please get a manager.';
 
   @override
   String get deviceRevokedTitle => 'This device was removed';
@@ -1088,22 +977,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'The restaurant\'s account is paused. Please get a manager.';
 
   @override
-  String get lockedTitle => 'Account temporarily locked';
-
-  @override
-  String lockedBody(String time) {
-    return 'Too many sign-in attempts. Try again in $time.';
-  }
-
-  @override
-  String lockedButton(String time) {
-    return 'Try again in $time';
-  }
-
-  @override
-  String get lockedOver => 'You can sign in again';
-
-  @override
   String get deactivatedTitle => 'Account deactivated';
 
   @override
@@ -1121,18 +994,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get updateAction => 'Update now';
 
   @override
-  String get nfcOffTitle => 'NFC is off';
-
-  @override
-  String get nfcOffBody => 'Turn on NFC to scan cards.';
-
-  @override
-  String get nfcOffAction => 'Turn on NFC';
-
-  @override
-  String get nfcOffOn => 'NFC is on. Ready to scan.';
-
-  @override
   String get cameraDeniedTitle => 'Camera access is off';
 
   @override
@@ -1144,14 +1005,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get cameraRestrictedBody =>
-      'The camera is restricted on this device. Use the card number.';
+      'The camera is restricted on this device. Please get a manager.';
 
   @override
   String get cameraUnavailableTitle => 'Camera not available';
 
   @override
   String get cameraUnavailableBody =>
-      'Close other apps using the camera or enter the card number.';
+      'Close other apps using the camera, then try again.';
 
   @override
   String get introSkip => 'Skip';
@@ -1168,25 +1029,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get intro1TitleAndroid => 'Tap the card';
+  String get intro1Title => 'Scan the voucher';
 
   @override
-  String get intro1BodyAndroid =>
-      'Hold the card to the back of the phone. The balance appears in under a second.';
-
-  @override
-  String get intro1TitleIos => 'Tap Scan, then hold the card';
-
-  @override
-  String get intro1BodyIos =>
-      'Tap \"Scan card\", then hold the card near the top of the iPhone.';
-
-  @override
-  String get intro1TitleNoNfc => 'Scan the QR code';
-
-  @override
-  String get intro1BodyNoNfc =>
-      'Point the camera at the QR code or type the card number.';
+  String get intro1Body =>
+      'Point the camera at the QR code. The balance appears right away.';
 
   @override
   String get intro2Title => 'Type the amount, redeem';
@@ -1215,7 +1062,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String a11yCardLoaded(String restaurant, String spokenAmount) {
+  String a11yVoucherLoaded(String restaurant, String spokenAmount) {
     return '$restaurant. Balance $spokenAmount.';
   }
 
@@ -1225,7 +1072,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get a11yReady => 'Ready for the next card';
+  String get a11yReady => 'Ready for the next voucher';
 
   @override
   String get a11yScanAvailable => 'Scanning available again';

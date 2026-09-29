@@ -38,11 +38,8 @@ enum IllustrationUse {
 /// `knockout` drawn in placeholder colours that [IllustrationView] maps to
 /// the active theme.
 enum WaiterIllustration {
-  /// S10 not found (scan and manual).
+  /// S10 not a voucher of this restaurant.
   cardNotFound('ill_card_not_found', 120, IllustrationUse.problem),
-
-  /// S10 card from another restaurant.
-  wrongRestaurant('ill_wrong_restaurant', 120, IllustrationUse.problem),
 
   /// S10 verification failed (first and final) — calm (13 · R03).
   verifyFailed('ill_verify_failed', 120, IllustrationUse.problem),
@@ -58,9 +55,6 @@ enum WaiterIllustration {
 
   /// S13 Recent, empty.
   recentEmpty('ill_recent_empty', 96, IllustrationUse.empty),
-
-  /// S17 card 1 "Tap the card".
-  introTap('ill_intro_tap', 160, IllustrationUse.intro),
 
   /// S17 card 2 "Enter the amount".
   introAmount('ill_intro_amount', 160, IllustrationUse.intro),

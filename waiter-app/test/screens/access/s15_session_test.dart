@@ -102,7 +102,7 @@ void main() {
       await tester.tap(_sheetButton);
       await settle(tester);
 
-      expect(tester.widget<PrimaryButton>(_sheetButton).label, en.lockedButton('0:02'));
+      expect(tester.widget<PrimaryButton>(_sheetButton).label, en.signInRetryIn('0:02'));
       expect(tester.widget<PrimaryButton>(_sheetButton).onPressed, isNull);
       await tester.pump(const Duration(seconds: 2));
       await settle(tester);
@@ -248,62 +248,6 @@ void main() {
       await tester.tap(text(en.commonBackToSignIn));
       await settle(tester);
       expect(find.byType(SignInScreen), findsOneWidget);
-      await finishApp(tester, app);
-    });
-
-    testWidgets('A06 locked: live countdown, disabled button, back to S02 at 0', (WidgetTester tester) async {
-      final SemanticsHandle semantics = tester.ensureSemantics();
-      final TestApp app = await TestApp.create(signedIn: false);
-      app.backend.on(
-        'POST',
-        '/auth/token',
-        FakeReply(423, Payloads.error('ACCOUNT_LOCKED', <String, Object?>{'retry_after': 65})),
-      );
-      await pumpWaiterApp(tester, app);
-      await tester.enterText(find.byType(TextField).at(0), 'anna@example.at');
-      await tester.enterText(find.byType(TextField).at(1), 'secret');
-      await tester.pump();
-      await tester.tap(find.byType(PrimaryButton));
-      await settle(tester);
-
-      expect(text(en.lockedTitle), findsOneWidget);
-      expect(text(en.lockedBody('1:05')), findsOneWidget);
-      final PrimaryButton button = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
-      expect(button.label, en.lockedButton('1:05'));
-      expect(button.onPressed, isNull);
-      expect(text(en.signInForgot), findsOneWidget);
-      expect(find.byType(ProgressRing), findsOneWidget);
-      expect(tester.widget<IllustrationView>(find.byType(IllustrationView)).illustration, WaiterIllustration.wait);
-
-      await tester.pump(const Duration(seconds: 5));
-      expect(text(en.lockedBody('1:00')), findsOneWidget);
-
-      await tester.pump(const Duration(seconds: 60));
-      await settle(tester);
-      expect(app.session.phase, AccessPhase.signedOut);
-      expect(find.byType(SignInScreen), findsOneWidget);
-      semantics.dispose();
-      await finishApp(tester, app);
-    });
-
-    testWidgets('A06: "Forgot password" opens the reset page', (WidgetTester tester) async {
-      final List<Map<Object?, Object?>> launches = recordLaunches();
-      final TestApp app = await TestApp.create(signedIn: false);
-      app.backend.on(
-        'POST',
-        '/auth/token',
-        FakeReply(423, Payloads.error('ACCOUNT_LOCKED', <String, Object?>{'retry_after': 300})),
-      );
-      await pumpWaiterApp(tester, app);
-      await tester.enterText(find.byType(TextField).at(0), 'anna@example.at');
-      await tester.enterText(find.byType(TextField).at(1), 'secret');
-      await tester.pump();
-      await tester.tap(find.byType(PrimaryButton));
-      await settle(tester);
-
-      await tester.tap(text(en.signInForgot));
-      await settle(tester);
-      expect(launches.single['url'], 'https://cards.example.at/forgot-password');
       await finishApp(tester, app);
     });
 

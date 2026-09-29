@@ -15,9 +15,8 @@ enum DialogChoice {
   cancel,
 }
 
-/// A modal decision — only two uses in v1 (05 §4.3): the sign-out
-/// confirmation ([destructive], DangerButton) and the switch-card fallback
-/// while a screen reader or Switch Control runs (PrimaryButton).
+/// A modal decision (05 §4.3): the sign-out confirmation and closing a sale
+/// whose QR was not printed (both [destructive], DangerButton).
 ///
 /// Content width (max 360), centred 24 pt above centre, `radius.xl`,
 /// padding 24; title `type.title.m`, body `type.body.m` `fg.secondary`;

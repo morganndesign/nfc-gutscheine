@@ -6,9 +6,7 @@ import 'package:giftcard_waiter/app/app_scope.dart';
 import 'package:giftcard_waiter/app/money.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/components/support/announce.dart';
-import 'package:giftcard_waiter/core/api/models.dart';
 import 'package:giftcard_waiter/core/format/format.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/loop_controller.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/core/storage/recent_store.dart';
@@ -17,7 +15,6 @@ import 'package:giftcard_waiter/l10n/app_localizations.dart';
 
 import 'charge/entrance.dart';
 import 'charge/money_text.dart';
-import 'ios_sheet_texts.dart';
 
 /// S09 Success and its "Show guest" presentation mode (03b §4).
 ///
@@ -25,9 +22,9 @@ import 'ios_sheet_texts.dart';
 /// AC-S09-7). The loop controller plays `haptic.success` + `sound.success`
 /// at the response and returns to Ready after 4 s unless the guest view is
 /// open; this screen draws the mark (M18), the countdown (M19), announces
-/// the result and offers the next step: iPhone "Scan next card", Android
-/// "Just tap the next card" with "Show guest" / "Done". A tap anywhere
-/// outside the buttons returns to Ready at once.
+/// the result and offers the next step: "Scan next voucher" and "Show
+/// guest", the same on Android and iPhone. A tap anywhere outside the
+/// buttons returns to Ready at once.
 class SuccessScreen extends StatefulWidget {
   /// Creates the screen.
   const SuccessScreen({super.key});
@@ -93,7 +90,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
     });
   }
 
-  /// "Redeemed 24 euro 90, remaining balance 8 euro 60" — or "… Card is
+  /// "Redeemed 24 euro 90, remaining balance 8 euro 60" — or "… Voucher is
   /// now empty." for a full redemption (03b §4.4–4.5, 12 §5.11).
   static String _spokenResult(
     AppLocalizations l10n,
@@ -112,17 +109,8 @@ class _SuccessScreenState extends State<SuccessScreen> {
 
   void _finish() => _loop.finishSuccess();
 
-  /// iPhone opens the NFC sheet directly (M27); a device without NFC
-  /// (iPad) opens the QR scanner instead (03b §4.2).
-  void _scanNext() {
-    if (_loop.nfcAvailability == NfcAvailability.unsupported) {
-      _loop
-        ..finishSuccess()
-        ..openQr();
-      return;
-    }
-    unawaited(_loop.startScan(iosSheetTextsOf(context)));
-  }
+  /// Straight to the QR scanner for the next voucher.
+  void _scanNext() => _loop.openQr();
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +143,6 @@ class _SuccessScreenState extends State<SuccessScreen> {
                   key: const ValueKey<String>('success'),
                   entry: s.entry,
                   money: money,
-                  isIos: _loop.isIos,
                   hairline: _Hairline(loop: _loop, onFinished: _finish),
                   onFinish: _finish,
                   onShowGuest: () => _loop.presentToGuest(true),
@@ -189,7 +176,6 @@ class _SuccessView extends StatelessWidget {
   const _SuccessView({
     required this.entry,
     required this.money,
-    required this.isIos,
     required this.hairline,
     required this.onFinish,
     required this.onShowGuest,
@@ -199,7 +185,6 @@ class _SuccessView extends StatelessWidget {
 
   final RecentEntry entry;
   final MoneyContext money;
-  final bool isIos;
   final Widget hairline;
   final VoidCallback onFinish;
   final VoidCallback onShowGuest;
@@ -289,7 +274,7 @@ class _SuccessView extends StatelessWidget {
                       color: c.fgTertiary,
                     ),
                   ),
-                  if (empty) const StatusBadge(status: CardStatus.redeemed),
+                  if (empty) const StatusBadge(status: BadgeStatus.usedUp),
                 ],
               ),
             ],
@@ -298,66 +283,14 @@ class _SuccessView extends StatelessWidget {
       ],
     );
 
-    final Widget actions = isIos
-        ? Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TertiaryButton(
-                label: l10n.successShowGuest,
-                large: true,
-                onPressed: onShowGuest,
-              ),
-              const SizedBox(height: Space.s2),
-              PrimaryButton(label: l10n.successNextIos, onPressed: onScanNext),
-            ],
-          )
-        : Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: Sizes.targetMin),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    const ExcludeSemantics(
-                      child: SizedBox.square(
-                        dimension: _hintGlyph,
-                        child: FittedBox(
-                          child: NfcScanAnimation(state: NfcScanState.idle),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: Space.s2),
-                    Flexible(
-                      child: ScaledText(
-                        l10n.successNextAndroid,
-                        type: TypeTokens.bodyM,
-                        color: c.fgSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Space.s2),
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    child: SecondaryButton(
-                      label: l10n.successShowGuest,
-                      onPressed: onShowGuest,
-                    ),
-                  ),
-                  const SizedBox(width: ButtonTokens.stackGap),
-                  Expanded(
-                    child: SecondaryButton(
-                      label: l10n.commonDone,
-                      onPressed: onFinish,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          );
+    final Widget actions = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        TertiaryButton(label: l10n.successShowGuest, large: true, onPressed: onShowGuest),
+        const SizedBox(height: Space.s2),
+        PrimaryButton(label: l10n.successNext, icon: WaiterIcon.scanQrCode, onPressed: onScanNext),
+      ],
+    );
 
     final double width = layout.widthClass.isTablet
         ? _successColumn
@@ -406,15 +339,12 @@ class _SuccessView extends StatelessWidget {
     );
   }
 
-  /// 03b §4.3 Android hint glyph.
-  static const double _hintGlyph = 24;
-
   /// 08 §3.3: gaps −25 % at compact height.
   static const double _compactGaps = 0.75;
 }
 
 /// "Show guest" (03b §4.8): what the guest reads at arm's length — mark,
-/// amount, remaining balance, restaurant and card; no controls. One
+/// amount, remaining balance, restaurant and voucher; no controls. One
 /// accessibility element; a tap anywhere closes it.
 class _GuestView extends StatefulWidget {
   const _GuestView({
@@ -528,7 +458,7 @@ class _GuestViewState extends State<_GuestView>
         ],
         const SizedBox(height: Space.s4),
         ScaledText(
-          '${entry.restaurantName} · ${CardNumber.masked(entry.last4)}',
+          '${entry.restaurantName} · ${VoucherNumber.masked(entry.last4)}',
           type: TypeTokens.caption,
           color: c.fgTertiary,
           textAlign: TextAlign.center,

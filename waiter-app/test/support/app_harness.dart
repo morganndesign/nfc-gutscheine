@@ -16,14 +16,14 @@ import 'package:giftcard_waiter/core/platform/biometrics_service.dart';
 import 'package:giftcard_waiter/core/platform/channels.dart';
 import 'package:giftcard_waiter/core/platform/connectivity_service.dart';
 import 'package:giftcard_waiter/core/platform/feedback_service.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
-import 'package:giftcard_waiter/core/platform/tag_writer.dart';
 import 'package:giftcard_waiter/core/platform/system_service.dart';
+import 'package:giftcard_waiter/core/platform/voucher_printer.dart';
 import 'package:giftcard_waiter/core/state/business_calendar.dart';
 import 'package:giftcard_waiter/core/state/client_identity.dart';
 import 'package:giftcard_waiter/core/state/clock.dart';
 import 'package:giftcard_waiter/core/state/loop_controller.dart';
 import 'package:giftcard_waiter/core/state/session_controller.dart';
+import 'package:giftcard_waiter/core/storage/pending_redemptions.dart';
 import 'package:giftcard_waiter/core/storage/recent_store.dart';
 import 'package:giftcard_waiter/core/storage/secure_store.dart';
 import 'package:giftcard_waiter/core/storage/settings_store.dart';
@@ -79,6 +79,12 @@ class FakeBackend implements HttpClientAdapter {
   /// Replaces every scripted reply for `METHOD path` with [reply].
   void only(String method, String path, FakeReply reply) => _replies['$method $path'] = <FakeReply>[reply];
 
+  /// Answers every `METHOD <prefix>…` without its own script with [reply]
+  /// (paths that contain a key generated during the test).
+  void onPrefix(String method, String prefix, FakeReply reply) => _prefixes['$method $prefix'] = reply;
+
+  final Map<String, FakeReply> _prefixes = <String, FakeReply>{};
+
   List<RecordedRequest> to(String method, String path) =>
       requests.where((RecordedRequest r) => r.method == method && r.path == path).toList();
 
@@ -90,10 +96,16 @@ class FakeBackend implements HttpClientAdapter {
     requests.add(RecordedRequest(options.method, path, Map<String, Object?>.from(options.headers), body));
 
     final List<FakeReply>? queue = _replies['${options.method} $path'];
-    if (queue == null || queue.isEmpty) {
-      throw StateError('No fake reply for ${options.method} $path');
+    final FakeReply reply;
+    if (queue != null && queue.isNotEmpty) {
+      reply = queue.length > 1 ? queue.removeAt(0) : queue.first;
+    } else {
+      final String? prefix = _prefixes.keys
+          .where((String k) => '${options.method} $path'.startsWith(k))
+          .fold<String?>(null, (String? best, String k) => best == null || k.length > best.length ? k : best);
+      if (prefix == null) throw StateError('No fake reply for ${options.method} $path');
+      reply = _prefixes[prefix]!;
     }
-    final FakeReply reply = queue.length > 1 ? queue.removeAt(0) : queue.first;
 
     if (reply.status == -2) {
       final Completer<ResponseBody> never = Completer<ResponseBody>();
@@ -152,120 +164,96 @@ class RecordedRequest {
   }
 }
 
-/// NFC service whose events the test injects.
-class FakeNfcService implements NfcService {
-  final StreamController<NfcEvent> controller = StreamController<NfcEvent>.broadcast();
-  NfcAvailability value = NfcAvailability.enabled;
-  final List<String> calls = <String>[];
+/// Records print jobs instead of opening the system dialog.
+class FakeVoucherPrinter implements VoucherPrinter {
+  final List<PrintableVoucher> jobs = <PrintableVoucher>[];
 
-  void emit(NfcEvent event) => controller.add(event);
+  /// What the next print returns (false = dialog closed without printing).
+  bool result = true;
 
-  @override
-  Stream<NfcEvent> get events => controller.stream;
-
-  @override
-  Future<NfcAvailability> availability() async => value;
+  /// Throws instead (printing unavailable).
+  bool fail = false;
 
   @override
-  Future<void> setReaderMode({required bool enabled}) async => calls.add('readerMode:$enabled');
-
-  @override
-  Future<void> startSession(IosSheetTexts texts) async => calls.add('startSession');
-
-  @override
-  Future<void> finishSession() async => calls.add('finishSession');
-
-  @override
-  Future<void> rejectTag() async => calls.add('rejectTag');
-
-  @override
-  Future<void> openSettings() async => calls.add('openSettings');
+  Future<bool> print(PrintableVoucher voucher) async {
+    jobs.add(voucher);
+    if (fail) throw StateError('no printer');
+    return result;
+  }
 }
 
 class MockLocalAuthentication extends Mock implements LocalAuthentication {}
 
 /// Sample payloads matching the backend resources.
 abstract final class Payloads {
-  static const String cardId = '9f1c7a0e-3b2d-4c1a-9e8f-0a1b2c3d4e5f';
-  static const String cardToken = 'b8c1d2e3-f4a5-4b6c-8d7e-9f0a1b2c3d4e';
+  static const String voucherId = '9f1c7a0e-3b2d-4c1a-9e8f-0a1b2c3d4e5f';
+  static const String presentmentId = '7d6c5b4a-3928-4716-a5b4-c3d2e1f0a9b8';
 
-  static Map<String, Object?> user({bool partial = true, int? maxSingle}) => <String, Object?>{
-        'id': 'u-1',
-        'name': 'Anna Berger',
-        'email': 'anna@example.at',
-        'permissions': <String>['cards.scan', 'cards.redeem'],
-        'restaurant': <String, Object?>{
-          'id': 'r-1',
-          'name': 'Trattoria Bella Vista',
-          'currency': 'EUR',
-          'timezone': 'Europe/Vienna',
-          'locale': 'de_AT',
-          'settings': <String, Object?>{
-            'allow_partial_redemption': partial,
-            'max_single_redemption': maxSingle,
-            'brand_color': '#0F172A',
-          },
-        },
-      };
+  /// A printable voucher's QR text (`GCPV1.` + 43 base64url characters).
+  static const String qr = 'GCPV1.AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE';
 
-  /// A manager / owner profile: role and the issuing abilities of the waiter-app sign-in.
-  static Map<String, Object?> manager({String role = 'manager', bool issuing = true, bool lockTags = false}) {
-    final Map<String, Object?> u = user();
-    final Map<String, Object?> restaurant = Map<String, Object?>.from(u['restaurant']! as Map<String, Object?>);
-    restaurant['settings'] = <String, Object?>{
-      ...(restaurant['settings']! as Map<String, Object?>),
-      'lock_nfc_tags_after_write': lockTags,
-    };
-    return <String, Object?>{
-      ...u,
-      'id': 'u-2',
-      'name': 'Mia Manager',
-      'email': 'mia@example.at',
-      'role': <String, Object?>{'slug': role, 'name': role},
-      'permissions': <String>['cards.scan', 'cards.redeem', if (issuing) ...<String>['cards.create', 'cards.write_nfc']],
-      'restaurant': restaurant,
-    };
-  }
+  static Map<String, Object?> user({bool partial = true, int? maxSingle, bool emails = true}) => <String, Object?>{
+    'id': 'u-1',
+    'name': 'Anna Berger',
+    'email': 'anna@example.at',
+    'permissions': <String>['vouchers.redeem'],
+    'restaurant': <String, Object?>{
+      'id': 'r-1',
+      'name': 'Trattoria Bella Vista',
+      'currency': 'EUR',
+      'timezone': 'Europe/Vienna',
+      'locale': 'de_AT',
+      'settings': <String, Object?>{
+        'allow_partial_redemption': partial,
+        'max_debit_per_transaction': maxSingle,
+        'brand_color': '#0F172A',
+        'min_voucher_value': 500,
+        'max_voucher_balance': 50000,
+        'send_customer_emails': emails,
+      },
+    },
+  };
 
-  static const String newCardId = '0f1e2d3c-4b5a-4968-8776-655443322110';
-  static const String newCardUrl = 'https://cards.example.at/c/1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d';
+  /// A manager or owner: selling (owners also complimentary).
+  static Map<String, Object?> manager({String role = 'manager', bool selling = true}) => <String, Object?>{
+    ...user(),
+    'id': 'u-2',
+    'name': 'Mia Manager',
+    'email': 'mia@example.at',
+    'role': <String, Object?>{'slug': role, 'name': role},
+    'permissions': <String>[
+      'vouchers.redeem',
+      if (selling) 'vouchers.sell',
+      if (selling && role == 'owner') 'vouchers.sell_complimentary',
+    ],
+  };
 
-  static Map<String, Object?> issued({int value = 5000, bool replayed = false}) => <String, Object?>{
-        'data': <String, Object?>{
-          'id': newCardId,
-          'card_number': '1268834313520042',
-          'card_number_formatted': '1268 8343 1352 0042',
-          'status': 'active',
-          'currency': 'EUR',
-          'balance': value,
-        },
-        'nfc': <String, Object?>{'url': newCardUrl, 'tag_type_hint': 'ntag215', 'ndef_template': null},
-        'replayed': replayed,
-      };
+  static const String soldId = '0f1e2d3c-4b5a-4968-8776-655443322110';
 
-  static Map<String, Object?> tagCheck({String status = 'available', String? reason, String? conflict, String? url}) =>
-      <String, Object?>{
-        'data': <String, Object?>{
-          'status': status,
-          'reason': reason,
-          'message': null,
-          'conflict': conflict == null ? null : <String, Object?>{'card_id': 'other', 'card_number': conflict},
-          'content': 'blank',
-          'replaces_tag': false,
-          'locked': false,
-          'expected_url': url ?? newCardUrl,
-          'attempt_id': 'a',
-        },
-      };
+  static Map<String, Object?> sold({int value = 5000, bool replayed = false, String? payload}) => <String, Object?>{
+    'data': <String, Object?>{
+      'id': soldId,
+      'kind': 'digital',
+      'voucher_number': '1268834313520042',
+      'status': 'active',
+      'currency': 'EUR',
+      'balance': value,
+      'expires_at': null,
+    },
+    'printable': <String, Object?>{'payload': payload ?? qr, 'qr_svg': '<svg/>'},
+    'replayed': replayed,
+  };
 
   static Map<String, Object?> token() => <String, Object?>{
-        'data': <String, Object?>{'token': 'gcp_test', 'expires_at': '2026-10-27T00:00:00Z', 'user': user()},
-      };
+    'data': <String, Object?>{'token': 'gcp_test', 'expires_at': '2026-10-27T00:00:00Z', 'user': user()},
+  };
 
-  static Map<String, Object?> card({int balance = 5000, String status = 'active', bool partial = true}) => <String, Object?>{
-        'id': cardId,
+  static Map<String, Object?> voucher({int balance = 5000, String status = 'active', bool partial = true, int? max}) =>
+      <String, Object?>{
+        'id': voucherId,
+        'kind': 'digital',
         'restaurant_name': 'Trattoria Bella Vista',
-        'card_number': '5285 1058 7098 6488',
+        'voucher_number': '5285 1058 7098 6488',
         'status': status,
         'currency': 'EUR',
         'balance': balance,
@@ -273,41 +261,73 @@ abstract final class Payloads {
         'is_expired': false,
         'blocked_reason': status == 'blocked' ? 'Reported lost' : null,
         'allow_partial_redemption': partial,
+        'max_debit_per_transaction': max,
         'actions': <String, Object?>{'redeem': status == 'active' && balance > 0},
       };
 
-  static Map<String, Object?> scan({int balance = 5000, String status = 'active', bool partial = true}) =>
-      <String, Object?>{'data': card(balance: balance, status: status, partial: partial)};
+  /// `POST /presentments` → 201.
+  static Map<String, Object?> presentment({
+    int balance = 5000,
+    String status = 'active',
+    bool partial = true,
+    int? max,
+    int expiresIn = 60,
+    String id = presentmentId,
+  }) => <String, Object?>{
+    'data': <String, Object?>{
+      'id': id,
+      'purpose': 'spend',
+      'method': 'printable_qr',
+      'level': 1,
+      'expires_at': '2026-09-26T12:01:00Z',
+      'expires_in': expiresIn,
+      'voucher': voucher(balance: balance, status: status, partial: partial, max: max),
+    },
+  };
+
+  static Map<String, Object?> transaction({required int amount, required int balanceAfter}) => <String, Object?>{
+    'id': 'tx-$amount-$balanceAfter',
+    'type': 'redemption',
+    'amount': -amount,
+    'balance_before': balanceAfter + amount,
+    'balance_after': balanceAfter,
+    'currency': 'EUR',
+    'created_at': '2026-09-26T12:00:00Z',
+  };
 
   static Map<String, Object?> redeemed({required int amount, required int balanceAfter, bool replayed = false}) =>
       <String, Object?>{
         'data': <String, Object?>{
-          'card': card(balance: balanceAfter, status: balanceAfter == 0 ? 'redeemed' : 'active'),
-          'transaction': <String, Object?>{
-            'id': 'tx-$amount-$balanceAfter',
-            'amount': -amount,
-            'balance_after': balanceAfter,
-            'created_at': '2026-09-26T12:00:00Z',
-          },
+          'voucher': voucher(balance: balanceAfter),
+          'transaction': transaction(amount: amount, balanceAfter: balanceAfter),
         },
         'replayed': replayed,
       };
 
+  /// `GET /vouchers/{id}/redemptions/{key}`.
+  static Map<String, Object?> outcome({int? amount, int? balanceAfter}) => amount == null
+      ? <String, Object?>{
+          'data': <String, Object?>{'status': 'not_booked'},
+        }
+      : <String, Object?>{
+          'data': <String, Object?>{
+            'status': 'booked',
+            'voucher': voucher(balance: balanceAfter!),
+            'transaction': transaction(amount: amount, balanceAfter: balanceAfter),
+          },
+        };
+
   static Map<String, Object?> config({bool updateRequired = false, String? notice}) => <String, Object?>{
-        'data': <String, Object?>{
-          'min_version': <String, Object?>{'android': null, 'ios': null},
-          'update_required': updateRequired,
-          'maintenance_notice': notice,
-          'support_email': 'support@example.at',
-          'card_domains': <String>['cards.example.at'],
-        },
-      };
+    'data': <String, Object?>{
+      'min_version': <String, Object?>{'android': null, 'ios': null},
+      'update_required': updateRequired,
+      'maintenance_notice': notice,
+      'support_email': 'support@example.at',
+    },
+  };
 
   static Map<String, Object?> error(String code, [Map<String, Object?> context = const <String, Object?>{}]) =>
       <String, Object?>{'message': code, 'code': code, if (context.isNotEmpty) 'context': context};
-
-  static String cardUrl({bool sun = false}) =>
-      'https://cards.example.at/c/$cardToken${sun ? '?picc=0123456789ABCDEF0123456789ABCDEF&cmac=0123456789ABCDEF' : ''}';
 }
 
 /// A fully wired app with real controllers and fake platform edges.
@@ -315,7 +335,7 @@ class TestApp {
   TestApp._({
     required this.services,
     required this.backend,
-    required this.nfc,
+    required this.printer,
     required this.secrets,
     required this.localAuth,
     required this.feedbackCalls,
@@ -324,7 +344,7 @@ class TestApp {
 
   final AppServices services;
   final FakeBackend backend;
-  final FakeNfcService nfc;
+  final FakeVoucherPrinter printer;
   final MemorySecretStore secrets;
   final MockLocalAuthentication localAuth;
   final List<MethodCall> feedbackCalls;
@@ -332,6 +352,7 @@ class TestApp {
 
   SessionController get session => services.session;
   LoopController get loop => services.loop;
+  PendingRedemptionStore get pending => services.pending;
 
   /// Cancels every timer (rollover, countdowns) so no timer outlives the test.
   void dispose() {
@@ -354,11 +375,8 @@ class TestApp {
     bool isIos = false,
     Map<String, Object?>? user,
     Map<String, Object> prefs = const <String, Object>{},
-    TagWriter? tagWriter,
-    AppEnvironment environment = const AppEnvironment(
-      apiBaseUrl: 'https://cards.example.at/api/v1',
-      cardDomains: <String>['cards.example.at'],
-    ),
+    DateTime Function()? wallClock,
+    AppEnvironment environment = const AppEnvironment(apiBaseUrl: 'https://cards.example.at/api/v1'),
   }) async {
     SharedPreferencesAsyncPlatform.instance = InMemorySharedPreferencesAsync.withData(<String, Object>{
       'installed': true,
@@ -411,8 +429,9 @@ class TestApp {
     final SystemService system = SystemService();
     final BiometricsService biometricsService = BiometricsService(system: system, auth: localAuth);
     final RecentStore recent = RecentStore(secrets);
+    final PendingRedemptionStore pending = PendingRedemptionStore(secrets, now: wallClock ?? () => clock.now());
     final TestMonotonicClock monotonic = TestMonotonicClock();
-    final FakeNfcService nfc = FakeNfcService();
+    final FakeVoucherPrinter printer = FakeVoucherPrinter();
     final ConnectivityService connectivity = ConnectivityService.fixed();
 
     final SessionController session = SessionController(
@@ -420,6 +439,7 @@ class TestApp {
       secrets: secrets,
       settings: settings,
       recent: recent,
+      pending: pending,
       biometrics: biometricsService,
       feedback: feedback,
       identity: identity,
@@ -433,21 +453,14 @@ class TestApp {
     final LoopController loop = LoopController(
       session: session,
       api: api,
-      nfc: nfc,
       feedback: feedback,
       recent: recent,
+      pending: pending,
       connectivity: connectivity,
-      settings: settings,
       clock: monotonic,
-      cardDomains: environments.current.cardDomains,
-      allowHttpLinks: environment.allowsHttp,
-      isIos: isIos,
       log: log,
     );
-    environments.addListener(() {
-      client.baseUrl = environments.current.apiBaseUrl;
-      loop.cardDomains = environments.current.cardDomains;
-    });
+    environments.addListener(() => client.baseUrl = environments.current.apiBaseUrl);
 
     return TestApp._(
       services: AppServices(
@@ -456,8 +469,8 @@ class TestApp {
         loop: loop,
         settings: settings,
         recent: recent,
+        pending: pending,
         feedback: feedback,
-        nfc: nfc,
         system: system,
         connectivity: connectivity,
         identity: identity,
@@ -466,76 +479,14 @@ class TestApp {
         buildNumber: '1',
         isTablet: false,
         api: api,
-        tagWriter: tagWriter,
+        printer: printer,
       ),
       backend: backend,
-      nfc: nfc,
+      printer: printer,
       secrets: secrets,
       localAuth: localAuth,
       feedbackCalls: feedbackCalls,
       connectivity: connectivity,
     );
-  }
-}
-
-/// Scripted tag writer for S20: [tap] holds a tag to the phone; each operation takes the next scripted
-/// result (or the defaults: a blank NTAG215 that reads back what was written).
-class FakeTagWriter implements TagWriter {
-  final StreamController<NfcWriterTag> _tags = StreamController<NfcWriterTag>.broadcast();
-  final List<String> calls = <String>[];
-  bool enabled = false;
-  String uid = '04:A2:3F:1B:6C:80:12';
-  String? type = 'ntag215';
-  bool writable = true;
-  String? written;
-
-  /// Errors thrown by the next call of an operation (`inspect`, `write`, `read`, `lock`).
-  final Map<String, List<TagIoException>> failNext = <String, List<TagIoException>>{};
-
-  /// Overrides what the read-back returns.
-  String? readBackUrl;
-  String? readBackUid;
-
-  void tap({String? uid, String? url}) => _tags.add(NfcWriterTag(uid: uid ?? this.uid, url: url));
-
-  void _maybeFail(String op) {
-    final List<TagIoException>? queue = failNext[op];
-    if (queue != null && queue.isNotEmpty) throw queue.removeAt(0);
-  }
-
-  @override
-  Stream<NfcWriterTag> get tags => _tags.stream;
-
-  @override
-  Future<void> setEnabled({required bool enabled}) async {
-    this.enabled = enabled;
-    calls.add('enabled:$enabled');
-  }
-
-  @override
-  Future<TagInfo> inspect() async {
-    calls.add('inspect');
-    _maybeFail('inspect');
-    return TagInfo(uid: uid, type: type, writable: writable, maxSize: -1);
-  }
-
-  @override
-  Future<void> writeUrl(String url) async {
-    calls.add('write:$url');
-    _maybeFail('write');
-    written = url;
-  }
-
-  @override
-  Future<NfcTagRead> readBack() async {
-    calls.add('read');
-    _maybeFail('read');
-    return NfcTagRead(uid: readBackUid ?? uid, url: readBackUrl ?? written);
-  }
-
-  @override
-  Future<void> lock() async {
-    calls.add('lock');
-    _maybeFail('lock');
   }
 }

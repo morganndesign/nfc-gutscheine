@@ -1,15 +1,41 @@
 # GiftCard Waiter
 
-The native Android and iPhone app for restaurant staff: scan an NFC gift card, redeem its balance. Nothing else.
-The design specification is [docs/design/waiter-app](../docs/design/waiter-app/README.md); this app implements it.
+The native Android and iPhone app for restaurant staff: scan a voucher's QR code and redeem its balance; managers
+and owners also sell printable vouchers. Android and iPhone have the same features.
+The design specification is [docs/design/waiter-app](../docs/design/waiter-app/README.md); ADR-002
+([docs/implementation/v2-implementation-plan.md](../docs/implementation/v2-implementation-plan.md)) takes precedence
+where they differ.
 
 | | |
 |---|---|
 | Framework | Flutter 3.47 (Dart 3.13) |
-| Platforms | Android 9+ (API 28), iOS 16+; iPad and tablets without NFC use QR and manual entry |
+| Platforms | Android 9+ (API 28), iOS 16+, tablets and iPad |
 | Package / bundle id | `eu.tapredeem.waiter` (neutral id, spec 13 Q10) |
-| API | `POST /auth/token` (device-bound token), `GET /app/config`, `GET /auth/me`, `POST /scan`, `POST /cards/{id}/redeem`, `GET /devices/current`, `POST /auth/logout` — see [docs/API.md](../docs/API.md) |
+| API | `POST /auth/token` (device-bound token), `GET /app/config`, `GET /auth/me`, `POST /presentments`, `POST /vouchers/{id}/redemptions`, `GET /vouchers/{id}/redemptions/{key}`, `POST /vouchers` (sell), `GET /devices/current`, `POST /auth/logout` — see [docs/API.md](../docs/API.md) |
 | Languages | German, English, Bosnian/Croatian/Serbian (from the master string table in spec 12) |
+
+## How redeeming works
+
+1. **Scan** (S12): only a voucher QR (`GCPV1.` + 43 characters) is sent; anything else is refused on the phone.
+2. **Presentment**: `POST /presentments` proves the voucher is here, now. The answer is single use, bound to this
+   waiter, this phone and this voucher, and valid for 60 s (`expires_in`, counted down from receipt). After that S07
+   shows *Scan again*; the typed amount is kept.
+3. **Redeem** (S07): `POST /vouchers/{id}/redemptions` with the presentment and an `Idempotency-Key`.
+4. **Unknown outcomes** (audit M1, M2, M6): the attempt — key, voucher, amount — is written to protected storage
+   *before* the first request leaves the phone and is removed only on a definitive answer. Retries always reuse the
+   key. After *Cancel*, a lost answer or an app restart, the outcome is asked with
+   `GET /vouchers/{id}/redemptions/{key}`, never by sending the debit again; while an attempt is unresolved its
+   voucher accepts no other amount. "Not booked" counts only once the request can no longer be running on the server
+   (60 s after it was sent). A gateway answer (401, 403, 429) after an unanswered request never closes an attempt.
+
+## Selling (S20)
+
+Managers and owners (`vouchers.sell`): value (within the restaurant's limits) → how the guest paid (cash, card
+terminal with receipt number, bank transfer with reference, complimentary with a reason — owners only) → optional
+guest e-mail → `POST /vouchers` (`form: printable`). The QR is returned once and printed with the system print dialog
+(AirPrint / Android print service) as an A6 sheet in the restaurant's language, without voucher number or value.
+Leaving before printing asks first. A retry after a lost answer reuses the key: the server returns the same sale with
+a fresh QR.
 
 ## Build and run
 
@@ -30,7 +56,6 @@ tool/release.sh ios production                                      # Mac: Xcode
 |---|---|
 | `APP_ENV` | `development` · `staging` · `production` — http allowed only in development; development/staging get their own app id (`.dev` / `.staging`) and a corner badge |
 | `API_BASE_URL` | API root ending in `/api/v1` |
-| `CARD_DOMAINS` | hosts of the card links `https://<host>/c/<uuid>` (comma-separated; the first one is used for Android App Links / NDEF intent filters) — must match the backend's `CARD_BASE_URL` |
 | `APP_STORE_URL` | App Store listing opened by "Update required" (iOS production) |
 | `PLAY_STORE_URL` | optional, defaults to the Play listing of the package |
 
@@ -39,16 +64,12 @@ If the server cannot be reached at launch (signed out), the app shows the reason
 the technical detail and *Try again*; an invalid build configuration or unusable secure storage end on the same
 screen. The app never stays on the launch screen.
 
-The version is the GiftCard Pro platform version (`pubspec.yaml`, currently 1.4.2+2).
+The version is the GiftCard Pro platform version (`pubspec.yaml`, currently 2.0.0+4).
 
 ### Signing
 
 - **Android:** create `android/key.properties` with `storeFile`, `storePassword`, `keyAlias`, `keyPassword` (not committed). Without it a release build is signed with the debug key and Gradle prints a warning — never upload such a build.
-- **iOS:** automatic signing; select the team in Xcode (or `DEVELOPMENT_TEAM` for `tool/release.sh ios-ipa`). The Associated Domains entitlement `applinks:$(CARD_DOMAIN)` takes its host from the environment: `tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from `config/<environment>.json` (local runs: `localhost`). NFC entitlement: `TAG` only.
-
-### Universal Links / App Links
-
-The web app serves `/.well-known/apple-app-site-association` and `/.well-known/assetlinks.json` from the variables `WAITER_IOS_APP_IDS`, `WAITER_ANDROID_PACKAGE` and `WAITER_ANDROID_CERT_SHA256` ([docs/ENVIRONMENT.md](../docs/ENVIRONMENT.md)). Set them before the first store release so card links open the app.
+- **iOS:** automatic signing; select the team in Xcode (or `DEVELOPMENT_TEAM` for `tool/release.sh ios-ipa`). The app has no special entitlements; the camera and Face ID usage texts come from spec 12 §5.21.
 
 ### Minimum version and maintenance notice
 
@@ -58,14 +79,16 @@ The platform admin sets **Minimum waiter app version (Android / iPhone)** and th
 
 | Path | Contents |
 |---|---|
-| `lib/app/` | bootstrap, root router (screens rendered from state), platform coordination (reader mode, keep awake, links, lifecycle) |
+| `lib/app/` | bootstrap, root router (screens rendered from state), keep-awake and lifecycle |
 | `lib/core/api/` | HTTP client (request id per attempt, device id, bearer token, timeouts, error classes of spec 09 §9.3) and typed endpoints |
-| `lib/core/state/` | `SessionController` (access, session, blocked states) and `LoopController` (the redeem loop and its idempotency rules, spec 02 §4.5 / 09 §4.4) |
-| `lib/core/platform/` | NFC, haptics/sounds, biometrics, device facts — thin platform channels (`android/.../eu/tapredeem/waiter/*.kt`, `ios/Runner/Waiter*.swift`) |
+| `lib/core/state/` | `SessionController` (access, session, blocked states) and `LoopController` (the redeem loop and its money-safety rules) |
+| `lib/core/storage/` | settings, Recent and the unresolved redemption attempts (`PendingRedemptionStore`), encrypted at rest |
+| `lib/core/sale/` | `SaleController` (S20) |
+| `lib/core/platform/` | haptics/sounds, biometrics, device facts, printing — thin platform channels (`android/.../eu/tapredeem/waiter/*.kt`, `ios/Runner/Waiter*.swift`) |
 | `lib/core/tokens/`, `lib/core/theme/` | design tokens (generated), theme, typography, icons, illustrations |
-| `lib/core/format/`, `lib/core/l10n/`, `lib/l10n/` | money, dates, spoken forms, card numbers; strings (generated) |
+| `lib/core/format/`, `lib/core/l10n/`, `lib/l10n/` | money, dates, spoken forms, voucher numbers; strings (generated) |
 | `lib/components/` | the component library of spec 05 |
-| `lib/screens/` | S01–S17 |
+| `lib/screens/` | S01–S20 |
 | `tokens/waiter.tokens.json` | design tokens (source); `dart run tool/generate_tokens.dart` |
 | `tool/import_strings.dart` | imports the master string table from spec 12 into `lib/l10n/*.arb` |
 | `tool/synthesize_sounds.py`, `tool/render_brand_assets.py` | reproducible sounds, launcher icons and splash |
@@ -79,8 +102,8 @@ flutter analyze
 flutter test                     # unit, component, screen and end-to-end journey tests
 ```
 
-`test/support/app_harness.dart` wires the real controllers to a scripted backend, fake NFC and in-memory storage; `test/support/screen_harness.dart` pumps the whole app. Inside `testWidgets`, never `await` a controller or API future directly — act, then `settle(tester)`.
+`test/support/app_harness.dart` wires the real controllers to a scripted backend, a fake printer and in-memory storage; `test/support/screen_harness.dart` pumps the whole app. Inside `testWidgets`, never `await` a controller or API future directly — act, then `settle(tester)`.
 
-The backend side of the app's API is covered by `backend/tests/Feature/WaiterApp*Test.php` and, against a running stack, by `e2e/waiter-api.mjs`.
+The backend side of the app's API is covered by `backend/tests/Feature/WaiterApp*Test.php` and `backend/tests/Feature/Abuse/PresentmentAbuseTest.php` and, against a running stack, by `e2e/waiter-api.mjs`.
 
-Not verifiable in CI: NFC with real cards, the iPhone system NFC sheet, biometrics and the iOS build (needs Xcode). Test them on the reference devices of spec 09 §11.3 before every release.
+Not verifiable in CI: the camera with real printed and on-screen QR codes, printing on real printers, biometrics and the iOS build (needs Xcode). Test them on the reference devices of spec 09 §11.3 before every release.

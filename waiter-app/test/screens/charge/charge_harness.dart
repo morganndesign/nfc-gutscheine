@@ -1,109 +1,53 @@
-import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
+import '../scan/scan_harness.dart' show mockDeniedCamera;
 
-/// Redeem endpoint of the sample card.
-const String redeemPath = '/cards/${Payloads.cardId}/redeem';
+/// Redemption endpoint of the sample voucher.
+const String redeemPath = '/vouchers/${Payloads.voucherId}/redemptions';
 
-/// UID of the sample card's chip.
-const String cardUid = '04:A2:3F:1B:6C:80:12';
-
-/// iPhone sheet texts for tests that start a session directly.
-const IosSheetTexts sheetTexts = IosSheetTexts(
-  alert: 'alert',
-  found: 'found',
-  multiple: 'multiple',
-  readFailed: 'readFailed',
-  timeoutSoon: 'timeoutSoon',
-  notCard: 'notCard',
-);
-
-/// A running app on S05 (Android unless [isIos]) and its card-link sink.
-Future<(TestApp, Sink<Uri>)> startAppWithLinks(
-  WidgetTester tester, {
-  bool isIos = false,
-  Locale locale = const Locale('en'),
-  Size size = const Size(393, 852),
-}) async {
-  final TestApp app = await TestApp.create(isIos: isIos);
-  final StreamController<Uri> links = await pumpWaiterApp(
-    tester,
-    app,
-    locale: locale,
-    size: size,
-  );
-  addTearDown(links.close);
-  return (app, links);
-}
-
-/// A running app on S05 (Android unless [isIos]).
+/// A running app on S05.
 Future<TestApp> startApp(
   WidgetTester tester, {
-  bool isIos = false,
   Locale locale = const Locale('en'),
   Size size = const Size(393, 852),
   Map<String, Object> prefs = const <String, Object>{},
   Map<String, Object?>? user,
 }) async {
-  final TestApp app = await TestApp.create(
-    isIos: isIos,
-    prefs: prefs,
-    user: user,
-  );
-  final StreamController<Uri> links = await pumpWaiterApp(
-    tester,
-    app,
-    locale: locale,
-    size: size,
-  );
-  addTearDown(links.close);
+  final TestApp app = await TestApp.create(prefs: prefs, user: user);
+  await pumpWaiterApp(tester, app, locale: locale, size: size);
   return app;
 }
 
-/// Reads the sample card: Android reader mode, or the iPhone sheet.
-Future<void> readCard(
-  WidgetTester tester,
-  TestApp app, {
-  String uid = cardUid,
-}) async {
-  if (app.loop.isIos) {
-    unawaited(app.loop.startScan(sheetTexts));
-    await settle(tester, 2);
-  }
-  app.nfc.emit(NfcTagRead(uid: uid, url: Payloads.cardUrl()));
+/// Scans the sample voucher's QR (the camera itself is not under test here).
+Future<void> scanVoucher(WidgetTester tester, TestApp app) async {
+  mockDeniedCamera();
+  app.loop.openQr();
+  await settle(tester, 2);
+  app.loop.qrDetected(Payloads.qr);
   await settle(tester);
 }
 
-/// App on S07 for a card answered with [scan].
+/// App on S07 for a voucher answered with [presentment].
 Future<TestApp> openCharge(
   WidgetTester tester, {
-  Map<String, Object?>? scan,
-  bool isIos = false,
+  Map<String, Object?>? presentment,
   Locale locale = const Locale('en'),
   Size size = const Size(393, 852),
   Map<String, Object> prefs = const <String, Object>{},
   Map<String, Object?>? user,
 }) async {
-  final TestApp app = await startApp(
-    tester,
-    isIos: isIos,
-    locale: locale,
-    size: size,
-    prefs: prefs,
-    user: user,
-  );
-  app.backend.on('POST', '/scan', FakeReply(200, scan ?? Payloads.scan()));
-  await readCard(tester, app);
+  final TestApp app = await startApp(tester, locale: locale, size: size, prefs: prefs, user: user);
+  app.backend.on('POST', '/presentments', FakeReply(201, presentment ?? Payloads.presentment()));
+  await scanVoucher(tester, app);
   expect(app.loop.state, isA<ChargeState>());
   return app;
 }

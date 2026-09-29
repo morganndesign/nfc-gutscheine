@@ -164,12 +164,12 @@ void main() {
     await _fill(tester);
     await _tapSubmit(tester);
     expect(text(en.signInErrorThrottled('0:03')), findsOneWidget);
-    expect(_label(tester), en.lockedButton('0:03'));
+    expect(_label(tester), en.signInRetryIn('0:03'));
     expect(_enabled(tester), isFalse);
 
     await tester.pump(const Duration(seconds: 1));
     expect(text(en.signInErrorThrottled('0:02')), findsOneWidget);
-    expect(_label(tester), en.lockedButton('0:02'));
+    expect(_label(tester), en.signInRetryIn('0:02'));
 
     // Editing a field keeps the countdown.
     await tester.enterText(_password, 'secret2');
@@ -227,20 +227,28 @@ void main() {
     await finishApp(tester, app);
   });
 
-  testWidgets('423 moves to the S15 locked state', (WidgetTester tester) async {
+  testWidgets('S4: a locked account gets the same answer as wrong credentials, never a lock screen', (
+    WidgetTester tester,
+  ) async {
     final TestApp app = await TestApp.create(signedIn: false);
     app.backend.on(
       'POST',
       '/auth/token',
-      FakeReply(423, Payloads.error('ACCOUNT_LOCKED', <String, Object?>{'retry_after': 300})),
+      FakeReply(422, <String, Object?>{
+        'message': 'The e-mail address or password is incorrect.',
+        'code': 'VALIDATION_FAILED',
+        'errors': <String, Object?>{
+          'email': <String>['The e-mail address or password is incorrect.'],
+        },
+      }),
     );
     await pumpWaiterApp(tester, app);
 
     await _fill(tester);
     await _tapSubmit(tester);
-    expect(app.session.blocked, BlockedKind.locked);
-    await settle(tester);
-    expect(text(en.lockedTitle), findsOneWidget);
+    expect(app.session.blocked, isNull);
+    expect(app.session.phase, AccessPhase.signedOut);
+    expect(text(en.signInErrorInvalid), findsOneWidget);
     await finishApp(tester, app);
   });
 

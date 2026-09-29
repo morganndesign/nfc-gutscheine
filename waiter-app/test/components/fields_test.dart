@@ -31,6 +31,20 @@ void main() {
     setUp(() => controller = TextEditingController());
     tearDown(() => controller.dispose());
 
+    testWidgets('text kind keeps spaces and stops at its limit (S20 reference)', (WidgetTester tester) async {
+      await pumpComponent(
+        tester,
+        WaiterTextField(kind: TextFieldKind.text, label: 'Reference', controller: controller, maxLength: 12),
+      );
+      await tester.enterText(find.byType(TextField), 'Beleg 4711 vom Terminal');
+      await tester.pump();
+      expect(controller.text, 'Beleg 4711 v');
+      final TextField field = tester.widget<TextField>(find.byType(TextField));
+      expect(field.keyboardType, TextInputType.text);
+      expect(field.textCapitalization, TextCapitalization.sentences);
+      expect(field.autofillHints, isNull);
+    });
+
     for (final Brightness b in bothThemes) {
       testWidgets('56-pt container, border.control at rest ($b)', (
         WidgetTester tester,
@@ -166,91 +180,6 @@ void main() {
         isSemantics(hasToggledState: true, isToggled: true),
       );
       handle.dispose();
-    });
-  });
-
-  group('CardNumberField', () {
-    for (final Brightness b in bothThemes) {
-      testWidgets('64 pt, groups of four, empty cells "·" ($b)', (
-        WidgetTester tester,
-      ) async {
-        await pumpComponent(
-          tester,
-          const CardNumberField(digits: '5285105870'),
-          brightness: b,
-        );
-        await tester.pump(const Duration(milliseconds: 100));
-        final Iterable<String> cells = tester
-            .widgetList<RichText>(
-              find.descendant(
-                of: find.byType(CardNumberField),
-                matching: find.byType(RichText),
-              ),
-            )
-            .map((RichText t) => t.text.toPlainText());
-        expect(cells.where((String c) => c == '·'), hasLength(6));
-        expect(
-          tester
-              .getSize(
-                find
-                    .descendant(
-                      of: find.byType(CardNumberField),
-                      matching: find.byType(AnimatedContainer),
-                    )
-                    .first,
-              )
-              .height,
-          64,
-        );
-        expect(
-          _border(tester, find.byType(CardNumberField)).color,
-          WaiterColors.resolve(b).focusRing,
-        );
-      });
-    }
-
-    testWidgets('reads in groups; label and hint', (WidgetTester tester) async {
-      final SemanticsHandle handle = tester.ensureSemantics();
-      await pumpComponent(tester, const CardNumberField(digits: '5285105870'));
-      expect(find.bySemanticsLabel('Card number'), findsOneWidget);
-      final SemanticsNode node = tester.getSemantics(
-        find.bySemanticsLabel('Card number'),
-      );
-      expect(node.value, '5 2 8 5, 1 0 5 8, 7 0');
-      expect(node, isSemantics(isTextField: true, isReadOnly: true));
-      handle.dispose();
-    });
-
-    testWidgets('fits a 320-pt phone at 200 % without overflow', (
-      WidgetTester tester,
-    ) async {
-      await pumpComponent(
-        tester,
-        const CardNumberField(digits: '5285105870986488'),
-        textScale: 2,
-        size: const Size(320, 568),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('error border and message', (WidgetTester tester) async {
-      await pumpComponent(
-        tester,
-        const CardNumberField(
-          digits: '5285105870986488',
-          errorText: 'Check the card number',
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 200));
-      expect(
-        _border(tester, find.byType(CardNumberField)).color,
-        WaiterColors.resolve(Brightness.light).danger,
-      );
-      expect(
-        find.text('Check the card number', findRichText: true),
-        findsOneWidget,
-      );
     });
   });
 

@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/api/models.dart' show CardStatus;
+import 'package:giftcard_waiter/core/api/models.dart' show VoucherStatus;
 import 'package:giftcard_waiter/core/format/format.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 
 import 'harness.dart';
 
 BalanceCardData _card({
-  CardStatus status = CardStatus.active,
+  VoucherStatus status = VoucherStatus.active,
   int balance = 3250,
   String? brand = '#7A1F2B',
   String last4 = '6488',
@@ -54,7 +54,7 @@ void main() {
     await pumpComponent(
       tester,
       BalanceCard(
-        data: _card(status: CardStatus.blocked),
+        data: _card(status: VoucherStatus.blocked),
         money: testMoney,
         density: BalanceCardDensity.compact,
       ),
@@ -101,14 +101,14 @@ void main() {
     await pumpComponent(
       tester,
       BalanceCard(
-        data: _card(status: CardStatus.blocked),
+        data: _card(status: VoucherStatus.blocked),
         money: testMoney,
       ),
     );
     final SemanticsNode node = tester.getSemantics(find.byType(BalanceCard));
     expect(
       node.label,
-      'Gift card Zum Hirschen. Balance 32 euros 50. Card ending 6 4 8 8. '
+      'Voucher Zum Hirschen. Balance 32 euros 50. Voucher ending 6 4 8 8. '
       'Valid until 26 September 2029. Blocked.',
     );
     expect(node, isSemantics(isButton: false, hasTapAction: false));
@@ -197,7 +197,7 @@ void main() {
       ),
     );
     expect(find.byType(SkeletonBox), findsNWidgets(3));
-    expect(find.bySemanticsLabel('Looking up card …'), findsOneWidget);
+    expect(find.bySemanticsLabel('Checking voucher\u00A0…'), findsOneWidget);
     await pumpComponent(tester, BalanceCard(data: _card(), money: testMoney));
     await tester.pump(const Duration(milliseconds: 160));
     await tester.pump(const Duration(milliseconds: 1));

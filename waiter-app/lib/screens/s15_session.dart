@@ -14,7 +14,6 @@ import '../core/state/session_state.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'access/countdown.dart';
-import 'access/forgot_password.dart';
 import 'access/sign_in_banner.dart';
 
 // ---------------------------------------------------------------- 10.1 sheet
@@ -99,7 +98,7 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> {
 
   void _throttleOver() {
     if (!_throttled) return;
-    announce(context, AppLocalizations.of(context).lockedOver);
+    announce(context, AppLocalizations.of(context).signInAvailable);
     setState(() => _issue = null);
   }
 
@@ -164,7 +163,7 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> {
         ),
         const SizedBox(height: Space.s6),
         PrimaryButton(
-          label: _throttled ? l.lockedButton(DateTimeFormat.countdown(remaining)) : l.sessionExpiredAction,
+          label: _throttled ? l.signInRetryIn(DateTimeFormat.countdown(remaining)) : l.sessionExpiredAction,
           semanticLabel: _busy ? l.signInLoading : null,
           status: _busy ? ButtonStatus.loading : ButtonStatus.idle,
           onPressed: _canSubmit ? () => unawaited(_submit()) : null,
@@ -210,8 +209,7 @@ const Duration _recheckSpacing = Duration(seconds: 3);
 
 /// S15 full-screen account states (03a §10.2–10.5; 12 A03–A06, A10) on the
 /// ProblemScreen template (05 §4.6): forbidden, device revoked, restaurant
-/// suspended, account locked (live countdown on the monotonic clock) and
-/// account deactivated. No back into Ready; the only ways on are the
+/// suspended and account deactivated. No back into Ready; the only ways on are the
 /// actions.
 class BlockedScreen extends StatefulWidget {
   const BlockedScreen({super.key});
@@ -231,10 +229,6 @@ class _BlockedScreenState extends State<BlockedScreen> {
   /// "Check again" found no connection: `offline.title` below the button.
   bool _offline = false;
   Duration? _lastCheck;
-
-  /// Full wait of the current lock (the countdown ring's 100 %).
-  Duration? _lockedUntil;
-  Duration _lockTotal = Duration.zero;
 
   Future<void> _recheck(String body) async {
     final AppServices services = context.services;
@@ -259,11 +253,6 @@ class _BlockedScreenState extends State<BlockedScreen> {
 
   void _leave() => unawaited(context.services.session.leaveBlocked());
 
-  void _lockOver() {
-    announce(context, AppLocalizations.of(context).lockedOver);
-    _leave();
-  }
-
   @override
   Widget build(BuildContext context) {
     final AppServices services = context.services;
@@ -282,7 +271,6 @@ class _BlockedScreenState extends State<BlockedScreen> {
         final AppLocalizations l = AppLocalizations.of(context);
         final ProblemAction backToSignIn = ProblemAction(l.commonBackToSignIn, _leave);
         return switch (shown) {
-          BlockedKind.locked => _locked(context, session.lockedUntil ?? services.loop.now()),
           BlockedKind.forbidden => _problem(
             shown,
             l.forbiddenTitle,
@@ -330,37 +318,6 @@ class _BlockedScreenState extends State<BlockedScreen> {
     () => unawaited(_recheck(body)),
     status: _checking ? ButtonStatus.loading : ButtonStatus.idle,
   );
-
-  /// 10.4 / A06: countdown from `lockedUntil`; at 0 `locked.over` is
-  /// announced and the waiter is back on S02.
-  Widget _locked(BuildContext context, Duration until) {
-    final AppServices services = context.services;
-    if (_lockedUntil != until) {
-      _lockedUntil = until;
-      final Duration left = until - services.loop.now();
-      _lockTotal = left.isNegative ? Duration.zero : left;
-    }
-    return MonotonicCountdown(
-      until: until,
-      now: services.loop.now,
-      onFinished: _lockOver,
-      builder: (BuildContext context, Duration remaining) {
-        final AppLocalizations l = AppLocalizations.of(context);
-        final String time = DateTimeFormat.countdown(remaining);
-        return ProblemScreen(
-          key: const ValueKey<BlockedKind>(BlockedKind.locked),
-          family: ProblemFamily.account,
-          visual: const ProblemVisual.illustration(WaiterIllustration.wait),
-          countdown: ProblemCountdown(remaining: remaining, total: _lockTotal),
-          title: l.lockedTitle,
-          body: l.lockedBody(time),
-          primary: ProblemAction(l.lockedButton(time), null),
-          // Resetting the password is the way out.
-          tertiary: ProblemAction(l.signInForgot, () => unawaited(openForgotPassword(context))),
-        );
-      },
-    );
-  }
 }
 
 // --------------------------------------------------------- 10.6 update

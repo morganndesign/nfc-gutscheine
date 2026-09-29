@@ -41,8 +41,8 @@ void main() {
     }
   });
 
-  test('key count: 348 table keys (12 §5.22) = 345 ARB + 3 OS strings', () {
-    expect(messageKeys(template).length, 345);
+  test('key count: 300 table keys (12 §5.22) = 298 ARB + 2 OS strings', () {
+    expect(messageKeys(template).length, 298);
     final Set<String> plistKeys = <String>{};
     final String strings = File(
       'ios/Runner/en.lproj/InfoPlist.strings',
@@ -54,7 +54,6 @@ void main() {
       plistKeys.add(m.group(1)!);
     }
     expect(plistKeys, <String>{
-      'NFCReaderUsageDescription',
       'NSCameraUsageDescription',
       'NSFaceIDUsageDescription',
     });
@@ -146,7 +145,6 @@ void main() {
     }
     // Kept as own keys, same text as their master (12 §5.22).
     expect(template['cameraDeniedAction'], template['commonOpenSettings']);
-    expect(template['qrManual'], template['commonEnterNumber']);
   });
 
   test('identical strings across languages are only the intended ones', () {

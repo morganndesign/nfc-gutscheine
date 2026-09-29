@@ -18,7 +18,6 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		B3C7E0B29947083D0B7C0A37 /* WaiterPlatformPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4D6CC427CA5BBCDDEED542 /* WaiterPlatformPlugin.swift */; };
-		8082BD6D494704EC1A0C55BB /* WaiterNfc.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D32DCAB7D90B6BA64AD96DE /* WaiterNfc.swift */; };
 		15F00CB93050DF54354C9D3B /* WaiterFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176E61559644EBEB2E69D4AB /* WaiterFeedback.swift */; };
 		F794DD79E63B4FEA26ACA43A /* WaiterSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0310B30244CF7505DC58F27 /* WaiterSystem.swift */; };
 		931EEDE6404C13A9227843D1 /* gcw_card_detected.caf in Resources */ = {isa = PBXBuildFile; fileRef = BFF1DA80CE46873C21CB935D /* gcw_card_detected.caf */; };
@@ -71,7 +70,6 @@
 		97C147001CF9000F007C117D /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		97C147021CF9000F007C117D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1E4D6CC427CA5BBCDDEED542 /* WaiterPlatformPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterPlatformPlugin.swift; sourceTree = "<group>"; };
-		5D32DCAB7D90B6BA64AD96DE /* WaiterNfc.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterNfc.swift; sourceTree = "<group>"; };
 		176E61559644EBEB2E69D4AB /* WaiterFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterFeedback.swift; sourceTree = "<group>"; };
 		F0310B30244CF7505DC58F27 /* WaiterSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterSystem.swift; sourceTree = "<group>"; };
 		BFF1DA80CE46873C21CB935D /* gcw_card_detected.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = gcw_card_detected.caf; sourceTree = "<group>"; };
@@ -152,7 +150,6 @@
 				7884E8672EC3CC0400C636F2 /* SceneDelegate.swift */,
 				74858FAD1ED2DC5600515810 /* Runner-Bridging-Header.h */,
 				1E4D6CC427CA5BBCDDEED542 /* WaiterPlatformPlugin.swift */,
-				5D32DCAB7D90B6BA64AD96DE /* WaiterNfc.swift */,
 				176E61559644EBEB2E69D4AB /* WaiterFeedback.swift */,
 				F0310B30244CF7505DC58F27 /* WaiterSystem.swift */,
 				9A29E95A87A77B985205717D /* Runner.entitlements */,
@@ -341,7 +338,6 @@
 				1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */,
 				7884E8682EC3CC0700C636F2 /* SceneDelegate.swift in Sources */,
 				B3C7E0B29947083D0B7C0A37 /* WaiterPlatformPlugin.swift in Sources */,
-				8082BD6D494704EC1A0C55BB /* WaiterNfc.swift in Sources */,
 				15F00CB93050DF54354C9D3B /* WaiterFeedback.swift in Sources */,
 				F794DD79E63B4FEA26ACA43A /* WaiterSystem.swift in Sources */,
 			);

@@ -4,7 +4,6 @@ import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/foundation.dart';
 
 import '../api/api_failure.dart';
-import '../api/card_link.dart';
 import '../api/models.dart';
 import '../api/waiter_api.dart';
 import '../diagnostics/diagnostic_log.dart';
@@ -12,417 +11,305 @@ import '../format/amount_entry.dart';
 import '../format/support_code.dart';
 import '../platform/connectivity_service.dart';
 import '../platform/feedback_service.dart';
-import '../platform/nfc_service.dart';
+import '../storage/pending_redemptions.dart';
 import '../storage/recent_store.dart';
-import '../storage/settings_store.dart';
 import '../tokens/tokens.dart';
 import 'clock.dart';
 import 'loop_state.dart';
-import 'redeem_attempts.dart';
 import 'session_controller.dart';
 import 'session_state.dart';
 
-/// The one explicit state holder of the redeem loop (09 §4.1): Ready →
-/// Scanning → LookingUp → Charge → Redeeming → Success, with Problem, QR and
-/// manual entry. Implements the transitions and guards of 02 §4.5.4, the
-/// redeem sub-machine of 09 §4.4 and the error surfaces of 03b §1.3 / 12 §3.
+/// An earlier, unconfirmed redemption whose outcome became known while the
+/// waiter was elsewhere (shown once on S05).
+@immutable
+class PendingResolution {
+  const PendingResolution({required this.booked, required this.amount, required this.currency});
+
+  final bool booked;
+  final int amount;
+  final String currency;
+}
+
+/// The one explicit state holder of the redeem loop: Ready → QR scan →
+/// Presenting → Charge → Redeeming → Success, with Problem.
+///
+/// Money safety rules:
+/// - every redemption attempt is stored with its `Idempotency-Key` before the
+///   first request leaves the phone ([PendingRedemptionStore]), and every
+///   retry reuses that key;
+/// - "nothing was booked" is only said after a definitive answer to that key;
+/// - while an attempt is unresolved, its voucher accepts no other amount: it is
+///   resolved first by asking the server for the key's outcome, never by
+///   sending the debit again.
 class LoopController extends ChangeNotifier {
   LoopController({
     required SessionController session,
     required WaiterApi api,
-    required NfcService nfc,
     required FeedbackService feedback,
     required RecentStore recent,
+    required PendingRedemptionStore pending,
     required ConnectivityService connectivity,
-    required SettingsStore settings,
     required MonotonicClock clock,
-    required List<String> cardDomains,
-    required bool isIos,
-    bool? allowHttpLinks,
-    RedeemAttempts? attempts,
     DiagnosticLog? log,
-  })  : _session = session,
-        _api = api,
-        _nfc = nfc,
-        _feedback = feedback,
-        _recent = recent,
-        _connectivity = connectivity,
-        _settings = settings,
-        _clock = clock,
-        _cardDomains = cardDomains,
-        _allowHttpLinks = allowHttpLinks,
-        _isIos = isIos,
-        _attempts = attempts ?? RedeemAttempts(),
-        _log = log {
+  }) : _session = session,
+       _api = api,
+       _feedback = feedback,
+       _recent = recent,
+       _pending = pending,
+       _connectivity = connectivity,
+       _clock = clock,
+       _log = log {
     _sessionSubscription = _session.signals.listen(_onSessionSignal);
-    _nfcSubscription = _nfc.events.listen(_onNfcEvent);
     _connectivity.addListener(_onConnectivity);
     _session.addListener(_onSessionChanged);
   }
 
-  // Timings (04 A.6 time.*, 09 §4.4).
-  static const Duration lookupSlowAfter = Duration(seconds: 3);
-  /// S09 → S05 without a tap, measured from the response (AC-S09-3).
+  /// "Still checking …" after this long.
+  static const Duration presentSlowAfter = Duration(seconds: 3);
+
+  /// S09 → S05 without a tap, measured from the response.
   static const Duration successReturn = Duration(milliseconds: 4520);
 
-  /// Same with a screen reader running (03b §4, 10.52 s).
+  /// Same with a screen reader running.
   static const Duration successReturnScreenReader = Duration(milliseconds: 10520);
   static const Duration uncertainCap = Duration(seconds: 20);
   static const List<Duration> retryWaits = <Duration>[Duration(seconds: 1), Duration(seconds: 2), Duration(seconds: 4)];
-  static const Duration duplicateReadWindow = Duration(seconds: 2);
-  static const Duration readFailureWindow = Duration(seconds: 5);
-  static const int readFailuresForHint = 3;
-  static const Duration switchOfferLifetime = Duration(seconds: 6);
 
-  /// Amounts from this value on need the 600 ms hold (brief §1).
+  /// The presentment is not used in its last seconds: the redemption request
+  /// must reach the server while it is still valid.
+  static const Duration presentmentMargin = Duration(seconds: 3);
+
+  /// How often unresolved attempts are asked about while S05 is shown.
+  static const Duration resolveInterval = Duration(seconds: 20);
+
+  /// Amounts from this value on need the 600 ms hold.
   static const int holdThreshold = 10000;
 
   final SessionController _session;
   final WaiterApi _api;
-  final NfcService _nfc;
   final FeedbackService _feedback;
   final RecentStore _recent;
+  final PendingRedemptionStore _pending;
   final ConnectivityService _connectivity;
-  final SettingsStore _settings;
   final MonotonicClock _clock;
-  List<String> _cardDomains;
-  final bool? _allowHttpLinks;
-
-  /// Hosts of card links; follows the environment when a development or
-  /// staging build is pointed at another server.
-  set cardDomains(List<String> value) => _cardDomains = value;
-  final bool _isIos;
-  final RedeemAttempts _attempts;
   final DiagnosticLog? _log;
 
   late final StreamSubscription<SessionSignal> _sessionSubscription;
-  late final StreamSubscription<NfcEvent> _nfcSubscription;
 
   LoopState _state = const ReadyState();
   LoopState get state => _state;
 
-  NfcAvailability _nfcAvailability = NfcAvailability.enabled;
-  NfcAvailability get nfcAvailability => _nfcAvailability;
-
-  bool _sheetOpen = false;
-
-  /// Android reader mode must be on now (02 §4.5.2 "Reader mode" column).
-  bool get wantsReaderMode {
-    if (_isIos || _nfcAvailability != NfcAvailability.enabled || _sheetOpen) return false;
-    if (_session.expired != null) return false;
-    // 03a S17: a card tapped during the intro ends it and is looked up.
-    if (_session.phase == AccessPhase.onboardingIntro) return _state is ReadyState;
-    if (_session.phase != AccessPhase.active) return false;
-    return switch (_state) {
-      ReadyState() || LookingUpState() || ChargeState() || SuccessState() => true,
-      ProblemState(:final Duration? until) => until == null || _clock.now() >= until,
-      ScanningState() || QrScanState() || ManualEntryState() => false,
-    };
-  }
-
   bool get isOnline => _connectivity.isOnline;
 
-  /// Keep the screen on (09 §7.7): S05, S07–S10 and sheets — not S11/S12.
+  /// Keep the screen on: everywhere except the camera.
   bool get wantsKeepAwake => switch (_state) {
-        QrScanState() || ManualEntryState() => false,
-        LookingUpState(:final LookupOrigin origin) => origin != LookupOrigin.manual && origin != LookupOrigin.qr,
-        _ => true,
-      };
-
-  /// V8: no successful card read on this device since 04:00 (03a S05).
-  bool get showFirstCardTip => _settings.firstReadDay != _session.businessDayKey();
-
-  bool get isIos => _isIos;
+    QrScanState() => false,
+    PresentingState(:final PresentOrigin origin) => origin != PresentOrigin.qr,
+    _ => true,
+  };
 
   /// Monotonic "now" for countdown rendering.
   Duration now() => _clock.now();
+
+  /// The unresolved attempts of the signed-in user.
+  List<PendingRedemption> get pendingRedemptions => _pending.entries;
 
   int _generation = 0;
   Timer? _slowTimer;
   Timer? _successTimer;
   Timer? _countdownTimer;
-  Timer? _switchTimer;
+  Timer? _presentmentTimer;
+  Timer? _recheckTimer;
+  Timer? _resolveTimer;
   CancelToken? _inFlight;
   Completer<void>? _retryWait;
   Duration? _tapAt;
   bool _retryOnReconnect = false;
-  String? _heldLink;
+  bool _resolvingInBackground = false;
 
-  String? _lastUid;
-  Duration? _lastReadAt;
-  final List<Duration> _readFailures = <Duration>[];
+  /// Voucher and amount kept across "Scan again" when the presentment ran out.
+  (String, AmountEntry)? _carry;
 
-  // ------------------------------------------------------------------ setup
+  final List<PendingResolution> _resolutions = <PendingResolution>[];
+  bool _uncertainCancelled = false;
 
-  Future<void> refreshNfcAvailability() async {
-    _nfcAvailability = await _nfc.availability();
-    notifyListeners();
-  }
-
-  void setSheetOpen(bool open) {
-    if (_sheetOpen == open) return;
-    _sheetOpen = open;
-    notifyListeners();
-  }
-
-  // ------------------------------------------------------------------ ready
-
-  void clearReadyNotice() {
-    if (_state case ReadyState(:final ReadyNotice? notice) when notice != null) _go(const ReadyState());
-  }
-
-  /// iPhone: "Scan card" (S05), "Scan next card" (S09), "Scan again" (S10).
-  /// [texts] are the localised `ios.sheet.*` strings.
-  Future<void> startScan(IosSheetTexts texts) async {
-    if (!_isIos) {
-      _go(const ReadyState());
-      return;
-    }
-    _cancelTimers();
-    _go(const ScanningState());
-    try {
-      await _nfc.startSession(texts);
-    } on Object {
-      _go(const ReadyState());
-      _feedback.haptic(HapticToken.warning);
-      _scanUnavailable = true;
-      notifyListeners();
-    }
-  }
-
-  bool _scanUnavailable = false;
-
-  /// P09: NFC temporarily unavailable — shown once as a snackbar on S05.
-  bool takeScanUnavailable() {
-    final bool value = _scanUnavailable;
-    _scanUnavailable = false;
+  /// True once after "Cancel" in the final uncertain state (S05 snackbar).
+  bool takeUncertainCancelled() {
+    final bool value = _uncertainCancelled;
+    _uncertainCancelled = false;
     return value;
   }
 
+  /// Outcomes of earlier unconfirmed redemptions, shown once on S05.
+  List<PendingResolution> takeResolutions() {
+    final List<PendingResolution> taken = List<PendingResolution>.of(_resolutions);
+    _resolutions.clear();
+    return taken;
+  }
+
+  // ------------------------------------------------------------------- scan
+
+  /// S05 "Scan voucher", S09 "Scan next voucher", S10 "Scan again".
   void openQr() {
-    if (_state is! ReadyState) return;
+    switch (_state) {
+      case ReadyState() || ProblemState():
+        break;
+      case SuccessState():
+        _successTimer?.cancel();
+      case QrScanState() || PresentingState() || ChargeState():
+        return;
+    }
+    _cancelTimers();
     _go(const QrScanState());
   }
 
-  void openManual() {
-    if (_state is ReadyState || _state is ProblemState || _state is QrScanState) _go(const ManualEntryState());
-  }
-
-  /// S12: a QR code was decoded. Returns false when it is not a gift card
-  /// (L10 inline on S12, `haptic.warning`, no request).
+  /// S12: a QR code was decoded. Returns false when it is not a voucher QR
+  /// (shown inline on S12, `haptic.warning`, no request).
   bool qrDetected(String raw) {
     if (_state is! QrScanState) return false;
-    final CardLink? link = CardLink.parse(raw, _cardDomains, allowHttp: _allowHttpLinks);
-    if (link == null) {
+    final String credential = raw.trim();
+    if (!voucherQrPattern.hasMatch(credential)) {
       _feedback.haptic(HapticToken.warning);
       return false;
     }
     _feedback.both(HapticToken.cardDetected, SoundToken.cardDetected);
-    unawaited(_lookup(ScanRequest.qr(url: link.url, isSunSigned: link.isSunSigned)));
+    unawaited(_present(credential));
     return true;
   }
 
-  /// S11: 16 digits submitted.
-  void submitManual(String digits) {
-    if (_state is! ManualEntryState || digits.length != 16) return;
-    unawaited(_lookup(ScanRequest.manual(digits: digits)));
-  }
-
-  /// Universal link / App Link `https://<domain>/c/<token>` (method `link`).
-  void openLink(String url) {
-    final CardLink? link = CardLink.parse(url, _cardDomains, allowHttp: _allowHttpLinks);
-    if (link == null) return;
-    if (_session.phase != AccessPhase.active || _session.expired != null) {
-      _session.keepLink(link.url);
-      return;
-    }
-    if (_state case ChargeState(:final bool isLocked) when isLocked) {
-      // 03b §1.4: held until the attempt resolves.
-      _heldLink = link.url;
-      return;
-    }
-    final ScanRequest request = ScanRequest.link(url: link.url, isSunSigned: link.isSunSigned);
-    if (_state case final ChargeState s when s.amount > 0 && !s.fullOnly && s.phase == RedeemPhase.entering) {
-      _offerSwitch(s, request);
-      return;
-    }
+  Future<void> _present(String credential) async {
     _cancelTimers();
-    unawaited(_lookup(request));
-  }
-
-  // ---------------------------------------------------------------- lookup
-
-  LookupOrigin _originOf(LoopState state, ScanRequest request) {
-    if (request.method == ScanMethod.link) return LookupOrigin.link;
-    return switch (state) {
-      ManualEntryState() => LookupOrigin.manual,
-      QrScanState() => LookupOrigin.qr,
-      ChargeState() => LookupOrigin.charge,
-      SuccessState() => LookupOrigin.success,
-      ProblemState() => LookupOrigin.problem,
-      LookingUpState(:final LookupOrigin origin) => origin,
-      ReadyState() || ScanningState() => LookupOrigin.ready,
-    };
-  }
-
-  Future<void> _lookup(ScanRequest request) async {
-    _cancelTimers();
-    final bool verifyRescan = _verifyRescan;
-    _verifyRescan = false;
-    final LookupOrigin origin = _originOf(_state, request);
-    final bool replacing = origin == LookupOrigin.charge || origin == LookupOrigin.success;
+    final PresentOrigin origin = _state is ProblemState ? PresentOrigin.problem : PresentOrigin.qr;
     final int generation = ++_generation;
-    final LookingUpState looking = LookingUpState(
-      request: request,
-      origin: origin,
-      problem: _state is ProblemState ? _state as ProblemState : null,
+    _go(
+      PresentingState(
+        credential: credential,
+        origin: origin,
+        problem: _state is ProblemState ? _state as ProblemState : null,
+      ),
     );
-    _go(looking);
-    _slowTimer = _clock.timer(lookupSlowAfter, () {
-      if (_generation == generation && _state is LookingUpState) _go((_state as LookingUpState).markSlow());
+    _slowTimer = _clock.timer(presentSlowAfter, () {
+      if (_generation == generation && _state is PresentingState) _go((_state as PresentingState).markSlow());
     });
 
     final CancelToken token = CancelToken();
     _inFlight = token;
     try {
-      final ScannedCard card = await _api.scan(request, cancelToken: token);
+      final Presentment presentment = await _api.presentQr(credential, cancelToken: token);
       if (_generation != generation) return;
-      _enterCharge(card, replacing: replacing);
+      _enterCharge(presentment);
     } on ApiCancelled {
       return;
     } on ApiFailure catch (e) {
       if (_generation != generation) return;
-      _lookupFailed(request, e, verifyRescan: verifyRescan);
+      _presentFailed(credential, e);
     } finally {
       if (identical(_inFlight, token)) _inFlight = null;
       _slowTimer?.cancel();
     }
   }
 
-  void _lookupFailed(ScanRequest request, ApiFailure failure, {required bool verifyRescan}) {
+  void _presentFailed(String credential, ApiFailure failure) {
+    _carry = null;
     if (_session.handleFailure(failure, SessionContext.lookup)) {
       _go(const ReadyState());
       return;
     }
     final String support = SupportCode.fromRequestId(failure.requestId);
     final String requestId = failure.requestId;
-    final ScanRequest? retry = request.isSunSigned ? null : request;
-
-    // S11: a number the server does not accept is an inline field error (E19).
-    if (failure case ApiRejected(status: 422) when request.method == ScanMethod.manual) {
-      _feedback.haptic(HapticToken.error);
-      _go(ManualEntryState(prefill: request.cardNumber ?? '', invalid: true));
-      return;
-    }
-
     switch (failure) {
-      case ApiRejected(:final String code, :final int status, :final Duration? retryAfter):
-        if (code == 'CARD_NOT_FOUND' || status == 404) {
-          final bool manual = request.method == ScanMethod.manual;
-          _problem(
-            ProblemState(
-              kind: manual ? ProblemKind.notFoundManual : ProblemKind.notFound,
-              supportCode: support,
-              requestId: requestId,
-              manualDigits: manual ? request.cardNumber : null,
-            ),
-            error: true,
-          );
-        } else if (code == 'CARD_FOREIGN_RESTAURANT') {
-          _problem(const ProblemState(kind: ProblemKind.foreign), error: true);
-        } else if (code.startsWith('NFC_')) {
-          _problem(
-            ProblemState(
-              kind: ProblemKind.verify,
-              supportCode: support,
-              requestId: requestId,
-              verifyTag: switch (code) {
-                'NFC_UID_MISMATCH' => VerifyTag.uid,
-                'NFC_REPLAY_DETECTED' => VerifyTag.replay,
-                _ => VerifyTag.sig,
-              },
-              verifyRescanUsed: verifyRescan,
-            ),
-            error: true,
-          );
-        } else if (status == 429) {
-          final Duration until = _clock.now() + (retryAfter ?? const Duration(seconds: 60));
-          _problem(ProblemState(kind: ProblemKind.throttled, until: until), error: false);
-          _countdownTimer = _clock.timer(until - _clock.now(), () {
-            _feedback.haptic(HapticToken.select);
-            notifyListeners();
-          });
-        } else {
-          _problem(ProblemState(kind: ProblemKind.server, retry: retry, supportCode: support, requestId: requestId), error: false);
-        }
+      case ApiRejected(:final int status, :final Duration? retryAfter) when status == 429:
+        final Duration until = _clock.now() + (retryAfter ?? const Duration(seconds: 60));
+        _go(ProblemState(kind: ProblemKind.throttled, until: until));
+        _countdownTimer = _clock.timer(until - _clock.now(), () {
+          _feedback.haptic(HapticToken.select);
+          notifyListeners();
+        });
+      case ApiRejected(:final int status) when status < 500:
+        // Unknown, revoked or foreign code, or a medium this till cannot take.
+        _go(ProblemState(kind: ProblemKind.notRecognized, supportCode: support, requestId: requestId));
+      case ApiRejected() || ApiServerFault():
+        _go(ProblemState(kind: ProblemKind.server, retry: credential, supportCode: support, requestId: requestId));
       case ApiTransportFailure():
-        _problem(ProblemState(kind: ProblemKind.network, retry: retry), error: false);
-      case ApiServerFault():
-        _problem(ProblemState(kind: ProblemKind.server, retry: retry, supportCode: support, requestId: requestId), error: false);
+        _go(ProblemState(kind: ProblemKind.network, retry: credential));
       case ApiUnauthorized() || ApiCancelled():
         _go(const ReadyState());
     }
   }
 
-  bool _verifyRescan = false;
-
-  /// S10; its haptic and sound (E25/E26) are played by the `ProblemScreen`
-  /// template when it appears.
-  void _problem(ProblemState problem, {required bool error}) => _go(problem);
-
-  // --------------------------------------------------------------- problem
-
-  /// S10 "Try again" — re-sends the identical lookup (never a SUN URL).
-  void retryLookup() {
-    if (_state case ProblemState(:final ScanRequest? retry) when retry != null) {
-      unawaited(_lookup(retry));
+  /// S10 "Try again": the same QR text again (a new presentment).
+  void retryPresent() {
+    if (_state case ProblemState(:final String? retry) when retry != null) {
+      unawaited(_present(retry));
     }
   }
 
-  /// S10 "Scan again": Android waits for the next tap on S05; iPhone opens the
-  /// sheet. From "verification failed" it allows exactly one fresh read.
-  Future<void> scanAgain(IosSheetTexts texts) async {
-    if (_state case ProblemState(kind: ProblemKind.verify)) _verifyRescan = true;
-    if (_isIos) {
-      await startScan(texts);
-    } else {
-      _go(const ReadyState());
+  /// S10 "Scan again".
+  void scanAgain() {
+    if (_state case ProblemState(kind: ProblemKind.throttled, :final Duration? until)
+        when until != null && _clock.now() < until) {
+      return;
     }
-  }
-
-  /// S10 "Edit number" (L02) → S11 with the digits kept.
-  void editNumber() {
-    if (_state case ProblemState(:final String? manualDigits)) {
-      _go(ManualEntryState(prefill: manualDigits ?? ''));
-    }
+    openQr();
   }
 
   // ---------------------------------------------------------------- charge
 
-  void _enterCharge(ScannedCard card, {required bool replacing}) {
-    _settings.firstReadDay = _session.businessDayKey();
-    final int? max = _session.user?.restaurant?.settings.maxSingleRedemption;
-    final bool fullOnly = !card.allowPartialRedemption;
+  void _enterCharge(Presentment presentment) {
+    final PresentedVoucher voucher = presentment.voucher;
+    final (String, AmountEntry)? carry = _carry;
+    _carry = null;
+    final bool fullOnly = !voucher.allowPartialRedemption;
+    final Duration usable = presentment.expiresIn - presentmentMargin;
+    final PendingRedemption? pending = _pending.forVoucher(voucher.id);
     final ChargeState next = ChargeState(
-      card: card,
-      entry: fullOnly ? AmountEntry.fromCents(card.balance) : AmountEntry.empty,
-      maxSingle: max,
-      replacedCard: replacing,
+      voucher: voucher,
+      presentmentId: presentment.id,
+      presentmentDeadline: _clock.now() + (usable.isNegative ? Duration.zero : usable),
+      entry: fullOnly
+          ? AmountEntry.fromCents(voucher.balance)
+          : (carry != null && carry.$1 == voucher.id ? carry.$2 : AmountEntry.empty),
+      maxSingle: voucher.maxDebitPerTransaction ?? _session.user?.restaurant?.settings.maxDebitPerTransaction,
+      phase: pending == null ? RedeemPhase.entering : RedeemPhase.resolving,
+      pending: pending,
     );
     _go(next);
-    switch (next.condition) {
-      case CardCondition.blocked:
+    _startPresentmentTimer(next.presentmentDeadline);
+    if (pending != null) {
+      unawaited(_resolveInCharge());
+      return;
+    }
+    _conditionFeedback(next.condition);
+  }
+
+  void _conditionFeedback(VoucherCondition condition) {
+    switch (condition) {
+      case VoucherCondition.blocked:
         _feedback.both(HapticToken.error, SoundToken.error);
-      case CardCondition.expired || CardCondition.inactive || CardCondition.empty || CardCondition.replaced:
+      case VoucherCondition.expired || VoucherCondition.empty:
         _feedback.both(HapticToken.warning, SoundToken.warning);
-      case CardCondition.redeemable:
+      case VoucherCondition.redeemable:
         break;
     }
   }
 
+  void _startPresentmentTimer(Duration deadline) {
+    _presentmentTimer?.cancel();
+    _presentmentTimer = _clock.timer(deadline - _clock.now(), () {
+      final ChargeState? s = _charge;
+      if (s == null || s.presentmentExpired) return;
+      // An attempt in flight is decided by the server, never by this timer.
+      if (s.phase != RedeemPhase.entering && s.phase != RedeemPhase.resolving) return;
+      if (s.phase == RedeemPhase.entering && s.condition == VoucherCondition.redeemable) {
+        _feedback.haptic(HapticToken.warning);
+      }
+      _go(s.copyWith(presentmentExpired: true));
+    });
+  }
+
   ChargeState? get _charge => _state is ChargeState ? _state as ChargeState : null;
 
-  /// Keypad digit (0–9), `00`, ⌫ and long-press clear (E30–E33).
+  /// Keypad digit (0–9), `00`, ⌫ and long-press clear.
   void key(int digit) => _edit((AmountEntry e) => e.digit(digit));
 
   void doubleZero() => _edit((AmountEntry e) => e.doubleZero());
@@ -433,8 +320,7 @@ class LoopController extends ChangeNotifier {
 
   void _edit(EntryChange<AmountEntry> Function(AmountEntry entry) change) {
     final ChargeState? s = _charge;
-    if (s == null || s.isLocked || s.fullOnly || s.condition != CardCondition.redeemable) return;
-    // Key, clear and limit haptics (E30–E33) are played by the Keypad.
+    if (s == null || s.isLocked || s.fullOnly || s.condition != VoucherCondition.redeemable) return;
     final EntryChange<AmountEntry> result = change(s.entry);
     switch (result.outcome) {
       case EntryOutcome.ignored || EntryOutcome.pasteRejected || EntryOutcome.rejectedAtLimit:
@@ -445,47 +331,44 @@ class LoopController extends ChangeNotifier {
   }
 
   void _setAmount(ChargeState s, AmountEntry entry) {
-    // K5: a changed amount starts a new attempt; the kept one is dropped.
-    _attempts.keepOnly(s.card.id, entry.cents);
-    if (entry.cents != s.amount) _attempts.close(s.card.id, s.amount);
-    final ChargeState next = s.copyWith(
-      entry: entry,
-      clearNotice: s.notice is! VelocityNotice && s.notice is! RateLimitNotice,
-      clearSupportCode: true,
-      replacedCard: false,
+    _go(
+      s.copyWith(
+        entry: entry,
+        clearNotice: s.notice is! VelocityNotice && s.notice is! RateLimitNotice,
+        clearSupportCode: true,
+      ),
     );
-    // E34 (crossing above the balance) is played by the AmountDisplay.
-    _go(next);
   }
 
-  /// `QuickAmountChip` "Use balance" / "Use maximum" (E35).
+  /// `QuickAmountChip` "Use balance" / "Use maximum".
   void useAmount(int cents) {
     final ChargeState? s = _charge;
     if (s == null || s.isLocked || s.fullOnly) return;
-    // E35 is played by the QuickAmountChip.
     _setAmount(s, AmountEntry.fromCents(cents));
   }
 
   /// True while a rate or velocity countdown blocks Redeem.
   bool redeemBlockedByCountdown(ChargeState s) => switch (s.notice) {
-        RateLimitNotice(:final Duration until) => _clock.now() < until,
-        // Without a known time Redeem stays enabled (AC-S07-29).
-        VelocityNotice(:final Duration? until) => until != null && _clock.now() < until,
-        _ => false,
-      };
+    RateLimitNotice(:final Duration until) => _clock.now() < until,
+    // Without a known time Redeem stays enabled.
+    VelocityNotice(:final Duration? until) => until != null && _clock.now() < until,
+    _ => false,
+  };
 
-  /// Guards of 02 §4.5.4 for REDEEM_TAP / HOLD_COMPLETE.
+  /// Guards for REDEEM_TAP / HOLD_COMPLETE.
   bool canRedeem(ChargeState s) =>
       s.phase == RedeemPhase.entering &&
-      s.condition == CardCondition.redeemable &&
+      s.condition == VoucherCondition.redeemable &&
+      !s.presentmentExpired &&
+      _clock.now() < s.presentmentDeadline &&
       s.amount > 0 &&
       !s.isOverBalance &&
       !s.isOverMax &&
-      (!s.fullOnly || s.amount == s.card.balance) &&
+      (!s.fullOnly || s.amount == s.voucher.balance) &&
       _connectivity.isOnline &&
       !redeemBlockedByCountdown(s);
 
-  /// Warms up the success haptic when the button is pressed (09 §7.8).
+  /// Warms up the success haptic when the button is pressed.
   void prepareRedeem() => _feedback.prepare(HapticToken.success);
 
   /// REDEEM_TAP (< € 100) or HOLD_COMPLETE (≥ € 100).
@@ -496,64 +379,130 @@ class LoopController extends ChangeNotifier {
       if (!_connectivity.isOnline) _feedback.haptic(HapticToken.warning);
       return;
     }
-    final String key = _attempts.keyFor(s.card.id, s.amount);
     _tapAt = _clock.now();
-    _go(s.copyWith(phase: RedeemPhase.submitting, attempt: 0, clearNotice: true, clearSupportCode: true, replacedCard: false));
-    await _runAttempts(++_generation, s.card, s.amount, key);
+    final int generation = ++_generation;
+    _go(s.copyWith(phase: RedeemPhase.submitting, attempt: 0, clearNotice: true, clearSupportCode: true));
+    // Stored before the request leaves the phone; without it nothing is sent.
+    final PendingRedemption pending;
+    try {
+      pending = await _pending.open(
+        voucherId: s.voucher.id,
+        amount: s.amount,
+        currency: s.voucher.currency,
+        last4: s.voucher.last4,
+        restaurantName: s.voucher.restaurantName,
+      );
+    } on Object catch (e) {
+      _log?.record('redeem.store', '$e');
+      if (_generation == generation) {
+        _go(s.copyWith(phase: RedeemPhase.entering, notice: const ServerFaultNotice('')));
+        _feedback.haptic(HapticToken.warning);
+      }
+      return;
+    }
+    if (_generation != generation) return;
+    final ChargeState? current = _charge;
+    if (current != null) _go(current.copyWith(pending: pending));
+    await _runAttempts(generation, pending, first: true);
   }
 
-  /// Uncertain final: "Try again" — same key (TRY_AGAIN).
+  /// Uncertain final: "Check again" — the same key, the same presentment.
   Future<void> tryAgain() async {
     final ChargeState? s = _charge;
-    if (s == null || s.phase != RedeemPhase.uncertainFinal) return;
+    final PendingRedemption? pending = s?.pending;
+    if (s == null || pending == null || s.phase != RedeemPhase.uncertainFinal) return;
     _retryOnReconnect = false;
-    final String key = _attempts.keyFor(s.card.id, s.amount);
     _tapAt = _clock.now();
     _go(s.copyWith(phase: RedeemPhase.submitting, attempt: 0, clearSupportCode: true));
-    await _runAttempts(++_generation, s.card, s.amount, key);
+    await _runAttempts(++_generation, pending);
   }
 
-  /// Uncertain final: "Cancel" — back to Editing, attempt kept (K6, R05).
+  /// Uncertain final: "Cancel" — back to S05. The attempt stays stored and is
+  /// resolved by asking the server; this voucher takes no other amount until
+  /// then.
   void cancelUncertain() {
     final ChargeState? s = _charge;
     if (s == null || s.phase != RedeemPhase.uncertainFinal) return;
     _retryOnReconnect = false;
     _feedback.haptic(HapticToken.select);
-    _go(s.copyWith(phase: RedeemPhase.entering, notice: const UncertainCancelledNotice(), clearSupportCode: true));
-    _releaseHeldLink();
+    _cancelTimers();
+    _uncertainCancelled = true;
+    _go(const ReadyState());
   }
 
-  Future<void> _runAttempts(int generation, ScannedCard card, int amount, String key) async {
+  Future<void> _runAttempts(int generation, PendingRedemption pending, {bool first = false}) async {
     int retries = 0;
     bool slowRetryUsed = false;
+    PendingRedemption attempt = pending;
+    bool sendRecorded = first;
+    // Whether an earlier request of this attempt went unanswered: then only an
+    // answer from the redemption itself decides, not one from the gateway
+    // (sign-in, permission or rate limit are checked before the key).
+    bool unanswered = !first;
 
     while (_generation == generation) {
+      final ChargeState? s = _charge;
+      if (s == null) return;
+      if (!sendRecorded) attempt = await _pending.resend(attempt);
+      sendRecorded = false;
+      if (_generation != generation) return;
+
       final CancelToken token = CancelToken();
       _inFlight = token;
       try {
         final RedeemResult result = await _api.redeem(
-          cardId: card.id,
-          amount: amount,
-          idempotencyKey: key,
+          voucherId: attempt.voucherId,
+          amount: attempt.amount,
+          presentmentId: s.presentmentId,
+          idempotencyKey: attempt.key,
           cancelToken: token,
         );
         if (_generation != generation) return;
-        await _redeemSucceeded(result, amount);
+        await _pending.resolve(attempt);
+        await _redeemSucceeded(result);
         return;
       } on ApiCancelled {
         return;
       } on ApiUnauthorized catch (e) {
         if (_generation != generation) return;
-        // K6: the attempt survives re-authentication; back on S07 with the amount.
         _session.handleFailure(e, SessionContext.redeem);
-        final ChargeState? s = _charge;
-        if (s != null) _go(s.copyWith(phase: RedeemPhase.entering));
+        final ChargeState? current = _charge;
+        if (unanswered) {
+          // An earlier request may have been booked: resolved after signing in.
+          if (current != null) _toUncertainFinal(current, e.requestId);
+          return;
+        }
+        // Refused before it was handled: nothing was booked with this key.
+        await _pending.resolve(attempt);
+        if (current != null) _go(current.copyWith(phase: RedeemPhase.entering, clearPending: true));
         return;
       } on ApiRejected catch (e) {
         if (_generation != generation) return;
-        _attempts.close(card.id, amount);
+        if (unanswered && (e.status == 403 || e.status == 429)) {
+          // Refused before the key was looked up: says nothing about the
+          // unanswered request. The attempt stays stored.
+          if (_session.handleFailure(e, SessionContext.redeem)) {
+            _go(const ReadyState());
+            return;
+          }
+          final ChargeState? current = _charge;
+          if (current != null) _toUncertainFinal(current, e.requestId);
+          return;
+        }
+        if (e.code == 'IDEMPOTENCY_CONFLICT') {
+          // The key is already booked, with another amount: never answered
+          // by a new key. Ask what was booked and show it.
+          final ChargeState? current = _charge;
+          if (current != null) {
+            _go(current.copyWith(phase: RedeemPhase.resolving, pending: attempt, checking: false));
+            unawaited(_resolveInCharge());
+          }
+          return;
+        }
+        // A definitive answer to this key: the server looks the key up before
+        // and after taking its locks, so a booked attempt is always replayed.
+        await _pending.resolve(attempt);
         if (_session.handleFailure(e, SessionContext.redeem)) {
-          _attempts.clear();
           _go(const ReadyState());
           return;
         }
@@ -561,37 +510,36 @@ class LoopController extends ChangeNotifier {
         return;
       } on ApiFailure catch (e) {
         if (_generation != generation) return;
-        final ChargeState? s = _charge;
-        if (s == null) return;
+        final ChargeState? current = _charge;
+        if (current == null) return;
+        unanswered = true;
 
         // First attempt unanswered after 8 s: "Connection slow", re-sent at once.
-        if (e is ApiTransportFailure && e.timedOut && s.phase == RedeemPhase.submitting && !slowRetryUsed) {
+        if (e is ApiTransportFailure && e.timedOut && current.phase == RedeemPhase.submitting && !slowRetryUsed) {
           slowRetryUsed = true;
-          _go(s.copyWith(phase: RedeemPhase.slow));
+          _go(current.copyWith(phase: RedeemPhase.slow));
           continue;
         }
 
         final Duration elapsed = _clock.now() - (_tapAt ?? _clock.now());
-        if (s.phase != RedeemPhase.uncertainAuto) {
-          _feedback.haptic(HapticToken.warning);
-        }
+        if (current.phase != RedeemPhase.uncertainAuto) _feedback.haptic(HapticToken.warning);
         if (retries >= retryWaits.length || elapsed >= uncertainCap) {
-          _toUncertainFinal(s, e.requestId);
+          _toUncertainFinal(current, e.requestId);
           return;
         }
 
         final Duration wait = retryWaits[retries];
         if (elapsed + wait >= uncertainCap) {
-          _go(s.copyWith(phase: RedeemPhase.uncertainAuto, attempt: retries + 1));
+          _go(current.copyWith(phase: RedeemPhase.uncertainAuto, attempt: retries + 1));
           await _waitForRetry(uncertainCap - elapsed);
           if (_generation != generation) return;
-          final ChargeState? current = _charge;
-          if (current != null) _toUncertainFinal(current, e.requestId);
+          final ChargeState? latest = _charge;
+          if (latest != null) _toUncertainFinal(latest, e.requestId);
           return;
         }
 
         retries++;
-        _go(s.copyWith(phase: RedeemPhase.uncertainAuto, attempt: retries));
+        _go(current.copyWith(phase: RedeemPhase.uncertainAuto, attempt: retries));
         await _waitForRetry(wait);
       } finally {
         if (identical(_inFlight, token)) _inFlight = null;
@@ -602,10 +550,16 @@ class LoopController extends ChangeNotifier {
   void _toUncertainFinal(ChargeState s, String requestId) {
     _feedback.haptic(HapticToken.warning);
     _retryOnReconnect = !_connectivity.isOnline;
-    _go(s.copyWith(phase: RedeemPhase.uncertainFinal, supportCode: SupportCode.fromRequestId(requestId), requestId: requestId));
+    _go(
+      s.copyWith(
+        phase: RedeemPhase.uncertainFinal,
+        supportCode: SupportCode.fromRequestId(requestId),
+        requestId: requestId,
+      ),
+    );
   }
 
-  /// Waits [duration]; a connectivity-restored event skips the wait (09 §4.4).
+  /// Waits [duration]; a connectivity-restored event skips the wait.
   Future<void> _waitForRetry(Duration duration) {
     final Completer<void> done = Completer<void>();
     _retryWait = done;
@@ -618,73 +572,87 @@ class LoopController extends ChangeNotifier {
     });
   }
 
-  Future<void> _redeemSucceeded(RedeemResult result, int amount) async {
+  Future<void> _redeemSucceeded(RedeemResult result) async {
     final ChargeState? s = _charge;
-    _attempts.close(result.card.id, amount);
-    final RecentEntry entry = RecentEntry(
-      transactionId: result.transaction.id,
-      createdAt: result.transaction.createdAt,
-      last4: result.card.last4,
-      amount: result.transaction.amount,
-      balanceAfter: result.transaction.balanceAfter,
-      currency: result.card.currency,
-      restaurantName: result.card.restaurantName,
-      businessDay: _session.businessDayKey(result.transaction.createdAt),
-      requestId: result.requestId,
-    );
+    if (s == null) return;
+    final PresentedVoucher voucher = s.voucher.copyWith(balance: result.transaction.balanceAfter);
+    final RecentEntry entry = _recentEntry(voucher, result.transaction, result.requestId);
+    _presentmentTimer?.cancel();
     _feedback.both(HapticToken.success, SoundToken.success);
     _successAt = _clock.now();
     _successTotal = successReturn;
-    _go(SuccessState(entry: entry, card: result.card));
+    _go(SuccessState(entry: entry, voucher: voucher));
     _log?.record('redeem.ok', result.replayed ? 'replayed' : 'created');
     _startSuccessTimer();
     await _recent.add(entry);
-    if (s != null) _releaseHeldLink();
   }
+
+  RecentEntry _recentEntry(PresentedVoucher voucher, RedeemedTransaction tx, String requestId) => RecentEntry(
+    transactionId: tx.id,
+    createdAt: tx.createdAt,
+    last4: voucher.last4,
+    amount: tx.amount,
+    balanceAfter: tx.balanceAfter,
+    currency: voucher.currency,
+    restaurantName: voucher.restaurantName,
+    businessDay: _session.businessDayKey(tx.createdAt),
+    requestId: requestId,
+  );
 
   void _redeemRejected(ApiRejected e) {
     final ChargeState? s = _charge;
     if (s == null) return;
-    ChargeState next = s.copyWith(phase: RedeemPhase.entering, clearSupportCode: true);
+    ChargeState next = s.copyWith(phase: RedeemPhase.entering, clearPending: true, clearSupportCode: true);
     bool error = true;
     bool sound = true;
 
     switch (e.code) {
+      case 'PRESENTMENT_INVALID':
+        // Ran out, or refused: scan again. Nothing was booked with this key.
+        next = next.copyWith(presentmentExpired: true, notice: const NothingBookedNotice());
+        error = false;
       case 'INSUFFICIENT_BALANCE':
-        final int balance = e.contextInt('balance') ?? s.card.balance;
-        next = next.copyWith(card: s.card.copyWith(balance: balance), notice: BalanceChangedNotice(balance));
-      case 'CARD_BLOCKED':
-        next = next.copyWith(card: s.card.copyWith(status: CardStatus.blocked), notice: const NothingBookedNotice());
-      case 'CARD_EXPIRED':
-        next = next.copyWith(card: s.card.copyWith(isExpired: true), notice: const NothingBookedNotice());
-      case 'CARD_NOT_REDEEMABLE' || 'INVALID_CARD_STATE':
-        final CardStatus status = CardStatus.values.asNameMap()[e.contextString('status')] ?? CardStatus.redeemed;
+        final int balance = e.contextInt('balance') ?? s.voucher.balance;
+        next = next.copyWith(voucher: s.voucher.copyWith(balance: balance), notice: BalanceChangedNotice(balance));
+      case 'VOUCHER_BLOCKED':
         next = next.copyWith(
-          card: s.card.copyWith(status: status, balance: status == CardStatus.redeemed ? 0 : null),
+          voucher: s.voucher.copyWith(status: VoucherStatus.blocked),
           notice: const NothingBookedNotice(),
         );
-      case 'INVALID_AMOUNT':
-        final int? max = e.contextInt('max_single_redemption');
-        final int? balance = e.contextInt('balance');
-        if (max != null) {
+      case 'VOUCHER_EXPIRED':
+        next = next.copyWith(voucher: s.voucher.copyWith(isExpired: true), notice: const NothingBookedNotice());
+      case 'VOUCHER_NOT_REDEEMABLE' || 'INVALID_VOUCHER_STATE':
+        final VoucherStatus? status = VoucherStatus.values.asNameMap()[e.contextString('status')];
+        next = next.copyWith(
+          voucher: status == null ? s.voucher.copyWith(balance: 0) : s.voucher.copyWith(status: status),
+          notice: const NothingBookedNotice(),
+        );
+      case 'DEBIT_LIMIT_EXCEEDED':
+        final int? max = e.contextInt('max');
+        if (e.contextString('limit') == 'per_voucher_per_day') {
+          next = next.copyWith(notice: DailyLimitNotice(e.contextInt('remaining') ?? 0));
+        } else if (max != null) {
           next = next.copyWith(maxSingle: max, notice: MaxSingleNotice(max));
-        } else if (balance != null) {
+        } else {
+          next = next.copyWith(notice: const NothingBookedNotice());
+        }
+      case 'INVALID_AMOUNT':
+        final int? balance = e.contextInt('balance');
+        if (balance != null) {
           next = next.copyWith(
-            card: s.card.copyWith(balance: balance, allowPartialRedemption: false),
+            voucher: s.voucher.copyWith(balance: balance, allowPartialRedemption: false),
             entry: AmountEntry.fromCents(balance),
             notice: const FullOnlyNotice(),
           );
           error = false;
           sound = false;
         } else {
-          next = next.copyWith(notice: ServerFaultNotice(SupportCode.fromRequestId(e.requestId), requestId: e.requestId));
+          next = next.copyWith(
+            notice: ServerFaultNotice(SupportCode.fromRequestId(e.requestId), requestId: e.requestId),
+          );
           error = false;
           sound = false;
         }
-      case 'IDEMPOTENCY_CONFLICT':
-        next = next.copyWith(notice: const TapAgainNotice());
-        error = false;
-        sound = false;
       case 'VELOCITY_LIMIT_EXCEEDED':
         next = next.copyWith(
           notice: VelocityNotice(until: e.retryAfter == null ? null : _clock.now() + e.retryAfter!),
@@ -698,7 +666,9 @@ class LoopController extends ChangeNotifier {
           error = false;
           _scheduleCountdown(wait);
         } else {
-          next = next.copyWith(notice: ServerFaultNotice(SupportCode.fromRequestId(e.requestId), requestId: e.requestId));
+          next = next.copyWith(
+            notice: ServerFaultNotice(SupportCode.fromRequestId(e.requestId), requestId: e.requestId),
+          );
           error = false;
           sound = false;
         }
@@ -712,7 +682,6 @@ class LoopController extends ChangeNotifier {
     } else {
       _feedback.haptic(HapticToken.warning);
     }
-    _releaseHeldLink();
   }
 
   void _scheduleCountdown(Duration? wait) {
@@ -721,45 +690,139 @@ class LoopController extends ChangeNotifier {
     _countdownTimer = _clock.timer(wait, notifyListeners);
   }
 
-  /// ✕ / Back on S07 (N6): no confirmation; the amount and any kept attempt
-  /// for this card are discarded.
+  /// "Scan again" on S07 once the presentment ran out: the amount is kept for
+  /// the same voucher.
+  void rescan() {
+    final ChargeState? s = _charge;
+    if (s == null || s.phase == RedeemPhase.submitting || s.phase == RedeemPhase.slow || s.isUncertain) return;
+    _carry = (s.voucher.id, s.entry);
+    _cancelTimers();
+    _go(const QrScanState());
+  }
+
+  /// ✕ / Back on S07: no confirmation. An unresolved attempt stays stored.
   void closeCharge() {
     final ChargeState? s = _charge;
-    if (s == null || s.isLocked) return;
-    _attempts.clear();
+    if (s == null) return;
+    if (s.phase != RedeemPhase.entering && s.phase != RedeemPhase.resolving) return;
+    _generation++;
+    _cancelTimers();
     _go(const ReadyState());
   }
 
-  // ---------------------------------------------------------- card switch
+  // ------------------------------------------------------------- resolving
 
-  /// P14: "Switch" on the snackbar (E54).
-  void acceptSwitch() {
+  /// Resolving on S07: asks whether the earlier attempt on this voucher was
+  /// booked. "Check again" calls this too.
+  Future<void> _resolveInCharge() async {
     final ChargeState? s = _charge;
-    final ScanRequest? pending = s?.pendingSwitch;
-    if (s == null || pending == null || s.isLocked) return;
-    _switchTimer?.cancel();
-    _feedback.haptic(HapticToken.select);
-    _attempts.clear();
-    unawaited(_lookup(pending));
+    final PendingRedemption? pending = s?.pending;
+    if (s == null || pending == null || s.phase != RedeemPhase.resolving || s.checking) return;
+    _recheckTimer?.cancel();
+    final int generation = _generation;
+    _go(s.copyWith(checking: true, clearSupportCode: true));
+    try {
+      final RedemptionOutcome outcome = await _api.redemptionOutcome(
+        voucherId: pending.voucherId,
+        idempotencyKey: pending.key,
+      );
+      if (_generation != generation) return;
+      final ChargeState? current = _charge;
+      if (current == null) return;
+      switch (outcome) {
+        case RedemptionBooked(:final PresentedVoucher voucher, :final RedeemedTransaction transaction, :final String requestId):
+          await _pending.resolve(pending);
+          await _recent.add(_recentEntry(voucher, transaction, requestId));
+          _log?.record('redeem.resolved', 'booked');
+          final ChargeState? latest = _charge;
+          if (latest == null || _generation != generation) return;
+          final ChargeState next = latest.copyWith(
+            voucher: voucher,
+            phase: RedeemPhase.entering,
+            checking: false,
+            clearPending: true,
+            entry: voucher.allowPartialRedemption ? AmountEntry.empty : AmountEntry.fromCents(voucher.balance),
+            notice: EarlierBookedNotice(transaction.amount),
+          );
+          _go(next);
+          _feedback.both(HapticToken.warning, SoundToken.warning);
+        case RedemptionNotBooked():
+          if (_pending.notBookedIsFinal(pending)) {
+            await _pending.resolve(pending);
+            _log?.record('redeem.resolved', 'not booked');
+            final ChargeState? latest = _charge;
+            if (latest == null || _generation != generation) return;
+            _go(latest.copyWith(phase: RedeemPhase.entering, checking: false, clearPending: true));
+            _conditionFeedback(latest.condition);
+          } else {
+            // The attempt may still be running on the server: ask again once
+            // it no longer can.
+            _go(current.copyWith(checking: false));
+            final Duration wait =
+                PendingRedemptionStore.serverCeiling - _pending.now().difference(pending.lastSentAt);
+            _recheckTimer = _clock.timer(wait.isNegative ? Duration.zero : wait, () => unawaited(_resolveInCharge()));
+          }
+      }
+    } on ApiFailure catch (e) {
+      if (_generation != generation) return;
+      final ChargeState? current = _charge;
+      if (current == null) return;
+      if (_session.handleFailure(e, SessionContext.lookup)) {
+        _go(const ReadyState());
+        return;
+      }
+      _go(
+        current.copyWith(
+          checking: false,
+          supportCode: e is ApiTransportFailure ? null : SupportCode.fromRequestId(e.requestId),
+          requestId: e is ApiTransportFailure ? null : e.requestId,
+        ),
+      );
+    }
   }
 
-  /// P14 / E53: another card while an amount is typed — offered for 6 s.
-  void _offerSwitch(ChargeState s, ScanRequest request) {
-    _feedback.haptic(HapticToken.warning);
-    _go(s.copyWith(pendingSwitch: request));
-    _switchTimer?.cancel();
-    _switchTimer = _clock.timer(switchOfferLifetime, keepCard);
+  /// S07 resolving: "Check again".
+  void checkPending() => unawaited(_resolveInCharge());
+
+  /// Asks about every unresolved attempt not on screen; outcomes are queued
+  /// for S05 ([takeResolutions]).
+  Future<void> resolvePending() async {
+    if (_resolvingInBackground || !_connectivity.isOnline || _session.phase != AccessPhase.active) return;
+    _resolvingInBackground = true;
+    try {
+      for (final PendingRedemption pending in _pending.entries) {
+        if (_charge?.voucher.id == pending.voucherId) continue;
+        final RedemptionOutcome outcome;
+        try {
+          outcome = await _api.redemptionOutcome(voucherId: pending.voucherId, idempotencyKey: pending.key);
+        } on ApiFailure catch (e) {
+          _session.handleFailure(e, SessionContext.lookup);
+          return;
+        }
+        if (_charge?.voucher.id == pending.voucherId) continue;
+        switch (outcome) {
+          case RedemptionBooked(:final PresentedVoucher voucher, :final RedeemedTransaction transaction, :final String requestId):
+            await _pending.resolve(pending);
+            await _recent.add(_recentEntry(voucher, transaction, requestId));
+            _resolutions.add(PendingResolution(booked: true, amount: transaction.amount, currency: voucher.currency));
+          case RedemptionNotBooked() when _pending.notBookedIsFinal(pending):
+            await _pending.resolve(pending);
+            _resolutions.add(PendingResolution(booked: false, amount: pending.amount, currency: pending.currency));
+          case RedemptionNotBooked():
+            break;
+        }
+      }
+    } finally {
+      _resolvingInBackground = false;
+      _scheduleResolve();
+      notifyListeners();
+    }
   }
 
-  /// With a screen reader the offer is a dialog without a timeout (12 P14).
-  void holdSwitchOffer() => _switchTimer?.cancel();
-
-  /// P14: "Keep".
-  void keepCard() {
-    final ChargeState? s = _charge;
-    if (s == null || s.pendingSwitch == null) return;
-    _switchTimer?.cancel();
-    _go(s.copyWith(clearPendingSwitch: true));
+  void _scheduleResolve() {
+    _resolveTimer?.cancel();
+    if (_pending.isEmpty) return;
+    _resolveTimer = _clock.timer(resolveInterval, () => unawaited(resolvePending()));
   }
 
   // --------------------------------------------------------------- success
@@ -776,8 +839,7 @@ class LoopController extends ChangeNotifier {
     });
   }
 
-  /// S09 with a screen reader: the automatic return is extended to 10.52 s
-  /// from the response (03b §4).
+  /// S09 with a screen reader: the automatic return is extended to 10.52 s.
   void extendSuccessForScreenReader() {
     if (_state is! SuccessState || _successTotal == successReturnScreenReader) return;
     _successTotal = successReturnScreenReader;
@@ -790,7 +852,7 @@ class LoopController extends ChangeNotifier {
   /// Total time S09 stays without a tap.
   Duration get successTotal => _successTotal;
 
-  /// Any tap on S09 or the countdown ending (TIMER_4S / TAP).
+  /// Any tap on S09 or the countdown ending.
   void finishSuccess() {
     if (_state is! SuccessState) return;
     _successTimer?.cancel();
@@ -799,145 +861,50 @@ class LoopController extends ChangeNotifier {
 
   /// "Show guest": presentation mode pauses the automatic return.
   void presentToGuest(bool presenting) {
-    if (_state case SuccessState(:final RecentEntry entry, :final ScannedCard card)) {
+    if (_state case SuccessState(:final RecentEntry entry, :final PresentedVoucher voucher)) {
       if (presenting) {
         _successTimer?.cancel();
       } else {
         _startSuccessTimer();
       }
-      _go(SuccessState(entry: entry, card: card, presenting: presenting));
+      _go(SuccessState(entry: entry, voucher: voucher, presenting: presenting));
     }
   }
 
   // ---------------------------------------------------------------- closing
 
-  /// ✕ on S10, S11, S12 and Android back; returns false on S05 (the system
-  /// then moves the app to the background, N4). Ignored while money may be
-  /// moving (N5); Back in the final uncertain state = Cancel.
+  /// ✕ on S10, S12 and Android back; returns false on S05 (the system then
+  /// moves the app to the background). Ignored while money may be moving;
+  /// Back in the final uncertain state = Cancel.
   bool back() {
     switch (_state) {
       case ReadyState():
         return false;
-      case ChargeState(:final RedeemPhase phase, :final bool isLocked):
-        if (isLocked) return true;
-        if (phase == RedeemPhase.uncertainFinal) {
-          cancelUncertain();
-        } else {
-          closeCharge();
+      case ChargeState(:final RedeemPhase phase):
+        switch (phase) {
+          case RedeemPhase.uncertainFinal:
+            cancelUncertain();
+          case RedeemPhase.entering || RedeemPhase.resolving:
+            closeCharge();
+          case RedeemPhase.submitting || RedeemPhase.slow || RedeemPhase.uncertainAuto:
+            break;
         }
         return true;
       case SuccessState():
         finishSuccess();
         return true;
-      case LookingUpState(:final LookupOrigin origin, :final ScanRequest request, :final ProblemState? problem):
-        // Cancel returns to the screen the lookup came from (03a §6.4, §7, §8).
+      case PresentingState(:final PresentOrigin origin, :final ProblemState? problem):
+        // Cancel returns to the screen the scan came from.
         _generation++;
         _inFlight?.cancel();
-        _go(switch (origin) {
-          LookupOrigin.manual => ManualEntryState(prefill: request.cardNumber ?? ''),
-          LookupOrigin.qr => const QrScanState(),
-          LookupOrigin.problem when problem != null => problem,
-          _ => const ReadyState(),
-        });
+        _slowTimer?.cancel();
+        _go(origin == PresentOrigin.problem && problem != null ? problem : const QrScanState());
         return true;
-      case ScanningState() || QrScanState() || ManualEntryState() || ProblemState():
+      case QrScanState() || ProblemState():
+        _carry = null;
+        _cancelTimers();
         _go(const ReadyState());
         return true;
-    }
-  }
-
-  // ------------------------------------------------------------------- NFC
-
-  void _onNfcEvent(NfcEvent event) {
-    switch (event) {
-      case NfcAdapterChanged(:final NfcAvailability availability):
-        _nfcAvailability = availability;
-        notifyListeners();
-      case NfcSessionEnded(:final NfcSessionEnd reason):
-        if (_state is! ScanningState) return;
-        if (reason == NfcSessionEnd.systemBusy || reason == NfcSessionEnd.unavailable) {
-          _scanUnavailable = true;
-          _feedback.haptic(HapticToken.warning);
-          _go(const ReadyState());
-        } else {
-          // P08 / E16: silent return with the hint.
-          _go(const ReadyState(notice: ReadyNotice.iosTimeout));
-        }
-      case NfcReadFailed():
-        _onReadFailed();
-      case NfcWriterTag():
-        // S20 programs this tag; it is never looked up as a card.
-        break;
-      case NfcTagRead(:final String uid, :final String? url):
-        if (_isIos) {
-          unawaited(_onIosTag(uid, url));
-        } else {
-          _onAndroidTag(uid, url);
-        }
-    }
-  }
-
-  Future<void> _onIosTag(String uid, String? url) async {
-    if (_state is! ScanningState) return;
-    final CardLink? link = url == null ? null : CardLink.parse(url, _cardDomains, allowHttp: _allowHttpLinks);
-    if (link == null) {
-      await _nfc.rejectTag();
-      return;
-    }
-    await _nfc.finishSession();
-    unawaited(_lookup(ScanRequest.nfc(url: link.url, uid: uid, isSunSigned: link.isSunSigned)));
-  }
-
-  void _onAndroidTag(String uid, String? url) {
-    if (!wantsReaderMode) return;
-    final Duration now = _clock.now();
-    if (_lastUid == uid && _lastReadAt != null && now - _lastReadAt! < duplicateReadWindow) return;
-
-    final LoopState current = _state;
-    if (current is ChargeState && current.isLocked) return; // 03b §1.4: ignored, no feedback.
-    if (current is LookingUpState) return;
-    if (current is ChargeState && current.phase == RedeemPhase.uncertainFinal) return;
-
-    final CardLink? link = url == null ? null : CardLink.parse(url, _cardDomains, allowHttp: _allowHttpLinks);
-    if (link == null) {
-      if (current is ReadyState) {
-        _feedback.both(HapticToken.warning, SoundToken.warning);
-        _go(const ReadyState(notice: ReadyNotice.notCard));
-      }
-      return;
-    }
-    _lastUid = uid;
-    _lastReadAt = now;
-    _readFailures.clear();
-
-    final ScanRequest request = ScanRequest.nfc(url: link.url, uid: uid, isSunSigned: link.isSunSigned);
-
-    if (current is ReadyState && !_connectivity.isOnline) {
-      _feedback.haptic(HapticToken.warning);
-      _go(const ReadyState(notice: ReadyNotice.offlineRead));
-      return;
-    }
-
-    if (current is ChargeState && current.amount > 0 && !current.fullOnly) {
-      if (current.pendingSwitch == null) _offerSwitch(current, request);
-      return;
-    }
-
-    _feedback.both(HapticToken.cardDetected, SoundToken.cardDetected);
-    if (_session.phase == AccessPhase.onboardingIntro) _session.finishIntro();
-    unawaited(_lookup(request));
-  }
-
-  void _onReadFailed() {
-    if (_isIos || _state is! ReadyState) return;
-    final Duration now = _clock.now();
-    _readFailures
-      ..add(now)
-      ..removeWhere((Duration t) => now - t > readFailureWindow);
-    if (_readFailures.length >= readFailuresForHint) {
-      _readFailures.clear();
-      _feedback.haptic(HapticToken.warning);
-      _go(const ReadyState(notice: ReadyNotice.readFailed));
     }
   }
 
@@ -949,8 +916,9 @@ class LoopController extends ChangeNotifier {
         _generation++;
         _inFlight?.cancel();
         _retryWait?.complete();
-        _attempts.clear();
+        _carry = null;
         _cancelTimers();
+        _resolveTimer?.cancel();
         _go(const ReadyState());
       case SessionSignal.reauthenticated:
         notifyListeners();
@@ -961,14 +929,9 @@ class LoopController extends ChangeNotifier {
 
   void _onSessionChanged() {
     final AccessPhase phase = _session.phase;
-    if (phase == _lastPhase) {
-      notifyListeners();
-      return;
-    }
-    _lastPhase = phase;
-    if (phase == AccessPhase.active) {
-      final String? link = _session.takePendingLink();
-      if (link != null) openLink(link);
+    if (phase != _lastPhase) {
+      _lastPhase = phase;
+      if (phase == AccessPhase.active) unawaited(resolvePending());
     }
     notifyListeners();
   }
@@ -977,18 +940,15 @@ class LoopController extends ChangeNotifier {
     if (_connectivity.isOnline) {
       final Completer<void>? wait = _retryWait;
       if (wait != null && !wait.isCompleted) wait.complete();
-      if (_retryOnReconnect && _charge?.phase == RedeemPhase.uncertainFinal) {
+      final ChargeState? s = _charge;
+      if (_retryOnReconnect && s?.phase == RedeemPhase.uncertainFinal) {
         _retryOnReconnect = false;
         unawaited(tryAgain());
       }
+      if (s != null && s.phase == RedeemPhase.resolving && !s.checking) unawaited(_resolveInCharge());
+      unawaited(resolvePending());
     }
     notifyListeners();
-  }
-
-  void _releaseHeldLink() {
-    final String? link = _heldLink;
-    _heldLink = null;
-    if (link != null) scheduleMicrotask(() => openLink(link));
   }
 
   // ------------------------------------------------------------------ core
@@ -997,23 +957,27 @@ class LoopController extends ChangeNotifier {
     _slowTimer?.cancel();
     _successTimer?.cancel();
     _countdownTimer?.cancel();
-    _switchTimer?.cancel();
+    _presentmentTimer?.cancel();
+    _recheckTimer?.cancel();
   }
 
   void _go(LoopState next) {
     final LoopState previous = _state;
     _state = next;
     if (previous.name != next.name) _log?.record('state', next.name);
-    if (next is ReadyState && previous is! ReadyState) _session.readyShown();
+    if (next is ReadyState && previous is! ReadyState) {
+      _session.readyShown();
+      if (_pending.entries.isNotEmpty) unawaited(resolvePending());
+    }
     notifyListeners();
   }
 
   @override
   void dispose() {
     _cancelTimers();
+    _resolveTimer?.cancel();
     _inFlight?.cancel();
     unawaited(_sessionSubscription.cancel());
-    unawaited(_nfcSubscription.cancel());
     _connectivity.removeListener(_onConnectivity);
     _session.removeListener(_onSessionChanged);
     super.dispose();

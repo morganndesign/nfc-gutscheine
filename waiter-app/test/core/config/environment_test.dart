@@ -14,8 +14,7 @@ import 'package:giftcard_waiter/core/storage/settings_store.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
-Map<String, String> _defines(String env, String api, [String cards = '']) =>
-    <String, String>{'APP_ENV': env, 'API_BASE_URL': api, 'CARD_DOMAINS': cards};
+Map<String, String> _defines(String env, String api) => <String, String>{'APP_ENV': env, 'API_BASE_URL': api};
 
 Future<SettingsStore> _settings([Map<String, Object> data = const <String, Object>{}]) async {
   SharedPreferencesAsyncPlatform.instance = InMemorySharedPreferencesAsync.withData(data);
@@ -25,11 +24,10 @@ Future<SettingsStore> _settings([Map<String, Object> data = const <String, Objec
 void main() {
   group('AppEnvironment.resolve', () {
     test('development accepts http and appends /api/v1 to a bare origin', () {
-      final AppEnvironment e = AppEnvironment.resolve(_defines('development', 'http://10.0.2.2:8000', 'localhost'));
+      final AppEnvironment e = AppEnvironment.resolve(_defines('development', 'http://10.0.2.2:8000'));
       expect(e.flavor, AppFlavor.development);
       expect(e.apiBaseUrl, 'http://10.0.2.2:8000/api/v1');
       expect(e.apiHost, '10.0.2.2:8000');
-      expect(e.cardDomains, <String>['localhost']);
       expect(e.allowsHttp, isTrue);
       expect(e.allowsServerOverride, isTrue);
     });
@@ -49,7 +47,6 @@ void main() {
       expect(e.flavor, AppFlavor.production);
       expect(e.isProduction, isTrue);
       expect(e.allowsServerOverride, isFalse);
-      expect(e.cardDomains, <String>['app.giftcardpro.at'], reason: 'defaults to the API host');
     });
 
     test('unusable configurations are reported, not ignored', () {
@@ -72,14 +69,13 @@ void main() {
   group('EnvironmentController', () {
     test('development: a server set in the app is stored, used and can be reset', () async {
       final SettingsStore settings = await _settings();
-      final AppEnvironment build = AppEnvironment.resolve(_defines('development', 'http://10.0.2.2:8000/api/v1', 'localhost'));
+      final AppEnvironment build = AppEnvironment.resolve(_defines('development', 'http://10.0.2.2:8000/api/v1'));
       final EnvironmentController c = EnvironmentController(build: build, settings: settings);
       int changes = 0;
       c.addListener(() => changes++);
 
       expect(c.setServer('http://192.168.1.20:8000'), isNull);
       expect(c.current.apiBaseUrl, 'http://192.168.1.20:8000/api/v1');
-      expect(c.current.cardDomains, containsAll(<String>['localhost', '192.168.1.20']));
       expect(settings.apiServerOverride, 'http://192.168.1.20:8000/api/v1');
       expect(changes, 1);
 

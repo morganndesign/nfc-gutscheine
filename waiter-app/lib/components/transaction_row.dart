@@ -36,7 +36,7 @@ class TransactionRow extends StatelessWidget {
   /// Redemption time in the restaurant time zone.
   final WallTime time;
 
-  /// Card ending.
+  /// Voucher ending.
   final String last4;
 
   /// Redeemed amount (no sign).

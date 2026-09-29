@@ -61,11 +61,6 @@ void main() {
     expect(text('Sign out'), findsOneWidget);
     expect(text('Version 1.0.0 (1)'), findsOneWidget);
     expect(find.textContaining('Reload', findRichText: true), findsNothing);
-    expect(
-      app.loop.wantsReaderMode,
-      isFalse,
-      reason: 'reader mode pauses while a sheet is open',
-    );
     await finishApp(tester, app);
   });
 
@@ -178,7 +173,6 @@ void main() {
       expect(app.session.phase, AccessPhase.signedOut);
       expect(app.secrets.values['token'], isNull);
       expect(app.services.recent.entries, isEmpty);
-      expect(app.loop.wantsReaderMode, isFalse);
       await finishApp(tester, app);
     },
   );

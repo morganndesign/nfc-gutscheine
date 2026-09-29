@@ -49,7 +49,7 @@ class ConfigurationProblem implements Exception {
   String toString() => 'ConfigurationProblem: $detail';
 }
 
-/// Build configuration (09 §9.1, §7.1, §7.4) plus the optional server
+/// Build configuration (09 §9.1) plus the optional server
 /// override of development and staging builds.
 ///
 /// Values come from `--dart-define` / `--dart-define-from-file`:
@@ -58,13 +58,11 @@ class ConfigurationProblem implements Exception {
 /// |---|---|
 /// | `APP_ENV` | `development`, `staging` or `production` (missing → production rules) |
 /// | `API_BASE_URL` | API root, e.g. `https://app.giftcardpro.at/api/v1` |
-/// | `CARD_DOMAINS` | hosts of card links `https://<host>/c/<uuid>`, comma-separated |
 /// | `APP_STORE_URL`, `PLAY_STORE_URL` | store listings for "Update required" |
 @immutable
 class AppEnvironment {
   const AppEnvironment({
     required this.apiBaseUrl,
-    required this.cardDomains,
     this.flavor = AppFlavor.production,
     String? buildApiBaseUrl,
     this.appStoreUrl,
@@ -77,7 +75,6 @@ class AppEnvironment {
         const <String, String>{
           'APP_ENV': String.fromEnvironment('APP_ENV'),
           'API_BASE_URL': String.fromEnvironment('API_BASE_URL'),
-          'CARD_DOMAINS': String.fromEnvironment('CARD_DOMAINS'),
           'APP_STORE_URL': String.fromEnvironment('APP_STORE_URL'),
           'PLAY_STORE_URL': String.fromEnvironment('PLAY_STORE_URL'),
         },
@@ -104,19 +101,10 @@ class AppEnvironment {
     }
     final String buildUrl = api.url!;
 
-    final List<String> hosts = <String>{
-      ...(defines['CARD_DOMAINS'] ?? '')
-          .split(',')
-          .map((String d) => d.trim().toLowerCase())
-          .where((String d) => d.isNotEmpty),
-    }.toList();
-    if (hosts.isEmpty) hosts.add(Uri.parse(buildUrl).host.toLowerCase());
-
     final String appStore = (defines['APP_STORE_URL'] ?? '').trim();
     final String playStore = (defines['PLAY_STORE_URL'] ?? '').trim();
     return AppEnvironment(
       apiBaseUrl: buildUrl,
-      cardDomains: List<String>.unmodifiable(hosts),
       flavor: flavor,
       buildApiBaseUrl: buildUrl,
       appStoreUrl: appStore.isEmpty ? null : appStore,
@@ -161,9 +149,6 @@ class AppEnvironment {
   /// Whether a server override is in use.
   bool get usesOverride => apiBaseUrl != buildApiBaseUrl;
 
-  /// Hosts whose `/c/<uuid>` links are gift cards (09 §7.1 "allowed domains").
-  final List<String> cardDomains;
-
   /// Store listing opened by S15 "Update now" on iOS.
   final String? appStoreUrl;
 
@@ -172,7 +157,7 @@ class AppEnvironment {
 
   bool get isProduction => flavor == AppFlavor.production;
 
-  /// `http` API and card links are accepted only in development builds.
+  /// An `http` API is accepted only in development builds.
   bool get allowsHttp => flavor == AppFlavor.development;
 
   /// Development and staging builds can point at another server in the app.
@@ -181,9 +166,8 @@ class AppEnvironment {
   /// `host[:port]` of [apiBaseUrl], for problem screens.
   String get apiHost => Uri.parse(apiBaseUrl).authority;
 
-  AppEnvironment copyWith({String? apiBaseUrl, List<String>? cardDomains}) => AppEnvironment(
+  AppEnvironment copyWith({String? apiBaseUrl}) => AppEnvironment(
         apiBaseUrl: apiBaseUrl ?? this.apiBaseUrl,
-        cardDomains: cardDomains ?? this.cardDomains,
         flavor: flavor,
         buildApiBaseUrl: buildApiBaseUrl,
         appStoreUrl: appStoreUrl,

@@ -21,9 +21,13 @@ enum TextFieldKind {
   /// Server address (development and staging builds only): URL keyboard,
   /// no autocorrect, whitespace removed, Return = done, max 512.
   url,
+
+  /// Short free text (S20 payment reference or reason): text keyboard,
+  /// sentence case, spaces kept, Return = done, max 500.
+  text,
 }
 
-/// E-mail and password entry (05 §2.4). Named `WaiterTextField` because
+/// E-mail, password and short text entry (05 §2.4). Named `WaiterTextField` because
 /// Material's `TextField` would collide in screens.
 ///
 /// Label above (never floating), 56-pt container, `radius.s`, `bg.surface`,
@@ -50,6 +54,7 @@ class WaiterTextField extends StatefulWidget {
     this.onChanged,
     this.onSubmitted,
     this.shakeController,
+    this.maxLength,
   });
 
   /// Content kind.
@@ -92,6 +97,9 @@ class WaiterTextField extends StatefulWidget {
   /// Field error shake trigger.
   final ShakeController? shakeController;
 
+  /// Character limit of a [TextFieldKind.text] field (default 500).
+  final int? maxLength;
+
   @override
   State<WaiterTextField> createState() => _WaiterTextFieldState();
 }
@@ -106,6 +114,7 @@ class _WaiterTextFieldState extends State<WaiterTextField> {
   static const int _maxEmail = 254;
   static const int _maxUrl = 512;
   static const int _maxPassword = 128;
+  static const int _maxText = 500;
 
   @override
   void initState() {
@@ -170,25 +179,31 @@ class _WaiterTextFieldState extends State<WaiterTextField> {
             TextFieldKind.password => TextInputType.visiblePassword,
             TextFieldKind.email => TextInputType.emailAddress,
             TextFieldKind.url => TextInputType.url,
+            TextFieldKind.text => TextInputType.text,
           },
           textInputAction: widget.kind == TextFieldKind.email
               ? TextInputAction.next
               : TextInputAction.done,
           autocorrect: false,
           enableSuggestions: false,
-          textCapitalization: TextCapitalization.none,
+          textCapitalization: widget.kind == TextFieldKind.text
+              ? TextCapitalization.sentences
+              : TextCapitalization.none,
           autofillHints: switch (widget.kind) {
             TextFieldKind.password => const <String>[AutofillHints.password],
             TextFieldKind.email => const <String>[AutofillHints.username, AutofillHints.email],
             TextFieldKind.url => const <String>[AutofillHints.url],
+            TextFieldKind.text => null,
           },
           inputFormatters: <TextInputFormatter>[
-            if (!password) FilteringTextInputFormatter.deny(RegExp(r'\s')),
+            if (!password && widget.kind != TextFieldKind.text)
+              FilteringTextInputFormatter.deny(RegExp(r'\s')),
             LengthLimitingTextInputFormatter(
               switch (widget.kind) {
                 TextFieldKind.password => _maxPassword,
                 TextFieldKind.email => _maxEmail,
                 TextFieldKind.url => _maxUrl,
+                TextFieldKind.text => widget.maxLength ?? _maxText,
               },
             ),
           ],

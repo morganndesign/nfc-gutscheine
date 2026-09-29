@@ -146,18 +146,6 @@ abstract class AppLocalizations {
   /// **'Scan again'**
   String get commonScanAgain;
 
-  /// Spec key: common.enterNumber (12 §5.1) · Max: 24 · Notes: 03b · opens S11
-  ///
-  /// In en, this message translates to:
-  /// **'Enter card number'**
-  String get commonEnterNumber;
-
-  /// Spec key: common.editNumber (12 §5.1) · Max: 24 · Notes: 03b · S11 prefilled
-  ///
-  /// In en, this message translates to:
-  /// **'Edit number'**
-  String get commonEditNumber;
-
   /// Spec key: common.openSettings (12 §5.1) · Max: 24 · Notes: 12 · = camera.denied.action (alias)
   ///
   /// In en, this message translates to:
@@ -524,16 +512,16 @@ abstract class AppLocalizations {
   /// **'Check the e-mail address'**
   String get signInErrorEmailFormat;
 
-  /// Spec key: signIn.error.invalid (12 §5.3) · Max: 90 · Notes: 03a · A07
+  /// Spec key: signIn.error.invalid (12 §5.3) · Max: 120 · Notes: 03a · ADR-002: one answer for wrong and locked (audit S4)
   ///
   /// In en, this message translates to:
-  /// **'E-mail or password is incorrect. Check both and try again.'**
+  /// **'E-mail or password is incorrect. After too many attempts, sign-in is paused for a few minutes.'**
   String get signInErrorInvalid;
 
   /// Spec key: signIn.error.noPermission (12 §5.3) · Max: 90 · Notes: 03a · A02
   ///
   /// In en, this message translates to:
-  /// **'This account can\'t redeem cards. Please get a manager.'**
+  /// **'This account can\'t redeem vouchers. Please get a manager.'**
   String get signInErrorNoPermission;
 
   /// Spec key: signIn.error.throttled (12 §5.3) · Max: 48 · Notes: 03a · A08
@@ -541,6 +529,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Too many attempts. Try again in {time}.'**
   String signInErrorThrottled(String time);
+
+  /// Spec key: signIn.retryIn (12 §5.3) · Max: 24 · Notes: 03a · disabled sign-in button during the 429 wait (S02, S15 sheet)
+  ///
+  /// In en, this message translates to:
+  /// **'Try again in {time}'**
+  String signInRetryIn(String time);
+
+  /// Spec key: signIn.available (12 §5.3) · Max: — · Notes: 03a · (a11y) end of the wait
+  ///
+  /// In en, this message translates to:
+  /// **'You can sign in again'**
+  String get signInAvailable;
 
   /// Spec key: signIn.error.server (12 §5.3) · Max: 90 · Notes: 03a · A09 · support code below
   ///
@@ -674,12 +674,6 @@ abstract class AppLocalizations {
   /// **'Too many attempts. Use the password.'**
   String get unlockLockedOut;
 
-  /// Spec key: unlock.pendingCard (12 §5.5) · Max: 48 · Notes: 03a · deep link waiting
-  ///
-  /// In en, this message translates to:
-  /// **'The card opens after unlocking.'**
-  String get unlockPendingCard;
-
   /// Spec key: topBar.recent (12 §5.6) · Max: — · Notes: 03a · (a11y)
   ///
   /// In en, this message translates to:
@@ -692,83 +686,53 @@ abstract class AppLocalizations {
   /// **'Menu, {name}'**
   String topBarMenu(String name);
 
-  /// Spec key: ready.android.title (12 §5.6) · Max: 32 · Notes: B
+  /// Spec key: ready.title (12 §5.6) · Max: 32 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'Hold the card to the phone'**
-  String get readyAndroidTitle;
+  /// **'Scan the voucher'**
+  String get readyTitle;
 
-  /// Spec key: ready.android.hint (12 §5.6) · Max: 40 · Notes: 03a
+  /// Spec key: ready.hint (12 §5.6) · Max: 90 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'The card is detected automatically'**
-  String get readyAndroidHint;
+  /// **'Point the camera at the voucher\'s QR code – printed or on the guest\'s phone.'**
+  String get readyHint;
 
-  /// Spec key: ready.ios.button (12 §5.6) · Max: 24 · Notes: B
+  /// Spec key: ready.scan (12 §5.6) · Max: 24 · Notes: ADR-002 · primary
   ///
   /// In en, this message translates to:
-  /// **'Scan card'**
-  String get readyIosButton;
+  /// **'Scan voucher'**
+  String get readyScan;
 
-  /// Spec key: ready.ios.hint (12 §5.6) · Max: 60 · Notes: 03a · 2 lines
+  /// Spec key: ready.sell (12 §5.6) · Max: 24 · Notes: ADR-002 · opens S20; only with vouchers.sell
   ///
   /// In en, this message translates to:
-  /// **'After tapping, hold the card near the top of the iPhone'**
-  String get readyIosHint;
+  /// **'Sell voucher'**
+  String get readySell;
 
-  /// Spec key: ready.ios.timeout (12 §5.6) · Max: 90 · Notes: 03a · P08
+  /// Spec key: ready.pending.title (12 §5.6) · Max: 32 · Notes: ADR-002 · banner while an attempt is unresolved (audit M1, M2, M6)
   ///
   /// In en, this message translates to:
-  /// **'No card detected. Tap \"Scan card\" to try again.'**
-  String get readyIosTimeout;
+  /// **'Redemption not confirmed yet'**
+  String get readyPendingTitle;
 
-  /// Spec key: ready.manual (12 §5.6) · Max: 16 · Notes: 03a · icon + noun (exception to verb + object, §1.2)
+  /// Spec key: ready.pending.body (12 §5.6) · Max: 90 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'Card number'**
-  String get readyManual;
+  /// **'{amount} on voucher •••• {last4}. Checked automatically – nothing is ever booked twice.'**
+  String readyPendingBody(String amount, String last4);
 
-  /// Spec key: ready.qr (12 §5.6) · Max: 16 · Notes: 03a · icon + noun
+  /// Spec key: ready.pending.booked (12 §5.6) · Max: 60 · Notes: ADR-002 · snackbar; the row appears in Recent
   ///
   /// In en, this message translates to:
-  /// **'QR code'**
-  String get readyQr;
+  /// **'The unconfirmed redemption of {amount} was booked.'**
+  String readyPendingBooked(String amount);
 
-  /// Spec key: ready.firstCardTip.android (12 §5.6) · Max: 90 · Notes: 03a
+  /// Spec key: ready.pending.notBooked (12 §5.6) · Max: 60 · Notes: ADR-002 · snackbar
   ///
   /// In en, this message translates to:
-  /// **'Tip: the NFC antenna is usually at the top of the back, near the camera.'**
-  String get readyFirstCardTipAndroid;
-
-  /// Spec key: ready.firstCardTip.ios (12 §5.6) · Max: 90 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Tip: hold the card flat against the top edge, near the camera.'**
-  String get readyFirstCardTipIos;
-
-  /// Spec key: ready.noNfc.title (12 §5.6) · Max: 32 · Notes: 03a · P02
-  ///
-  /// In en, this message translates to:
-  /// **'Scan the QR code on the card'**
-  String get readyNoNfcTitle;
-
-  /// Spec key: ready.noNfc.hint (12 §5.6) · Max: 90 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'This device has no NFC. Use the QR code or the card number.'**
-  String get readyNoNfcHint;
-
-  /// Spec key: ready.noNfc.button (12 §5.6) · Max: 24 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Scan QR code'**
-  String get readyNoNfcButton;
-
-  /// Spec key: ready.offline.tap (12 §5.6) · Max: 60 · Notes: 03a · L09 · harmonised (EN en dash)
-  ///
-  /// In en, this message translates to:
-  /// **'No connection – the card can\'t be checked'**
-  String get readyOfflineTap;
+  /// **'The unconfirmed redemption of {amount} was not booked.'**
+  String readyPendingNotBooked(String amount);
 
   /// Spec key: ready.online (12 §5.6) · Max: 32 · Notes: 03a · snackbar / announcement
   ///
@@ -800,304 +764,28 @@ abstract class AppLocalizations {
   /// **'Dismiss notice'**
   String get maintenanceDismiss;
 
-  /// Spec key: ready.newCard (12 §5.6) · Max: 24 · Notes: S20 · managers and owners only · button on S05
-  ///
-  /// In en, this message translates to:
-  /// **'New gift card'**
-  String get readyNewCard;
-
-  /// Spec key: issue.title (12 §5.6) · Max: 24 · Notes: S20 · screen title
-  ///
-  /// In en, this message translates to:
-  /// **'New gift card'**
-  String get issueTitle;
-
-  /// Spec key: issue.amount.label (12 §5.6) · Max: 24 · Notes: S20 · above the amount
-  ///
-  /// In en, this message translates to:
-  /// **'Card value'**
-  String get issueAmountLabel;
-
-  /// Spec key: issue.email.label (12 §5.6) · Max: 32 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'Guest e-mail (optional)'**
-  String get issueEmailLabel;
-
-  /// Spec key: issue.email.helper (12 §5.6) · Max: 60 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'The guest receives a confirmation.'**
-  String get issueEmailHelper;
-
-  /// Spec key: issue.email.invalid (12 §5.6) · Max: 60 · Notes: S20 · field error
-  ///
-  /// In en, this message translates to:
-  /// **'Enter a valid e-mail address.'**
-  String get issueEmailInvalid;
-
-  /// Spec key: issue.amount.range (12 §5.6) · Max: 60 · Notes: S20 · server INVALID_AMOUNT
-  ///
-  /// In en, this message translates to:
-  /// **'The card value must be between {min} and {max}.'**
-  String issueAmountRange(String min, String max);
-
-  /// Spec key: issue.create (12 §5.6) · Max: 32 · Notes: S20 · primary
-  ///
-  /// In en, this message translates to:
-  /// **'Create card · {amount}'**
-  String issueCreate(String amount);
-
-  /// Spec key: issue.creating (12 §5.6) · Max: 32 · Notes: S20 · button progress
-  ///
-  /// In en, this message translates to:
-  /// **'Creating card …'**
-  String get issueCreating;
-
-  /// Spec key: issue.program.title (12 §5.6) · Max: 36 · Notes: S20 · programming
-  ///
-  /// In en, this message translates to:
-  /// **'Hold a blank card to the phone'**
-  String get issueProgramTitle;
-
-  /// Spec key: issue.program.body (12 §5.6) · Max: 90 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'Keep it still on the back of the phone until the check mark appears.'**
-  String get issueProgramBody;
-
-  /// Spec key: issue.program.retap (12 §5.6) · Max: 60 · Notes: S20 · hint
-  ///
-  /// In en, this message translates to:
-  /// **'Lift the card and hold it to the phone again.'**
-  String get issueProgramRetap;
-
-  /// Spec key: issue.step.check (12 §5.6) · Max: 24 · Notes: S20 · step
-  ///
-  /// In en, this message translates to:
-  /// **'Check tag'**
-  String get issueStepCheck;
-
-  /// Spec key: issue.step.write (12 §5.6) · Max: 24 · Notes: S20 · step
-  ///
-  /// In en, this message translates to:
-  /// **'Write card link'**
-  String get issueStepWrite;
-
-  /// Spec key: issue.step.verify (12 §5.6) · Max: 24 · Notes: S20 · step
-  ///
-  /// In en, this message translates to:
-  /// **'Read back and verify'**
-  String get issueStepVerify;
-
-  /// Spec key: issue.step.save (12 §5.6) · Max: 28 · Notes: S20 · step
-  ///
-  /// In en, this message translates to:
-  /// **'Save chip to card'**
-  String get issueStepSave;
-
-  /// Spec key: issue.card (12 §5.6) · Max: 32 · Notes: S20 · card number, grouped
-  ///
-  /// In en, this message translates to:
-  /// **'Card {number}'**
-  String issueCard(String number);
-
-  /// Spec key: issue.success.title (12 §5.6) · Max: 20 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'Card ready'**
-  String get issueSuccessTitle;
-
-  /// Spec key: issue.success.balance (12 §5.6) · Max: 32 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'Balance {amount}'**
-  String issueSuccessBalance(String amount);
-
-  /// Spec key: issue.success.verified (12 §5.6) · Max: 40 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'NFC tag written and verified'**
-  String get issueSuccessVerified;
-
-  /// Spec key: issue.success.noTag (12 §5.6) · Max: 60 · Notes: S20 · after “Program later”
-  ///
-  /// In en, this message translates to:
-  /// **'No tag yet. Program it later in the dashboard.'**
-  String get issueSuccessNoTag;
-
-  /// Spec key: issue.success.another (12 §5.6) · Max: 28 · Notes: S20 · secondary
-  ///
-  /// In en, this message translates to:
-  /// **'Sell another card'**
-  String get issueSuccessAnother;
-
-  /// Spec key: issue.later (12 §5.6) · Max: 24 · Notes: S20 · keeps the card without a tag
-  ///
-  /// In en, this message translates to:
-  /// **'Program later'**
-  String get issueLater;
-
-  /// Spec key: issue.nfcOff (12 §5.6) · Max: 60 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on NFC to program the tag.'**
-  String get issueNfcOff;
-
-  /// Spec key: issue.createFailed.title (12 §5.6) · Max: 28 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'Card not created'**
-  String get issueCreateFailedTitle;
-
-  /// Spec key: issue.createFailed.body (12 §5.6) · Max: 90 · Notes: S20 · definitive answer
-  ///
-  /// In en, this message translates to:
-  /// **'No card was created. Check the connection and try again.'**
-  String get issueCreateFailedBody;
-
-  /// Spec key: issue.createUncertain.body (12 §5.6) · Max: 90 · Notes: S20 · same idempotency key
-  ///
-  /// In en, this message translates to:
-  /// **'The answer did not arrive. Try again, the card will not be created twice.'**
-  String get issueCreateUncertainBody;
-
-  /// Spec key: issue.notAllowed.title (12 §5.6) · Max: 28 · Notes: S20 · 403
-  ///
-  /// In en, this message translates to:
-  /// **'Not allowed'**
-  String get issueNotAllowedTitle;
-
-  /// Spec key: issue.notAllowed.body (12 §5.6) · Max: 120 · Notes: S20 · 403
-  ///
-  /// In en, this message translates to:
-  /// **'This account cannot sell cards on this phone. Sign out and in again, or use the dashboard.'**
-  String get issueNotAllowedBody;
-
-  /// Spec key: issue.tagFailed.title (12 §5.6) · Max: 28 · Notes: S20 · the card exists, nothing was saved to it
-  ///
-  /// In en, this message translates to:
-  /// **'Tag not programmed'**
-  String get issueTagFailedTitle;
-
-  /// Spec key: issue.tag.otherCard (12 §5.6) · Max: 90 · Notes: S20 · check refused, conflict
-  ///
-  /// In en, this message translates to:
-  /// **'This tag belongs to card {number}. Use a blank tag.'**
-  String issueTagOtherCard(String number);
-
-  /// Spec key: issue.tag.refused (12 §5.6) · Max: 90 · Notes: S20 · check refused
-  ///
-  /// In en, this message translates to:
-  /// **'This tag cannot be used for this card. Use a blank tag.'**
-  String get issueTagRefused;
-
-  /// Spec key: issue.tag.unsupported (12 §5.6) · Max: 90 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'This tag type is not supported. Use NTAG213, 215 or 216.'**
-  String get issueTagUnsupported;
-
-  /// Spec key: issue.tag.readOnly (12 §5.6) · Max: 90 · Notes: S20
-  ///
-  /// In en, this message translates to:
-  /// **'This tag is locked and cannot be written.'**
-  String get issueTagReadOnly;
-
-  /// Spec key: issue.tag.moved (12 §5.6) · Max: 90 · Notes: S20 · write / read failed, timeout
-  ///
-  /// In en, this message translates to:
-  /// **'The tag moved away. Hold it still and try again.'**
-  String get issueTagMoved;
-
-  /// Spec key: issue.tag.verifyFailed (12 §5.6) · Max: 90 · Notes: S20 · read-back mismatch
-  ///
-  /// In en, this message translates to:
-  /// **'The tag could not be verified. Try again with the same tag.'**
-  String get issueTagVerifyFailed;
-
-  /// Spec key: issue.tag.network (12 §5.6) · Max: 90 · Notes: S20 · check / save without answer
-  ///
-  /// In en, this message translates to:
-  /// **'No connection to the server. Try again.'**
-  String get issueTagNetwork;
-
-  /// Spec key: ios.sheet.alert (12 §5.7) · Max: 48 · Notes: B
-  ///
-  /// In en, this message translates to:
-  /// **'Hold the card near the top of the iPhone'**
-  String get iosSheetAlert;
-
-  /// Spec key: ios.sheet.found (12 §5.7) · Max: 48 · Notes: 03a · B wording
-  ///
-  /// In en, this message translates to:
-  /// **'Card found'**
-  String get iosSheetFound;
-
-  /// Spec key: ios.sheet.readFailed (12 §5.7) · Max: 48 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t read the card. Try again.'**
-  String get iosSheetReadFailed;
-
-  /// Spec key: ios.sheet.multiple (12 §5.7) · Max: 48 · Notes: 03a · P06
-  ///
-  /// In en, this message translates to:
-  /// **'More than one card detected. Hold only one.'**
-  String get iosSheetMultiple;
-
-  /// Spec key: ios.sheet.timeoutSoon (12 §5.7) · Max: 60 · Notes: 03a · P07
-  ///
-  /// In en, this message translates to:
-  /// **'No card yet. Hold it flat near the top of the iPhone.'**
-  String get iosSheetTimeoutSoon;
-
-  /// Spec key: scan.notCard (12 §5.7) · Max: 32 · Notes: 03a · harmonised ("Gutscheinkarte", "poklon kartica", §1.3) · L10
-  ///
-  /// In en, this message translates to:
-  /// **'This is not a gift card'**
-  String get scanNotCard;
-
-  /// Spec key: scan.readFailed.title (12 §5.7) · Max: 32 · Notes: 03a · L11
-  ///
-  /// In en, this message translates to:
-  /// **'Couldn\'t read the card'**
-  String get scanReadFailedTitle;
-
-  /// Spec key: scan.readFailed.body (12 §5.7) · Max: 48 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Hold it still for a second.'**
-  String get scanReadFailedBody;
-
   /// Spec key: scan.detected (12 §5.7) · Max: — · Notes: 03a · (a11y) announcement
   ///
   /// In en, this message translates to:
-  /// **'Card detected'**
+  /// **'Voucher detected'**
   String get scanDetected;
 
   /// Spec key: scan.lookingUp (12 §5.7) · Max: 32 · Notes: 03a
   ///
   /// In en, this message translates to:
-  /// **'Looking up card …'**
+  /// **'Checking voucher …'**
   String get scanLookingUp;
 
   /// Spec key: scan.slow (12 §5.7) · Max: 32 · Notes: 03a · L08 · alias lookup.stillLooking (03b)
   ///
   /// In en, this message translates to:
-  /// **'Still looking …'**
+  /// **'Still checking …'**
   String get scanSlow;
 
-  /// Spec key: scan.unavailable (12 §5.7) · Max: 90 · Notes: 03a · P09
+  /// Spec key: balanceCard.overline (12 §5.8) · Max: 16 · Notes: 12 · uppercased by style · ADR-002
   ///
   /// In en, this message translates to:
-  /// **'NFC isn\'t available right now. Use the card number or QR code.'**
-  String get scanUnavailable;
-
-  /// Spec key: balanceCard.overline (12 §5.8) · Max: 16 · Notes: 12 · uppercased by style
-  ///
-  /// In en, this message translates to:
-  /// **'Gift card'**
+  /// **'Voucher'**
   String get balanceCardOverline;
 
   /// Spec key: balanceCard.validUntil (12 §5.8) · Max: 24 · Notes: 12
@@ -1121,19 +809,19 @@ abstract class AppLocalizations {
   /// Spec key: balanceCard.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y) · validity and status appended
   ///
   /// In en, this message translates to:
-  /// **'Gift card {restaurant}. Balance {spokenAmount}. Card ending {last4}.'**
+  /// **'Voucher {restaurant}. Balance {spokenAmount}. Voucher ending {last4}.'**
   String balanceCardA11y(String restaurant, String spokenAmount, String last4);
 
-  /// Spec key: charge.cardNumber.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y)
+  /// Spec key: charge.voucherNumber.a11y (12 §5.8) · Max: — · Notes: 12 · (a11y)
   ///
   /// In en, this message translates to:
-  /// **'Card number {number}'**
-  String chargeCardNumberA11y(String number);
+  /// **'Voucher number {number}'**
+  String chargeVoucherNumberA11y(String number);
 
   /// Spec key: a11y.charge.close (12 §5.8) · Max: — · Notes: 03b · (a11y)
   ///
   /// In en, this message translates to:
-  /// **'Close card'**
+  /// **'Close voucher'**
   String get a11yChargeClose;
 
   /// Spec key: a11y.amount (12 §5.8) · Max: — · Notes: 03b · (a11y) AmountDisplay
@@ -1217,7 +905,7 @@ abstract class AppLocalizations {
   /// Spec key: charge.velocity.title (12 §5.8) · Max: 32 · Notes: 03b · R14
   ///
   /// In en, this message translates to:
-  /// **'Limit for this card reached'**
+  /// **'Limit for this voucher reached'**
   String get chargeVelocityTitle;
 
   /// Spec key: charge.velocity.bodyTime (12 §5.8) · Max: 90 · Notes: 03b · harmonised ("min" without period)
@@ -1232,29 +920,35 @@ abstract class AppLocalizations {
   /// **'Too many requests – possible again in {seconds} s'**
   String chargeRateLimited(int seconds);
 
-  /// Spec key: charge.switchCard.message (12 §5.8) · Max: 48 · Notes: 03b · B EN wording (brief §2) · P14
+  /// Spec key: charge.dailyLimit (12 §5.8) · Max: 60 · Notes: ADR-002 · per-day limit of the restaurant
   ///
   /// In en, this message translates to:
-  /// **'Different card detected – Switch?'**
-  String get chargeSwitchCardMessage;
+  /// **'At most {amount} more with this voucher today'**
+  String chargeDailyLimit(String amount);
 
-  /// Spec key: charge.switchCard.action (12 §5.8) · Max: 12 · Notes: 03b · B
+  /// Spec key: charge.presentment.expired (12 §5.8) · Max: 60 · Notes: ADR-002 · the 60-s proof ran out; the amount is kept
   ///
   /// In en, this message translates to:
-  /// **'Switch'**
-  String get chargeSwitchCardAction;
+  /// **'Scan the voucher again to redeem.'**
+  String get chargePresentmentExpired;
 
-  /// Spec key: charge.switchCard.keep (12 §5.8) · Max: 12 · Notes: 03b
+  /// Spec key: charge.pending.title (12 §5.8) · Max: 36 · Notes: ADR-002 · an unresolved attempt on this voucher
   ///
   /// In en, this message translates to:
-  /// **'Keep'**
-  String get chargeSwitchCardKeep;
+  /// **'Checking an earlier redemption'**
+  String get chargePendingTitle;
 
-  /// Spec key: charge.switchCard.dialogTitle (12 §5.8) · Max: 32 · Notes: 12 · Dialog fallback with screen reader (03b §2.18)
+  /// Spec key: charge.pending.body (12 §5.8) · Max: 90 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'Different card detected'**
-  String get chargeSwitchCardDialogTitle;
+  /// **'{amount} may already have been redeemed. Redeeming is possible once this is checked.'**
+  String chargePendingBody(String amount);
+
+  /// Spec key: charge.earlierBooked (12 §5.8) · Max: 90 · Notes: ADR-002
+  ///
+  /// In en, this message translates to:
+  /// **'The earlier redemption of {amount} was booked. Balance updated.'**
+  String chargeEarlierBooked(String amount);
 
   /// Spec key: keypad.doubleZero (12 §5.8) · Max: — · Notes: 03a · (a11y) · alias a11y.keypad.doubleZero (03b)
   ///
@@ -1292,17 +986,11 @@ abstract class AppLocalizations {
   /// **'Active'**
   String get badgeActive;
 
-  /// Spec key: badge.inactive (12 §5.9) · Max: 16 · Notes: 12
-  ///
-  /// In en, this message translates to:
-  /// **'Not activated'**
-  String get badgeInactive;
-
-  /// Spec key: badge.redeemed (12 §5.9) · Max: 16 · Notes: 12 · status redeemed or balance 0
+  /// Spec key: badge.usedUp (12 §5.9) · Max: 16 · Notes: 12 · status redeemed or balance 0
   ///
   /// In en, this message translates to:
   /// **'Used up'**
-  String get badgeRedeemed;
+  String get badgeUsedUp;
 
   /// Spec key: badge.blocked (12 §5.9) · Max: 16 · Notes: 12
   ///
@@ -1316,71 +1004,41 @@ abstract class AppLocalizations {
   /// **'Expired'**
   String get badgeExpired;
 
-  /// Spec key: badge.replaced (12 §5.9) · Max: 16 · Notes: 12
+  /// Spec key: voucher.blocked (12 §5.9) · Max: 28 · Notes: B · danger · body = getManager
   ///
   /// In en, this message translates to:
-  /// **'Replaced'**
-  String get badgeReplaced;
+  /// **'Voucher blocked'**
+  String get voucherBlocked;
 
-  /// Spec key: card.blocked (12 §5.9) · Max: 28 · Notes: B · danger · body = getManager
-  ///
-  /// In en, this message translates to:
-  /// **'Card blocked'**
-  String get cardBlocked;
-
-  /// Spec key: card.blocked.reason (12 §5.9) · Max: 90 · Notes: 03b · only if blocked_reason present
+  /// Spec key: voucher.blocked.reason (12 §5.9) · Max: 90 · Notes: 03b · only if blocked_reason present
   ///
   /// In en, this message translates to:
   /// **'Reason: {reason}'**
-  String cardBlockedReason(String reason);
+  String voucherBlockedReason(String reason);
 
-  /// Spec key: card.expired (12 §5.9) · Max: 28 · Notes: B · warning
+  /// Spec key: voucher.expired (12 §5.9) · Max: 28 · Notes: B · warning
   ///
   /// In en, this message translates to:
-  /// **'Card expired'**
-  String get cardExpired;
+  /// **'Voucher expired'**
+  String get voucherExpired;
 
-  /// Spec key: card.expired.body (12 §5.9) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)
+  /// Spec key: voucher.expired.body (12 §5.9) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)
   ///
   /// In en, this message translates to:
   /// **'Expired on {date}. Please get a manager.'**
-  String cardExpiredBody(String date);
+  String voucherExpiredBody(String date);
 
-  /// Spec key: card.inactive (12 §5.9) · Max: 28 · Notes: B · warning
-  ///
-  /// In en, this message translates to:
-  /// **'Card not activated yet'**
-  String get cardInactive;
-
-  /// Spec key: card.inactive.body (12 §5.9) · Max: 90 · Notes: 03b
-  ///
-  /// In en, this message translates to:
-  /// **'It can be redeemed once activated. Please get a manager.'**
-  String get cardInactiveBody;
-
-  /// Spec key: card.replaced (12 §5.9) · Max: 28 · Notes: B · warning
-  ///
-  /// In en, this message translates to:
-  /// **'Card was replaced'**
-  String get cardReplaced;
-
-  /// Spec key: card.replaced.body (12 §5.9) · Max: 90 · Notes: 03b
-  ///
-  /// In en, this message translates to:
-  /// **'The balance is on the new card. Ask the guest for the new card.'**
-  String get cardReplacedBody;
-
-  /// Spec key: card.empty (12 §5.9) · Max: 28 · Notes: B · warning
+  /// Spec key: voucher.empty (12 §5.9) · Max: 28 · Notes: B · warning
   ///
   /// In en, this message translates to:
   /// **'No balance left'**
-  String get cardEmpty;
+  String get voucherEmpty;
 
-  /// Spec key: card.empty.body (12 §5.9) · Max: 90 · Notes: 03b
+  /// Spec key: voucher.empty.body (12 §5.9) · Max: 90 · Notes: 03b
   ///
   /// In en, this message translates to:
-  /// **'This card has been fully used.'**
-  String get cardEmptyBody;
+  /// **'This voucher has been fully used.'**
+  String get voucherEmptyBody;
 
   /// Spec key: redeem.slow (12 §5.10) · Max: 36 · Notes: 03b · R02 · harmonised (EN en dash)
   ///
@@ -1412,22 +1070,22 @@ abstract class AppLocalizations {
   /// **'Tell the guest: \"One moment please, the redemption is being confirmed.\"'**
   String get uncertainGuestHint;
 
-  /// Spec key: uncertain.failedBody (12 §5.10) · Max: 90 · Notes: 03b · R04
+  /// Spec key: uncertain.failedBody (12 §5.10) · Max: 90 · Notes: 03b · R04 · ADR-002: "Check again" resends the same key
   ///
   /// In en, this message translates to:
-  /// **'Not confirmed yet. Try again – nothing is ever booked twice.'**
+  /// **'Not confirmed yet. Check again – nothing is ever booked twice.'**
   String get uncertainFailedBody;
 
-  /// Spec key: uncertain.cancelled (12 §5.10) · Max: 90 · Notes: 03b · R05 · harmonised (no "charging / terećenje")
+  /// Spec key: uncertain.cancelled (12 §5.10) · Max: 120 · Notes: 03b · R05 · ADR-002 · snackbar on S05 after Cancel
   ///
   /// In en, this message translates to:
-  /// **'Not confirmed. Scan the card again before redeeming.'**
+  /// **'Not confirmed. It is checked automatically before this voucher can be redeemed again.'**
   String get uncertainCancelled;
 
   /// Spec key: uncertain.cancelledGuestHint (12 §5.10) · Max: 120 · Notes: 03b · harmonised (vocabulary); 3 lines allowed (quoted speech)
   ///
   /// In en, this message translates to:
-  /// **'Tell the guest: \"The redemption isn\'t confirmed yet. We\'ll check the balance before redeeming again.\"'**
+  /// **'Tell the guest: \"The redemption isn\'t confirmed yet. We\'ll check it before redeeming again.\"'**
   String get uncertainCancelledGuestHint;
 
   /// Spec key: redeem.balanceChanged (12 §5.10) · Max: 48 · Notes: 03b · R06
@@ -1435,12 +1093,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Balance changed: now {amount}'**
   String redeemBalanceChanged(String amount);
-
-  /// Spec key: redeem.tapAgain (12 §5.10) · Max: 48 · Notes: 03b · R13
-  ///
-  /// In en, this message translates to:
-  /// **'Please tap Redeem again.'**
-  String get redeemTapAgain;
 
   /// Spec key: success.title (12 §5.11) · Max: 20 · Notes: B
   ///
@@ -1457,20 +1109,14 @@ abstract class AppLocalizations {
   /// Spec key: success.empty (12 §5.11) · Max: 28 · Notes: 03b · replaces the remaining line at 0
   ///
   /// In en, this message translates to:
-  /// **'Card is now empty'**
+  /// **'Voucher is now empty'**
   String get successEmpty;
 
-  /// Spec key: success.next.ios (12 §5.11) · Max: 24 · Notes: B
+  /// Spec key: success.next (12 §5.11) · Max: 24 · Notes: B · ADR-002 wording
   ///
   /// In en, this message translates to:
-  /// **'Scan next card'**
-  String get successNextIos;
-
-  /// Spec key: success.next.android (12 §5.11) · Max: 32 · Notes: B
-  ///
-  /// In en, this message translates to:
-  /// **'Just tap the next card'**
-  String get successNextAndroid;
+  /// **'Scan next voucher'**
+  String get successNext;
 
   /// Spec key: success.showGuest (12 §5.11) · Max: 24 · Notes: 03b · presentation mode
   ///
@@ -1481,7 +1127,7 @@ abstract class AppLocalizations {
   /// Spec key: success.card (12 §5.11) · Max: 20 · Notes: 12 · caption
   ///
   /// In en, this message translates to:
-  /// **'Card •••• {last4}'**
+  /// **'Voucher •••• {last4}'**
   String successCard(String last4);
 
   /// Spec key: guest.remaining.label (12 §5.11) · Max: 20 · Notes: 03b · Show-guest mode
@@ -1496,47 +1142,17 @@ abstract class AppLocalizations {
   /// **'Redeemed {amount}, remaining balance {balance}'**
   String a11ySuccess(String amount, String balance);
 
-  /// Spec key: problem.notFound.title (12 §5.12) · Max: 32 · Notes: B · L01/L02
+  /// Spec key: problem.notRecognized.title (12 §5.12) · Max: 32 · Notes: ADR-002 · unknown, revoked or foreign code
   ///
   /// In en, this message translates to:
-  /// **'Card not found'**
-  String get problemNotFoundTitle;
+  /// **'Not a voucher of this restaurant'**
+  String get problemNotRecognizedTitle;
 
-  /// Spec key: problem.notFound.body (12 §5.12) · Max: 90 · Notes: 03b
+  /// Spec key: problem.notRecognized.body (12 §5.12) · Max: 90 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'This card is not in the system. Check the card or ask the guest for another one.'**
-  String get problemNotFoundBody;
-
-  /// Spec key: problem.notFound.bodyManual (12 §5.12) · Max: 90 · Notes: 03b
-  ///
-  /// In en, this message translates to:
-  /// **'No card with this number. Check the digits.'**
-  String get problemNotFoundBodyManual;
-
-  /// Spec key: problem.foreign.title (12 §5.12) · Max: 32 · Notes: B · L03
-  ///
-  /// In en, this message translates to:
-  /// **'Card from another restaurant'**
-  String get problemForeignTitle;
-
-  /// Spec key: problem.foreign.body (12 §5.12) · Max: 90 · Notes: 03b
-  ///
-  /// In en, this message translates to:
-  /// **'It can only be redeemed at the restaurant that issued it.'**
-  String get problemForeignBody;
-
-  /// Spec key: problem.verify.title (12 §5.12) · Max: 32 (2 lines) · Notes: B · L04
-  ///
-  /// In en, this message translates to:
-  /// **'Card could not be verified'**
-  String get problemVerifyTitle;
-
-  /// Spec key: problem.verify.body (12 §5.12) · Max: 90 · Notes: 03b · harmonised (escalation wording §2.6)
-  ///
-  /// In en, this message translates to:
-  /// **'Do not accept this card for now. Please get a manager.'**
-  String get problemVerifyBody;
+  /// **'This code is not valid here. Ask the guest for another voucher or get a manager.'**
+  String get problemNotRecognizedBody;
 
   /// Spec key: problem.throttled.title (12 §5.12) · Max: 32 · Notes: 03b · L05
   ///
@@ -1559,7 +1175,7 @@ abstract class AppLocalizations {
   /// Spec key: problem.network.body (12 §5.12) · Max: 90 · Notes: 03b · L06 (title = offline.title)
   ///
   /// In en, this message translates to:
-  /// **'The card could not be checked. Check Wi-Fi or mobile data, then try again.'**
+  /// **'The voucher could not be checked. Check Wi-Fi or mobile data, then try again.'**
   String get problemNetworkBody;
 
   /// Spec key: problem.server.title (12 §5.12) · Max: 32 · Notes: 03b · harmonised (title states what happened, §2.1)
@@ -1571,62 +1187,242 @@ abstract class AppLocalizations {
   /// Spec key: problem.server.body (12 §5.12) · Max: 90 · Notes: 03b · harmonised (no "wir/uns" in the UI, §1.2)
   ///
   /// In en, this message translates to:
-  /// **'The problem is not the card. Try again in a moment.'**
+  /// **'The problem is not the voucher. Try again in a moment.'**
   String get problemServerBody;
 
-  /// Spec key: manual.title (12 §5.13) · Max: 28 · Notes: 03a
+  /// Spec key: sale.title (12 §5.13) · Max: 24 · Notes: ADR-002 · screen title
   ///
   /// In en, this message translates to:
-  /// **'Card number'**
-  String get manualTitle;
+  /// **'Sell voucher'**
+  String get saleTitle;
 
-  /// Spec key: manual.helper (12 §5.13) · Max: 40 · Notes: 03a
+  /// Spec key: sale.amount.label (12 §5.13) · Max: 24 · Notes: ADR-002 · above the amount
   ///
   /// In en, this message translates to:
-  /// **'16 digits on the back of the card'**
-  String get manualHelper;
+  /// **'Voucher value'**
+  String get saleAmountLabel;
 
-  /// Spec key: manual.counter (12 §5.13) · Max: 12 · Notes: 03a · tabular figures
+  /// Spec key: sale.amount.range (12 §5.13) · Max: 60 · Notes: ADR-002 · restaurant limits / INVALID_AMOUNT
   ///
   /// In en, this message translates to:
-  /// **'{count} of 16'**
-  String manualCounter(int count);
+  /// **'The value must be between {min} and {max}.'**
+  String saleAmountRange(String min, String max);
 
-  /// Spec key: manual.submit (12 §5.13) · Max: 24 · Notes: 03a · enabled at 16 digits
+  /// Spec key: sale.continue (12 §5.13) · Max: 24+amt · Notes: ADR-002 · amount step → payment step
   ///
   /// In en, this message translates to:
-  /// **'Look up card'**
-  String get manualSubmit;
+  /// **'Continue · {amount}'**
+  String saleContinue(String amount);
 
-  /// Spec key: manual.error.invalid (12 §5.13) · Max: 32 · Notes: 03a
+  /// Spec key: sale.payment.label (12 §5.13) · Max: 24 · Notes: ADR-002 · the guest pays for the voucher (§1.3 "payment" rule is about redeeming)
   ///
   /// In en, this message translates to:
-  /// **'Check the card number'**
-  String get manualErrorInvalid;
+  /// **'Paid with'**
+  String get salePaymentLabel;
 
-  /// Spec key: manual.error.paste (12 §5.13) · Max: 48 · Notes: 03a
+  /// Spec key: sale.payment.cash (12 §5.13) · Max: 16 · Notes: ADR-002 · choice
   ///
   /// In en, this message translates to:
-  /// **'No valid card number to paste'**
-  String get manualErrorPaste;
+  /// **'Cash'**
+  String get salePaymentCash;
+
+  /// Spec key: sale.payment.cardTerminal (12 §5.13) · Max: 16 · Notes: ADR-002 · choice
+  ///
+  /// In en, this message translates to:
+  /// **'Card terminal'**
+  String get salePaymentCardTerminal;
+
+  /// Spec key: sale.payment.bankTransfer (12 §5.13) · Max: 16 · Notes: ADR-002 · choice
+  ///
+  /// In en, this message translates to:
+  /// **'Bank transfer'**
+  String get salePaymentBankTransfer;
+
+  /// Spec key: sale.payment.complimentary (12 §5.13) · Max: 16 · Notes: ADR-002 · choice · only with vouchers.sell_complimentary
+  ///
+  /// In en, this message translates to:
+  /// **'Complimentary'**
+  String get salePaymentComplimentary;
+
+  /// Spec key: sale.reference.label (12 §5.13) · Max: 32 · Notes: ADR-002 · card terminal / bank transfer
+  ///
+  /// In en, this message translates to:
+  /// **'Receipt or reference number'**
+  String get saleReferenceLabel;
+
+  /// Spec key: sale.reference.required (12 §5.13) · Max: 60 · Notes: ADR-002 · field error
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the receipt or reference number.'**
+  String get saleReferenceRequired;
+
+  /// Spec key: sale.reason.label (12 §5.13) · Max: 24 · Notes: ADR-002 · complimentary
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get saleReasonLabel;
+
+  /// Spec key: sale.reason.required (12 §5.13) · Max: 60 · Notes: ADR-002 · field error
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a reason (at least 3 characters).'**
+  String get saleReasonRequired;
+
+  /// Spec key: sale.email.label (12 §5.13) · Max: 32 · Notes: ADR-002
+  ///
+  /// In en, this message translates to:
+  /// **'Guest e-mail (optional)'**
+  String get saleEmailLabel;
+
+  /// Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · when the restaurant sends guest e-mails
+  ///
+  /// In en, this message translates to:
+  /// **'The guest receives a confirmation.'**
+  String get saleEmailHelper;
+
+  /// Spec key: sale.email.helperNoMail (12 §5.13) · Max: 60 · Notes: ADR-002 · when it does not
+  ///
+  /// In en, this message translates to:
+  /// **'Saved with the voucher.'**
+  String get saleEmailHelperNoMail;
+
+  /// Spec key: sale.email.invalid (12 §5.13) · Max: 60 · Notes: ADR-002 · field error
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid e-mail address.'**
+  String get saleEmailInvalid;
+
+  /// Spec key: sale.submit (12 §5.13) · Max: 24+amt · Notes: ADR-002 · primary
+  ///
+  /// In en, this message translates to:
+  /// **'Sell voucher · {amount}'**
+  String saleSubmit(String amount);
+
+  /// Spec key: sale.submitting (12 §5.13) · Max: 32 · Notes: ADR-002 · button progress
+  ///
+  /// In en, this message translates to:
+  /// **'Selling voucher …'**
+  String get saleSubmitting;
+
+  /// Spec key: sale.failed.title (12 §5.13) · Max: 28 · Notes: ADR-002 · definitive answer
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher not sold'**
+  String get saleFailedTitle;
+
+  /// Spec key: sale.failed.body (12 §5.13) · Max: 90 · Notes: ADR-002
+  ///
+  /// In en, this message translates to:
+  /// **'No voucher was sold. Check the connection and try again.'**
+  String get saleFailedBody;
+
+  /// Spec key: sale.uncertain.title (12 §5.13) · Max: 28 · Notes: ADR-002 · no answer
+  ///
+  /// In en, this message translates to:
+  /// **'Sale not confirmed'**
+  String get saleUncertainTitle;
+
+  /// Spec key: sale.uncertain.body (12 §5.13) · Max: 90 · Notes: ADR-002 · same idempotency key
+  ///
+  /// In en, this message translates to:
+  /// **'The answer did not arrive. Try again – the voucher will not be sold twice.'**
+  String get saleUncertainBody;
+
+  /// Spec key: sale.notAllowed.title (12 §5.13) · Max: 28 · Notes: ADR-002 · 403
+  ///
+  /// In en, this message translates to:
+  /// **'Not allowed'**
+  String get saleNotAllowedTitle;
+
+  /// Spec key: sale.notAllowed.body (12 §5.13) · Max: 90 · Notes: ADR-002 · 403
+  ///
+  /// In en, this message translates to:
+  /// **'This account cannot sell vouchers on this phone. Please get a manager.'**
+  String get saleNotAllowedBody;
+
+  /// Spec key: sale.done.title (12 §5.13) · Max: 28 · Notes: ADR-002
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher sold'**
+  String get saleDoneTitle;
+
+  /// Spec key: sale.done.value (12 §5.13) · Max: 32 · Notes: ADR-002
+  ///
+  /// In en, this message translates to:
+  /// **'Value {amount}'**
+  String saleDoneValue(String amount);
+
+  /// Spec key: sale.done.body (12 §5.13) · Max: 90 · Notes: ADR-002 · the QR is returned once
+  ///
+  /// In en, this message translates to:
+  /// **'Print the QR code for the guest. It is shown only now.'**
+  String get saleDoneBody;
+
+  /// Spec key: sale.print (12 §5.13) · Max: 24 · Notes: ADR-002 · primary · system print dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Print voucher'**
+  String get salePrint;
+
+  /// Spec key: sale.printed (12 §5.13) · Max: 32 · Notes: ADR-002 · after the print dialog finished
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to the printer'**
+  String get salePrinted;
+
+  /// Spec key: sale.printFailed (12 §5.13) · Max: 60 · Notes: ADR-002
+  ///
+  /// In en, this message translates to:
+  /// **'Printing did not work. Try again.'**
+  String get salePrintFailed;
+
+  /// Spec key: sale.another (12 §5.13) · Max: 28 · Notes: ADR-002 · secondary
+  ///
+  /// In en, this message translates to:
+  /// **'Sell another voucher'**
+  String get saleAnother;
+
+  /// Spec key: sale.leave.title (12 §5.13) · Max: 28 · Notes: ADR-002 · Dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Close without printing?'**
+  String get saleLeaveTitle;
+
+  /// Spec key: sale.leave.body (12 §5.13) · Max: 120 · Notes: ADR-002 · Dialog
+  ///
+  /// In en, this message translates to:
+  /// **'The QR code cannot be shown again. Without it the guest cannot redeem the voucher.'**
+  String get saleLeaveBody;
+
+  /// Spec key: sale.leave.confirm (12 §5.13) · Max: 24 · Notes: ADR-002 · DangerButton (cancel = common.cancel)
+  ///
+  /// In en, this message translates to:
+  /// **'Close anyway'**
+  String get saleLeaveConfirm;
+
+  /// Spec key: sale.qr.a11y (12 §5.13) · Max: — · Notes: ADR-002 · (a11y)
+  ///
+  /// In en, this message translates to:
+  /// **'QR code of the voucher'**
+  String get saleQrA11y;
 
   /// Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a
   ///
   /// In en, this message translates to:
-  /// **'Scan QR code'**
+  /// **'Scan voucher'**
   String get qrTitle;
 
   /// Spec key: qr.hint (12 §5.14) · Max: 48 · Notes: 03a
   ///
   /// In en, this message translates to:
-  /// **'Point the camera at the QR code on the card'**
+  /// **'Point the camera at the voucher\'s QR code'**
   String get qrHint;
 
-  /// Spec key: qr.notCard (12 §5.14) · Max: 48 · Notes: 03a · harmonised (vocabulary) · L10
+  /// Spec key: qr.notVoucher (12 §5.14) · Max: 48 · Notes: 03a · ADR-002 · L10
   ///
   /// In en, this message translates to:
-  /// **'This QR code isn\'t a gift card'**
-  String get qrNotCard;
+  /// **'This QR code isn\'t a voucher'**
+  String get qrNotVoucher;
 
   /// Spec key: qr.dark (12 §5.14) · Max: 32 · Notes: 03a
   ///
@@ -1645,12 +1441,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Turn off light'**
   String get qrTorchOff;
-
-  /// Spec key: qr.manual (12 §5.14) · Max: 24 · Notes: 03a · = common.enterNumber (alias)
-  ///
-  /// In en, this message translates to:
-  /// **'Enter card number'**
-  String get qrManual;
 
   /// Spec key: recent.title (12 §5.15) · Max: 28 · Notes: 03b · harmonised (DE = topBar.recent)
   ///
@@ -1673,13 +1463,13 @@ abstract class AppLocalizations {
   /// Spec key: recent.row.empty (12 §5.15) · Max: 20 · Notes: 03b
   ///
   /// In en, this message translates to:
-  /// **'Card now empty'**
+  /// **'Voucher now empty'**
   String get recentRowEmpty;
 
   /// Spec key: recent.row.a11y (12 §5.15) · Max: — · Notes: 12 · (a11y)
   ///
   /// In en, this message translates to:
-  /// **'{time}, card ending {last4}, {amount} redeemed, remaining balance {balance}'**
+  /// **'{time}, voucher ending {last4}, {amount} redeemed, remaining balance {balance}'**
   String recentRowA11y(
     String time,
     String last4,
@@ -1723,11 +1513,11 @@ abstract class AppLocalizations {
   /// **'Time'**
   String get recentDetailTime;
 
-  /// Spec key: recent.detail.card (12 §5.15) · Max: 20 · Notes: 03b
+  /// Spec key: recent.detail.voucher (12 §5.15) · Max: 20 · Notes: 03b
   ///
   /// In en, this message translates to:
-  /// **'Card'**
-  String get recentDetailCard;
+  /// **'Voucher'**
+  String get recentDetailVoucher;
 
   /// Spec key: recent.detail.amount (12 §5.15) · Max: 20 · Notes: 03b
   ///
@@ -1912,7 +1702,7 @@ abstract class AppLocalizations {
   /// Spec key: forbidden.body (12 §5.17) · Max: 90 · Notes: 12
   ///
   /// In en, this message translates to:
-  /// **'This account can no longer redeem cards. Please get a manager.'**
+  /// **'This account can no longer redeem vouchers. Please get a manager.'**
   String get forbiddenBody;
 
   /// Spec key: deviceRevoked.title (12 §5.17) · Max: 32 · Notes: 03a · A04
@@ -1945,30 +1735,6 @@ abstract class AppLocalizations {
   /// **'The restaurant\'s account is paused. Please get a manager.'**
   String get suspendedBody;
 
-  /// Spec key: locked.title (12 §5.17) · Max: 32 · Notes: 03a · A06
-  ///
-  /// In en, this message translates to:
-  /// **'Account temporarily locked'**
-  String get lockedTitle;
-
-  /// Spec key: locked.body (12 §5.17) · Max: 90 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Too many sign-in attempts. Try again in {time}.'**
-  String lockedBody(String time);
-
-  /// Spec key: locked.button (12 §5.17) · Max: 24 · Notes: 03a · disabled
-  ///
-  /// In en, this message translates to:
-  /// **'Try again in {time}'**
-  String lockedButton(String time);
-
-  /// Spec key: locked.over (12 §5.17) · Max: — · Notes: 03a · (a11y)
-  ///
-  /// In en, this message translates to:
-  /// **'You can sign in again'**
-  String get lockedOver;
-
   /// Spec key: deactivated.title (12 §5.17) · Max: 32 · Notes: 03a · A10
   ///
   /// In en, this message translates to:
@@ -1999,30 +1765,6 @@ abstract class AppLocalizations {
   /// **'Update now'**
   String get updateAction;
 
-  /// Spec key: nfcOff.title (12 §5.18) · Max: 32 · Notes: 03a · P01
-  ///
-  /// In en, this message translates to:
-  /// **'NFC is off'**
-  String get nfcOffTitle;
-
-  /// Spec key: nfcOff.body (12 §5.18) · Max: 90 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on NFC to scan cards.'**
-  String get nfcOffBody;
-
-  /// Spec key: nfcOff.action (12 §5.18) · Max: 24 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Turn on NFC'**
-  String get nfcOffAction;
-
-  /// Spec key: nfcOff.on (12 §5.18) · Max: — · Notes: 03a · (a11y)
-  ///
-  /// In en, this message translates to:
-  /// **'NFC is on. Ready to scan.'**
-  String get nfcOffOn;
-
   /// Spec key: camera.denied.title (12 §5.18) · Max: 32 · Notes: 03a · P03
   ///
   /// In en, this message translates to:
@@ -2044,7 +1786,7 @@ abstract class AppLocalizations {
   /// Spec key: camera.restricted.body (12 §5.18) · Max: 90 · Notes: 03a · P04
   ///
   /// In en, this message translates to:
-  /// **'The camera is restricted on this device. Use the card number.'**
+  /// **'The camera is restricted on this device. Please get a manager.'**
   String get cameraRestrictedBody;
 
   /// Spec key: camera.unavailable.title (12 §5.18) · Max: 32 · Notes: 12 · P05
@@ -2056,7 +1798,7 @@ abstract class AppLocalizations {
   /// Spec key: camera.unavailable.body (12 §5.18) · Max: 90 · Notes: 12
   ///
   /// In en, this message translates to:
-  /// **'Close other apps using the camera or enter the card number.'**
+  /// **'Close other apps using the camera, then try again.'**
   String get cameraUnavailableBody;
 
   /// Spec key: intro.skip (12 §5.19) · Max: 16 · Notes: 03a
@@ -2083,41 +1825,17 @@ abstract class AppLocalizations {
   /// **'Page {n} of 3'**
   String introPage(int n);
 
-  /// Spec key: intro.1.title.android (12 §5.19) · Max: 28 · Notes: 03a
+  /// Spec key: intro.1.title (12 §5.19) · Max: 28 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'Tap the card'**
-  String get intro1TitleAndroid;
+  /// **'Scan the voucher'**
+  String get intro1Title;
 
-  /// Spec key: intro.1.body.android (12 §5.19) · Max: 90 · Notes: 03a · harmonised (brand guide: "unter einer Sekunde" instead of "sofort")
+  /// Spec key: intro.1.body (12 §5.19) · Max: 90 · Notes: ADR-002
   ///
   /// In en, this message translates to:
-  /// **'Hold the card to the back of the phone. The balance appears in under a second.'**
-  String get intro1BodyAndroid;
-
-  /// Spec key: intro.1.title.ios (12 §5.19) · Max: 32 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Tap Scan, then hold the card'**
-  String get intro1TitleIos;
-
-  /// Spec key: intro.1.body.ios (12 §5.19) · Max: 90 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Tap \"Scan card\", then hold the card near the top of the iPhone.'**
-  String get intro1BodyIos;
-
-  /// Spec key: intro.1.title.noNfc (12 §5.19) · Max: 28 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Scan the QR code'**
-  String get intro1TitleNoNfc;
-
-  /// Spec key: intro.1.body.noNfc (12 §5.19) · Max: 90 · Notes: 03a
-  ///
-  /// In en, this message translates to:
-  /// **'Point the camera at the QR code or type the card number.'**
-  String get intro1BodyNoNfc;
+  /// **'Point the camera at the QR code. The balance appears right away.'**
+  String get intro1Body;
 
   /// Spec key: intro.2.title (12 §5.19) · Max: 32 · Notes: 03a
   ///
@@ -2149,11 +1867,11 @@ abstract class AppLocalizations {
   /// **'{euros, plural, one {{euros} euro} other {{euros} euros}} {cents}'**
   String a11ySpokenAmount(int euros, String cents);
 
-  /// Spec key: a11y.cardLoaded (12 §5.20) · Politeness: assertive · Notes: 12 · S07 opened; status appended if not active
+  /// Spec key: a11y.voucherLoaded (12 §5.20) · Politeness: assertive · Notes: 12 · S07 opened; status appended if not active
   ///
   /// In en, this message translates to:
   /// **'{restaurant}. Balance {spokenAmount}.'**
-  String a11yCardLoaded(String restaurant, String spokenAmount);
+  String a11yVoucherLoaded(String restaurant, String spokenAmount);
 
   /// Spec key: a11y.problem (12 §5.20) · Politeness: assertive · Notes: 12 · every S10/S15 screen and banner
   ///
@@ -2164,7 +1882,7 @@ abstract class AppLocalizations {
   /// Spec key: a11y.ready (12 §5.20) · Politeness: polite · Notes: 12 · return to S05
   ///
   /// In en, this message translates to:
-  /// **'Ready for the next card'**
+  /// **'Ready for the next voucher'**
   String get a11yReady;
 
   /// Spec key: a11y.scanAvailable (12 §5.20) · Politeness: polite · Notes: 12 · throttle end (03b §5.2)

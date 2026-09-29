@@ -4,19 +4,16 @@ import 'package:flutter/widgets.dart';
 import 'package:giftcard_waiter/app/app_scope.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/core/format/format.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/loop_controller.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
 
-import 'ios_sheet_texts.dart';
-
-/// S10 — full-screen problems when no card data is available (03b §5,
-/// 12 §3.1 L01–L07), rendered with the ProblemScreen template (05 §4.6).
+/// S10 — full-screen problems when a scanned QR gave no voucher (03b §5,
+/// 12 §3.1), rendered with the ProblemScreen template (05 §4.6).
 ///
 /// The loop controller decides the variant ([ProblemState]) and plays the
-/// lookup-failure feedback and the throttle-end haptic (11 E25–E27); this
+/// throttle-end haptic (11 E27); this
 /// page maps the variant to copy, visual and actions. ✕ / Done / back
 /// return to Ready through the loop.
 class ProblemPage extends StatefulWidget {
@@ -52,8 +49,8 @@ class _ProblemPageState extends State<ProblemPage> {
     loop.addListener(_onLoop);
     final LoopState state = loop.state;
     if (state is ProblemState) _show(state);
-    if (state case LookingUpState(
-      origin: LookupOrigin.problem,
+    if (state case PresentingState(
+      origin: PresentOrigin.problem,
       :final ProblemState? problem,
     ) when problem != null) {
       _show(problem);
@@ -70,7 +67,7 @@ class _ProblemPageState extends State<ProblemPage> {
 
   void _onLoop() {
     final LoopState next = _loop.state;
-    if (next case LookingUpState(origin: LookupOrigin.problem)) {
+    if (next case PresentingState(origin: PresentOrigin.problem)) {
       setState(() => _retrying = true);
       return;
     }
@@ -109,19 +106,6 @@ class _ProblemPageState extends State<ProblemPage> {
     return left > Duration.zero ? left : Duration.zero;
   }
 
-  /// "Scan again": iPhone opens the NFC sheet, Android returns to the
-  /// listening Ready screen; a device without NFC opens the QR scanner
-  /// (03b §5.1 "iPad: S12").
-  void _scanAgain() {
-    if (_loop.nfcAvailability == NfcAvailability.unsupported) {
-      _loop
-        ..back()
-        ..openQr();
-      return;
-    }
-    unawaited(_loop.scanAgain(iosSheetTextsOf(context)));
-  }
-
   void _close() => _loop.back();
 
   @override
@@ -141,55 +125,20 @@ class _ProblemPageState extends State<ProblemPage> {
   ProblemScreen _screen(AppLocalizations l10n, ProblemState problem) {
     final ProblemAction tryAgain = ProblemAction(
       l10n.commonTryAgain,
-      _loop.retryLookup,
+      _loop.retryPresent,
       status: _retrying ? ButtonStatus.loading : null,
     );
-    final ProblemAction scanAgain = ProblemAction(
-      l10n.commonScanAgain,
-      _scanAgain,
-    );
+    final ProblemAction scanAgain = ProblemAction(l10n.commonScanAgain, _loop.scanAgain);
     final String? code = problem.supportCode;
     switch (problem.kind) {
-      case ProblemKind.notFound:
+      case ProblemKind.notRecognized:
         return _problem(
           family: ProblemFamily.notFound,
-          title: l10n.problemNotFoundTitle,
-          body: l10n.problemNotFoundBody,
+          title: l10n.problemNotRecognizedTitle,
+          body: l10n.problemNotRecognizedBody,
           primary: scanAgain,
-          secondary: ProblemAction(l10n.commonEnterNumber, _loop.openManual),
+          secondary: ProblemAction(l10n.commonDone, _close),
           code: code,
-        );
-      case ProblemKind.notFoundManual:
-        return _problem(
-          family: ProblemFamily.notFound,
-          title: l10n.problemNotFoundTitle,
-          body: l10n.problemNotFoundBodyManual,
-          primary: ProblemAction(l10n.commonEditNumber, _loop.editNumber),
-          code: code,
-        );
-      case ProblemKind.foreign:
-        return _problem(
-          family: ProblemFamily.foreign,
-          title: l10n.problemForeignTitle,
-          body: l10n.problemForeignBody,
-          primary: ProblemAction(l10n.commonDone, _close),
-          code: code,
-        );
-      case ProblemKind.verify:
-        // Calm visual (13 · R03); one fresh read, never QR/manual (L04).
-        return _problem(
-          family: ProblemFamily.verification,
-          title: l10n.problemVerifyTitle,
-          body: l10n.problemVerifyBody,
-          primary: ProblemAction(l10n.commonDone, _close),
-          tertiary: problem.verifyRescanUsed ? null : scanAgain,
-          code: code,
-          tag: switch (problem.verifyTag) {
-            VerifyTag.uid => _tagUid,
-            VerifyTag.sig => _tagSig,
-            VerifyTag.replay => _tagReplay,
-            null => null,
-          },
         );
       case ProblemKind.throttled:
         final Duration left = _remaining(problem);
@@ -205,10 +154,7 @@ class _ProblemPageState extends State<ProblemPage> {
             finishedAnnouncement: l10n.a11yScanAvailable,
           ),
           primary: left > Duration.zero
-              ? ProblemAction(
-                  l10n.problemScanAgainIn(DateTimeFormat.countdown(left)),
-                  null,
-                )
+              ? ProblemAction(l10n.problemScanAgainIn(DateTimeFormat.countdown(left)), null)
               : scanAgain,
         );
       case ProblemKind.network:
@@ -227,14 +173,6 @@ class _ProblemPageState extends State<ProblemPage> {
           primary: problem.retry == null ? scanAgain : tryAgain,
           code: code,
         );
-      case ProblemKind.notGiftCard:
-        return _problem(
-          family: ProblemFamily.notFound,
-          title: l10n.scanNotCard,
-          body: l10n.problemNotFoundBody,
-          primary: scanAgain,
-          secondary: ProblemAction(l10n.commonEnterNumber, _loop.openManual),
-        );
     }
   }
 
@@ -246,9 +184,7 @@ class _ProblemPageState extends State<ProblemPage> {
     ProblemVisual? visual,
     ProblemCountdown? countdown,
     ProblemAction? secondary,
-    ProblemAction? tertiary,
     String? code,
-    String? tag,
   }) {
     return ProblemScreen(
       family: family,
@@ -258,16 +194,9 @@ class _ProblemPageState extends State<ProblemPage> {
       countdown: countdown,
       primary: primary,
       secondary: secondary,
-      tertiary: tertiary,
       onClose: _close,
       supportCode: code,
       requestId: code == null ? null : _shown?.requestId,
-      supportCodeTag: tag,
     );
   }
-
-  /// Neutral reason tags after the support code (12 §2.5).
-  static const String _tagUid = 'UID';
-  static const String _tagSig = 'SIG';
-  static const String _tagReplay = 'REPLAY';
 }

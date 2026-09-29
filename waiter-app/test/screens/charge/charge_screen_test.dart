@@ -2,8 +2,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
+import 'package:giftcard_waiter/core/storage/pending_redemptions.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/screens/s07_charge.dart';
 import 'package:giftcard_waiter/screens/s09_success.dart';
@@ -12,8 +12,9 @@ import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
 import 'charge_harness.dart';
 
-/// S07 Charge (03b §2): entry, limits, hold, card states, switch, skeleton,
-/// layouts and accessibility — driven through the real app.
+/// S07 Charge (03b §2): entry, limits, hold, voucher states, an earlier
+/// unresolved attempt, presentment expiry, layouts and accessibility — driven
+/// through the real app (QR → presentment → S07).
 void main() {
   group('amount entry', () {
     testWidgets('typed digits shift in and the button repeats the amount in '
@@ -62,7 +63,7 @@ void main() {
     ) async {
       final TestApp app = await openCharge(
         tester,
-        scan: Payloads.scan(balance: 9999999),
+        presentment: Payloads.presentment(balance: 9999999),
       );
       final List<(String, bool)> said = recordAnnouncements(tester);
       await typeDigits(tester, '12345678');
@@ -80,7 +81,7 @@ void main() {
         'sets the balance (AC-S07-10/11)', (WidgetTester tester) async {
       final TestApp app = await openCharge(
         tester,
-        scan: Payloads.scan(balance: 3250),
+        presentment: Payloads.presentment(balance: 3250),
       );
       final List<(String, bool)> said = recordAnnouncements(tester);
       await typeDigits(tester, '3251');
@@ -129,11 +130,11 @@ void main() {
   });
 
   group('hold to redeem', () {
-    testWidgets('€ 99,99 is a tap, € 100,00 needs the 600 ms hold '
+    testWidgets('€ 99,99 is a tap, € 100,00 needs the 600 ms hold '
         '(AC-S07-13/14/15)', (WidgetTester tester) async {
       final TestApp app = await openCharge(
         tester,
-        scan: Payloads.scan(balance: 20000),
+        presentment: Payloads.presentment(balance: 20000),
       );
       app.backend.on(
         'POST',
@@ -177,7 +178,7 @@ void main() {
         '(AC-S07-17/18/19)', (WidgetTester tester) async {
       final TestApp app = await openCharge(
         tester,
-        scan: Payloads.scan(balance: 3250, partial: false),
+        presentment: Payloads.presentment(balance: 3250, partial: false),
       );
       expect(find.byType(Keypad), findsNothing);
       expect(find.byType(QuickAmountChip), findsNothing);
@@ -189,17 +190,17 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('≥ € 100 uses the HoldButton', (WidgetTester tester) async {
+    testWidgets('≥ € 100 uses the HoldButton', (WidgetTester tester) async {
       final TestApp app = await openCharge(
         tester,
-        scan: Payloads.scan(balance: 15000, partial: false),
+        presentment: Payloads.presentment(balance: 15000, partial: false),
       );
       expect(find.byType(HoldButton), findsOneWidget);
       await finishApp(tester, app);
     });
   });
 
-  group('card states (03b §2.14)', () {
+  group('voucher states (03b §2.14)', () {
     Future<void> expectState(
       WidgetTester tester, {
       required String status,
@@ -210,12 +211,13 @@ void main() {
       final TestApp app = await startApp(tester);
       app.backend.on(
         'POST',
-        '/scan',
-        FakeReply(200, Payloads.scan(status: status, balance: balance)),
+        '/presentments',
+        FakeReply(201, Payloads.presentment(status: status, balance: balance)),
       );
       final List<(String, bool)> said = recordAnnouncements(tester);
-      await readCard(tester, app);
+      await scanVoucher(tester, app);
       await tester.pump(const Duration(milliseconds: 400));
+      expect(find.byType(ChargeScreen), findsOneWidget);
       expect(find.byType(StatusBanner), findsOneWidget);
       expect(rich(title), findsOneWidget);
       expect(rich(body), findsOneWidget);
@@ -233,6 +235,7 @@ void main() {
       await tester.tap(rich('Done'));
       await settle(tester);
       expect(app.loop.state, isA<ReadyState>());
+      expect(app.backend.to('POST', redeemPath), isEmpty);
       await finishApp(tester, app);
     }
 
@@ -240,7 +243,7 @@ void main() {
       await expectState(
         tester,
         status: 'blocked',
-        title: 'Card blocked',
+        title: 'Voucher blocked',
         body: 'Reason: Reported lost',
       );
     });
@@ -249,26 +252,8 @@ void main() {
       await expectState(
         tester,
         status: 'expired',
-        title: 'Card expired',
+        title: 'Voucher expired',
         body: 'Expired on 26 Sep 2029',
-      );
-    });
-
-    testWidgets('replaced', (WidgetTester tester) async {
-      await expectState(
-        tester,
-        status: 'replaced',
-        title: 'Card was replaced',
-        body: 'Ask the guest for the new card.',
-      );
-    });
-
-    testWidgets('inactive', (WidgetTester tester) async {
-      await expectState(
-        tester,
-        status: 'inactive',
-        title: 'Card not activated yet',
-        body: 'It can be redeemed once activated.',
       );
     });
 
@@ -278,7 +263,7 @@ void main() {
         status: 'active',
         balance: 0,
         title: 'No balance left',
-        body: 'This card has been fully used.',
+        body: 'This voucher has been fully used.',
       );
     });
   });
@@ -290,7 +275,7 @@ void main() {
     ) async {
       final TestApp app = await openCharge(
         tester,
-        scan: Payloads.scan(balance: 3250),
+        presentment: Payloads.presentment(balance: 3250),
       );
       await typeDigits(tester, '325');
       await realPause(tester);
@@ -345,7 +330,7 @@ void main() {
     });
   });
 
-  group('connection and card switch', () {
+  group('connection', () {
     testWidgets('offline: banner and Redeem disabled (12 R16)', (
       WidgetTester tester,
     ) async {
@@ -368,179 +353,162 @@ void main() {
       );
       await finishApp(tester, app);
     });
-
-    testWidgets('Android: a different card with an amount typed offers '
-        '"Switch" and hides Redeem (AC-S07-31/32)', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await openCharge(tester);
-      await typeDigits(tester, '2490');
-      app.nfc.emit(
-        NfcTagRead(uid: '04:00:00:00:00:00:01', url: Payloads.cardUrl()),
-      );
-      await settle(tester);
-      expect(chargeOf(app).pendingSwitch, isNotNull);
-      expect(rich('Different card detected – Switch?'), findsOneWidget);
-      final AnimatedOpacity slot = tester.widget(
-        find
-            .ancestor(
-              of: find.byType(PrimaryButton),
-              matching: find.byType(AnimatedOpacity),
-            )
-            .first,
-      );
-      expect(slot.opacity, 0);
-
-      await tester.tap(rich('Switch').last);
-      await settle(tester);
-      expect(chargeOf(app).amount, 0);
-      expect(app.backend.to('POST', '/scan'), hasLength(2));
-      await finishApp(tester, app);
-    });
-
-    testWidgets('the switch snackbar times out as "Keep" (6 s)', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await openCharge(tester);
-      await typeDigits(tester, '2490');
-      app.nfc.emit(
-        NfcTagRead(uid: '04:00:00:00:00:00:01', url: Payloads.cardUrl()),
-      );
-      await settle(tester);
-      expect(chargeOf(app).pendingSwitch, isNotNull);
-      await tester.pump(const Duration(seconds: 7));
-      await settle(tester);
-      expect(chargeOf(app).pendingSwitch, isNull);
-      expect(rich('Different card detected'), findsNothing);
-      expect(chargeOf(app).amount, 2490);
-      await finishApp(tester, app);
-    });
-
-    testWidgets('with a screen reader the switch offer is a dialog', (
-      WidgetTester tester,
-    ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(accessibleNavigation: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
-      final TestApp app = await openCharge(tester);
-      await typeDigits(tester, '2490');
-      app.nfc.emit(
-        NfcTagRead(uid: '04:00:00:00:00:00:01', url: Payloads.cardUrl()),
-      );
-      await settle(tester);
-      expect(find.byType(WaiterDialog), findsOneWidget);
-      await tester.pump(const Duration(seconds: 10));
-      expect(find.byType(WaiterDialog), findsOneWidget, reason: 'no timeout');
-      expect(chargeOf(app).pendingSwitch, isNotNull);
-      await tester.tap(rich('Keep'));
-      await settle(tester);
-      expect(find.byType(WaiterDialog), findsNothing);
-      expect(chargeOf(app).pendingSwitch, isNull);
-      expect(chargeOf(app).amount, 2490);
-      await finishApp(tester, app);
-    });
-
-    testWidgets('Android: a new card with amount 0 replaces the card', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await startApp(tester);
-      app.backend
-        ..on('POST', '/scan', FakeReply(200, Payloads.scan()))
-        ..on('POST', '/scan', FakeReply(200, Payloads.scan(balance: 800)));
-      await readCard(tester, app);
-      expect(chargeOf(app).card.balance, 5000);
-      app.nfc.emit(
-        NfcTagRead(uid: '04:00:00:00:00:00:02', url: Payloads.cardUrl()),
-      );
-      await settle(tester);
-      expect(chargeOf(app).card.balance, 800);
-      expect(chargeOf(app).replacedCard, isTrue);
-      expect(find.byType(ChargeScreen), findsOneWidget);
-      await finishApp(tester, app);
-    });
-
-    testWidgets('a slow new-card lookup stays on S07 with the skeleton (M21)', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await startApp(tester);
-      app.backend
-        ..on('POST', '/scan', FakeReply(200, Payloads.scan()))
-        ..on(
-          'POST',
-          '/scan',
-          FakeReply(
-            200,
-            Payloads.scan(balance: 800),
-            const Duration(seconds: 1),
-          ),
-        );
-      await readCard(tester, app);
-      app.nfc.emit(
-        NfcTagRead(uid: '04:00:00:00:00:00:02', url: Payloads.cardUrl()),
-      );
-      await settle(tester);
-      expect(app.loop.state, isA<LookingUpState>());
-      expect(find.byType(ChargeScreen), findsOneWidget);
-      expect(tester.widget<BalanceCard>(find.byType(BalanceCard)).data, isNull);
-      await tester.pump(const Duration(seconds: 1));
-      await settle(tester);
-      expect(chargeOf(app).card.balance, 800);
-      await finishApp(tester, app);
-    });
   });
 
-  group('card link skeleton (03b §2.19)', () {
-    testWidgets('skeleton, "Still looking …" at 3 s, ✕ cancels', (
-      WidgetTester tester,
-    ) async {
-      final (TestApp app, links) = await startAppWithLinks(tester);
+  group('earlier unresolved attempt (resolving)', () {
+    /// App on S05 with an unresolved attempt of € 15 on the sample voucher;
+    /// returns the attempt's outcome path.
+    Future<(TestApp, String)> withPending(WidgetTester tester) async {
+      final TestApp app = await startApp(tester);
+      final PendingRedemption pending = await app.pending.open(
+        voucherId: Payloads.voucherId,
+        amount: 1500,
+        currency: 'EUR',
+        last4: '6488',
+        restaurantName: 'Trattoria Bella Vista',
+      );
       app.backend.on(
         'POST',
-        '/scan',
-        FakeReply.hang(const Duration(seconds: 30)),
+        '/presentments',
+        FakeReply(201, Payloads.presentment()),
       );
-      links.add(Uri.parse(Payloads.cardUrl()));
-      await settle(tester);
-      expect(app.loop.state, isA<LookingUpState>());
-      expect(find.byType(ChargeScreen), findsOneWidget);
-      final BalanceCard card = tester.widget(find.byType(BalanceCard));
-      expect(card.data, isNull);
-      expect(tester.widget<Keypad>(find.byType(Keypad)).enabled, isFalse);
-      expect(rich('Enter amount'), findsOneWidget);
-      expect(rich('Still looking'), findsNothing);
+      return (app, '$redeemPath/${pending.key}');
+    }
 
-      await tester.pump(const Duration(seconds: 3));
+    PrimaryButton button(WidgetTester tester) =>
+        tester.widget<PrimaryButton>(find.byType(PrimaryButton));
+
+    testWidgets('banner and "Check again" instead of the keypad; a booked '
+        'answer updates the balance with the 4-s helper', (
+      WidgetTester tester,
+    ) async {
+      final (TestApp app, String outcome) = await withPending(tester);
+      app.backend
+        ..on('GET', outcome, FakeReply(200, Payloads.outcome()))
+        ..on(
+          'GET',
+          outcome,
+          FakeReply(200, Payloads.outcome(amount: 1500, balanceAfter: 3500)),
+        );
+      final List<(String, bool)> said = recordAnnouncements(tester);
+      await scanVoucher(tester, app);
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(chargeOf(app).phase, RedeemPhase.resolving);
+      expect(
+        app.backend.to('GET', outcome),
+        hasLength(1),
+        reason: 'asked at once',
+      );
+      expect(rich('Checking an earlier redemption'), findsOneWidget);
+      expect(rich('€ 15,00 may already have been redeemed'), findsOneWidget);
+      expect(find.byType(Keypad), findsNothing);
+      expect(find.byType(AmountDisplay), findsNothing);
+      expect(button(tester).label, 'Check again');
+      expect(button(tester).onPressed, isNotNull);
+      expect(
+        said,
+        contains((
+          'Trattoria Bella Vista. Balance 50 euros. '
+              'Checking an earlier redemption.',
+          false,
+        )),
+      );
+      expect(app.loop.canRedeem(chargeOf(app)), isFalse);
+
+      await tester.tap(find.byType(PrimaryButton));
       await settle(tester);
-      expect(rich('Still looking'), findsOneWidget);
+      expect(app.backend.to('GET', outcome), hasLength(2));
+      expect(chargeOf(app).phase, RedeemPhase.entering);
+      expect(chargeOf(app).voucher.balance, 3500);
+      expect(chargeOf(app).notice, isA<EarlierBookedNotice>());
+      expect(
+        rich('The earlier redemption of € 15,00 was booked. Balance updated.'),
+        findsOneWidget,
+      );
+      expect(find.byType(Keypad), findsOneWidget);
+      expect(app.pending.entries, isEmpty);
+      expect(app.services.recent.entries.single.amount, 1500);
+      expect(
+        app.backend.to('POST', redeemPath),
+        isEmpty,
+        reason: 'asking never re-sends the debit',
+      );
+      expect(
+        said.map(((String, bool) a) => a.$1),
+        contains(
+          'The earlier redemption of 15 euros was booked. Balance updated.',
+        ),
+      );
+
+      await tester.pump(const Duration(seconds: 4));
+      await settle(tester);
+      expect(rich('The earlier redemption'), findsNothing);
+      await finishApp(tester, app);
+    });
+
+    testWidgets('"Check again" is disabled offline; ✕ leaves and keeps the '
+        'attempt', (WidgetTester tester) async {
+      final (TestApp app, String outcome) = await withPending(tester);
+      app.backend.on('GET', outcome, FakeReply(200, Payloads.outcome()));
+      await scanVoucher(tester, app);
+      expect(chargeOf(app).phase, RedeemPhase.resolving);
+
+      app.connectivity.setOnline(false);
+      await settle(tester);
+      expect(button(tester).onPressed, isNull);
+      expect(rich('No connection'), findsOneWidget);
+      app.connectivity.setOnline(true);
+      await settle(tester);
+      expect(button(tester).onPressed, isNotNull);
 
       await tester.tap(closeButton);
       await settle(tester);
       expect(app.loop.state, isA<ReadyState>());
+      expect(app.pending.entries, hasLength(1));
+      expect(app.backend.to('POST', redeemPath), isEmpty);
       await finishApp(tester, app);
     });
+  });
 
-    testWidgets('the skeleton turns into the card', (
-      WidgetTester tester,
-    ) async {
-      final (TestApp app, links) = await startAppWithLinks(tester);
-      app.backend.on(
+  group('presentment expiry', () {
+    testWidgets('the presentment runs out: "Scan again" replaces Redeem and '
+        'the amount is kept for the same voucher', (WidgetTester tester) async {
+      final TestApp app = await openCharge(
+        tester,
+        presentment: Payloads.presentment(expiresIn: 60),
+      );
+      await typeDigits(tester, '1800');
+      expect(rich('Redeem € 18,00'), findsOneWidget);
+      final List<(String, bool)> said = recordAnnouncements(tester);
+
+      await tester.pump(const Duration(seconds: 57));
+      await settle(tester);
+      expect(chargeOf(app).presentmentExpired, isTrue);
+      expect(rich('Scan the voucher again to redeem.'), findsOneWidget);
+      expect(rich('Redeem € 18,00'), findsNothing);
+      final PrimaryButton rescan = tester.widget(find.byType(PrimaryButton));
+      expect(rescan.label, 'Scan again');
+      expect(rescan.onPressed, isNotNull);
+      expect(said, contains(('Scan the voucher again to redeem.', true)));
+      expect(app.backend.to('POST', redeemPath), isEmpty);
+
+      app.backend.only(
         'POST',
-        '/scan',
-        FakeReply(200, Payloads.scan(), const Duration(milliseconds: 500)),
+        '/presentments',
+        FakeReply(201, Payloads.presentment(id: 'p-2')),
       );
-      links.add(Uri.parse(Payloads.cardUrl()));
+      await tester.tap(find.byType(PrimaryButton));
       await settle(tester);
-      expect(tester.widget<BalanceCard>(find.byType(BalanceCard)).data, isNull);
-      await tester.pump(const Duration(milliseconds: 500));
+      expect(app.loop.state, isA<QrScanState>());
+
+      app.loop.qrDetected(Payloads.qr);
       await settle(tester);
-      expect(app.loop.state, isA<ChargeState>());
-      expect(
-        tester.widget<BalanceCard>(find.byType(BalanceCard)).data,
-        isNotNull,
-      );
-      expect(tester.widget<Keypad>(find.byType(Keypad)).enabled, isTrue);
+      expect(find.byType(ChargeScreen), findsOneWidget);
+      expect(chargeOf(app).presentmentId, 'p-2');
+      expect(chargeOf(app).amount, 1800);
+      expect(rich('Redeem € 18,00'), findsOneWidget);
+      expect(rich('Scan the voucher again'), findsNothing);
       await finishApp(tester, app);
     });
   });
@@ -635,23 +603,30 @@ void main() {
   });
 
   group('accessibility (07 §5)', () {
-    testWidgets('card, amount, keys and button carry spoken labels; the card '
-        'is announced on entry', (WidgetTester tester) async {
+    testWidgets('voucher, amount, keys and button carry spoken labels; the '
+        'voucher is announced on entry', (WidgetTester tester) async {
       final SemanticsHandle semantics = tester.ensureSemantics();
       final TestApp app = await startApp(tester);
-      app.backend.on('POST', '/scan', FakeReply(200, Payloads.scan()));
+      app.backend.on(
+        'POST',
+        '/presentments',
+        FakeReply(201, Payloads.presentment()),
+      );
       final List<(String, bool)> said = recordAnnouncements(tester);
-      await readCard(tester, app);
+      await scanVoucher(tester, app);
       expect(
         said,
         contains(('Trattoria Bella Vista. Balance 50 euros.', true)),
       );
-      expect(find.bySemanticsLabel('Close card'), findsOneWidget);
+      expect(find.bySemanticsLabel('Close voucher'), findsOneWidget);
       expect(
-        find.bySemanticsLabel(RegExp('^Gift card Trattoria Bella Vista')),
+        find.bySemanticsLabel(RegExp('^Voucher Trattoria Bella Vista')),
         findsOneWidget,
       );
-      expect(find.bySemanticsLabel(RegExp('^Card number 5 2 8 5')), findsOne);
+      expect(
+        find.bySemanticsLabel(RegExp('^Voucher number 5 2 8 5')),
+        findsOne,
+      );
       expect(find.bySemanticsLabel('Double zero'), findsOneWidget);
 
       await typeDigits(tester, '2490');
@@ -662,7 +637,7 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('Return redeems below € 100 (hardware keyboard)', (
+    testWidgets('Return redeems below € 100 (hardware keyboard)', (
       WidgetTester tester,
     ) async {
       final TestApp app = await openCharge(tester);

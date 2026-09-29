@@ -77,15 +77,15 @@ abstract final class Spoken {
   }
 
   /// Characters separated by spaces so screen readers read them one by one:
-  /// `6488` → `6 4 8 8` (12 §1.10 card ending), `7F3A9C` → `7 F 3 A 9 C`
+  /// `6488` → `6 4 8 8` (12 §1.10 voucher ending), `7F3A9C` → `7 F 3 A 9 C`
   /// (12 §2.5 support code).
   static String characters(String text) =>
       text.runes.map(String.fromCharCode).join(' ');
 
-  /// A (possibly partial) card number read in groups of four with a pause
+  /// A voucher number read in groups of four with a pause
   /// between groups (07 §5.2, 05 §2.5): `5285105870` →
   /// `5 2 8 5, 1 0 5 8, 7 0`. Non-digits are ignored.
-  static String cardNumber(String digits) {
+  static String voucherNumber(String digits) {
     final String clean = digits.replaceAll(RegExp('[^0-9]'), '');
     final List<String> groups = <String>[];
     for (int i = 0; i < clean.length; i += 4) {

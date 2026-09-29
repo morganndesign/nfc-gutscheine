@@ -146,7 +146,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
   void _throttleOver() {
     if (!_throttled) return;
-    announce(context, AppLocalizations.of(context).lockedOver);
+    announce(context, AppLocalizations.of(context).signInAvailable);
     setState(() => _issue = null);
   }
 
@@ -189,7 +189,7 @@ class _SignInScreenState extends State<SignInScreen> {
     final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
 
     final Widget button = PrimaryButton(
-      label: _throttled ? l.lockedButton(DateTimeFormat.countdown(remaining)) : l.signInSubmit,
+      label: _throttled ? l.signInRetryIn(DateTimeFormat.countdown(remaining)) : l.signInSubmit,
       semanticLabel: _busy ? l.signInLoading : null,
       status: _busy ? ButtonStatus.loading : ButtonStatus.idle,
       onPressed: _canSubmit ? _submit : null,

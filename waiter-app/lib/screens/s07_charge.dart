@@ -7,27 +7,26 @@ import 'package:giftcard_waiter/app/app_scope.dart';
 import 'package:giftcard_waiter/app/money.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/components/support/announce.dart';
-import 'package:giftcard_waiter/core/api/waiter_api.dart';
 import 'package:giftcard_waiter/core/format/format.dart';
 import 'package:giftcard_waiter/core/platform/feedback_scope.dart';
 import 'package:giftcard_waiter/core/state/loop_controller.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
+import 'package:giftcard_waiter/core/storage/pending_redemptions.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
 
-import 'charge/card_data.dart';
 import 'charge/card_region.dart';
-import 'charge/card_state_banner.dart';
 import 'charge/charge_metrics.dart';
 import 'charge/entrance.dart';
 import 'charge/helper_line.dart';
 import 'charge/support_code_line.dart';
 import 'charge/uncertain_panel.dart';
+import 'charge/voucher_data.dart';
+import 'charge/voucher_state_banner.dart';
 
 /// S07 Charge and its in-place S08 Redeeming states (03b §2–§3).
 ///
-/// Renders the loop's [ChargeState] (and the card skeleton of a
-/// [LookingUpState] opened by a card link, 03b §2.19). All decisions —
+/// Renders the loop's [ChargeState]. All decisions —
 /// guards, attempts, retries, feedback of the loop events — live in the
 /// [LoopController]; this screen maps state to layout, plays the motion
 /// and posts the screen-reader announcements of 07 §5.6.
@@ -46,9 +45,9 @@ class _ChargeScreenState extends State<ChargeScreen> {
   LoopController? _loopOrNull;
   LoopController get _loop => _loopOrNull!;
 
-  /// The state on screen: a [ChargeState] or a link [LookingUpState]. Kept
-  /// while the page leaves so it animates out unchanged.
-  LoopState? _shown;
+  /// The state on screen. Kept while the page leaves so it animates out
+  /// unchanged.
+  ChargeState? _shown;
   bool _leaving = false;
 
   final GlobalKey _cardKey = GlobalKey(debugLabel: 'BalanceCard');
@@ -68,14 +67,8 @@ class _ChargeScreenState extends State<ChargeScreen> {
   Timer? _ticker;
   bool _countdownRunning = false;
 
-  /// The switch-card offer on screen (P14).
-  ScanRequest? _switchOffered;
-  bool _switchDialog = false;
-  SnackbarController? _snackbars;
-
-  /// 06 M08 arrival scale: Android NFC / QR origin, iPhone sheet / S11.
-  static const double _arrivalAndroid = 0.4;
-  static const double _arrivalIos = 0.6;
+  /// 06 M08 arrival scale: the voucher rises from the QR scanner.
+  static const double _arrival = 0.6;
 
   /// 03b §2.13 / §2.16: the 4-s helper after a definitive rejection.
   static const Duration _transientHelper = Duration(seconds: 4);
@@ -89,23 +82,15 @@ class _ChargeScreenState extends State<ChargeScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _snackbars = SnackbarHost.maybeOf(context);
     if (_loopOrNull != null) return;
     final LoopController loop = _loopOrNull = context.services.loop;
     loop.addListener(_onLoop);
     final LoopState state = loop.state;
-    if (!_accepts(state)) return;
+    if (state is! ChargeState) return;
     _shown = state;
-    // 06 M08: a card rises from its origin; a swap on S07 cross-fades in
-    // place (M21) and a link has no visible origin.
-    final bool rises = switch (state) {
-      ChargeState(:final bool replacedCard) => !replacedCard,
-      LookingUpState(:final LookupOrigin origin) =>
-        origin == LookupOrigin.success,
-      _ => false,
-    };
-    if (rises) _arrivalScale = loop.isIos ? _arrivalIos : _arrivalAndroid;
-    if (state is ChargeState) _onCharge(null, state);
+    // 06 M08: the voucher rises from the scanner.
+    _arrivalScale = _arrival;
+    _onCharge(null, state);
   }
 
   @override
@@ -118,39 +103,19 @@ class _ChargeScreenState extends State<ChargeScreen> {
     super.dispose();
   }
 
-  /// S07 shows charges and the card skeleton of lookups started by a card
-  /// link, on S07 (new card, "Switch") or on S09 (next card).
-  static bool _accepts(LoopState state) => switch (state) {
-    ChargeState() => true,
-    LookingUpState(:final LookupOrigin origin) =>
-      origin == LookupOrigin.link ||
-          origin == LookupOrigin.charge ||
-          origin == LookupOrigin.success,
-    _ => false,
-  };
-
-  ChargeState? get _charge {
-    final LoopState? shown = _shown;
-    return shown is ChargeState ? shown : null;
-  }
+  ChargeState? get _charge => _shown;
 
   // ------------------------------------------------------------ state flow
 
   void _onLoop() {
     final LoopState next = _loop.state;
-    if (!_accepts(next)) {
-      _withdrawSwitch();
+    if (next is! ChargeState) {
       _ticker?.cancel();
       if (!_leaving) setState(() => _leaving = true);
       return;
     }
-    final LoopState? previous = _shown;
-    if (next is ChargeState) _onCharge(previous, next);
-    if (next is LookingUpState &&
-        next.slow &&
-        !(previous is LookingUpState && previous.slow)) {
-      _announceAfterFrame(AppLocalizations.of(context).scanSlow);
-    }
+    final ChargeState? previous = _shown;
+    _onCharge(previous, next);
     setState(() {
       _shown = next;
       _leaving = false;
@@ -158,13 +123,15 @@ class _ChargeScreenState extends State<ChargeScreen> {
   }
 
   /// Transitions of 03b §2–§3 that need a screen-level reaction.
-  void _onCharge(LoopState? previous, ChargeState next) {
-    final ChargeState? before = previous is ChargeState ? previous : null;
+  void _onCharge(ChargeState? before, ChargeState next) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final MoneyContext money = context.moneyFor(next.card.currency);
+    final MoneyContext money = context.moneyFor(next.voucher.currency);
 
-    if (before == null || before.card.id != next.card.id) {
-      _announceCard(next, l10n, money);
+    if (before == null || before.voucher.id != next.voucher.id) {
+      _announceVoucher(next, l10n, money);
+    }
+    if (next.presentmentExpired && !(before?.presentmentExpired ?? false)) {
+      _announceAfterFrame(l10n.chargePresentmentExpired, assertive: true);
     }
     if (!identical(before?.notice, next.notice)) {
       _onNotice(next, l10n, money);
@@ -183,17 +150,20 @@ class _ChargeScreenState extends State<ChargeScreen> {
       );
     }
     _onPhase(before, next, l10n, money);
-    _syncSwitchOffer(next);
     _syncCountdown(next);
   }
 
-  void _announceCard(ChargeState s, AppLocalizations l10n, MoneyContext money) {
-    final String loaded = l10n.a11yCardLoaded(
-      s.card.restaurantName,
-      money.spoken(s.card.balance),
+  void _announceVoucher(ChargeState s, AppLocalizations l10n, MoneyContext money) {
+    final String loaded = l10n.a11yVoucherLoaded(
+      s.voucher.restaurantName,
+      money.spoken(s.voucher.balance),
     );
-    if (s.condition != CardCondition.redeemable) {
-      // The card-state banner announces itself assertively (03b §2.14).
+    if (s.phase == RedeemPhase.resolving) {
+      _announceAfterFrame('$loaded ${l10n.chargePendingTitle}.');
+      return;
+    }
+    if (s.condition != VoucherCondition.redeemable) {
+      // The voucher-state banner announces itself assertively (03b §2.14).
       _announceAfterFrame(loaded);
       return;
     }
@@ -221,17 +191,18 @@ class _ChargeScreenState extends State<ChargeScreen> {
           l10n.chargeMaxSingle(money.spoken(max)),
           assertive: true,
         );
-      case TapAgainNotice():
-        _announceAfterFrame(l10n.redeemTapAgain);
+      case DailyLimitNotice(:final int remaining):
+        _shake.shake();
+        _announceAfterFrame(l10n.chargeDailyLimit(money.spoken(remaining)), assertive: true);
+      case EarlierBookedNotice(:final int amount):
+        _startTransient(notice);
+        _announceAfterFrame(l10n.chargeEarlierBooked(money.spoken(amount)), assertive: true);
       case ServerFaultNotice(:final String supportCode):
         _announceAfterFrame(
           '${l10n.problemServerTitle}. '
           '${l10n.commonSupportCodeA11y(SupportCode.spoken(supportCode))}',
         );
-      case VelocityNotice() ||
-          RateLimitNotice() ||
-          UncertainCancelledNotice() ||
-          null:
+      case VelocityNotice() || RateLimitNotice() || null:
         // Banners announce themselves (05 §3.3).
         break;
     }
@@ -291,7 +262,7 @@ class _ChargeScreenState extends State<ChargeScreen> {
           l10n.a11yProblem(l10n.uncertainTitle, l10n.uncertainFailedBody),
           assertive: true,
         );
-      case RedeemPhase.entering:
+      case RedeemPhase.entering || RedeemPhase.resolving:
         break;
     }
   }
@@ -338,77 +309,13 @@ class _ChargeScreenState extends State<ChargeScreen> {
     _syncCountdown(s);
   }
 
-  // ------------------------------------------------------ card switch (P14)
-
-  void _syncSwitchOffer(ChargeState s) {
-    final ScanRequest? pending = s.pendingSwitch;
-    if (pending == null) {
-      _withdrawSwitch();
-    } else if (!identical(pending, _switchOffered)) {
-      _switchOffered = pending;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _offerSwitch());
-    }
-  }
-
-  /// Snackbar in the button slot, or — with a screen reader — the Dialog
-  /// fallback without timeout (03b §2.18, 07 §5.4).
-  void _offerSwitch() {
-    if (!mounted || _switchOffered == null) return;
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    if (MediaQuery.accessibleNavigationOf(context)) {
-      _switchDialog = true;
-      _loop.holdSwitchOffer();
-      unawaited(
-        showWaiterDialog(
-          context: context,
-          title: l10n.chargeSwitchCardDialogTitle,
-          body: l10n.chargeSwitchCardMessage,
-          confirmLabel: l10n.chargeSwitchCardAction,
-          cancelLabel: l10n.chargeSwitchCardKeep,
-        ).then((DialogChoice choice) {
-          if (!_switchDialog) return;
-          _switchDialog = false;
-          if (choice == DialogChoice.confirm) {
-            _loop.acceptSwitch();
-          } else {
-            _loop.keepCard();
-          }
-        }),
-      );
-      return;
-    }
-    _snackbars?.show(
-      SnackbarData(
-        message: l10n.chargeSwitchCardMessage,
-        actionLabel: l10n.chargeSwitchCardAction,
-        onAction: _loop.acceptSwitch,
-        // Swipe or timeout = "Keep" (03b §2.18).
-        onDismissed: _loop.keepCard,
-      ),
-    );
-  }
-
-  void _withdrawSwitch() {
-    if (_switchOffered == null) return;
-    _switchOffered = null;
-    if (_switchDialog) {
-      _switchDialog = false;
-      Navigator.of(context).popUntil(ModalRoute.withName(_pageName));
-    } else {
-      _snackbars?.dismiss();
-    }
-  }
-
-  /// Name of the S07 page in the app navigator.
-  static const String _pageName = 'charge';
-
   // ----------------------------------------------------------------- input
 
   bool _editable(ChargeState s) =>
       !_leaving &&
       !s.isLocked &&
       !s.fullOnly &&
-      s.condition == CardCondition.redeemable;
+      s.condition == VoucherCondition.redeemable;
 
   /// Applies a key through the loop controller and hands the Keypad the
   /// outcome for its feedback (05 §2.1): the pure preview on the current
@@ -437,10 +344,6 @@ class _ChargeScreenState extends State<ChargeScreen> {
   EntryOutcome _clear() =>
       _input((AmountEntry e) => e.clear(), _loop.clearAmount);
 
-  static EntryOutcome _ignoreDigit(int digit) => EntryOutcome.ignored;
-
-  static EntryOutcome _ignore() => EntryOutcome.ignored;
-
   void _redeem() => unawaited(_loop.redeem());
 
   void _tryAgain() => unawaited(_loop.tryAgain());
@@ -449,7 +352,7 @@ class _ChargeScreenState extends State<ChargeScreen> {
 
   static _Limit _limitOf(ChargeState s) {
     final int? max = s.maxSingle;
-    if (s.isOverMax && (max! < s.card.balance || !s.isOverBalance)) {
+    if (s.isOverMax && (max! < s.voucher.balance || !s.isOverBalance)) {
       return _Limit.max;
     }
     return s.isOverBalance ? _Limit.balance : _Limit.none;
@@ -459,12 +362,8 @@ class _ChargeScreenState extends State<ChargeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final LoopState? shown = _shown;
-    final Widget body = switch (shown) {
-      ChargeState() => _ChargeBody(state: this, s: shown),
-      LookingUpState() => _SkeletonBody(state: this, lookup: shown),
-      _ => const SizedBox.shrink(),
-    };
+    final ChargeState? shown = _shown;
+    final Widget body = shown == null ? const SizedBox.shrink() : _ChargeBody(state: this, s: shown);
     return ColoredBox(
       color: context.colors.bgCanvas,
       child: IgnorePointer(ignoring: _leaving, child: body),
@@ -679,10 +578,10 @@ class _ChargeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    final MoneyContext money = context.moneyFor(s.card.currency);
+    final MoneyContext money = context.moneyFor(s.voucher.currency);
     final ChargeMetrics metrics = ChargeMetrics.of(context);
-    final BalanceCardData data = balanceCardDataOf(context, s.card);
-    final bool redeemable = s.condition == CardCondition.redeemable;
+    final BalanceCardData data = balanceCardDataOf(context, s.voucher);
+    final bool redeemable = s.condition == VoucherCondition.redeemable;
 
     Widget card(
       BuildContext context,
@@ -699,20 +598,49 @@ class _ChargeBody extends StatelessWidget {
       onContrastFallback: () => logContrastFallback(context),
     );
 
-    final Widget topBar = AnimatedSwitcher(
-      duration: s.replacedCard ? Times.cardSwap : Duration.zero,
-      switchInCurve: Motion.easeStandard,
-      switchOutCurve: Motion.easeStandard,
-      child: TopBar.task(
-        key: ValueKey<String>(s.card.id),
-        // Dimmed while money may be moving (03b §1.4, §3.2).
-        onClose: s.isLocked ? null : _loop.closeCharge,
-        closeLabel: l10n.a11yChargeClose,
-        cardNumber: s.card.cardNumber,
-      ),
+    final Widget topBar = TopBar.task(
+      // Dimmed while money may be moving (03b §1.4, §3.2); an unresolved
+      // earlier attempt can be left, it stays stored.
+      onClose: s.isLocked && s.phase != RedeemPhase.resolving ? null : _loop.closeCharge,
+      closeLabel: l10n.a11yChargeClose,
+      voucherNumber: s.voucher.voucherNumber,
     );
 
     final Widget? offline = _offlineBanner(_loop, l10n);
+
+    if (s.phase == RedeemPhase.resolving) {
+      final PendingRedemption? pending = s.pending;
+      final String? code = s.supportCode;
+      return _ChargeFrame(
+        topBar: topBar,
+        offlineBanner: offline,
+        card: card,
+        trailing: <Widget>[
+          const SizedBox(height: Space.s6),
+          Entrance(
+            delay: _ChargeScreenState._bannerDelay,
+            rise: Space.s2,
+            child: StatusBanner(
+              tone: BannerTone.warning,
+              icon: WaiterIcon.clock,
+              title: l10n.chargePendingTitle,
+              body: l10n.chargePendingBody(money.format(pending?.amount ?? 0)),
+            ),
+          ),
+          if (code != null) ...<Widget>[
+            const SizedBox(height: Space.s4),
+            SupportCodeLine(code: code, requestId: s.requestId ?? ''),
+          ],
+        ],
+        action: PrimaryButton(
+          label: l10n.commonCheckAgain,
+          loadingLabel: l10n.uncertainBody,
+          status: s.checking ? ButtonStatus.loading : ButtonStatus.idle,
+          onPressed: s.checking || !_loop.isOnline ? null : _loop.checkPending,
+          disabledReason: _loop.isOnline ? null : l10n.offlineBody,
+        ),
+      );
+    }
 
     if (!redeemable) {
       final bool nothingBooked =
@@ -740,13 +668,13 @@ class _ChargeBody extends StatelessWidget {
                 : const SizedBox(width: double.infinity),
           ),
           Entrance(
-            key: ValueKey<CardCondition>(s.condition),
+            key: ValueKey<VoucherCondition>(s.condition),
             delay: _ChargeScreenState._bannerDelay,
             rise: Space.s2,
-            child: cardStateBanner(
+            child: voucherStateBanner(
               l10n: l10n,
               condition: s.condition,
-              card: s.card,
+              voucher: s.voucher,
               expiry: data.expiresAt,
               money: money,
             ),
@@ -767,9 +695,9 @@ class _ChargeBody extends StatelessWidget {
       bindings: <ShortcutActivator, VoidCallback>{
         // Return activates the PrimaryButton, never a HoldButton (05 §2.1).
         const SingleActivator(LogicalKeyboardKey.enter): () {
-          if (s.amount < LoopController.holdThreshold &&
-              _loop.canRedeem(s) &&
-              s.pendingSwitch == null) {
+          if (s.presentmentExpired) {
+            _loop.rescan();
+          } else if (s.amount < LoopController.holdThreshold && _loop.canRedeem(s)) {
             state._redeem();
           }
         },
@@ -825,6 +753,17 @@ class _EntryBlock extends StatelessWidget {
     }
     final ChargeNotice? notice = s.notice;
     final bool transient = identical(state._transient, notice);
+    if (s.presentmentExpired && s.phase == RedeemPhase.entering) {
+      return HelperMessage(
+        notice is NothingBookedNotice
+            ? '${l10n.redeemNothingBooked} ${l10n.chargePresentmentExpired}'
+            : l10n.chargePresentmentExpired,
+        HelperTone.info,
+      );
+    }
+    if (notice is EarlierBookedNotice && transient) {
+      return HelperMessage(l10n.chargeEarlierBooked(money.format(notice.amount)), HelperTone.info);
+    }
     if (notice is BalanceChangedNotice && transient) {
       return HelperMessage(
         l10n.redeemBalanceChanged(money.format(notice.balance)),
@@ -847,14 +786,17 @@ class _EntryBlock extends StatelessWidget {
         );
       case _Limit.balance:
         return HelperMessage(
-          l10n.chargeOverBalance(money.format(s.amount - s.card.balance)),
+          l10n.chargeOverBalance(money.format(s.amount - s.voucher.balance)),
           HelperTone.danger,
         );
       case _Limit.none:
         break;
     }
     return switch (notice) {
-      TapAgainNotice() => HelperMessage(l10n.redeemTapAgain, HelperTone.info),
+      DailyLimitNotice(:final int remaining) => HelperMessage(
+        l10n.chargeDailyLimit(money.format(remaining)),
+        HelperTone.danger,
+      ),
       ServerFaultNotice() => HelperMessage(
         l10n.problemServerTitle,
         HelperTone.info,
@@ -893,12 +835,6 @@ class _EntryBlock extends StatelessWidget {
             DateTimeFormat.ceilSeconds(until - now),
           ),
         );
-      case UncertainCancelledNotice():
-        return StatusBanner(
-          tone: BannerTone.warning,
-          title: l10n.uncertainCancelled,
-          body: l10n.uncertainCancelledGuestHint,
-        );
       default:
         return null;
     }
@@ -906,7 +842,7 @@ class _EntryBlock extends StatelessWidget {
 
   Widget? _assist() {
     final ChargeNotice? notice = s.notice;
-    if (s.phase == RedeemPhase.entering && notice is ServerFaultNotice) {
+    if (s.phase == RedeemPhase.entering && notice is ServerFaultNotice && notice.supportCode.isNotEmpty) {
       return SupportCodeLine(
         code: notice.supportCode,
         requestId: notice.requestId,
@@ -916,9 +852,9 @@ class _EntryBlock extends StatelessWidget {
     return switch (_ChargeScreenState._limitOf(s)) {
       _Limit.balance => QuickAmountChip(
         key: const ValueKey<QuickAmount>(QuickAmount.balance),
-        cents: s.card.balance,
+        cents: s.voucher.balance,
         money: money,
-        onPressed: () => state._loop.useAmount(s.card.balance),
+        onPressed: () => state._loop.useAmount(s.voucher.balance),
       ),
       _Limit.max => QuickAmountChip(
         key: const ValueKey<QuickAmount>(QuickAmount.maximum),
@@ -939,7 +875,7 @@ class _EntryBlock extends StatelessWidget {
 
   String _overBalanceAnnouncement(AppLocalizations l10n) {
     final String over = l10n.a11yOverBalance(
-      money.spoken(math.max(0, s.amount - s.card.balance)),
+      money.spoken(math.max(0, s.amount - s.voucher.balance)),
     );
     final ChargeNotice? notice = s.notice;
     if (notice is BalanceChangedNotice && identical(state._transient, notice)) {
@@ -1084,9 +1020,8 @@ class _EntryBlock extends StatelessWidget {
 }
 
 /// The button slot: Redeem (PrimaryButton < € 100, HoldButton ≥ € 100),
-/// empty while retrying, "Cancel" / "Try again" in the final uncertain
-/// state; hidden while the switch-card snackbar shows (03b §2.10–2.18,
-/// §3).
+/// empty while retrying, "Cancel" / "Check again" in the final uncertain
+/// state, "Scan again" once the presentment ran out (03b §2.10–2.18, §3).
 class _ActionSlot extends StatelessWidget {
   const _ActionSlot({
     required this.state,
@@ -1104,7 +1039,7 @@ class _ActionSlot extends StatelessWidget {
     if (!_loop.isOnline) return l10n.offlineBody;
     return switch (_ChargeScreenState._limitOf(s)) {
       _Limit.balance => l10n.chargeOverBalance(
-        money.spoken(s.amount - s.card.balance),
+        money.spoken(s.amount - s.voucher.balance),
       ),
       _Limit.max => l10n.chargeMaxSingle(money.spoken(s.maxSingle!)),
       _Limit.none => null,
@@ -1134,7 +1069,7 @@ class _ActionSlot extends StatelessWidget {
               const SizedBox(width: ButtonTokens.stackGap),
               Expanded(
                 child: PrimaryButton(
-                  label: l10n.commonTryAgain,
+                  label: l10n.commonCheckAgain,
                   size: ButtonSize.regular,
                   onPressed: state._tryAgain,
                 ),
@@ -1142,12 +1077,21 @@ class _ActionSlot extends StatelessWidget {
             ],
           ),
         );
-      case RedeemPhase.entering || RedeemPhase.submitting || RedeemPhase.slow:
+      case RedeemPhase.entering || RedeemPhase.submitting || RedeemPhase.slow || RedeemPhase.resolving:
         break;
     }
 
+    if (s.presentmentExpired && s.phase == RedeemPhase.entering) {
+      return PrimaryButton(
+        key: const ValueKey<String>('rescan'),
+        label: l10n.commonScanAgain,
+        icon: WaiterIcon.scanQrCode,
+        onPressed: _loop.rescan,
+      );
+    }
+
     final bool busy = s.isLocked;
-    final bool can = _loop.canRedeem(s) && s.pendingSwitch == null;
+    final bool can = _loop.canRedeem(s);
     final bool hold = s.amount >= LoopController.holdThreshold;
     final String visible = money.format(s.amount);
     final String spoken = money.spoken(s.amount);
@@ -1196,25 +1140,16 @@ class _ActionSlot extends StatelessWidget {
       );
     }
 
-    final bool switchOffered = s.pendingSwitch != null;
-    return AnimatedOpacity(
-      opacity: switchOffered ? 0 : 1,
-      duration: Motion.durationBase,
-      curve: Motion.easeStandard,
-      child: IgnorePointer(
-        ignoring: switchOffered,
-        child: Listener(
-          // Warms up the success haptic on touch-down (09 §7.8, 11 §4.1).
-          onPointerDown: (_) {
-            if (can) _loop.prepareRedeem();
-          },
-          child: AnimatedSwitcher(
-            duration: Motion.durationFast,
-            switchInCurve: Motion.easeStandard,
-            switchOutCurve: Motion.easeStandard,
-            child: button,
-          ),
-        ),
+    return Listener(
+      // Warms up the success haptic on touch-down (09 §7.8, 11 §4.1).
+      onPointerDown: (_) {
+        if (can) _loop.prepareRedeem();
+      },
+      child: AnimatedSwitcher(
+        duration: Motion.durationFast,
+        switchInCurve: Motion.easeStandard,
+        switchOutCurve: Motion.easeStandard,
+        child: button,
       ),
     );
   }
@@ -1222,109 +1157,4 @@ class _ActionSlot extends StatelessWidget {
   String _spokenLabel(AppLocalizations l10n, String spoken) =>
       (s.fullOnly ? l10n.chargeRedeemFull(spoken) : l10n.chargeRedeem(spoken))
           .replaceFirst(labelAmountSeparator, ', ');
-}
-
-/// The card skeleton while a card link is looked up (03b §2.19): skeleton
-/// card number and card, € 0,00, "Still looking …" after 3 s, keypad
-/// inert at 40 %, "Enter amount" disabled; ✕ cancels the lookup.
-class _SkeletonBody extends StatelessWidget {
-  const _SkeletonBody({required this.state, required this.lookup});
-
-  final _ChargeScreenState state;
-  final LookingUpState lookup;
-
-  /// 03b §2.19 caption skeleton.
-  static const Size _numberBar = Size(160, 12);
-
-  @override
-  Widget build(BuildContext context) {
-    final AppLocalizations l10n = AppLocalizations.of(context);
-    final MoneyContext money = context.money;
-    final ChargeMetrics metrics = ChargeMetrics.of(context);
-    final String? brand = brandColorOf(context);
-    final double top = MediaQuery.paddingOf(context).top;
-
-    final Widget topBar = Stack(
-      children: <Widget>[
-        TopBar.task(
-          onClose: state._loop.back,
-          closeLabel: l10n.a11yChargeClose,
-        ),
-        Positioned(
-          top: top,
-          left: 0,
-          right: 0,
-          height: TopBarTokens.height,
-          child: IgnorePointer(
-            child: Center(
-              child: SkeletonGroup(
-                child: SkeletonBox(
-                  width: _numberBar.width,
-                  height: _numberBar.height,
-                  radius: _numberBar.height / 2,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-
-    final Widget entry = Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        SizedBox(
-          height: metrics.amountLine,
-          child: OverflowBox(
-            alignment: Alignment.topCenter,
-            maxHeight: double.infinity,
-            child: AmountDisplay(digits: '', money: money),
-          ),
-        ),
-        SizedBox(
-          height: metrics.messageArea + _EntryBlock._chipOverhang,
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: SizedBox(
-              height: metrics.helperLine,
-              child: ChargeHelperLine(
-                message: lookup.slow
-                    ? HelperMessage(l10n.scanSlow, HelperTone.info)
-                    : null,
-              ),
-            ),
-          ),
-        ),
-        SizedBox(height: metrics.rowGap - _EntryBlock._chipOverhang),
-        const Keypad(
-          enabled: false,
-          onDigit: _ChargeScreenState._ignoreDigit,
-          onDoubleZero: _ChargeScreenState._ignore,
-          onBackspace: _ChargeScreenState._ignore,
-          onClear: _ChargeScreenState._ignore,
-        ),
-      ],
-    );
-
-    return _ChargeFrame(
-      topBar: topBar,
-      offlineBanner: _offlineBanner(state._loop, l10n),
-      card:
-          (
-            BuildContext context,
-            BalanceCardDensity density,
-            double maxHeight,
-          ) => BalanceCard(
-            key: state._cardKey,
-            data: null,
-            money: money,
-            density: density,
-            maxHeight: maxHeight,
-            arrivalScale: state._arrivalScale,
-            skeletonBrandColor: brand,
-          ),
-      entry: entry,
-      action: PrimaryButton(label: l10n.chargeEnterAmount, onPressed: null),
-    );
-  }
 }

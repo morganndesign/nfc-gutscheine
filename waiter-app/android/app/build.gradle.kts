@@ -58,16 +58,6 @@ val appLabel: String = when (appEnv) {
 val networkSecurityConfig: String =
     if (appEnvSuffix == ".dev") "network_security_config_development" else "network_security_config"
 
-// The first host of the CARD_DOMAINS dart-define becomes the host of the NFC
-// NDEF and App Links intent filters (09 §7.1, §7.4). Without CARD_DOMAINS the
-// filters use "localhost" (they then match no real card).
-fun cardHostFromDartDefines(): String =
-    dartDefines["CARD_DOMAINS"]
-        ?.split(',')
-        ?.map { it.trim().lowercase() }
-        ?.firstOrNull { it.isNotEmpty() }
-        ?: "localhost"
-
 android {
     namespace = "eu.tapredeem.waiter"
     compileSdk = flutter.compileSdkVersion
@@ -89,7 +79,6 @@ android {
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         applicationIdSuffix = appEnvSuffix
-        manifestPlaceholders["cardHost"] = cardHostFromDartDefines()
         manifestPlaceholders["appLabel"] = appLabel
         manifestPlaceholders["networkSecurityConfig"] = networkSecurityConfig
     }

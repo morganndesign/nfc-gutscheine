@@ -1,658 +1,429 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:clock/clock.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/platform/nfc_service.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
+import 'package:giftcard_waiter/l10n/app_localizations.dart';
 import 'package:giftcard_waiter/screens/s05_ready.dart';
+import 'package:giftcard_waiter/screens/s12_qr_scan.dart';
+import 'package:giftcard_waiter/screens/s20_sell_voucher.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
+import '../charge/charge_harness.dart' show openCharge, redeemPath, typeDigits;
 import 'scan_harness.dart';
 
-/// [readToday] false keeps the V8 first-card tip (no read since 04:00).
-Future<TestApp> _android({
-  NfcAvailability nfc = NfcAvailability.enabled,
+final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
+final AppLocalizations de = lookupAppLocalizations(const Locale('de'));
+
+/// The signed-in app, before it is pumped. [manager] signs in a user with
+/// `vouchers.sell`; [pending] stores unresolved attempts of the waiter
+/// (`u-1`) as a previous run of the app would have left them.
+Future<TestApp> _app({
+  bool manager = false,
+  bool isIos = false,
   Map<String, Object> prefs = const <String, Object>{},
-  bool readToday = true,
+  List<Map<String, Object?>> pending = const <Map<String, Object?>>[],
 }) async {
-  final TestApp app = await TestApp.create(prefs: prefs);
-  _prepare(app, nfc, readToday);
-  return app;
-}
-
-Future<TestApp> _iphone({
-  NfcAvailability nfc = NfcAvailability.enabled,
-  bool readToday = true,
-}) async {
-  final TestApp app = await TestApp.create(isIos: true);
-  _prepare(app, nfc, readToday);
-  return app;
-}
-
-void _prepare(TestApp app, NfcAvailability nfc, bool readToday) {
-  if (readToday) {
-    app.services.settings.firstReadDay = app.session.businessDayKey();
+  final TestApp app = await TestApp.create(
+    isIos: isIos,
+    prefs: prefs,
+    user: manager ? Payloads.manager() : null,
+  );
+  if (pending.isNotEmpty) {
+    app.secrets.values['pending_redemptions_v1'] = jsonEncode(<String, Object?>{'u-1': pending});
   }
-  app.nfc.value = nfc;
-  unawaited(app.loop.refreshNfcAvailability());
+  return app;
+}
+
+/// One stored, unresolved attempt; [sentAgo] ≥ 60 s makes "not booked" final.
+Map<String, Object?> _attempt({
+  String key = 'k-1',
+  int amount = 2490,
+  Duration sentAgo = Duration.zero,
+}) => <String, Object?>{
+  'key': key,
+  'voucher': Payloads.voucherId,
+  'amount': amount,
+  'currency': 'EUR',
+  'last4': '6488',
+  'restaurant': 'Trattoria Bella Vista',
+  'sent': clock.now().subtract(sentAgo).toUtc().toIso8601String(),
+};
+
+Finder _primary(String label) => find.ancestor(of: text(label), matching: find.byType(PrimaryButton));
+
+Finder _secondary(String label) => find.ancestor(of: text(label), matching: find.byType(SecondaryButton));
+
+Future<void> _goOffline(WidgetTester tester, TestApp app) async {
+  app.connectivity.setOnline(false);
+  await tester.pump(const Duration(seconds: 2));
+  await settle(tester);
 }
 
 void main() {
-  group('S05 Android · V1 listening', () {
-    testWidgets('TopBar, instruction and the two alternatives (EN)', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
+  group('S05 · ready', () {
+    testWidgets('TopBar, QR plate, title, hint and "Scan voucher" (EN)', (WidgetTester tester) async {
+      final TestApp app = await _app();
       await pumpWaiterApp(tester, app, size: androidFrame);
 
       expect(find.byType(ReadyScreen), findsOneWidget);
+      expect(app.loop.state, isA<ReadyState>());
       expect(text('Trattoria Bella Vista'), findsOneWidget);
       expect(find.bySemanticsLabel('Recent'), findsOneWidget);
       expect(find.bySemanticsLabel('Menu, Anna Berger'), findsOneWidget);
-      expect(text('Hold the card to the phone'), findsOneWidget);
-      expect(text('The card is detected automatically'), findsOneWidget);
-      expect(text('Card number'), findsOneWidget);
-      expect(text('QR code'), findsOneWidget);
+      expect(text(en.readyTitle), findsOneWidget);
+      expect(text(en.readyHint), findsOneWidget);
+      expect(_primary(en.readyScan), findsOneWidget);
       expect(
-        text('Scan card'),
-        findsNothing,
-        reason: 'Android Ready has no PrimaryButton (03a §5.19)',
+        find.byWidgetPredicate((Widget w) => w is WaiterIconView && w.icon == WaiterIcon.scanQrCode),
+        findsWidgets,
+        reason: 'QR plate and the button icon',
       );
-      expect(find.byType(NfcScanAnimation), findsOneWidget);
-      expect(app.nfc.calls, contains('readerMode:true'));
+      expect(find.byType(WaiterBanner), findsNothing);
       await finishApp(tester, app);
     });
 
-    testWidgets('German and BHS copy', (WidgetTester tester) async {
-      final TestApp de = await _android();
-      await pumpWaiterApp(
-        tester,
-        de,
-        locale: const Locale('de'),
-        size: androidFrame,
-      );
-      expect(text('Karte an das Handy halten'), findsOneWidget);
-      expect(text('Die Karte wird automatisch erkannt'), findsOneWidget);
-      expect(text('Kartennummer'), findsOneWidget);
-      expect(text('QR-Code'), findsOneWidget);
-      await finishApp(tester, de);
-
-      final TestApp bs = await _android();
-      await pumpWaiterApp(
-        tester,
-        bs,
-        locale: const Locale('bs'),
-        size: androidFrame,
-      );
-      expect(text('Prislonite karticu uz telefon'), findsOneWidget);
-      expect(text('Kartica se automatski prepoznaje'), findsOneWidget);
-      expect(text('Broj kartice'), findsOneWidget);
-      await finishApp(tester, bs);
+    testWidgets('identical on iPhone', (WidgetTester tester) async {
+      final TestApp app = await _app(isIos: true);
+      await pumpWaiterApp(tester, app);
+      expect(text(en.readyTitle), findsOneWidget);
+      expect(text(en.readyHint), findsOneWidget);
+      expect(_primary(en.readyScan), findsOneWidget);
+      expect(find.byType(SecondaryButton), findsNothing);
+      await finishApp(tester, app);
     });
 
-    testWidgets('card read → looking up → skeleton after 150 ms → Charge', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
-      app.backend.on(
-        'POST',
-        '/scan',
-        FakeReply(200, Payloads.scan(), const Duration(milliseconds: 600)),
-      );
-      await pumpWaiterApp(tester, app, size: androidFrame);
-
-      tapCard(app);
-      await tester.pump();
-      expect(text('Looking up card\u00a0…'), findsOneWidget);
-      expect(app.loop.state, isA<LookingUpState>());
-      await tester.pump(const Duration(milliseconds: 100));
+    testWidgets('German copy', (WidgetTester tester) async {
+      final TestApp app = await _app(manager: true);
+      await pumpWaiterApp(tester, app, locale: const Locale('de'), size: androidFrame);
+      expect(text('Gutschein scannen'), findsNWidgets(2), reason: 'title and button');
       expect(
-        find.byType(BalanceCard),
-        findsNothing,
-        reason: 'never a skeleton before 150 ms',
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-      expect(find.byType(BalanceCard), findsOneWidget);
-      final Iterable<MethodCall> scan = app.feedbackCalls.where(
-        (MethodCall c) => c.method == 'sound',
-      );
-      expect(
-        scan,
-        hasLength(1),
-        reason: 'the loop plays card-detected once; S05 adds nothing',
-      );
-
-      await tester.pump(const Duration(milliseconds: 600));
-      await settle(tester);
-      expect(app.loop.state, isA<ChargeState>());
-      expect(app.backend.to('POST', '/scan').single.body!['method'], 'nfc');
-      await finishApp(tester, app);
-    });
-
-    testWidgets('slow lookup: "Still looking …" at 3 s, Cancel returns to V1', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
-      app.backend.on(
-        'POST',
-        '/scan',
-        FakeReply.hang(const Duration(seconds: 30)),
-      );
-      await pumpWaiterApp(tester, app, size: androidFrame);
-
-      tapCard(app);
-      await settle(tester);
-      expect(text('Cancel'), findsNothing);
-      await tester.pump(const Duration(seconds: 3));
-      await settle(tester);
-      expect(text('Still looking\u00a0…'), findsOneWidget);
-      expect(text('Cancel'), findsOneWidget);
-
-      await tester.tap(text('Cancel'));
-      await settle(tester);
-      expect(app.loop.state, isA<ReadyState>());
-      await tester.pump(const Duration(milliseconds: 400));
-      expect(text('Hold the card to the phone'), findsOneWidget);
-      await finishApp(tester, app);
-    });
-
-    testWidgets('three failed reads show the hold-still hint for 2 s', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      for (int i = 0; i < 3; i++) {
-        app.nfc.emit(const NfcReadFailed());
-      }
-      await settle(tester);
-      expect(text("Couldn't read the card"), findsOneWidget);
-      expect(text('Hold it still for a second.'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 2));
-      await settle(tester);
-      expect(text('Hold the card to the phone'), findsOneWidget);
-      await finishApp(tester, app);
-    });
-
-    testWidgets('a tag that is not a gift card sends no request', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      tapCard(app, url: foreignUrl);
-      await settle(tester);
-      expect(text('This is not a gift card'), findsOneWidget);
-      expect(app.backend.to('POST', '/scan'), isEmpty);
-      await tester.pump(const Duration(seconds: 2));
-      await settle(tester);
-      expect(text('Hold the card to the phone'), findsOneWidget);
-      await finishApp(tester, app);
-    });
-  });
-
-  group('S05 · V8 first card of the shift', () {
-    testWidgets('Android: tip replaces the hint until the first read today', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android(readToday: false);
-      app.backend.on('POST', '/scan', FakeReply(200, Payloads.scan()));
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      expect(
-        text(
-          'Tip: the NFC antenna is usually at the top of the back, near the camera.',
-        ),
+        text('Kamera auf den QR-Code des Gutscheins richten – gedruckt oder am Handy des Gastes.'),
         findsOneWidget,
       );
-      expect(text('The card is detected automatically'), findsNothing);
+      expect(_primary(de.readyScan), findsOneWidget);
+      expect(_secondary('Gutschein verkaufen'), findsOneWidget);
+      await finishApp(tester, app);
+    });
 
-      tapCard(app);
-      await settle(tester);
+    testWidgets('"Scan voucher" opens S12', (WidgetTester tester) async {
+      mockDeniedCamera();
+      final TestApp app = await _app();
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      await tester.tap(_primary(en.readyScan));
+      await settle(tester, 10);
+      expect(app.loop.state, isA<QrScanState>());
+      expect(find.byType(QrScanScreen), findsOneWidget);
+
       app.loop.back();
       await settle(tester, 10);
-      expect(text('The card is detected automatically'), findsOneWidget);
-      expect(find.textContaining('Tip:', findRichText: true), findsNothing);
+      expect(app.loop.state, isA<ReadyState>());
+      expect(find.byType(QrScanScreen), findsNothing);
       await finishApp(tester, app);
     });
 
-    testWidgets('iPhone: tip in place of the hint', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _iphone(readToday: false);
-      await pumpWaiterApp(tester, app);
-      expect(
-        text('Tip: hold the card flat against the top edge, near the camera.'),
-        findsOneWidget,
-      );
+    testWidgets('Enter on a hardware keyboard opens S12', (WidgetTester tester) async {
+      mockDeniedCamera();
+      final TestApp app = await _app();
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await settle(tester, 10);
+      expect(app.loop.state, isA<QrScanState>());
       await finishApp(tester, app);
     });
   });
 
-  group('S05 · V6 offline', () {
-    testWidgets(
-      'enters after 2 s, disables scan entry points, recovers with "Connected again"',
-      (WidgetTester tester) async {
-        final TestApp app = await _android();
-        await pumpWaiterApp(tester, app, size: androidFrame);
-
-        app.connectivity.setOnline(false);
-        await settle(tester);
-        expect(
-          text('No connection'),
-          findsNothing,
-          reason: 'offline needs 2 s of confirmed loss',
-        );
-        await tester.pump(const Duration(seconds: 2));
-        await settle(tester);
-        expect(text('No connection'), findsOneWidget);
-        expect(
-          text('Redeeming needs a connection so nothing is ever booked twice.'),
-          findsOneWidget,
-        );
-
-        await tester.tap(text('Card number'));
-        await settle(tester);
-        expect(
-          app.loop.state,
-          isA<ReadyState>(),
-          reason: 'Card number is disabled offline',
-        );
-
-        app.connectivity.setOnline(true);
-        await settle(tester);
-        expect(text('Connected again'), findsOneWidget);
-        expect(text('Hold the card to the phone'), findsOneWidget);
-        await tester.pump(const Duration(seconds: 5));
-        await finishApp(tester, app);
-      },
-    );
-
-    testWidgets('a card read before offline is confirmed shows the L09 line', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
+  group('S05 · sell voucher (S20)', () {
+    testWidgets('waiters without vouchers.sell see no "Sell voucher"', (WidgetTester tester) async {
+      final TestApp app = await _app();
       await pumpWaiterApp(tester, app, size: androidFrame);
-      app.connectivity.setOnline(false);
-      await settle(tester, 2);
-      tapCard(app);
-      await settle(tester, 2);
-      expect(
-        text('No connection – the card can\'t be checked'),
-        findsOneWidget,
-      );
-      expect(app.backend.to('POST', '/scan'), isEmpty);
-      await tester.pump(const Duration(seconds: 3));
+      expect(text(en.readySell), findsNothing);
+      expect(find.byType(SecondaryButton), findsNothing);
       await finishApp(tester, app);
     });
 
-    testWidgets('iPhone offline: Scan card disabled', (
+    testWidgets('a manager without vouchers.sell sees no "Sell voucher"', (WidgetTester tester) async {
+      final TestApp app = await TestApp.create(user: Payloads.manager(selling: false));
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      expect(text(en.readySell), findsNothing);
+      await finishApp(tester, app);
+    });
+
+    for (final String role in <String>['manager', 'owner']) {
+      testWidgets('$role: "Sell voucher" below "Scan voucher" opens S20', (WidgetTester tester) async {
+        final TestApp app = await TestApp.create(user: Payloads.manager(role: role));
+        await pumpWaiterApp(tester, app, size: androidFrame);
+        final Rect scan = tester.getRect(_primary(en.readyScan));
+        final Rect sell = tester.getRect(_secondary(en.readySell));
+        expect(sell.top, greaterThan(scan.bottom));
+
+        await tester.tap(_secondary(en.readySell));
+        await settle(tester, 10);
+        expect(find.byType(SellVoucherScreen), findsOneWidget);
+        expect(app.loop.state, isA<ReadyState>(), reason: 'selling is outside the redeem loop');
+        await finishApp(tester, app);
+      });
+    }
+  });
+
+  group('S05 · offline', () {
+    testWidgets('after 2 s: title, body, both buttons disabled; back with "Connected again"', (
       WidgetTester tester,
     ) async {
-      final TestApp app = await _iphone();
-      await pumpWaiterApp(tester, app);
+      mockDeniedCamera();
+      final TestApp app = await _app(manager: true);
+      await pumpWaiterApp(tester, app, size: androidFrame);
+
       app.connectivity.setOnline(false);
+      await settle(tester);
+      expect(text(en.offlineTitle), findsNothing, reason: 'offline needs 2 s of confirmed loss');
+      expect(tester.widget<PrimaryButton>(_primary(en.readyScan)).onPressed, isNotNull);
+
       await tester.pump(const Duration(seconds: 2));
       await settle(tester);
-      expect(text('No connection'), findsOneWidget);
-      await tester.tap(text('Scan card'));
+      expect(text(en.offlineTitle), findsOneWidget);
+      expect(text(en.offlineBody), findsOneWidget);
+      expect(text(en.readyTitle), findsNothing);
+      expect(tester.widget<PrimaryButton>(_primary(en.readyScan)).onPressed, isNull);
+      expect(tester.widget<SecondaryButton>(_secondary(en.readySell)).onPressed, isNull);
+
+      await tester.tap(_primary(en.readyScan), warnIfMissed: false);
+      await tester.tap(_secondary(en.readySell), warnIfMissed: false);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await settle(tester);
-      expect(app.nfc.calls, isNot(contains('startSession')));
+      expect(app.loop.state, isA<ReadyState>());
+      expect(find.byType(SellVoucherScreen), findsNothing);
+
+      app.connectivity.setOnline(true);
+      await settle(tester);
+      expect(text(en.readyOnline), findsOneWidget);
+      expect(text(en.readyTitle), findsOneWidget);
+      expect(tester.widget<PrimaryButton>(_primary(en.readyScan)).onPressed, isNotNull);
+      expect(tester.widget<SecondaryButton>(_secondary(en.readySell)).onPressed, isNotNull);
+      await tester.pump(const Duration(seconds: 3));
+      await settle(tester);
+      expect(text(en.readyOnline), findsNothing, reason: 'the snackbar stays 2 s');
+      await finishApp(tester, app);
+    });
+
+    testWidgets('a short drop shows neither the offline state nor "Connected again"', (WidgetTester tester) async {
+      final TestApp app = await _app();
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      app.connectivity.setOnline(false);
+      await tester.pump(const Duration(seconds: 1));
+      app.connectivity.setOnline(true);
+      await settle(tester);
+      await tester.pump(const Duration(seconds: 2));
+      await settle(tester);
+      expect(text(en.offlineTitle), findsNothing);
+      expect(text(en.readyOnline), findsNothing);
       await finishApp(tester, app);
     });
   });
 
-  group('S05 · S16 NFC states', () {
-    testWidgets('V4 NFC off: deep link, then back on with haptic.select', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android(nfc: NfcAvailability.disabled);
+  group('S05 · banners', () {
+    testWidgets('maintenance: server text, buttons stay put, dismissible', (WidgetTester tester) async {
+      final TestApp app = await _app();
+      app.backend.on('GET', '/app/config', FakeReply(200, Payloads.config(notice: 'Wartung heute 23:00–23:30.')));
       await pumpWaiterApp(tester, app, size: androidFrame);
-      expect(text('NFC is off'), findsOneWidget);
-      expect(text('Turn on NFC to scan cards.'), findsOneWidget);
-      expect(text('Card number'), findsOneWidget);
+      final double buttonBefore = tester.getRect(_primary(en.readyScan)).top;
 
-      await tester.tap(text('Turn on NFC'));
+      await tester.pump(const Duration(minutes: 6));
+      unawaited(app.session.onForeground());
       await settle(tester);
-      expect(app.nfc.calls, contains('openSettings'));
+      expect(text('Wartung heute 23:00–23:30.'), findsOneWidget);
+      expect(tester.getRect(_primary(en.readyScan)).top, buttonBefore);
 
-      final int before = hapticCount(app);
-      app.nfc.value = NfcAvailability.enabled;
-      unawaited(app.loop.refreshNfcAvailability());
+      await tester.tap(find.bySemanticsLabel(en.maintenanceDismiss));
       await settle(tester);
-      expect(text('Hold the card to the phone'), findsOneWidget);
-      expect(hapticCount(app), before + 1);
+      expect(text('Wartung heute 23:00–23:30.'), findsNothing);
       await finishApp(tester, app);
     });
 
-    testWidgets(
-      'NFC off + offline shows NFC off with the offline banner (priority V4 > V6)',
-      (WidgetTester tester) async {
-        final TestApp app = await _android(nfc: NfcAvailability.disabled);
-        await pumpWaiterApp(tester, app, size: androidFrame);
-        app.connectivity.setOnline(false);
+    testWidgets('an unresolved attempt shows the pending banner; not dismissible', (WidgetTester tester) async {
+      final TestApp app = await _app(pending: <Map<String, Object?>>[_attempt()]);
+      app.backend.on('GET', '$redeemPath/k-1', FakeReply(200, Payloads.outcome()));
+      await pumpWaiterApp(tester, app, size: androidFrame);
+
+      expect(app.backend.to('GET', '$redeemPath/k-1'), isNotEmpty, reason: 'asked about at once');
+      expect(app.pending.entries, hasLength(1), reason: '"not booked" is not final within 60 s');
+      expect(text(en.readyPendingTitle), findsOneWidget);
+      expect(find.textContaining('24,90', findRichText: true), findsOneWidget);
+      expect(find.textContaining('6488', findRichText: true), findsOneWidget);
+      expect(find.bySemanticsLabel(en.maintenanceDismiss), findsNothing);
+      await finishApp(tester, app);
+    });
+
+    testWidgets('the banner leaves with "not booked" once final (snackbar)', (WidgetTester tester) async {
+      final TestApp app = await _app(pending: <Map<String, Object?>>[_attempt(sentAgo: const Duration(seconds: 30))]);
+      app.backend.on('GET', '$redeemPath/k-1', FakeReply(200, Payloads.outcome()));
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      expect(text(en.readyPendingTitle), findsOneWidget);
+
+      // The next background check (20 s) is past the 60-s server ceiling.
+      await tester.pump(const Duration(seconds: 40));
+      await settle(tester);
+      expect(app.pending.entries, isEmpty);
+      expect(text(en.readyPendingTitle), findsNothing);
+      expect(find.textContaining('was not booked', findRichText: true), findsOneWidget);
+      expect(find.textContaining('24,90', findRichText: true), findsOneWidget);
+      await tester.pump(const Duration(seconds: 6));
+      await finishApp(tester, app);
+    });
+
+    testWidgets('an earlier attempt that was booked: snackbar, Recent updated, no banner', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await _app(pending: <Map<String, Object?>>[_attempt()]);
+      app.backend.on('GET', '$redeemPath/k-1', FakeReply(200, Payloads.outcome(amount: 2490, balanceAfter: 2510)));
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      await settle(tester);
+
+      expect(app.pending.entries, isEmpty);
+      expect(text(en.readyPendingTitle), findsNothing);
+      expect(find.textContaining('was booked', findRichText: true), findsOneWidget);
+      expect(find.textContaining('24,90', findRichText: true), findsOneWidget);
+      expect(app.services.recent.entries.single.amount, 2490);
+      await tester.pump(const Duration(seconds: 6));
+      await finishApp(tester, app);
+    });
+
+    testWidgets('pending and maintenance banners stack, pending first', (WidgetTester tester) async {
+      final TestApp app = await _app(pending: <Map<String, Object?>>[_attempt()]);
+      app.backend
+        ..on('GET', '$redeemPath/k-1', FakeReply(200, Payloads.outcome()))
+        ..only('GET', '/app/config', FakeReply(200, Payloads.config(notice: 'Wartung')));
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      expect(find.byType(WaiterBanner), findsNWidgets(2));
+      expect(
+        tester.getRect(text(en.readyPendingTitle)).top,
+        lessThan(tester.getRect(text('Wartung')).top),
+      );
+      await finishApp(tester, app);
+    });
+  });
+
+  group('S05 · snackbars after the loop', () {
+    testWidgets('Cancel in the uncertain state returns to S05 with "Not confirmed …"', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await openCharge(tester);
+      app.backend.on('POST', redeemPath, FakeReply.transport());
+      await typeDigits(tester, '2490');
+      await tester.tap(find.textContaining('Redeem €', findRichText: true));
+      await settle(tester);
+      for (int i = 0; i < 4; i++) {
         await tester.pump(const Duration(seconds: 2));
         await settle(tester);
-        expect(text('NFC is off'), findsOneWidget);
-        expect(text('No connection'), findsOneWidget);
-        await finishApp(tester, app);
-      },
-    );
+      }
+      expect((app.loop.state as ChargeState).phase, RedeemPhase.uncertainFinal);
+      final String key = app.pending.entries.single.key;
+      app.backend.on('GET', '$redeemPath/$key', FakeReply(200, Payloads.outcome()));
 
-    testWidgets('V5 no NFC (Android phone): QR first, no NFC animation', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android(nfc: NfcAvailability.unsupported);
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      expect(text('Scan the QR code on the card'), findsOneWidget);
-      expect(
-        text('This device has no NFC. Use the QR code or the card number.'),
-        findsOneWidget,
-      );
-      expect(find.byType(NfcScanAnimation), findsNothing);
-      expect(text('QR code'), findsNothing);
-      await tester.tap(text('Card number'));
+      await tester.tap(find.textContaining('Cancel', findRichText: true).last);
       await settle(tester);
-      expect(app.loop.state, isA<ManualEntryState>());
+      expect(find.byType(ReadyScreen), findsOneWidget);
+      expect(text(en.uncertainCancelled), findsOneWidget);
+      expect(text(en.readyPendingTitle), findsOneWidget, reason: 'the attempt stays open');
+      await tester.pump(const Duration(seconds: 6));
       await finishApp(tester, app);
     });
   });
 
-  group('S05 iPhone · V2', () {
-    testWidgets('Scan card opens the system sheet once; timeout hint for 6 s', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _iphone();
-      await pumpWaiterApp(tester, app);
-      expect(text('Scan card'), findsOneWidget);
-      expect(
-        text('After tapping, hold the card near the top of the iPhone'),
-        findsOneWidget,
-      );
-      expect(text('Hold the card to the phone'), findsNothing);
-
-      await tester.tap(text('Scan card'));
-      await settle(tester);
-      expect(app.loop.state, isA<ScanningState>());
-      await tester.tap(text('Scan card'));
-      await settle(tester);
-      expect(
-        app.nfc.calls.where((String c) => c == 'startSession'),
-        hasLength(1),
-      );
-
-      app.nfc.emit(const NfcSessionEnded(NfcSessionEnd.timeout));
-      await settle(tester);
-      expect(
-        text('No card detected. Tap "Scan card" to try again.'),
-        findsOneWidget,
-      );
-      await tester.pump(const Duration(seconds: 6));
-      await settle(tester);
-      expect(
-        text('After tapping, hold the card near the top of the iPhone'),
-        findsOneWidget,
-      );
-      await finishApp(tester, app);
-    });
-
-    testWidgets('P09: NFC temporarily unavailable → snackbar', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _iphone();
-      await pumpWaiterApp(tester, app);
-      await tester.tap(text('Scan card'));
-      await settle(tester);
-      app.nfc.emit(const NfcSessionEnded(NfcSessionEnd.systemBusy));
-      await settle(tester);
-      expect(
-        text("NFC isn't available right now. Use the card number or QR code."),
-        findsOneWidget,
-      );
-      await tester.pump(const Duration(seconds: 5));
-      await finishApp(tester, app);
-    });
-
-    testWidgets('Scan card sits below the thumb-zone line', (
-      WidgetTester tester,
-    ) async {
+  group('S05 · layout, text size, theme, semantics', () {
+    testWidgets('"Scan voucher" sits in the thumb zone', (WidgetTester tester) async {
       for (final Size frame in <Size>[iphoneFrame, compactFrame]) {
-        final TestApp app = await _iphone();
+        final TestApp app = await _app();
         await pumpWaiterApp(tester, app, size: frame);
-        final Rect button = tester.getRect(
-          find.ancestor(
-            of: text('Scan card'),
-            matching: find.byType(PrimaryButton),
-          ),
-        );
+        final Rect button = tester.getRect(_primary(en.readyScan));
         expect(button.top, greaterThan(frame.height * 0.55));
         expect(button.height, frame.height < 700 ? 56 : 64);
         await finishApp(tester, app);
       }
     });
 
-    testWidgets('German copy', (WidgetTester tester) async {
-      final TestApp app = await _iphone();
-      await pumpWaiterApp(tester, app, locale: const Locale('de'));
-      expect(text('Karte scannen'), findsOneWidget);
-      expect(
-        text('Nach dem Tippen die Karte oben an das iPhone halten'),
-        findsOneWidget,
-      );
-      await finishApp(tester, app);
-    });
-
-    testWidgets('iPad: QR-first, secondary above primary, no NFC wording', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _iphone(nfc: NfcAvailability.unsupported);
-      await pumpWaiterApp(tester, app, size: tabletLandscape);
-      expect(text('Scan QR code'), findsOneWidget);
-      expect(
-        find.textContaining('NFC', findRichText: true),
-        findsOneWidget,
-        reason: 'only the no-NFC hint mentions NFC',
-      );
-      final double manual = tester.getCenter(text('Card number')).dy;
-      final double qr = tester.getCenter(text('Scan QR code')).dy;
-      expect(manual, lessThan(qr));
-      await tester.tap(text('Scan QR code'));
-      await settle(tester);
-      expect(app.loop.state, isA<QrScanState>());
-      await finishApp(tester, app);
-    });
-  });
-
-  group('S05 · V7 maintenance banner', () {
-    testWidgets('shows the server text, never moves the buttons, dismissible', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
-      app.backend.on(
-        'GET',
-        '/app/config',
-        FakeReply(200, Payloads.config(notice: 'Wartung heute 23:00–23:30.')),
-      );
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      final double buttonsBefore = tester.getRect(text('Card number')).top;
-
-      await tester.pump(const Duration(minutes: 6));
-      unawaited(app.session.onForeground());
-      await settle(tester);
-      expect(text('Wartung heute 23:00–23:30.'), findsOneWidget);
-      expect(tester.getRect(text('Card number')).top, buttonsBefore);
-
-      await tester.tap(find.bySemanticsLabel('Dismiss notice'));
-      await settle(tester);
-      expect(text('Wartung heute 23:00–23:30.'), findsNothing);
-      await finishApp(tester, app);
-    });
-  });
-
-  group('S05 · navigation', () {
-    testWidgets('Card number and QR code open S11 / S12', (
-      WidgetTester tester,
-    ) async {
-      mockDeniedCamera();
-      final TestApp app = await _android();
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      await tester.tap(text('Card number'));
-      await settle(tester);
-      expect(app.loop.state, isA<ManualEntryState>());
-      app.loop.back();
-      await settle(tester);
-      await tester.tap(text('QR code'));
-      await settle(tester);
-      expect(app.loop.state, isA<QrScanState>());
-      await finishApp(tester, app);
-    });
-
-    testWidgets('Recent and Menu open sheets and pause reader mode', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
-      await pumpWaiterApp(tester, app, size: androidFrame);
-      await tester.tap(find.bySemanticsLabel('Recent'));
-      await settle(tester);
-      expect(text('No redemptions yet'), findsOneWidget);
-      expect(app.loop.wantsReaderMode, isFalse);
-      expect(app.nfc.calls.last, 'readerMode:false');
-      await tester.tapAt(const Offset(200, 60));
-      await settle(tester);
-      expect(app.loop.wantsReaderMode, isTrue);
-
-      app.backend.on(
-        'GET',
-        '/devices/current',
-        FakeReply(200, <String, Object?>{
-          'data': <String, Object?>{'name': 'Pixel 7'},
-        }),
-      );
-      await tester.tap(find.bySemanticsLabel('Menu, Anna Berger'));
-      await settle(tester);
-      expect(text('Sign out'), findsOneWidget);
-      expect(app.loop.wantsReaderMode, isFalse);
-      await finishApp(tester, app);
-    });
-  });
-
-  group('S05 · responsive, text size, theme, semantics', () {
-    for (final (String name, Size size, bool ios) in <(String, Size, bool)>[
-      ('Android compact', compactFrame, false),
-      ('iPhone compact', compactFrame, true),
-      ('Android tablet landscape', tabletLandscape, false),
+    for (final (String name, Size size) in <(String, Size)>[
+      ('compact phone', compactFrame),
+      ('Android phone', androidFrame),
+      ('tablet landscape', tabletLandscape),
     ]) {
-      testWidgets('$name at 200 % text lays out without overflow', (
-        WidgetTester tester,
-      ) async {
+      testWidgets('$name at 200 % text lays out without overflow (manager, German)', (WidgetTester tester) async {
         tester.platformDispatcher.textScaleFactorTestValue = 2;
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-        final TestApp app = ios ? await _iphone() : await _android();
-        await pumpWaiterApp(tester, app, size: size);
+        final TestApp app = await _app(manager: true);
+        await pumpWaiterApp(tester, app, locale: const Locale('de'), size: size);
         expect(tester.takeException(), isNull);
-        expect(find.byType(SecondaryButton), findsNWidgets(2));
+        expect(_primary(de.readyScan), findsOneWidget);
+        expect(_secondary(de.readySell), findsOneWidget);
         await finishApp(tester, app);
       });
     }
 
-    testWidgets('secondary buttons stack at 200 % on a compact phone', (
+    testWidgets('tablet landscape: one centred column, max 480, buttons below the text', (
       WidgetTester tester,
     ) async {
-      tester.platformDispatcher.textScaleFactorTestValue = 2;
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      final TestApp app = await _android();
-      await pumpWaiterApp(
-        tester,
-        app,
-        locale: const Locale('de'),
-        size: compactFrame,
-      );
-      final Rect manual = tester.getRect(
-        find.ancestor(
-          of: text('Kartennummer'),
-          matching: find.byType(SecondaryButton),
-        ),
-      );
-      final Rect qr = tester.getRect(
-        find.ancestor(
-          of: text('QR-Code'),
-          matching: find.byType(SecondaryButton),
-        ),
-      );
-      expect(qr.top, greaterThan(manual.bottom));
-      await finishApp(tester, app);
-    });
-
-    testWidgets('tablet landscape: content column max 480, centred', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await _android();
+      final TestApp app = await _app(manager: true);
       await pumpWaiterApp(tester, app, size: tabletLandscape);
-      final Rect manual = tester.getRect(
-        find.ancestor(
-          of: text('Card number'),
-          matching: find.byType(SecondaryButton),
-        ),
-      );
-      final Rect qr = tester.getRect(
-        find.ancestor(
-          of: text('QR code'),
-          matching: find.byType(SecondaryButton),
-        ),
-      );
-      expect(qr.right - manual.left, lessThanOrEqualTo(480));
-      expect(
-        (manual.left + qr.right) / 2,
-        closeTo(tabletLandscape.width / 2, 1),
-      );
+      final Rect scan = tester.getRect(_primary(en.readyScan));
+      final Rect sell = tester.getRect(_secondary(en.readySell));
+      final Rect hint = tester.getRect(text(en.readyHint));
+      expect(scan.width, lessThanOrEqualTo(480));
+      expect(scan.center.dx, closeTo(tabletLandscape.width / 2, 1));
+      expect(sell.left, scan.left);
+      expect(scan.top, greaterThan(hint.bottom));
       await finishApp(tester, app);
     });
 
     testWidgets('dark theme', (WidgetTester tester) async {
-      final TestApp app = await _android(
-        prefs: const <String, Object>{'theme': 'dark'},
-      );
+      final TestApp app = await _app(manager: true, prefs: const <String, Object>{'theme': 'dark'});
       await pumpWaiterApp(tester, app, size: androidFrame);
-      await settle(tester);
       final BuildContext context = tester.element(find.byType(ReadyScreen));
       expect(context.waiter.brightness, Brightness.dark);
-      expect(text('Hold the card to the phone'), findsOneWidget);
+      expect(text(en.readyTitle), findsOneWidget);
+      expect(_secondary(en.readySell), findsOneWidget);
+      expect(tester.takeException(), isNull);
       await finishApp(tester, app);
     });
 
-    testWidgets('semantics: header + live region title, labelled TopBar', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('semantics: header + live-region title, labelled TopBar', (WidgetTester tester) async {
       final SemanticsHandle handle = tester.ensureSemantics();
-      final TestApp app = await _android();
+      final TestApp app = await _app();
       await pumpWaiterApp(tester, app, size: androidFrame);
       expect(
-        tester.getSemantics(text('Hold the card to the phone')),
-        isSemantics(
-          label: 'Hold the card to the phone',
-          isHeader: true,
-          isLiveRegion: true,
-        ),
+        tester.getSemantics(text(en.readyTitle)),
+        isSemantics(label: en.readyTitle, isHeader: true, isLiveRegion: true),
       );
-      expect(
-        tester.getSemantics(find.bySemanticsLabel('Recent')),
-        isSemantics(isButton: true),
-      );
+      expect(tester.getSemantics(find.bySemanticsLabel('Recent')), isSemantics(isButton: true));
       expect(find.bySemanticsLabel('Trattoria Bella Vista'), findsOneWidget);
       await finishApp(tester, app);
       handle.dispose();
     });
 
-    testWidgets('Reduce Motion keeps the rings static', (
-      WidgetTester tester,
-    ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+    testWidgets('offline title is announced as a live region too', (WidgetTester tester) async {
+      final SemanticsHandle handle = tester.ensureSemantics();
+      final TestApp app = await _app();
+      await pumpWaiterApp(tester, app, size: androidFrame);
+      await _goOffline(tester, app);
+      expect(
+        tester.getSemantics(text(en.offlineTitle)),
+        isSemantics(label: en.offlineTitle, isHeader: true, isLiveRegion: true),
       );
-      final TestApp app = await _android();
+      await finishApp(tester, app);
+      handle.dispose();
+    });
+
+    testWidgets('Reduce Motion: nothing animates on S05', (WidgetTester tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+        disableAnimations: true,
+      );
+      addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      final TestApp app = await _app();
       await pumpWaiterApp(tester, app, size: androidFrame);
       await tester.pump(const Duration(seconds: 1));
       expect(tester.hasRunningAnimations, isFalse);

@@ -12,7 +12,6 @@ import '../screens/s05_ready.dart';
 import '../screens/s07_charge.dart';
 import '../screens/s09_success.dart';
 import '../screens/s10_problem.dart';
-import '../screens/s11_manual_entry.dart';
 import '../screens/s12_qr_scan.dart';
 import '../screens/s15_session.dart';
 import '../screens/s17_intro.dart';
@@ -95,22 +94,15 @@ class WaiterRouterDelegate extends RouterDelegate<Object> with ChangeNotifier, P
     }
   }
 
-  /// Layer 1 for the loop state (09 §5). A lookup stays on the screen it was
-  /// started from: S05 inline, S11 / S12 with their own progress, S10 with a
-  /// busy action; links and new cards on S07/S09 show the S07 skeleton
-  /// (03a §6.4, 03b §2, M21).
+  /// Layer 1 for the loop state (09 §5). A presentment stays on the screen it
+  /// was started from: S12 with its own progress, S10 with a busy action.
   static Page<void>? _layer(LoopState state) => switch (state) {
-        ReadyState() || ScanningState() => null,
-        LookingUpState(:final LookupOrigin origin) => switch (origin) {
-            LookupOrigin.ready => null,
-            LookupOrigin.manual => _task('S11', 'manual', const ManualEntryScreen()),
-            LookupOrigin.qr => _task('S12', 'qr', const QrScanScreen()),
-            LookupOrigin.problem => _problem,
-            LookupOrigin.link || LookupOrigin.charge || LookupOrigin.success =>
-              _task('S07', 'charge', const ChargeScreen()),
+        ReadyState() => null,
+        PresentingState(:final PresentOrigin origin) => switch (origin) {
+            PresentOrigin.qr => _task('S12', 'qr', const QrScanScreen()),
+            PresentOrigin.problem => _problem,
           },
         QrScanState() => _task('S12', 'qr', const QrScanScreen()),
-        ManualEntryState() => _task('S11', 'manual', const ManualEntryScreen()),
         ChargeState() => _task('S07', 'charge', const ChargeScreen()),
         SuccessState() => _task('S09', 'success', const SuccessScreen()),
         ProblemState() => _problem,

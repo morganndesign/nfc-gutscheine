@@ -182,15 +182,6 @@ void main() {
     await finishApp(tester, app);
   });
 
-  testWidgets('a pending card link shows the info banner', (WidgetTester tester) async {
-    final TestApp app = await _locked();
-    stubPrompt(app, () async => false);
-    app.session.keepLink(Payloads.cardUrl());
-    await pumpWaiterApp(tester, app);
-    expect(text(en.unlockPendingCard), findsOneWidget);
-    await finishApp(tester, app);
-  });
-
   testWidgets('iPhone Face ID and Touch ID button labels', (WidgetTester tester) async {
     final TestApp face = await _locked(isIos: true, types: <BiometricType>[BiometricType.face]);
     stubPrompt(face, () async => false);

@@ -3,7 +3,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
-import 'package:giftcard_waiter/core/api/models.dart' show CardStatus;
+import 'package:giftcard_waiter/core/api/models.dart' show VoucherStatus;
 import 'package:giftcard_waiter/core/format/format.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 
@@ -320,7 +320,7 @@ void main() {
       restaurantName: 'Zum Hirschen',
       balanceCents: 3250,
       last4: '6488',
-      status: CardStatus.active,
+      status: VoucherStatus.active,
     );
 
     testWidgets('ratio kept inside a lower max height, centred', (

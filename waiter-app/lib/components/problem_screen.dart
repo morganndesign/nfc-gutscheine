@@ -17,11 +17,9 @@ import 'support/text_emphasis.dart';
 /// Problem families of the ProblemScreen (05 §4.6 tone table, 13 · R03 /
 /// R16): tone, default visual and the feedback played on appearance.
 enum ProblemFamily {
-  /// Card not found — danger, `ill_card_not_found`, error haptic + sound.
+  /// Not a voucher of this restaurant — danger, `ill_card_not_found`, error
+  /// haptic + sound.
   notFound,
-
-  /// Card of another restaurant — danger, `ill_wrong_restaurant`, error.
-  foreign,
 
   /// Server error — danger, `circle-alert`, warning haptic + sound.
   server,
@@ -44,7 +42,6 @@ enum ProblemFamily {
   /// Colour of the icon (the tone lives only in the visual, 05 §4.6).
   Color toneColor(WaiterColors c) => switch (this) {
     ProblemFamily.notFound ||
-    ProblemFamily.foreign ||
     ProblemFamily.server => c.danger,
     ProblemFamily.verification || ProblemFamily.throttled => c.warning,
     ProblemFamily.network => c.info,
@@ -55,9 +52,6 @@ enum ProblemFamily {
   ProblemVisual? get defaultVisual => switch (this) {
     ProblemFamily.notFound => const ProblemVisual.illustration(
       WaiterIllustration.cardNotFound,
-    ),
-    ProblemFamily.foreign => const ProblemVisual.illustration(
-      WaiterIllustration.wrongRestaurant,
     ),
     ProblemFamily.server => const ProblemVisual.icon(WaiterIcon.circleAlert),
     ProblemFamily.verification => const ProblemVisual.illustration(
@@ -75,7 +69,6 @@ enum ProblemFamily {
   /// Haptic on appearance.
   HapticToken? get haptic => switch (this) {
     ProblemFamily.notFound ||
-    ProblemFamily.foreign ||
     ProblemFamily.verification => HapticToken.error,
     ProblemFamily.server ||
     ProblemFamily.throttled ||
@@ -86,7 +79,6 @@ enum ProblemFamily {
   /// Sound on appearance.
   SoundToken? get sound => switch (this) {
     ProblemFamily.notFound ||
-    ProblemFamily.foreign ||
     ProblemFamily.verification => SoundToken.error,
     ProblemFamily.server ||
     ProblemFamily.throttled ||

@@ -180,7 +180,7 @@ void main() {
       });
     }
 
-    testWidgets('task: ✕ and the card number read in groups', (
+    testWidgets('task: ✕ and the voucher number read in groups', (
       WidgetTester tester,
     ) async {
       final SemanticsHandle handle = tester.ensureSemantics();
@@ -188,14 +188,14 @@ void main() {
         tester,
         TopBar.task(
           onClose: () {},
-          closeLabel: 'Close card',
-          cardNumber: '5285105870986488',
+          closeLabel: 'Close voucher',
+          voucherNumber: '5285105870986488',
         ),
         center: false,
       );
-      expect(find.bySemanticsLabel('Close card'), findsOneWidget);
+      expect(find.bySemanticsLabel('Close voucher'), findsOneWidget);
       expect(
-        find.bySemanticsLabel('Card number 5 2 8 5, 1 0 5 8, 7 0 9 8, 6 4 8 8'),
+        find.bySemanticsLabel('Voucher number 5 2 8 5, 1 0 5 8, 7 0 9 8, 6 4 8 8'),
         findsOneWidget,
       );
       handle.dispose();
@@ -252,7 +252,7 @@ void main() {
           greaterThanOrEqualTo(64),
         );
         final Finder row = find.bySemanticsLabel(
-          '14:32, card ending 6 4 8 8, 24 euros 90 redeemed, '
+          '14:32, voucher ending 6 4 8 8, 24 euros 90 redeemed, '
           'remaining balance 7 euros 60',
         );
         expect(row, findsOneWidget);

@@ -1,9 +1,4 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
-// Host for the Associated Domains entitlement (applinks:$(CARD_DOMAIN)). Default for local runs;
-// tool/release.sh writes Environment.xcconfig (not committed) with the first CARD_DOMAINS entry of
-// config/<environment>.json, so the entitlement always matches the build's environment.
-CARD_DOMAIN = localhost
-#include? "Environment.xcconfig"
 // Optional, not committed: DEVELOPMENT_TEAM=<Apple Team ID> (written by tool/release.sh ios-ipa).
 #include? "Team.xcconfig"

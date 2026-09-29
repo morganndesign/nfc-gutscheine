@@ -7,7 +7,6 @@ import '../app/money.dart';
 import '../components/components.dart';
 import '../components/support/announce.dart';
 import '../core/platform/feedback_scope.dart';
-import '../core/platform/nfc_service.dart';
 import '../core/state/loop_controller.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -25,9 +24,6 @@ class IntroScreen extends StatefulWidget {
 
 const int _pageCount = 3;
 
-/// Card 1 by device capability (03a §12 Card content).
-enum _TapVariant { android, ios, noNfc }
-
 /// Text of one card and its illustration slot.
 @immutable
 class _Card {
@@ -37,7 +33,7 @@ class _Card {
   final String body;
   final WaiterIllustration? illustration;
 
-  /// No-NFC card 1: `scan-qr-code` at `icon.48` instead of an illustration.
+  /// Card 1: `scan-qr-code` at `icon.48` instead of an illustration.
   final WaiterIcon? icon;
 }
 
@@ -169,26 +165,8 @@ class _IntroScreenState extends State<IntroScreen> {
 
   List<_Card> _cards(BuildContext context) {
     final AppLocalizations l = AppLocalizations.of(context);
-    final AppServices services = context.services;
-    final _TapVariant variant = services.loop.nfcAvailability == NfcAvailability.unsupported
-        ? _TapVariant.noNfc
-        : services.session.isIos
-        ? _TapVariant.ios
-        : _TapVariant.android;
     return <_Card>[
-      switch (variant) {
-        _TapVariant.android => _Card(
-          title: l.intro1TitleAndroid,
-          body: l.intro1BodyAndroid,
-          illustration: WaiterIllustration.introTap,
-        ),
-        _TapVariant.ios => _Card(
-          title: l.intro1TitleIos,
-          body: l.intro1BodyIos,
-          illustration: WaiterIllustration.introTap,
-        ),
-        _TapVariant.noNfc => _Card(title: l.intro1TitleNoNfc, body: l.intro1BodyNoNfc, icon: WaiterIcon.scanQrCode),
-      },
+      _Card(title: l.intro1Title, body: l.intro1Body, icon: WaiterIcon.scanQrCode),
       _Card(
         title: l.intro2Title,
         body: l.intro2Body(context.money.format(LoopController.holdThreshold)),

@@ -29,7 +29,7 @@ const double _windowCentreTablet = 0.5;
 /// The hint wraps to 3 lines at large text; the window shrinks from here on.
 const double _largeText = 1.3;
 
-/// "Not a gift card" stays for 2.5 s; the same payload is ignored for 3 s.
+/// "Not a voucher" stays for 2.5 s; the same payload is ignored for 3 s.
 const Duration _notCardLifetime = Duration(milliseconds: 2500);
 const Duration _ignoreSamePayload = Duration(seconds: 3);
 
@@ -117,7 +117,7 @@ class _QrScanScreenState extends State<QrScanScreen>
   }
 
   bool get _lookingUp => switch (_loop!.state) {
-    LookingUpState(:final LookupOrigin origin) => origin == LookupOrigin.qr,
+    PresentingState(:final PresentOrigin origin) => origin == PresentOrigin.qr,
     _ => false,
   };
 
@@ -132,7 +132,7 @@ class _QrScanScreenState extends State<QrScanScreen>
 
   void _onLoop() {
     final LoopState state = _loop!.state;
-    final bool slow = state is LookingUpState && state.slow;
+    final bool slow = state is PresentingState && state.slow;
     if (slow && !_wasSlow) {
       announce(context, AppLocalizations.of(context).scanSlow);
     }
@@ -144,8 +144,8 @@ class _QrScanScreenState extends State<QrScanScreen>
     }
   }
 
-  /// One detection = one request (03a §8): a valid card freezes the preview;
-  /// anything else shows `qr.notCard` and is ignored for 3 s.
+  /// One detection = one request (03a §8): a voucher QR freezes the preview;
+  /// anything else shows `qr.notVoucher` and is ignored for 3 s.
   void _onDetection(QrDetection detection) {
     final LoopController loop = _loop!;
     if (loop.state is! QrScanState || !loop.isOnline) return;
@@ -168,16 +168,13 @@ class _QrScanScreenState extends State<QrScanScreen>
       if (mounted) setState(() => _notCard = false);
     });
     setState(() => _notCard = true);
-    announce(context, l10n.qrNotCard, assertive: true);
+    announce(context, l10n.qrNotVoucher, assertive: true);
   }
 
   void _toggleTorch() {
     context.services.feedback.haptic(HapticToken.select);
     unawaited(_camera.toggleTorch());
   }
-
-  /// S12 → S11 replaces S12; back from S11 goes to S05 (03a §7).
-  void _enterNumber() => _loop!.openManual();
 
   void _focusAt(Offset local) {
     if (_view.isEmpty) return;
@@ -247,7 +244,7 @@ class _QrScanScreenState extends State<QrScanScreen>
                             onOpenSettings: () => unawaited(
                               context.services.system.openAppSettings(),
                             ),
-                            onEnterNumber: _enterNumber,
+                            onClose: loop.back,
                           ),
                   ),
                 ],
@@ -267,7 +264,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     final bool reduceMotion = MediaQuery.disableAnimationsOf(context);
     final LoopState state = loop.state;
     final bool lookingUp = _lookingUp;
-    final bool slow = lookingUp && state is LookingUpState && state.slow;
+    final bool slow = lookingUp && state is PresentingState && state.slow;
     final bool online = loop.isOnline;
 
     final double side = layout.widthClass.isTablet
@@ -308,12 +305,7 @@ class _QrScanScreenState extends State<QrScanScreen>
               large: true,
               onPressed: loop.back,
             )
-          : SecondaryButton(
-              key: const ValueKey<String>('manual'),
-              label: l10n.qrManual,
-              icon: WaiterIcon.keyboard,
-              onPressed: _enterNumber,
-            ),
+          : const SizedBox.shrink(key: ValueKey<String>('idle')),
     );
 
     return LayoutBuilder(
@@ -429,7 +421,7 @@ class _QrScanScreenState extends State<QrScanScreen>
     }
     if (_notCard) {
       return ScaledText(
-        l10n.qrNotCard,
+        l10n.qrNotVoucher,
         key: const ValueKey<String>('notCard'),
         type: TypeTokens.bodyM,
         color: c.warning,
@@ -447,35 +439,24 @@ class _QrScanScreenState extends State<QrScanScreen>
 }
 
 /// Camera denied (P03/P04) or unavailable (P05), in place of the preview
-/// (03a §11.3): icon plate, title, body; "Open Settings" + "Enter card
-/// number", or only "Enter card number" when Settings cannot help.
+/// (03a §11.3): icon plate, title, body; "Open Settings" when Settings can
+/// help, otherwise "Close".
 class _CameraProblem extends StatelessWidget {
   const _CameraProblem({
     required this.denied,
     required this.onOpenSettings,
-    required this.onEnterNumber,
+    required this.onClose,
   });
 
   final bool denied;
   final VoidCallback onOpenSettings;
-  final VoidCallback onEnterNumber;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final WaiterColors c = context.colors;
     final WaiterLayout layout = context.layout;
-    final Widget manual = denied
-        ? SecondaryButton(
-            label: l10n.qrManual,
-            icon: WaiterIcon.keyboard,
-            onPressed: onEnterNumber,
-          )
-        : PrimaryButton(
-            label: l10n.qrManual,
-            icon: WaiterIcon.keyboard,
-            onPressed: onEnterNumber,
-          );
     return Padding(
       padding: EdgeInsets.fromLTRB(
         layout.margin,
@@ -538,15 +519,14 @@ class _CameraProblem extends StatelessWidget {
                   ),
                 ),
               ),
-              if (denied) ...<Widget>[
+              if (denied)
                 PrimaryButton(
                   label: l10n.cameraDeniedAction,
                   icon: WaiterIcon.settings,
                   onPressed: onOpenSettings,
-                ),
-                const SizedBox(height: Space.s4),
-              ],
-              manual,
+                )
+              else
+                SecondaryButton(label: l10n.commonClose, onPressed: onClose),
             ],
           ),
         ),

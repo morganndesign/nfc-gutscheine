@@ -28,7 +28,6 @@ CONFIG="config/$ENVIRONMENT.json"
 value() { sed -n "s/^[[:space:]]*\"$1\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p" "$CONFIG" | head -1; }
 APP_ENV=$(value APP_ENV)
 API_BASE_URL=$(value API_BASE_URL)
-CARD_DOMAINS=$(value CARD_DOMAINS)
 APP_STORE_URL=$(value APP_STORE_URL)
 
 [[ "$APP_ENV" == "$ENVIRONMENT" ]] || { echo "$CONFIG: APP_ENV is '$APP_ENV', expected '$ENVIRONMENT'"; exit 1; }
@@ -36,8 +35,6 @@ APP_STORE_URL=$(value APP_STORE_URL)
 if [[ "$ENVIRONMENT" != development && "$API_BASE_URL" != https://* ]]; then
   echo "$CONFIG: API_BASE_URL must be https in $ENVIRONMENT builds"; exit 1
 fi
-[[ -n "$CARD_DOMAINS" ]] || { echo "$CONFIG: CARD_DOMAINS is empty"; exit 1; }
-CARD_DOMAIN="${CARD_DOMAINS%%,*}"
 
 VERSION=$(sed -n 's/^version: *//p' pubspec.yaml)
 DEFINES=(--dart-define-from-file="$CONFIG")
@@ -45,7 +42,7 @@ DEFINES=(--dart-define-from-file="$CONFIG")
 OBFUSCATE=(--obfuscate --split-debug-info=build/symbols)
 DIST="build/dist"
 
-echo "Environment: $ENVIRONMENT ($CONFIG) · API $API_BASE_URL · cards $CARD_DOMAINS · version $VERSION"
+echo "Environment: $ENVIRONMENT ($CONFIG) · API $API_BASE_URL · version $VERSION"
 
 case "$TARGET" in
   android)
@@ -78,8 +75,6 @@ case "$TARGET" in
     ;;
   ios|ios-ipa)
     [[ "$(uname)" == "Darwin" ]] || { echo "iOS builds need macOS with Xcode"; exit 1; }
-    # Associated Domains host of this environment (read by Debug/Release.xcconfig).
-    printf '// Written by tool/release.sh (%s) — do not edit, not committed.\nCARD_DOMAIN = %s\n' "$ENVIRONMENT" "$CARD_DOMAIN" > ios/Flutter/Environment.xcconfig
     if [[ "$ENVIRONMENT" == production && -z "$APP_STORE_URL" ]]; then
       echo "Note: APP_STORE_URL is empty — 'Update required' cannot open the App Store on iPhone."
     fi

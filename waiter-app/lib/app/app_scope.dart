@@ -7,12 +7,12 @@ import '../core/diagnostics/diagnostic_log.dart';
 import '../core/platform/biometrics_service.dart';
 import '../core/platform/connectivity_service.dart';
 import '../core/platform/feedback_service.dart';
-import '../core/platform/nfc_service.dart';
+import '../core/platform/voucher_printer.dart';
 import '../core/platform/system_service.dart';
-import '../core/platform/tag_writer.dart';
 import '../core/state/client_identity.dart';
 import '../core/state/loop_controller.dart';
 import '../core/state/session_controller.dart';
+import '../core/storage/pending_redemptions.dart';
 import '../core/storage/recent_store.dart';
 import '../core/storage/settings_store.dart';
 
@@ -25,8 +25,8 @@ class AppServices {
     required this.loop,
     required this.settings,
     required this.recent,
+    required this.pending,
     required this.feedback,
-    required this.nfc,
     required this.system,
     required this.connectivity,
     required this.identity,
@@ -35,7 +35,7 @@ class AppServices {
     required this.buildNumber,
     required this.isTablet,
     required this.api,
-    this.tagWriter,
+    this.printer,
   });
 
   /// Build configuration + server override (development / staging).
@@ -47,8 +47,10 @@ class AppServices {
   final LoopController loop;
   final SettingsStore settings;
   final RecentStore recent;
+
+  /// Redemption attempts whose outcome is not known yet.
+  final PendingRedemptionStore pending;
   final FeedbackService feedback;
-  final NfcService nfc;
   final SystemService system;
   final ConnectivityService connectivity;
 
@@ -59,13 +61,13 @@ class AppServices {
   final String buildNumber;
   final bool isTablet;
 
-  /// The API (S20 sells cards directly; the loop and the session own their calls).
+  /// The API (S20 sells vouchers directly; the loop and the session own their calls).
   final WaiterApi api;
 
-  /// Tag writing for S20; tests inject a fake.
-  final TagWriter? tagWriter;
+  /// Printing of the sold voucher (S20); tests inject a fake.
+  final VoucherPrinter? printer;
 
-  TagWriter get writer => tagWriter ?? PlatformTagWriter(nfc: nfc);
+  VoucherPrinter get voucherPrinter => printer ?? const SystemVoucherPrinter();
 
   BiometricKind get biometricKind => session.biometricKind;
 }
