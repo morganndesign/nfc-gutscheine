@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VoucherActionController;
 use App\Http\Controllers\Api\V1\VoucherController;
+use App\Http\Controllers\OperationsHealthController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -41,6 +42,8 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function (): void {
     // ---------------------------------------------------------------- public
     Route::get('app/config', AppConfigController::class)->middleware('throttle:app-config');
+    // For the external uptime monitor: database, scheduler and queue worker alive (200 ok / 503 degraded).
+    Route::get('health/operations', OperationsHealthController::class)->middleware('throttle:app-config');
 
     Route::prefix('auth')->group(function (): void {
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');

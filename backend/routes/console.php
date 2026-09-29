@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Jobs\QueueHeartbeat;
+use App\Support\Heartbeat;
 use Illuminate\Support\Facades\Schedule;
 
 /*
@@ -17,6 +19,10 @@ Schedule::command('vouchers:expire')->dailyAt('00:15')->timezone($tz)->withoutOv
 Schedule::command('vouchers:notify-expiring')->dailyAt('10:00')->timezone($tz)->withoutOverlapping()->onOneServer();
 
 // Security event stream: hash-chain settled events into seals (ADR-003).
+// Proof of life for GET /api/v1/health/operations: the scheduler beats itself, the worker runs the job.
+Schedule::call(static fn () => Heartbeat::beat(Heartbeat::SCHEDULER))->everyMinute()->name('heartbeat:scheduler')->onOneServer();
+Schedule::job(new QueueHeartbeat)->everyMinute()->name('heartbeat:worker')->onOneServer();
+
 Schedule::command('giftcard:seal-security-events')->everyMinute()->withoutOverlapping()->onOneServer();
 // Fraud and attack rules over new events; high and critical alerts are e-mailed to operations.
 Schedule::command('giftcard:monitor-security-events')->everyMinute()->withoutOverlapping()->onOneServer();

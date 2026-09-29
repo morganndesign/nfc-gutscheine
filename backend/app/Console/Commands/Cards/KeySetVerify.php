@@ -8,6 +8,7 @@ use App\Crypto\CryptoProvider;
 use App\Crypto\KeyReference;
 use App\Enums\KeySetStatus;
 use App\Models\KeySet;
+use App\Support\OpsAlert;
 use Illuminate\Console\Command;
 use Throwable;
 
@@ -43,7 +44,8 @@ final class KeySetVerify extends Command
             foreach ($problems as $problem) {
                 $this->error($problem);
             }
-            report(new \RuntimeException('Card key check failed: '.implode('; ', $problems)));
+            // A changed or missing root key: no card of that set verifies any more, or someone swapped the keystore.
+            OpsAlert::send('card-keys', 'Card key check failed', implode("\n", $problems)."\n\nPreserve the keystore and its backups; see docs/NFC.md.", 43200);
 
             return self::FAILURE;
         }

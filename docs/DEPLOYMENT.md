@@ -175,7 +175,7 @@ Record date, dump file and result in the operations log. The same drill run on M
 | Artisan command | *Terminal* → **api** → `php artisan …` (e.g. `migrate:status`, `schedule:list`, `queue:failed`) |
 | Integrity check now | *Terminal* → **api** → `php artisan giftcard:verify-chains` (recomputes every hash chain and every voucher balance) |
 | Change a setting | *Environment Variables* → *Redeploy* (configuration is cached at container start) |
-| Monitoring | an uptime check on `https://<domain>/up` (Better Stack, UptimeRobot…); `OPS_ALERT_EMAIL` gets a mail when a queue exceeds 500 jobs and when the nightly integrity check fails. A failed integrity check is a security incident: preserve the database and the backups before changing anything |
+| Monitoring | two uptime checks (Better Stack, UptimeRobot…): `https://<domain>/up` (web service, database, cache) and `https://<domain>/api/v1/health/operations` (503 when the scheduler or the queue worker stopped — nothing inside the platform can report that); `OPS_ALERT_EMAIL` gets a mail when a queue exceeds 500 jobs, a background job fails for good, backups are late, the nightly integrity or card key check fails, and for high/critical security alerts. A failed integrity check is a security incident: preserve the database and the backups before changing anything |
 | Logs without secrets | The gateway's access and error logs drop tokens, e-mail query parameters, cookies, `Authorization`, `X-Device-Id` and `Idempotency-Key`; every service rotates its Docker log at 10 MB × 5 files |
 
 Scheduled jobs (times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): every minute `giftcard:seal-security-events`
