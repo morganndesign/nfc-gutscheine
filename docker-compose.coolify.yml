@@ -73,6 +73,8 @@ services:
       APP_KEY: ${APP_KEY:-}
       # Opens the encrypted keystore in the laravel-storage volume (App\Crypto); never the keys themselves.
       CRYPTO_KEYSTORE_KEY: ${CRYPTO_KEYSTORE_KEY:-}
+      # Written into every card (permanent once the first card is personalised); empty = APP_URL + /t.
+      TAP_URL: ${TAP_URL:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
@@ -149,6 +151,8 @@ services:
       APP_KEY: ${APP_KEY:-}
       # Opens the encrypted keystore in the laravel-storage volume (App\Crypto); never the keys themselves.
       CRYPTO_KEYSTORE_KEY: ${CRYPTO_KEYSTORE_KEY:-}
+      # Written into every card (permanent once the first card is personalised); empty = APP_URL + /t.
+      TAP_URL: ${TAP_URL:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
@@ -218,12 +222,16 @@ services:
     command: ["php", "artisan", "schedule:work"]
     environment:
       CONTAINER_ROLE: scheduler
+      BACKUP_DIR: /backups
+      OFFSITE_ENABLED: ${OFFSITE_SFTP_HOST:-}
       APP_NAME: "GiftCard Pro"
       APP_ENV: ${APP_ENV:-production}
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:-}
       # Opens the encrypted keystore in the laravel-storage volume (App\Crypto); never the keys themselves.
       CRYPTO_KEYSTORE_KEY: ${CRYPTO_KEYSTORE_KEY:-}
+      # Written into every card (permanent once the first card is personalised); empty = APP_URL + /t.
+      TAP_URL: ${TAP_URL:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
@@ -270,6 +278,8 @@ services:
       SEED_DEMO_DATA: "false"
     volumes:
       - laravel-storage:/var/www/html/storage/app
+      # Read-only: ops:check-backups alerts when the last backup or off-site copy is too old.
+      - mysql-backups:/backups:ro
     healthcheck:
       test: ["CMD-SHELL", "pgrep -f 'schedule:work' >/dev/null || exit 1"]
       interval: 30s
@@ -363,6 +373,9 @@ services:
         max-size: "10m"
         max-file: "5"
     entrypoint: ["sh", "-c"]
+    # Daily: the database (consistent snapshot) and the card keystore (encrypted with CRYPTO_KEYSTORE_KEY; without
+    # it no card can ever be verified again). Every dump is checked before it counts; `last_success` is what the
+    # scheduler's backup check (ops:check-backups) reads, and the offsite service copies the directory away.
     command:
       - |
         set -eu -o pipefail
@@ -372,21 +385,80 @@ services:
           next=$$(date -u -d "today $${BACKUP_TIME}" +%s)
           [ "$$next" -gt "$$now" ] || next=$$(date -u -d "tomorrow $${BACKUP_TIME}" +%s)
           sleep $$((next - now))
-          file="/backups/giftcard_pro_$$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
-          if mysqldump -h mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" --single-transaction --quick --routines --triggers --no-tablespaces "$$MYSQL_DATABASE" | gzip -9 > "$$file.part"; then
+          stamp=$$(date -u +%Y%m%dT%H%M%SZ)
+          file="/backups/giftcard_pro_$$stamp.sql.gz"
+          if mysqldump -h mysql -uroot -p"$$MYSQL_ROOT_PASSWORD" --single-transaction --quick --routines --triggers --no-tablespaces "$$MYSQL_DATABASE" | gzip -9 > "$$file.part" \
+            && gzip -t "$$file.part" && [ "$$(gzip -dc "$$file.part" | tail -c 200 | grep -c 'Dump completed')" -ge 1 ]; then
             mv "$$file.part" "$$file"
+            if [ -f /storage/private/crypto/keystore.json ]; then
+              cp /storage/private/crypto/keystore.json "/backups/keystore_$$stamp.json"
+            fi
+            echo "$$stamp $$file" > /backups/last_success
             echo "Backup written: $$file"
           else
             rm -f "$$file.part"
             echo "Backup FAILED" >&2
           fi
           find /backups -name 'giftcard_pro_*.sql.gz' -mtime +"$$BACKUP_KEEP_DAYS" -delete
+          find /backups -name 'keystore_*.json' -mtime +"$$BACKUP_KEEP_DAYS" -delete
         done
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-giftcard_pro}
       MYSQL_ROOT_PASSWORD: ${SERVICE_PASSWORD_MYSQLROOT:?is empty - deploy this resource with Coolify, which generates it; do not run docker compose by hand}
       BACKUP_TIME: ${BACKUP_TIME:-01:30}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+    volumes:
+      - mysql-backups:/backups
+      - laravel-storage:/storage:ro
+
+  # ---------------------------------------------------------------- off-site copy of the backups
+  # A backup on the same server is gone with the server. Daily, one hour after the backup, the backup directory is
+  # copied to an SFTP server (e.g. a Hetzner Storage Box) through an rclone "crypt" remote: file contents and names
+  # are encrypted before they leave, with a password that is not on that server. Without OFFSITE_SFTP_HOST the
+  # service only logs that it is off, and ops:check-backups reports it.
+  offsite:
+    image: rclone/rclone:1.68
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ -z "$${RCLONE_CONFIG_OFFSITE_HOST}" ]; then
+          echo "Off-site backup is OFF (OFFSITE_SFTP_HOST not set)."
+          while true; do sleep 86400; done
+        fi
+        echo "Off-site copy daily at $${OFFSITE_TIME} UTC to the encrypted remote, kept $${OFFSITE_KEEP_DAYS} days"
+        while true; do
+          now=$$(date -u +%s)
+          next=$$(date -u -d "$$(date -u +%Y-%m-%d) $${OFFSITE_TIME}" +%s)
+          [ "$$next" -gt "$$now" ] || next=$$((next + 86400))
+          sleep $$((next - now))
+          if rclone copy /backups secure: --exclude 'last_success' --exclude 'offsite_success' --exclude '*.part' \
+            && rclone delete secure: --min-age "$${OFFSITE_KEEP_DAYS}d"; then
+            date -u +%Y%m%dT%H%M%SZ > /backups/offsite_success
+            echo "Off-site copy done"
+          else
+            echo "Off-site copy FAILED" >&2
+          fi
+        done
+    environment:
+      OFFSITE_TIME: ${OFFSITE_TIME:-02:30}
+      OFFSITE_KEEP_DAYS: ${OFFSITE_KEEP_DAYS:-60}
+      # rclone reads remotes from RCLONE_CONFIG_<NAME>_<OPTION>: "offsite" is the SFTP target, "secure" encrypts on it.
+      RCLONE_CONFIG_OFFSITE_TYPE: sftp
+      RCLONE_CONFIG_OFFSITE_HOST: ${OFFSITE_SFTP_HOST:-}
+      RCLONE_CONFIG_OFFSITE_PORT: ${OFFSITE_SFTP_PORT:-23}
+      RCLONE_CONFIG_OFFSITE_USER: ${OFFSITE_SFTP_USER:-}
+      RCLONE_CONFIG_OFFSITE_PASS: ${OFFSITE_SFTP_PASS_OBSCURED:-}
+      RCLONE_CONFIG_SECURE_TYPE: crypt
+      RCLONE_CONFIG_SECURE_REMOTE: offsite:giftcardpro
+      RCLONE_CONFIG_SECURE_PASSWORD: ${OFFSITE_CRYPT_PASSWORD_OBSCURED:-}
+      RCLONE_CONFIG_SECURE_PASSWORD2: ${OFFSITE_CRYPT_SALT_OBSCURED:-}
     volumes:
       - mysql-backups:/backups
 

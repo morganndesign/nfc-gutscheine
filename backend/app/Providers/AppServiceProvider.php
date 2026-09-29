@@ -45,7 +45,9 @@ final class AppServiceProvider extends ServiceProvider
         EnvironmentGuard::assertPublicUrls((string) $this->app->environment(), [
             'app.url' => config('app.url'),
             'giftcard.frontend_url' => config('giftcard.frontend_url'),
+            'giftcard.tap_url' => config('giftcard.tap_url'),
         ]);
+        EnvironmentGuard::assertCryptoKeystore((string) $this->app->environment(), (string) config('crypto.provider'), config('crypto.local.master_key'));
 
         Model::preventLazyLoading(! $this->app->isProduction());
         Model::preventSilentlyDiscardingAttributes(! $this->app->isProduction());

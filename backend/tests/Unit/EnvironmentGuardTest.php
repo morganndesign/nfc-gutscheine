@@ -49,4 +49,21 @@ final class EnvironmentGuardTest extends TestCase
         $this->expectExceptionMessage('giftcard.frontend_url');
         EnvironmentGuard::assertPublicUrls($environment, ['giftcard.frontend_url' => $url]);
     }
+
+    public function test_staging_and_production_need_the_keystore_key(): void
+    {
+        EnvironmentGuard::assertCryptoKeystore('production', 'local', 'base64:'.base64_encode(random_bytes(32)));
+        EnvironmentGuard::assertCryptoKeystore('local', 'local', null);
+        EnvironmentGuard::assertCryptoKeystore('production', 'hsm', null);
+        $this->addToAssertionCount(3);
+
+        foreach ([null, '', 'base64:short', 'not base64 !'] as $bad) {
+            try {
+                EnvironmentGuard::assertCryptoKeystore('staging', 'local', $bad);
+                $this->fail('Accepted '.var_export($bad, true));
+            } catch (RuntimeException $e) {
+                $this->assertStringContainsString('CRYPTO_KEYSTORE_KEY', $e->getMessage());
+            }
+        }
+    }
 }

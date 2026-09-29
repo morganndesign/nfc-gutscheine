@@ -61,15 +61,21 @@ class StationController extends ChangeNotifier {
     required NfcRelay nfc,
     required String Function() prompt,
     void Function(ApiFailure failure)? onAuthFailure,
+    Duration pause = const Duration(milliseconds: 900),
   }) : _api = api,
        _nfc = nfc,
        _prompt = prompt,
-       _onAuthFailure = onAuthFailure;
+       _onAuthFailure = onAuthFailure,
+       _pause = pause;
 
   final WaiterApi _api;
   final NfcRelay _nfc;
   final String Function() _prompt;
   final void Function(ApiFailure failure)? _onAuthFailure;
+
+  /// Between two cards: the operator takes the card away, and iPhone needs a moment before a new reader session
+  /// can start. It also keeps a reader that keeps failing from being restarted in a tight loop.
+  final Duration _pause;
 
   static const Set<String> _success = <String>{'9000', '9100', '91AF'};
 
@@ -161,6 +167,7 @@ class StationController extends ChangeNotifier {
           _notify();
           return;
         }
+        await Future<void>.delayed(_pause);
         continue;
       }
       if (run != _run || _disposed) {
@@ -175,6 +182,7 @@ class StationController extends ChangeNotifier {
       _last = outcome;
       if (outcome.cardNumber != null) _finished++;
       _notify();
+      await Future<void>.delayed(_pause);
     }
   }
 

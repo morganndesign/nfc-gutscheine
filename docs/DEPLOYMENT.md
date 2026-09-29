@@ -113,19 +113,45 @@ restore a backup only for real data loss.
 
 ## Backups
 
-The `backup` service writes `giftcard_pro_<UTC timestamp>.sql.gz` into the volume `mysql-backups` every day at
-`BACKUP_TIME` (UTC, default 01:30) and deletes dumps older than `BACKUP_KEEP_DAYS` (default 14). Dumps are
-consistent (`--single-transaction`) and include the append-only triggers (`--triggers`).
+The `backup` service writes, every day at `BACKUP_TIME` (UTC, default 01:30), into the volume `mysql-backups`:
 
-- **Off-site copy (required for real data):** the volume lives on the same disk as the database. On the server,
-  find it with `docker volume ls | grep mysql-backups` and sync its `_data` directory off-site, e.g. a root cron job
-  `rclone sync /var/lib/docker/volumes/<name>/_data storagebox:giftcard-backups`. Also enable Hetzner server backups.
+- `giftcard_pro_<UTC timestamp>.sql.gz` — a consistent dump (`--single-transaction`, with the append-only
+  triggers). It only counts when `gzip -t` passes and the dump ends with `Dump completed`;
+- `keystore_<UTC timestamp>.json` — a copy of the **card keystore** (still encrypted with `CRYPTO_KEYSTORE_KEY`).
+  Without the keystore no card ever issued can be verified again: it is as important as the database;
+- `last_success` — what the backup check reads.
+
+Files older than `BACKUP_KEEP_DAYS` (default 14) are deleted.
+
+**Off-site copy (required before real money):** the `offsite` service copies the backup directory, one hour after
+the backup (`OFFSITE_TIME`, default 02:30 UTC), to an SFTP server — e.g. a Hetzner Storage Box (a few euros a
+month) — through an rclone *crypt* remote: contents and file names are encrypted before they leave the server, and
+remote copies older than `OFFSITE_KEEP_DAYS` (default 60) are deleted. Set in Coolify:
+
+| Variable | Value |
+|---|---|
+| `OFFSITE_SFTP_HOST`, `OFFSITE_SFTP_USER`, `OFFSITE_SFTP_PORT` (23 for a Storage Box) | The SFTP account |
+| `OFFSITE_SFTP_PASS_OBSCURED` | Its password, obscured: `docker run --rm rclone/rclone:1.68 obscure '<password>'` |
+| `OFFSITE_CRYPT_PASSWORD_OBSCURED`, `OFFSITE_CRYPT_SALT_OBSCURED` | Two long random secrets (e.g. `openssl rand -base64 32`), each obscured the same way |
+
+Keep the two crypt secrets (not obscured) in the password manager **and offline**, with `CRYPTO_KEYSTORE_KEY`:
+without them the off-site copies cannot be read. Also enable Hetzner server backups (snapshots of the whole server).
+
+**Backup check:** `ops:check-backups` runs every hour in the scheduler (which sees the backup volume read-only) and
+e-mails `OPS_ALERT_EMAIL` (at most twice a day) when the last dump is older than 26 hours or suspiciously small,
+when the keystore has no copy, when the off-site copy is older than 26 hours — or when no off-site target is
+configured at all.
+
 - **Backup now:** *Terminal* → container **backup** →
   `mysqldump -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --no-tablespaces "$MYSQL_DATABASE" | gzip > /backups/manual_$(date -u +%Y%m%dT%H%M%SZ).sql.gz`
-- **List:** `ls -lh /backups` in the backup container.
+- **List:** `ls -lh /backups` in the backup container; `rclone ls secure:` in the offsite container.
+- **Fetch from off-site** (the server is gone): on any machine with rclone and the same `RCLONE_CONFIG_*` values,
+  `rclone copy secure: ./restore`.
 
 **Restore** (replaces all data — take a fresh dump first):
-1. *Terminal* → container **api** → `php artisan down` (the dashboard and app show maintenance).
+1. *Terminal* → container **api** → `php artisan down` (the dashboard and app show maintenance). On a new server,
+   copy the newest `keystore_*.json` to `storage/app/private/crypto/keystore.json` in the `laravel-storage` volume and
+   set the same `CRYPTO_KEYSTORE_KEY` before the first start; `php artisan cards:key-set:verify` must pass.
 2. *Terminal* → container **backup** →
    `gunzip -c /backups/<file>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"`
 3. Resource → *Redeploy* (brings the app back up).
@@ -146,8 +172,10 @@ check it, `DROP DATABASE restore_test`.
 | Monitoring | an uptime check on `https://<domain>/up` (Better Stack, UptimeRobot…); `OPS_ALERT_EMAIL` gets a mail when a queue exceeds 500 jobs and when the nightly integrity check fails. A failed integrity check is a security incident: preserve the database and the backups before changing anything |
 | Logs without secrets | The gateway's access and error logs drop tokens, e-mail query parameters, cookies, `Authorization`, `X-Device-Id` and `Idempotency-Key`; every service rotates its Docker log at 10 MB × 5 files |
 
-Nightly jobs (scheduler, times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): 00:15 `vouchers:expire`,
-02:30 `giftcard:verify-chains`, 03:30 `queue:prune-failed`, 10:00 `vouchers:notify-expiring`, every 15 min
+Scheduled jobs (times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): every minute `giftcard:seal-security-events`
+and `giftcard:monitor-security-events` (fraud rules → *Security alerts*, high/critical mailed), 00:15
+`vouchers:expire`, 02:30 `giftcard:verify-chains`, 02:40 `cards:key-set:verify` (card keys against their key check
+values), 03:30 `queue:prune-failed`, 10:00 `vouchers:notify-expiring`, hourly `ops:check-backups`, every 15 min
 `auth:clear-resets`, every 5 min `queue:monitor`. Check with `php artisan schedule:list` in the api container.
 
 ## Staging

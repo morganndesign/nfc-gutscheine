@@ -214,7 +214,8 @@ final class LiveAuthenticationTest extends TestCase
         [$card] = $this->activeCardVoucher($this->restaurant);
         $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
         $chip = $this->chip($card);
-        $url = str_replace('https://t.giftcardpro.at', 'https://evil.example', $chip->readNdefUrl());
+        $url = str_replace((string) config('giftcard.tap_url'), 'https://evil.example/t', $chip->readNdefUrl());
+        $this->assertStringStartsWith('https://evil.example/t/', $url);
 
         $this->tap($chip, url: $url)->assertForbidden()->assertJsonPath('code', 'SUN_VERIFICATION_FAILED');
     }

@@ -28,7 +28,7 @@ void main() {
     app.backend.on('GET', '/admin/station/batches', FakeReply(200, Payloads.stationBatches()));
     unawaited(app.session.start());
     await settle(tester);
-    station = StationController(api: app.services.api, nfc: app.nfc, prompt: () => 'Hold a blank card');
+    station = StationController(api: app.services.api, nfc: app.nfc, prompt: () => 'Hold a blank card', pause: Duration.zero);
     unawaited(station.load());
     await settle(tester);
   }

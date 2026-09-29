@@ -27,6 +27,9 @@ Schedule::command('giftcard:verify-chains')->dailyAt('02:30')->timezone($tz)->wi
 // Tamper check of the card root keys against the key check values of their ceremony.
 Schedule::command('cards:key-set:verify')->dailyAt('02:40')->timezone($tz)->withoutOverlapping()->onOneServer();
 
+// Backups: the last database dump, keystore copy and off-site copy are current (alerts operations).
+Schedule::command('ops:check-backups')->hourlyAt(45)->withoutOverlapping()->onOneServer();
+
 // Housekeeping.
 Schedule::command('queue:prune-failed --hours=720')->dailyAt('03:30')->timezone($tz)->onOneServer();
 Schedule::command('auth:clear-resets')->everyFifteenMinutes()->onOneServer();

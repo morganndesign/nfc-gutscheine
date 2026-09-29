@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Support;
 
+use App\Crypto\Exceptions\KeystoreException;
+use App\Crypto\Local\LocalKeystore;
 use RuntimeException;
 
 /**
@@ -37,6 +39,26 @@ final class EnvironmentGuard
                     $value,
                 ));
             }
+        }
+    }
+
+    /**
+     * A staging or production server keeps card keys in the local keystore, opened with CRYPTO_KEYSTORE_KEY. Without
+     * it no card can be personalised, tapped or paid with; the container refuses to start instead of failing at the
+     * first tap. The key is never generated here: it must not live next to the keystore it protects.
+     */
+    public static function assertCryptoKeystore(string $environment, string $provider, mixed $masterKey): void
+    {
+        if (! in_array($environment, ['production', 'staging'], true) || $provider !== 'local') {
+            return;
+        }
+        try {
+            LocalKeystore::decodeMasterKey(is_string($masterKey) ? $masterKey : null);
+        } catch (KeystoreException) {
+            throw new RuntimeException(
+                'CRYPTO_KEYSTORE_KEY must be "base64:" + 32 random bytes (openssl rand -base64 32, prefixed with base64:). '
+                .'Set it in Coolify and keep a copy offline: it opens the card keystore; without it no card works.'
+            );
         }
     }
 }

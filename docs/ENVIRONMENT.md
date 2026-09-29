@@ -101,15 +101,17 @@ A restaurant validity is at least 36 months (`min_validity_months`, fixed).
 | `MAIL_LOCALE` | `de` | Language of invitation e-mails when the restaurant's language has no translation. |
 | `MAIL_VERIFY_DOMAINS` | `true` | *Send test e-mail* refuses a recipient domain without a mail server. |
 | `VOUCHER_EXPIRING_NOTICE_DAYS` | `30` | Expiry reminder this many days before the last valid day. |
-| `OPS_ALERT_EMAIL` | *(support e-mail)* | Operations alerts: a queue with more than 500 waiting jobs, a failed integrity check. |
+| `OPS_ALERT_EMAIL` | *(support e-mail)* | Operations alerts: a queue with more than 500 waiting jobs, a failed integrity check, a stale backup, high and critical security alerts. |
+| `CRYPTO_PROVIDER` | `local` | `local`: card keys in one encrypted keystore file. All key use goes through `App\Crypto\CryptoProvider`; an HSM provider replaces it without code changes. |
+| `CRYPTO_KEYSTORE_PATH` | `storage/app/private/crypto/keystore.json` | Keystore file, in the `laravel-storage` volume; the daily backup copies it. |
+| `CRYPTO_KEYSTORE_KEY` | — | **Required on staging and production** (the API refuses to start without it): `base64:` + 32 random bytes (`openssl rand -base64 32`). The only key in the environment; keep a copy offline, never next to the keystore. Rotation: `CRYPTO_KEYSTORE_NEW_KEY` + `php artisan crypto:keystore:rekey`. |
+| `TAP_URL` | `APP_URL` + `/t` | Written into every card at the station (`{TAP_URL}/{key set}?e=…&m=…` opens the guest page). **Permanent once the first card is personalised**; must be https on staging/production. |
+| `FRAUD_COUNTER_GAP` | `50` | Card reads between two verified taps above which a card is flagged (*Security alerts*). |
 
 ### Development only
 
 | Variable | Description |
 |---|---|
-| `CRYPTO_PROVIDER` | `local` (default): keys in one encrypted keystore file. All key use goes through `App\Crypto\CryptoProvider`; an HSM provider replaces it without code changes. |
-| `CRYPTO_KEYSTORE_PATH` | Keystore file (default `storage/app/private/crypto/keystore.json`). A persistent volume in containers; back it up. |
-| `CRYPTO_KEYSTORE_KEY` | Master key of the keystore: `base64:` + 32 random bytes (`openssl rand -base64 32`). The only key in the environment; stored and backed up separately from the keystore. Rotation: `CRYPTO_KEYSTORE_NEW_KEY` + `php artisan crypto:keystore:rekey`. |
 | `SEED_DEMO_DATA` | `true` seeds the demo restaurants outside `local`/`testing`/`staging`. The Coolify stack fixes it to `false`. |
 | `LOG_CHANNEL` | `stack` locally; `stderr` in containers. |
 
@@ -142,7 +144,7 @@ their defaults from `config/giftcard.php`.
 |---|---|
 | Coolify, automatically | `SERVICE_URL_GATEWAY` / `SERVICE_FQDN_GATEWAY` (domain of the `gateway` service → `APP_URL`, `FRONTEND_URL`, `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, default `MAIL_FROM_ADDRESS`, derived in `infra/docker/php/entrypoint.sh`), `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` |
 | The first deploy, automatically | `APP_KEY` (kept in the `laravel-storage` volume unless you set `APP_KEY` yourself) |
-| You (needed for real use) | `MAIL_MAILER=smtp` and the `MAIL_*` values |
-| You (optional) | `APP_ENV` (`staging`), `APP_URL`, `APP_LOCALE`, `OPS_ALERT_EMAIL`, `MAIL_LOCALE`, `MAIL_TIMEOUT`, `SCHEDULE_TIMEZONE`, `LOG_LEVEL`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `DB_DATABASE`/`DB_USERNAME` (before the first deploy only) |
+| You (needed for real use) | `MAIL_MAILER=smtp` and the `MAIL_*` values; `CRYPTO_KEYSTORE_KEY` (the API does not start without it); `TAP_URL` before the first card is personalised; `OFFSITE_SFTP_*` and `OFFSITE_CRYPT_*` ([Backups](DEPLOYMENT.md#backups)) |
+| You (optional) | `APP_ENV` (`staging`), `APP_URL`, `APP_LOCALE`, `OPS_ALERT_EMAIL`, `MAIL_LOCALE`, `MAIL_TIMEOUT`, `SCHEDULE_TIMEZONE`, `LOG_LEVEL`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `OFFSITE_TIME`, `OFFSITE_KEEP_DAYS`, `DB_DATABASE`/`DB_USERNAME` (before the first deploy only) |
 
 The `web` service needs no variables.

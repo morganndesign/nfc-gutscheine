@@ -6,8 +6,6 @@ use App\Crypto\Ntag424\OriginalitySignature;
 return [
     'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
 
-    // Origin written into every card's NDEF URL (https://t.giftcardpro.at/{k}?e=…&m=…). Only URLs of this origin
-    // are accepted from a tapped card.
     'fraud' => [
         // Reads of a card between two verified taps above which the card is flagged (read elsewhere, skimming).
         'counter_gap' => (int) env('FRAUD_COUNTER_GAP', 50),
@@ -18,7 +16,11 @@ return [
         'originality_public_key' => OriginalitySignature::NXP_PUBLIC_KEY,
     ],
 
-    'tap_url' => rtrim((string) env('TAP_URL', 'https://t.giftcardpro.at'), '/'),
+    // Written into every card at the station: {tap_url}/{key set}?e=…&m=… opens the guest page (route /t/{key set}).
+    // PERMANENT once the first card is personalised — a card cannot be rewritten in the restaurant. Choose the
+    // domain for the life of the cards (a dedicated host such as https://t.example.at/t, routed to the gateway).
+    // Only URLs of this origin are accepted from a tapped card.
+    'tap_url' => rtrim((string) (env('TAP_URL') ?: rtrim((string) env('APP_URL', 'http://localhost'), '/').'/t'), '/'),
 
     'voucher_number' => [
         // Total digits including the Luhn check digit.
@@ -65,6 +67,12 @@ return [
 
     // Operations alerts (e.g. a queue backlog found by queue:monitor). Empty = the platform support e-mail.
     'ops_alert_email' => env('OPS_ALERT_EMAIL'),
+
+    // The backup volume as the scheduler sees it (read-only) and whether the offsite service copies it away.
+    'backups' => [
+        'dir' => env('BACKUP_DIR', ''),
+        'offsite_enabled' => (bool) env('OFFSITE_ENABLED', false),
+    ],
 
     // Language of account e-mails (invitations). The restaurant's language is used when a translation exists
     // (restaurant locale de-AT → de, en-GB → en); otherwise this platform default. Texts: lang/<locale>/invitation.php.

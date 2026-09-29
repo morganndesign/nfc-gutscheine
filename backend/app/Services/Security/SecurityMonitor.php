@@ -8,14 +8,12 @@ use App\Enums\SecurityEventOutcome;
 use App\Enums\SecurityEventType as T;
 use App\Models\SecurityAlert;
 use App\Models\SecurityEvent;
-use App\Models\SystemSetting;
+use App\Support\OpsAlert;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
-use Throwable;
 
 /**
  * Fraud and attack detection over the security event stream (ADR-003): every new event is matched against the
@@ -165,20 +163,11 @@ final class SecurityMonitor
 
     private function notify(SecurityAlert $alert): void
     {
-        $to = config('giftcard.ops_alert_email') ?: SystemSetting::get('platform.support_email');
-        if (! is_string($to) || $to === '') {
-            Log::critical('Security alert without an operations address', ['alert' => $alert->id]);
-
-            return;
-        }
-        try {
-            Mail::raw(
-                "Rule: {$alert->rule} ({$alert->severity})\nSubject: {$alert->subject}\nFirst seen: {$alert->first_seen_at->toIso8601String()}\n\n"
-                ."Open the platform dashboard → Security alerts, or `php artisan giftcard:export-security-events` from event {$alert->first_event_seq}.",
-                static fn ($message) => $message->to($to)->subject("[GiftCard Pro] {$alert->severity}: {$alert->rule}"),
-            );
-        } catch (Throwable $e) {
-            Log::error('Security alert could not be sent', ['alert' => $alert->id, 'error' => $e->getMessage()]);
-        }
+        OpsAlert::send(
+            'security-alert:'.$alert->id,
+            "{$alert->severity}: {$alert->rule}",
+            "Rule: {$alert->rule} ({$alert->severity})\nSubject: {$alert->subject}\nFirst seen: {$alert->first_seen_at->toIso8601String()}\n\n"
+            ."Open the platform dashboard → Security alerts, or `php artisan giftcard:export-security-events` from event {$alert->first_event_seq}.",
+        );
     }
 }
