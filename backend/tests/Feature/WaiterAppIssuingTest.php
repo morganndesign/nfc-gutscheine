@@ -64,7 +64,7 @@ final class WaiterAppIssuingTest extends TestCase
 
         $expected = [
             'mia@example.com' => ['manager', ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage']],
-            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage']],
+            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage', 'cards.replace_lost']],
         ];
         foreach ($expected as $email => [$role, $abilities]) {
             $permissions = $this->signIn($email)->assertCreated()

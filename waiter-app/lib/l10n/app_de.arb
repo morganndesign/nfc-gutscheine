@@ -328,6 +328,8 @@
   "cardsReasonDamaged": "Beschädigt",
   "cardsReasonFound": "Wiedergefunden",
   "cardsReplaceTap": "Neue Karte aus dem Lager ans Handy halten. Das Guthaben geht auf sie über.",
+  "cardsReplaceTapOld": "Die alte Karte des Gastes ans Handy halten.",
+  "cardsReplaceOwnerOnly": "Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Sperren Sie sie jetzt – dann zahlt sie nicht mehr.",
   "cardsReplaceDone": "Ersetzt durch {number}. Die alte Karte gilt nicht mehr.",
   "cardsSuspendDone": "Gesperrt – die Karte zahlt nicht mehr.",
   "cardsResumeDone": "Entsperrt – die Karte zahlt wieder.",

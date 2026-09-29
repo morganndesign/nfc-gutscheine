@@ -176,16 +176,22 @@ class CardLookupController extends ChangeNotifier {
     required CardPresenter cards,
     required SessionController session,
     required CardSheetTexts texts,
+    required CardSheetTexts oldCardTexts,
   }) : _api = api,
        _cards = cards,
        _session = session,
-       _texts = texts;
+       _texts = texts,
+       _oldCardTexts = oldCardTexts;
 
   final WaiterApi _api;
   final CardPresenter _cards;
   final SessionController _session;
   final CardSheetTexts _texts;
+  final CardSheetTexts _oldCardTexts;
   bool _disposed = false;
+
+  /// While tapping for a replacement: whether the old card (true) or the new stock card is wanted.
+  bool tappingOldCard = false;
 
   static final RegExp _number = RegExp(r'^B-\d{4}-\d{4}-\d{4,}$');
 
@@ -231,24 +237,38 @@ class CardLookupController extends ChangeNotifier {
     });
   }
 
-  /// Taps a stock card and moves the voucher to it.
-  Future<void> replace(String reason) async {
+  /// Moves the voucher to a stock card. With [oldCardAtHand] the guest's card is tapped first (it proves it is at the
+  /// till); without it (lost, stolen) the server accepts it only from an owner.
+  Future<void> replace(String reason, {required bool oldCardAtHand}) async {
     final CardInfo? current = card;
     if (current == null || phase != DeskPhase.idle) return;
     _update(() {
       phase = DeskPhase.tapping;
+      tappingOldCard = oldCardAtHand;
       cardFailure = null;
       requestFailed = false;
       done = null;
     });
     try {
+      String? surrender;
+      if (oldCardAtHand) {
+        surrender = (await _cards.present(
+          'surrender',
+          texts: _oldCardTexts,
+          onDetected: () => _update(() => phase = DeskPhase.checking),
+        )).id;
+        _update(() {
+          phase = DeskPhase.tapping;
+          tappingOldCard = false;
+        });
+      }
       final CardPresented fresh = await _cards.present(
         'bind',
         texts: _texts,
         onDetected: () => _update(() => phase = DeskPhase.checking),
       );
       _update(() => phase = DeskPhase.busy);
-      final CardInfo next = await _api.replaceCard(current.cardNumber, fresh.id, reason);
+      final CardInfo next = await _api.replaceCard(current.cardNumber, fresh.id, reason, surrenderPresentmentId: surrender);
       _update(() {
         replaced = current.cardNumber;
         card = next;
@@ -260,7 +280,10 @@ class CardLookupController extends ChangeNotifier {
     } on ApiFailure catch (e) {
       if (!_session.handleFailure(e, SessionContext.lookup)) _update(() => requestFailed = true);
     } finally {
-      _update(() => phase = DeskPhase.idle);
+      _update(() {
+        phase = DeskPhase.idle;
+        tappingOldCard = false;
+      });
     }
   }
 

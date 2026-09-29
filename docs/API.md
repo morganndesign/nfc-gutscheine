@@ -125,7 +125,8 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 | 404 | `NOT_FOUND` | Unknown resource, or one of another restaurant |
 | 409 | `IDEMPOTENCY_CONFLICT` | Key reused for a different request |
 | 409 | `INVALID_VOUCHER_STATE` | Status change not allowed in the current status |
-| 409 | `TRANSACTION_NOT_REVERSIBLE` | Wrong type or already reversed |
+| 409 | `TRANSACTION_NOT_REVERSIBLE` | Wrong type or already reversed; `context.reason` `own_reload`: a reload is reversed by someone other than the person who booked it (owners excepted) |
+| 403 | `CARD_NOT_PRESENTED` | A replacement without the old card's `surrender` presentment needs cards.replace_lost (owners) |
 | 409 | `IMMUTABLE_RECORD` | Attempt to change an append-only record |
 | 409 | `RESTAURANT_NOT_DELETABLE`, `INVITATION_NOT_POSSIBLE` | Platform administration (see there) |
 | 419 | `CSRF_TOKEN_MISMATCH` | Fetch `/sanctum/csrf-cookie` again and retry |
@@ -241,6 +242,7 @@ POST /presentments/cards/{authentication}
 | `spend` | vouchers.redeem | `active`, linked to a `card` voucher | the voucher |
 | `bind` | cards.bind | `available` | `null` |
 | `receive` | cards.receive | `delivered` | `null` |
+| `surrender` | cards.manage | `active`, `suspended` (the guest's card, handed in for its replacement) | `null` |
 
 Step 1 verifies the SUN (the card's own MAC; the read counter must be higher than every earlier one, so a copied
 URL fails with `403 SUN_REPLAYED`), that the radio UID is the SUN's UID (`403 CARD_AUTHENTICATION_FAILED`, a copied
@@ -365,7 +367,7 @@ Physical cards are addressed by their inventory number (`B-2026-0001-0042`); ids
 | GET | `/cards/{number}` | cards.view | The card plus `history[] {from_state, to_state, reason, at}` |
 | POST | `/cards/{number}/suspend` | cards.manage | `{reason}` — active → suspended (lost, stolen, check); it pays no more, earlier taps included |
 | POST | `/cards/{number}/resume` | cards.manage | `{reason}` — suspended → active |
-| POST | `/cards/{number}/replacement` | cards.manage + cards.bind | `{presentment_id, reason}` — the `bind` presentment of a stock card; the old card (active or suspended) becomes `replaced` for good, the new one takes over the voucher and its balance. Answers the new card |
+| POST | `/cards/{number}/replacement` | cards.manage + cards.bind | `{presentment_id, surrender_presentment_id?, reason}` — the `bind` presentment of a stock card and, when the old card is at hand, its `surrender` presentment (without it: cards.replace_lost, owners — lost or stolen card); the guest gets a `card_replaced` e-mail; the old card (active or suspended) becomes `replaced` for good, the new one takes over the voucher and its balance. Answers the new card |
 | POST | `/cards/{number}/revoke` | cards.manage | `{reason}` — a stock card (delivered, available) out of service for good; a guest's card is suspended and replaced instead |
 | GET | `/card-batches` | cards.view | The restaurant's batches with `counts` |
 | POST | `/card-batches/{id}/receipt` | cards.receive | `{count, presentment_id}` — the counted quantity and the `receive` presentment of one card of the batch. Matching count → `in_service`, every card `available`; otherwise `on_hold` for the platform |
@@ -399,7 +401,7 @@ four root keys in the keystore, records their key check values, makes the set ac
 
 `Transaction`: `id, type, type_label, amount` (signed), `balance_before, balance_after, currency, reference, note,
 reversed, reversed_at, reversible, related_transaction_id, payment, voucher {id, kind, voucher_number, status},
-user, device, created_at`. `reversed` is derived from the reversal entry that points at the original; no entry is
+user, device, created_at`. `reversible` is for the viewer (false on a reload they booked themselves unless they may reverse their own reloads). `reversed` is derived from the reversal entry that points at the original; no entry is
 ever changed. `Payment`: `id, method, method_label, amount, currency, reference, reason, created_at`.
 
 ### Dashboard `[dashboard.view]`

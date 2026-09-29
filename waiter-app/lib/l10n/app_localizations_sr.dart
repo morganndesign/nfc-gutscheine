@@ -1180,6 +1180,13 @@ class AppLocalizationsSr extends AppLocalizations {
       'Prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na nju.';
 
   @override
+  String get cardsReplaceTapOld => 'Prislonite staru karticu gosta uz telefon.';
+
+  @override
+  String get cardsReplaceOwnerOnly =>
+      'Izgubljenu ili ukradenu karticu zamjenjuje samo vlasnik. Blokirajte je sada da više ne plaća.';
+
+  @override
   String cardsReplaceDone(String number) {
     return 'Zamijenjena karticom $number. Stara kartica više ne vrijedi.';
   }

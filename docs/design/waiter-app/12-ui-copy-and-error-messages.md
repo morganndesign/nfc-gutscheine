@@ -825,6 +825,8 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `cards.reason.damaged` | Beschädigt | Damaged | Oštećena | 16 | Cards |
 | `cards.reason.found` | Wiedergefunden | Found again | Pronađena | 16 | Cards · resume |
 | `cards.replace.tap` | Neue Karte aus dem Lager ans Handy halten. Das Guthaben geht auf sie über. | Hold a new card from stock to the phone. The balance moves to it. | Prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na nju. | 90 | Cards · also the iPhone sheet |
+| `cards.replace.tapOld` | Die alte Karte des Gastes ans Handy halten. | Hold the guest's old card to the phone. | Prislonite staru karticu gosta uz telefon. | 60 | Cards · also the iPhone sheet |
+| `cards.replace.ownerOnly` | Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Sperren Sie sie jetzt – dann zahlt sie nicht mehr. | Only the owner can replace a lost or stolen card. Suspend it now so it stops paying. | Izgubljenu ili ukradenu karticu zamjenjuje samo vlasnik. Blokirajte je sada da više ne plaća. | 120 | Cards · replace sheet footnote |
 | `cards.replace.done` | Ersetzt durch {number}. Die alte Karte gilt nicht mehr. | Replaced by {number}. The old card no longer works. | Zamijenjena karticom {number}. Stara kartica više ne vrijedi. | 80 | Cards |
 | `cards.suspend.done` | Gesperrt – die Karte zahlt nicht mehr. | Suspended – the card no longer pays. | Blokirana – kartica više ne plaća. | 60 | Cards |
 | `cards.resume.done` | Entsperrt – die Karte zahlt wieder. | Resumed – the card pays again. | Deblokirana – kartica ponovo plaća. | 60 | Cards |
@@ -917,7 +919,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **383 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **385 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

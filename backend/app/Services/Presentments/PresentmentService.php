@@ -96,7 +96,7 @@ final class PresentmentService
         // Each purpose has its own state rule (architecture §10.1); for spending, the voucher's kind decides.
         $refused = match ($purpose) {
             PresentmentPurpose::Spend => ! $voucher->kind->allowsSpendingWith($method),
-            PresentmentPurpose::Bind, PresentmentPurpose::Receive => true,
+            PresentmentPurpose::Bind, PresentmentPurpose::Receive, PresentmentPurpose::Surrender => true,
         };
         if ($refused) {
             $this->audit->log('presentment.failed', $actor, $voucher, null, null, [

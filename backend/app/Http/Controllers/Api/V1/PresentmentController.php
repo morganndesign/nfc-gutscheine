@@ -46,6 +46,7 @@ final class PresentmentController extends Controller
             PresentmentPurpose::Spend => Permission::VouchersRedeem->value,
             PresentmentPurpose::Bind => Permission::CardsBind->value,
             PresentmentPurpose::Receive => Permission::CardsReceive->value,
+            PresentmentPurpose::Surrender => Permission::CardsManage->value,
         });
 
         $begun = $cards->begin(

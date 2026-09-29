@@ -211,6 +211,7 @@ void main() {
       cards: presenter(),
       session: app.session,
       texts: texts,
+      oldCardTexts: texts,
     );
 
     unawaited(desk.find('b-2026-0001-0007 '));
@@ -223,7 +224,8 @@ void main() {
     expect(desk.done, 'suspended');
     expect(app.backend.to('POST', '/cards/B-2026-0001-0007/suspend').single.body, <String, Object?>{'reason': 'Lost'});
 
-    unawaited(desk.replace('Lost'));
+    // Lost (an owner): only the new card is tapped.
+    unawaited(desk.replace('Lost', oldCardAtHand: false));
     await settle(tester);
     expect(desk.done, 'replaced');
     expect(desk.replaced, 'B-2026-0001-0007');
@@ -237,6 +239,43 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('a damaged card is tapped before the stock card and both presentments are sent', (WidgetTester tester) async {
+    await started(tester);
+    const String surrenderId = '01a0f000-0000-7000-8000-0000000005d0';
+    app.backend
+      ..on('GET', '/cards/B-2026-0001-0007', FakeReply(200, Payloads.cardInfo()))
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardOnly(id: surrenderId, state: 'active')))
+      ..on('POST', complete, FakeReply(200, Payloads.cardOnly(number: 'B-2026-0001-0009')))
+      ..on(
+        'POST',
+        '/cards/B-2026-0001-0007/replacement',
+        FakeReply(200, Payloads.cardInfo(number: 'B-2026-0001-0009')),
+      );
+    final CardLookupController desk = CardLookupController(
+      api: app.services.api,
+      cards: presenter(),
+      session: app.session,
+      texts: texts,
+      oldCardTexts: texts,
+    );
+    unawaited(desk.find('B-2026-0001-0007'));
+    await settle(tester);
+
+    unawaited(desk.replace('Damaged', oldCardAtHand: true));
+    await settle(tester);
+    expect(desk.done, 'replaced');
+    expect(app.backend.to('POST', begin).map((RecordedRequest r) => r.body!['purpose']), <String>['surrender', 'bind']);
+    expect(app.backend.to('POST', '/cards/B-2026-0001-0007/replacement').single.body, <String, Object?>{
+      'presentment_id': Payloads.bindPresentmentId,
+      'surrender_presentment_id': surrenderId,
+      'reason': 'Damaged',
+    });
+    expect(desk.tappingOldCard, isFalse);
+    desk.dispose();
+    await finish(tester);
+  });
+
   testWidgets('an unknown or malformed card number is not sent', (WidgetTester tester) async {
     await started(tester);
     app.backend.on('GET', '/cards/B-2026-0001-0404', FakeReply(404, Payloads.error('NOT_FOUND')));
@@ -245,6 +284,7 @@ void main() {
       cards: presenter(),
       session: app.session,
       texts: texts,
+      oldCardTexts: texts,
     );
 
     unawaited(desk.find('1268834313520042'));

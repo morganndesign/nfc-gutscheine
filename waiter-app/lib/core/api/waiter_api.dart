@@ -147,11 +147,17 @@ class WaiterApi {
   );
 
   /// Moves the voucher of card [number] to the tapped stock card; answers the new card.
-  Future<CardInfo> replaceCard(String number, String presentmentId, String reason) async => _parse(
+  /// [surrenderPresentmentId]: the old card's `surrender` presentment when it is at hand; without it only an owner
+  /// may replace (lost, stolen).
+  Future<CardInfo> replaceCard(String number, String presentmentId, String reason, {String? surrenderPresentmentId}) async => _parse(
     await _client.send(
       'POST',
       '/cards/${Uri.encodeComponent(number)}/replacement',
-      body: <String, Object?>{'presentment_id': presentmentId, 'reason': reason},
+      body: <String, Object?>{
+        'presentment_id': presentmentId,
+        'surrender_presentment_id': ?surrenderPresentmentId,
+        'reason': reason,
+      },
     ),
     CardInfo.fromJson,
   );

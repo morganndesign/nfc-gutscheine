@@ -1640,6 +1640,14 @@
   "@cardsReplaceTap": {
     "description": "Spec key: cards.replace.tap (12 §5.16) · Max: 90 · Notes: Cards · also the iPhone sheet"
   },
+  "cardsReplaceTapOld": "Hold the guest's old card to the phone.",
+  "@cardsReplaceTapOld": {
+    "description": "Spec key: cards.replace.tapOld (12 §5.16) · Max: 60 · Notes: Cards · also the iPhone sheet"
+  },
+  "cardsReplaceOwnerOnly": "Only the owner can replace a lost or stolen card. Suspend it now so it stops paying.",
+  "@cardsReplaceOwnerOnly": {
+    "description": "Spec key: cards.replace.ownerOnly (12 §5.16) · Max: 120 · Notes: Cards · replace sheet footnote"
+  },
   "cardsReplaceDone": "Replaced by {number}. The old card no longer works.",
   "@cardsReplaceDone": {
     "description": "Spec key: cards.replace.done (12 §5.16) · Max: 80 · Notes: Cards",

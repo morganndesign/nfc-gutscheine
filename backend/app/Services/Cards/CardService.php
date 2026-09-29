@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Services\Cards;
 
 use App\Enums\CardState;
+use App\Enums\Permission;
 use App\Enums\PresentmentPurpose;
 use App\Enums\SecurityEventType;
+use App\Exceptions\Domain\CardNotPresentedException;
 use App\Exceptions\Domain\CardStateException;
 use App\Exceptions\Domain\DomainException;
 use App\Exceptions\Domain\PresentmentInvalidException;
@@ -80,16 +82,28 @@ final class CardService
     /**
      * Replacement: the old card (active or suspended) is replaced for good and the tapped stock card takes over its
      * voucher. No money moves; the voucher, its balance and its history stay the same.
+     *
+     * The old card proves it is at the till with a `surrender` presentment (a damaged but readable card). Without it
+     * (lost, stolen) the balance would move on nobody's word but the staff member's, so that needs
+     * `cards.replace_lost` (owners). Either way the guest is told by e-mail.
      */
-    public function replace(Actor $actor, Card $old, string $presentmentId, string $reason): Card
+    public function replace(Actor $actor, Card $old, string $presentmentId, ?string $surrenderId, string $reason): Card
     {
         $this->assertTenant($old->restaurant_id);
-
         $voucherId = null;
-        $card = $this->guarded($actor, 'replacement', $old->card_number, null, function () use ($actor, $old, $presentmentId, $reason, &$voucherId): Card {
-            return DB::transaction(function () use ($actor, $old, $presentmentId, $reason, &$voucherId): Card {
+        $card = $this->guarded($actor, 'replacement', $old->card_number, null, function () use ($actor, $old, $presentmentId, $surrenderId, $reason, &$voucherId): Card {
+            if ($surrenderId === null && ($actor->user === null || ! $actor->user->hasPermission(Permission::CardsReplaceLost))) {
+                throw new CardNotPresentedException;
+            }
+
+            return DB::transaction(function () use ($actor, $old, $presentmentId, $surrenderId, $reason, &$voucherId): Card {
+                // Lock order: presentments → cards → voucher.
                 $presentment = $this->presentments->lockForUse($presentmentId);
+                $surrender = $surrenderId !== null ? $this->presentments->lockForUse($surrenderId) : null;
                 $new = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Bind);
+                if ($surrenderId !== null && $this->presentments->consumeCard($surrender, $actor, PresentmentPurpose::Surrender)->getKey() !== $old->getKey()) {
+                    throw new PresentmentInvalidException('', ['reason' => 'other_card']);
+                }
 
                 /** @var Card $locked */
                 $locked = Card::query()->withoutGlobalScopes()->whereKey($old->getKey())->lockForUpdate()->firstOrFail();
@@ -103,9 +117,10 @@ final class CardService
                 /** @var Voucher $voucher */
                 $voucher = Voucher::query()->whereKey($medium->voucher_id)->lockForUpdate()->firstOrFail();
                 $voucherId = $voucher->getKey();
+                $presented = $surrenderId !== null;
 
                 $this->media->revoke($actor, $medium, $voucher, 'card replaced');
-                $this->lifecycle->transition($locked, CardState::Replaced, mb_substr('replaced: '.$reason, 0, 120), $actor, $voucher, successor: $new);
+                $this->lifecycle->transition($locked, CardState::Replaced, mb_substr('replaced'.($presented ? '' : ' (not presented)').': '.$reason, 0, 120), $actor, $voucher, successor: $new);
                 $this->lifecycle->transition($new, CardState::Bound, 'replacement for '.$locked->card_number, $actor, $voucher);
                 $this->media->attach($actor, $voucher, $new, 'replacement');
                 $active = $this->lifecycle->transition($new, CardState::Active, 'voucher activated', $actor, $voucher);
@@ -113,6 +128,7 @@ final class CardService
                 $this->audit->log('card.replaced', $actor, $voucher, null, [
                     'old_card' => $locked->card_number,
                     'new_card' => $new->card_number,
+                    'old_card_presented' => $presented,
                 ], ['reason' => $reason]);
 
                 return $active;

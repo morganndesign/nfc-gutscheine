@@ -328,6 +328,8 @@
   "cardsReasonDamaged": "Oštećena",
   "cardsReasonFound": "Pronađena",
   "cardsReplaceTap": "Prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na nju.",
+  "cardsReplaceTapOld": "Prislonite staru karticu gosta uz telefon.",
+  "cardsReplaceOwnerOnly": "Izgubljenu ili ukradenu karticu zamjenjuje samo vlasnik. Blokirajte je sada da više ne plaća.",
   "cardsReplaceDone": "Zamijenjena karticom {number}. Stara kartica više ne vrijedi.",
   "cardsSuspendDone": "Blokirana – kartica više ne plaća.",
   "cardsResumeDone": "Deblokirana – kartica ponovo plaća.",

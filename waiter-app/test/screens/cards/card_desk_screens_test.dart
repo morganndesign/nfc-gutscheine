@@ -109,6 +109,13 @@ void main() {
     await settle(tester, 12);
     expect(text(en.cardsSuspendDone), findsOneWidget);
     expect(text(en.cardsResume), findsOneWidget);
+
+    // A manager replaces only a card that is at hand; lost or stolen is the owner's call.
+    await tester.tap(text(en.cardsReplace));
+    await settle(tester, 12);
+    expect(text(en.cardsReasonDamaged), findsOneWidget);
+    expect(text(en.cardsReasonStolen), findsNothing);
+    expect(text(en.cardsReplaceOwnerOnly), findsOneWidget);
     await finishApp(tester, app);
   });
 }

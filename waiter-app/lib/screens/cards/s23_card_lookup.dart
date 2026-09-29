@@ -40,6 +40,12 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
       cards: CardPresenter(api: s.api, nfc: s.nfc),
       session: s.session,
       texts: (prompt: l10n.cardsReplaceTap, checking: l10n.cardChecking, done: l10n.cardDone, failed: l10n.cardFailed),
+      oldCardTexts: (
+        prompt: l10n.cardsReplaceTapOld,
+        checking: l10n.cardChecking,
+        done: l10n.cardDone,
+        failed: l10n.cardFailed,
+      ),
     );
   }
 
@@ -56,8 +62,8 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
     if (mounted) Navigator.of(context).pop();
   }
 
-  /// Suspend and replace ask why; the reason goes to the card's history.
-  Future<void> _withReason(List<String> reasons, Future<void> Function(String reason) action) async {
+  /// Suspend and replace ask why; the reason goes to the card's history. [footnote] explains a missing choice.
+  Future<void> _withReason(List<String> reasons, Future<void> Function(String reason) action, {String? footnote}) async {
     final String? reason = await showWaiterSheet<String>(
       context: context,
       title: AppLocalizations.of(context).cardsReasonTitle,
@@ -66,10 +72,25 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
         children: <Widget>[
           for (final String r in reasons)
             SheetRow(label: r, onPressed: () => Navigator.of(sheet).pop(r), showDivider: r != reasons.last),
+          if (footnote != null)
+            Padding(
+              padding: const EdgeInsets.only(top: Space.s3),
+              child: ScaledText(footnote, type: TypeTokens.bodyM, color: sheet.colors.fgSecondary),
+            ),
         ],
       ),
     );
     if (reason != null && mounted) await action(reason);
+  }
+
+  /// Replace: a damaged card is at hand and is tapped first; a lost or stolen one is not (owners only).
+  Future<void> _replace(AppLocalizations l10n) {
+    final bool owner = context.services.session.user?.canReplaceLostCards ?? false;
+    return _withReason(
+      <String>[l10n.cardsReasonDamaged, if (owner) ...<String>[l10n.cardsReasonLost, l10n.cardsReasonStolen]],
+      (String reason) => _c.replace(reason, oldCardAtHand: reason == l10n.cardsReasonDamaged),
+      footnote: owner ? null : l10n.cardsReplaceOwnerOnly,
+    );
   }
 
   @override
@@ -95,7 +116,10 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
                 if (_c.done case final String done) _doneBanner(l10n, done),
                 Expanded(
                   child: tapping
-                      ? CardTapView(instruction: l10n.cardsReplaceTap, checking: _c.phase == DeskPhase.checking)
+                      ? CardTapView(
+                          instruction: _c.tappingOldCard ? l10n.cardsReplaceTapOld : l10n.cardsReplaceTap,
+                          checking: _c.phase == DeskPhase.checking,
+                        )
                       : _content(context, l10n),
                 ),
               ],
@@ -204,7 +228,7 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
         PrimaryButton(
           label: l10n.cardsReplace,
           icon: WaiterIcon.nfcArcs,
-          onPressed: busy ? null : () => unawaited(_withReason(lossReasons, _c.replace)),
+          onPressed: busy ? null : () => unawaited(_replace(l10n)),
         ),
       ],
     ];

@@ -38,6 +38,22 @@ final class IdempotencyAndConcurrencyTest extends TestCase
         $this->assertSame(2, VoucherTransaction::query()->where('voucher_id', $sale->voucher->id)->count());
     }
 
+    public function test_another_user_reusing_a_redemption_key_learns_nothing(): void
+    {
+        $restaurant = $this->restaurant();
+        $sale = $this->sell($restaurant, 5000);
+        $this->actingAsStaff($restaurant, RoleSlug::Waiter);
+        $key = (string) Str::uuid();
+        $body = ['amount' => 1500, 'presentment_id' => $this->present($sale->printable->payload)->json('data.id')];
+        $this->withHeaders($this->idempotency($key))->postJson("/api/v1/vouchers/{$sale->voucher->id}/redemptions", $body)->assertCreated();
+
+        // A colleague with the same key, voucher and amount is not told "done" for a debit they never made.
+        $this->actingAsStaff($restaurant, RoleSlug::Waiter);
+        $this->withHeaders($this->idempotency($key))->postJson("/api/v1/vouchers/{$sale->voucher->id}/redemptions", $body)
+            ->assertStatus(409)->assertJsonPath('code', 'IDEMPOTENCY_CONFLICT');
+        $this->assertSame(3500, $sale->voucher->refresh()->balance);
+    }
+
     /**
      * Audit P2: a retry that arrives while the first attempt holds the lock must replay the first attempt's
      * result after the lock, never answer "declined". The first attempt is run at the moment the retry takes
@@ -152,9 +168,11 @@ final class IdempotencyAndConcurrencyTest extends TestCase
         Carbon::setTestNow('2026-10-01 12:16:00');
         $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertOk()->assertJsonPath('printable', null);
 
+        // Another person reusing the key gets a conflict, never the first seller's voucher.
         Carbon::setTestNow('2026-10-01 12:01:00');
         $this->actingAsStaff($restaurant, RoleSlug::Manager);
-        $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertOk()->assertJsonPath('printable', null);
+        $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertStatus(409)->assertJsonPath('code', 'IDEMPOTENCY_CONFLICT')
+            ->assertJsonMissingPath('data');
         unset($seller);
     }
 

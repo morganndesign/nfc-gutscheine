@@ -1175,6 +1175,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Hold a new card from stock to the phone. The balance moves to it.';
 
   @override
+  String get cardsReplaceTapOld => 'Hold the guest\'s old card to the phone.';
+
+  @override
+  String get cardsReplaceOwnerOnly =>
+      'Only the owner can replace a lost or stolen card. Suspend it now so it stops paying.';
+
+  @override
   String cardsReplaceDone(String number) {
     return 'Replaced by $number. The old card no longer works.';
   }

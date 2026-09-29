@@ -19,6 +19,9 @@ enum PresentmentPurpose: string
     /** Confirm a delivery: one card of the delivered batch, tapped by a manager of its restaurant. */
     case Receive = 'receive';
 
+    /** Hand in a guest's card for its replacement: proves the old card is at the till. */
+    case Surrender = 'surrender';
+
     /**
      * The card states a live-authenticated card may be in for this purpose.
      *
@@ -30,6 +33,7 @@ enum PresentmentPurpose: string
             self::Spend => [CardState::Active],
             self::Bind => [CardState::Available],
             self::Receive => [CardState::Delivered],
+            self::Surrender => [CardState::Active, CardState::Suspended],
         };
     }
 

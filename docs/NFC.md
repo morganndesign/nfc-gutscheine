@@ -15,6 +15,7 @@ sold. This page is the operational reference and the **validation procedure for 
 | Changing a card's content or keys | NDEF file: read free, write and change only with K0; the SDM counter cannot be read out; all configuration runs under EV2 secure messaging (CommMode.Full, MACed responses verified). K0 exists only in the key provider. |
 | Replaying a tap into a payment | A presentment is single use, 60 seconds, bound to user, device, restaurant, purpose and (for spending) voucher. |
 | A card lost or stolen | Suspend it (dashboard or app) — it stops paying at once, also for a tap made a moment earlier; replace it with a stock card, the balance stays with the voucher. |
+| A staff member moving a guest's balance onto a stock card they keep | A manager replaces only a card that is at hand (the old card is tapped: `surrender`); a lost or stolen card is replaced by the owner. The guest gets an e-mail for every replacement; three replacements by one person in a day raise `card.replacements`. |
 | A compromised batch or key set | `compromised` revokes every card of the batch not yet with a guest; `cards:key-set:create` rotates to a new key set (old one `verify_only`). |
 | A changed or swapped keystore | Daily `cards:key-set:verify` compares every root key with the key check value of its ceremony. |
 
@@ -119,7 +120,8 @@ attack tests. Staging server, test restaurant. Record every result in the sign-o
 | # | Step | Expected |
 |---|---|---|
 | E1 | App → *Find a card* (number from the voucher detail) → *Suspend* → "Lost" | The card no longer pays (C3 now refused) |
-| E2 | *Replace card* → tap a stock card | "Replaced by B-…"; the new card pays the remaining balance; the old card is refused for ever |
+| E2 | As manager: *Replace card* → only *Damaged* offered (note: lost/stolen by the owner). As owner: *Replace card* → *Lost* → tap a stock card | "Replaced by B-…"; the new card pays the remaining balance; the old card is refused for ever; the guest's e-mail arrives |
+| E2b | Sell another card; as manager *Replace card* → *Damaged* → tap the old card, then a stock card (Android and iPhone) | Two taps; replaced; tapping another guest's card as the old one is refused |
 | E3 | Dashboard → *Cards* → take a damaged stock card out of service | `revoked`; it cannot be sold |
 
 ### F · Operations

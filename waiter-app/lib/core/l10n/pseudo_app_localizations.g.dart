@@ -1163,6 +1163,13 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get cardsReplaceTap => pseudoLocalize(base.cardsReplaceTap);
 
   @override
+  String get cardsReplaceTapOld => pseudoLocalize(base.cardsReplaceTapOld);
+
+  @override
+  String get cardsReplaceOwnerOnly =>
+      pseudoLocalize(base.cardsReplaceOwnerOnly);
+
+  @override
   String cardsReplaceDone(String number) =>
       pseudoLocalize(base.cardsReplaceDone(pseudoMarker(0)), <String>[number]);
 

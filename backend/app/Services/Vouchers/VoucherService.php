@@ -264,9 +264,11 @@ final class VoucherService
         $this->assertOwnedByTenant($voucher);
         $this->assertPositive($amount);
 
+        // A replay answers only the user who booked it: someone else reusing the key learns nothing (a conflict).
         $matches = static fn (VoucherTransaction $tx): bool => $tx->type === TransactionType::Redemption
             && $tx->voucher_id === $voucher->getKey()
-            && -$tx->amount === $amount;
+            && -$tx->amount === $amount
+            && $tx->user_id === $actor->userId();
 
         try {
             return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, function () use ($actor, $voucher, $amount, $presentmentId, $idempotencyKey, $reference, $note, $matches): TransactionResult {
@@ -361,7 +363,8 @@ final class VoucherService
 
         $matches = static fn (VoucherTransaction $tx): bool => $tx->type === TransactionType::Reload
             && $tx->voucher_id === $voucher->getKey()
-            && $tx->amount === $amount;
+            && $tx->amount === $amount
+            && $tx->user_id === $actor->userId();
 
         return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, function () use ($actor, $voucher, $amount, $payment, $idempotencyKey, $note, $matches): TransactionResult {
             $locked = $this->lock($voucher);
@@ -415,6 +418,11 @@ final class VoucherService
         }
         if (! $transaction->type->isReversible()) {
             throw new TransactionNotReversibleException;
+        }
+        // Taking a reload's money and then reversing the reload takes it from the guest: a second person reverses it.
+        if ($transaction->type === TransactionType::Reload && $transaction->user_id === $actor->userId()
+            && ($actor->user === null || ! $actor->user->hasPermission(Permission::TransactionsReverseOwnReload))) {
+            throw new TransactionNotReversibleException('A reload you booked yourself is reversed by another manager or the owner.', ['reason' => 'own_reload']);
         }
 
         try {
@@ -614,7 +622,7 @@ final class VoucherService
 
     private function replaySale(Actor $actor, VoucherTransaction $existing, IssueVoucherData $data): SaleResult
     {
-        if ($existing->type !== TransactionType::Issue || $existing->amount !== $data->value) {
+        if ($existing->type !== TransactionType::Issue || $existing->amount !== $data->value || $existing->user_id !== $actor->userId()) {
             throw new IdempotencyConflictException;
         }
 

@@ -70,7 +70,14 @@ final class CardController extends Controller
 
     public function replace(ReplaceCardRequest $request, string $card): CardResource
     {
-        $new = $this->cards->replace(Actor::fromRequest($request), $this->find($card), (string) $request->validated('presentment_id'), (string) $request->validated('reason'));
+        $surrender = $request->validated('surrender_presentment_id');
+        $new = $this->cards->replace(
+            Actor::fromRequest($request),
+            $this->find($card),
+            (string) $request->validated('presentment_id'),
+            is_string($surrender) ? $surrender : null,
+            (string) $request->validated('reason'),
+        );
 
         return $this->respond($new);
     }

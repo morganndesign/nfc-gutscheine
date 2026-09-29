@@ -170,6 +170,7 @@ abstract final class Permissions {
   static const String cardsReceive = 'cards.receive';
   static const String cardsBind = 'cards.bind';
   static const String cardsManage = 'cards.manage';
+  static const String cardsReplaceLost = 'cards.replace_lost';
 }
 
 /// `/auth/me` and the `user` part of `POST /auth/token`.
@@ -247,6 +248,9 @@ class SessionUser {
 
   /// Look up a card, suspend, resume and replace it.
   bool get canManageCards => permissions.contains(Permissions.cardsManage) && permissions.contains(Permissions.cardsView);
+
+  /// Replace a card that is not at hand (lost, stolen): owners.
+  bool get canReplaceLostCards => permissions.contains(Permissions.cardsReplaceLost);
 }
 
 /// Result of `POST /auth/token`.

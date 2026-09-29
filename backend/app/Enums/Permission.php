@@ -28,11 +28,15 @@ enum Permission: string
     case CardsReceive = 'cards.receive';
     /** Link an available card to a paid voucher. */
     case CardsBind = 'cards.bind';
-    /** Suspend, resume, replace and take out of stock the restaurant's cards. */
+    /** Suspend, resume, replace (with the old card at hand) and take out of stock the restaurant's cards. */
     case CardsManage = 'cards.manage';
+    /** Replace a card that is not at hand (lost, stolen): moves a guest's balance without the old card. Owner only. */
+    case CardsReplaceLost = 'cards.replace_lost';
 
     case TransactionsView = 'transactions.view';
     case TransactionsReverse = 'transactions.reverse';
+    /** Reverse a reload one booked oneself (took the money, then took the balance back): owners only (four eyes). */
+    case TransactionsReverseOwnReload = 'transactions.reverse_own_reload';
     case TransactionsExport = 'transactions.export';
 
     case CustomersView = 'customers.view';

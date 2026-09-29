@@ -62,6 +62,11 @@ final class CardWorkflowTest extends TestCase
         return $this->actingAsStaff($this->restaurant, RoleSlug::Manager);
     }
 
+    private function asOwner(): User
+    {
+        return $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
+    }
+
     /** A presentment id for the card, tapped now for `$purpose`. */
     private function tapped(Ntag424Chip $chip, string $purpose): string
     {
@@ -247,8 +252,14 @@ final class CardWorkflowTest extends TestCase
             ->assertStatus(422)->assertJsonPath('context.reason', 'card_not_active');
         $this->tapCard($old, 'spend')->assertStatus(422)->assertJsonPath('code', 'CARD_NOT_USABLE');
 
-        // Replacement: the new stock card takes over the voucher; no money moves.
+        // Without the old card a manager cannot move the balance: that is the owner's call.
         $new = $this->chip($cards[1]);
+        $this->postJson("/api/v1/cards/{$number}/replacement", ['presentment_id' => $this->tapped($new, 'bind'), 'reason' => 'lost'])
+            ->assertForbidden()->assertJsonPath('code', 'CARD_NOT_PRESENTED');
+        $this->assertSame(CardState::Available, $cards[1]->refresh()->state);
+
+        // Replacement by the owner: the new stock card takes over the voucher; no money moves.
+        $this->asOwner();
         $this->postJson("/api/v1/cards/{$number}/replacement", ['presentment_id' => $this->tapped($new, 'bind'), 'reason' => 'lost'])->assertOk()
             ->assertJsonPath('data.card_number', $cards[1]->card_number)
             ->assertJsonPath('data.state', 'active')
@@ -285,7 +296,11 @@ final class CardWorkflowTest extends TestCase
         $manager = $this->asManager();
 
         foreach ([0, 1, 2] as $i) {
-            $this->postJson("/api/v1/cards/{$cards[$i]->card_number}/replacement", ['presentment_id' => $this->tapped($this->chip($cards[$i + 3]), 'bind'), 'reason' => 'damaged'])->assertOk();
+            $this->postJson("/api/v1/cards/{$cards[$i]->card_number}/replacement", [
+                'presentment_id' => $this->tapped($this->chip($cards[$i + 3]), 'bind'),
+                'surrender_presentment_id' => $this->tapped($this->chip($cards[$i]), 'surrender'),
+                'reason' => 'damaged',
+            ])->assertOk();
         }
 
         foreach ($voucherIds as $voucherId) {
@@ -306,6 +321,42 @@ final class CardWorkflowTest extends TestCase
         $this->assertMatchesRegularExpression('/ersetzt|replaced/', $text);
         $this->assertStringNotContainsString($cards[3]->card_number, $text);
         $this->assertDoesNotMatchRegularExpression('/30,00|30\.00|€/', $text);
+    }
+
+    public function test_a_manager_replaces_a_card_that_is_at_hand(): void
+    {
+        [, $cards] = $this->stock(4);
+        $voucherId = (string) $this->sellCard($this->chip($cards[0]), 2500)->json('data.id');
+        $this->sellCard($this->chip($cards[1]), 1000);
+        $number = $cards[0]->card_number;
+
+        // Waiters cannot hand in a card.
+        $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
+        $this->tapCard($this->chip($cards[0]), 'surrender')->assertForbidden();
+        $this->asManager();
+
+        // Another guest's card tapped as "the old card" is refused and consumes nothing.
+        $this->postJson("/api/v1/cards/{$number}/replacement", [
+            'presentment_id' => $this->tapped($this->chip($cards[2]), 'bind'),
+            'surrender_presentment_id' => $this->tapped($this->chip($cards[1]), 'surrender'),
+            'reason' => 'damaged',
+        ])->assertStatus(422)->assertJsonPath('code', 'PRESENTMENT_INVALID')->assertJsonPath('context.reason', 'other_card');
+        $this->assertSame(CardState::Available, $cards[2]->refresh()->state);
+        $this->assertSame(CardState::Active, $cards[1]->refresh()->state);
+
+        // The same presentment for both cards is rejected by validation.
+        $both = $this->tapped($this->chip($cards[2]), 'bind');
+        $this->postJson("/api/v1/cards/{$number}/replacement", ['presentment_id' => $both, 'surrender_presentment_id' => $both, 'reason' => 'damaged'])
+            ->assertStatus(422);
+
+        $this->postJson("/api/v1/cards/{$number}/replacement", [
+            'presentment_id' => $this->tapped($this->chip($cards[2]), 'bind'),
+            'surrender_presentment_id' => $this->tapped($this->chip($cards[0]), 'surrender'),
+            'reason' => 'damaged',
+        ])->assertOk()->assertJsonPath('data.card_number', $cards[2]->card_number)->assertJsonPath('data.voucher.balance', 2500);
+        $this->assertSame(CardState::Replaced, $cards[0]->refresh()->state);
+        $this->postJson("/api/v1/vouchers/{$voucherId}/redemptions", ['amount' => 500, 'presentment_id' => $this->tapped($this->chip($cards[2]), 'spend')], $this->idempotency())
+            ->assertCreated();
     }
 
     public function test_a_suspended_card_can_be_resumed(): void
@@ -337,6 +388,7 @@ final class CardWorkflowTest extends TestCase
         $this->tapCard($this->chip($foreign[0]), 'bind')->assertStatus(422)->assertJsonPath('context.reason', 'other_restaurant');
 
         // A stock card that is only available cannot be "replaced".
+        $this->asOwner();
         $this->postJson("/api/v1/cards/{$cards[2]->card_number}/replacement", ['presentment_id' => $this->tapped($this->chip($cards[2]), 'bind'), 'reason' => 'x x'])->assertStatus(409);
         $this->assertSame(CardState::Available, $cards[2]->refresh()->state, 'the refused replacement consumed nothing');
         $this->assertSame(CardState::Active, $cards[0]->refresh()->state);

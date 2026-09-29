@@ -255,6 +255,38 @@ final class VoucherLifecycleTest extends TestCase
         $this->assertSame(50000, $sale->voucher->refresh()->balance);
     }
 
+    public function test_a_manager_cannot_reverse_a_reload_they_booked_themselves(): void
+    {
+        $restaurant = $this->restaurant();
+        $voucher = $this->sell($restaurant, 5000)->voucher;
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $txId = $this->withHeaders($this->idempotency())->postJson("/api/v1/vouchers/{$voucher->id}/reloads", ['amount' => 3000, 'payment' => $this->cashPayment()])
+            ->assertCreated()->json('data.transaction.id');
+
+        // Took the cash, then takes the balance back: refused (and not offered).
+        $this->getJson("/api/v1/transactions/{$txId}")->assertOk()->assertJsonPath('data.reversible', false);
+        $this->postJson("/api/v1/transactions/{$txId}/reverse", ['reason' => 'Mistake'])
+            ->assertStatus(409)->assertJsonPath('code', 'TRANSACTION_NOT_REVERSIBLE')->assertJsonPath('context.reason', 'own_reload');
+        $this->assertSame(8000, $voucher->refresh()->balance);
+
+        // A second manager (four eyes) reverses it.
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $this->getJson("/api/v1/transactions/{$txId}")->assertOk()->assertJsonPath('data.reversible', true);
+        $this->postJson("/api/v1/transactions/{$txId}/reverse", ['reason' => 'Mistake'])->assertCreated();
+        $this->assertSame(5000, $voucher->refresh()->balance);
+        $this->assertLedgerConsistent($voucher);
+    }
+
+    public function test_an_owner_may_reverse_their_own_reload(): void
+    {
+        $restaurant = $this->restaurant();
+        $voucher = $this->sell($restaurant, 5000)->voucher;
+        $this->actingAsStaff($restaurant, RoleSlug::Owner);
+        $txId = $this->withHeaders($this->idempotency())->postJson("/api/v1/vouchers/{$voucher->id}/reloads", ['amount' => 3000, 'payment' => $this->cashPayment()])
+            ->assertCreated()->json('data.transaction.id');
+        $this->postJson("/api/v1/transactions/{$txId}/reverse", ['reason' => 'Mistake'])->assertCreated();
+    }
+
     public function test_sales_cannot_be_reversed(): void
     {
         $restaurant = $this->restaurant();

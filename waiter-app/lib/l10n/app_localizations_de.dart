@@ -1180,6 +1180,14 @@ class AppLocalizationsDe extends AppLocalizations {
       'Neue Karte aus dem Lager ans Handy halten. Das Guthaben geht auf sie über.';
 
   @override
+  String get cardsReplaceTapOld =>
+      'Die alte Karte des Gastes ans Handy halten.';
+
+  @override
+  String get cardsReplaceOwnerOnly =>
+      'Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Sperren Sie sie jetzt – dann zahlt sie nicht mehr.';
+
+  @override
   String cardsReplaceDone(String number) {
     return 'Ersetzt durch $number. Die alte Karte gilt nicht mehr.';
   }

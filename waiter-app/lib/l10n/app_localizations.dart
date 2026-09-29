@@ -2077,6 +2077,18 @@ abstract class AppLocalizations {
   /// **'Hold a new card from stock to the phone. The balance moves to it.'**
   String get cardsReplaceTap;
 
+  /// Spec key: cards.replace.tapOld (12 §5.16) · Max: 60 · Notes: Cards · also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the guest\'s old card to the phone.'**
+  String get cardsReplaceTapOld;
+
+  /// Spec key: cards.replace.ownerOnly (12 §5.16) · Max: 120 · Notes: Cards · replace sheet footnote
+  ///
+  /// In en, this message translates to:
+  /// **'Only the owner can replace a lost or stolen card. Suspend it now so it stops paying.'**
+  String get cardsReplaceOwnerOnly;
+
   /// Spec key: cards.replace.done (12 §5.16) · Max: 80 · Notes: Cards
   ///
   /// In en, this message translates to:
