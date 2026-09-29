@@ -17,6 +17,7 @@ use App\Models\CardBatch;
 use App\Models\CardEvent;
 use App\Models\KeySet;
 use App\Models\Restaurant;
+use App\Models\SecurityAlert;
 use App\Models\SecurityEvent;
 use App\Models\User;
 use App\Services\Cards\CardBatchLifecycle;
@@ -228,6 +229,36 @@ final class StationPersonalizationTest extends TestCase
         $genuine = Ntag424Chip::factory();
         $this->station($genuine, $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
         $this->assertNotNull(Card::query()->withoutGlobalScopes()->where('uid', $genuine->uid)->value('originality_signature'));
+    }
+
+    public function test_only_an_ntag_424_dna_whose_version_carries_its_uid_is_keyed(): void
+    {
+        $batch = $this->stationBatch(1);
+        $this->actingAsStation();
+
+        // Another NXP product (a DESFire: HW type 01) with a valid-looking signature.
+        $desfire = Ntag424Chip::factory();
+        $desfire->hardwareVersion = "\x04\x01\x01\x33\x00\x1A\x05";
+        $this->station($desfire, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_ntag424');
+        $this->assertSame(0, $desfire->keyVersion(0));
+
+        // An emulator replaying another chip's production data.
+        $emulator = Ntag424Chip::factory();
+        $emulator->productionUid = "\x04".random_bytes(6);
+        $this->station($emulator, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'uid_mismatch');
+
+        // A chip of another vendor.
+        $foreign = Ntag424Chip::factory();
+        $foreign->softwareVersion = "\x05\x04\x02\x01\x02\x11\x05";
+        $this->station($foreign, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_nxp');
+
+        foreach ([$desfire, $emulator, $foreign] as $chip) {
+            $this->assertSame(CardState::QaFailed, Card::query()->withoutGlobalScopes()->where('uid', $chip->uid)->sole()->state);
+        }
+        $this->station(Ntag424Chip::factory(), $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
+
+        $this->artisan('giftcard:monitor-security-events')->assertSuccessful();
+        $this->assertSame(1, SecurityAlert::query()->where('rule', 'card.counterfeit')->count(), 'one alert per batch, deduplicated');
     }
 
     public function test_a_tampered_answer_breaks_the_session(): void

@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Cards;
 
+use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
+use App\Enums\KeySetStatus;
 use App\Enums\Permission;
 use App\Enums\PresentmentPurpose;
 use App\Enums\SecurityEventType;
@@ -16,6 +18,7 @@ use App\Exceptions\Domain\TenantMismatchException;
 use App\Jobs\SendVoucherNotification;
 use App\Models\Card;
 use App\Models\CardBatch;
+use App\Models\KeySet;
 use App\Models\NotificationTemplate;
 use App\Models\Voucher;
 use App\Services\Audit\AuditLogger;
@@ -70,6 +73,16 @@ final class CardService
 
     public function resume(Actor $actor, Card $card, string $reason): Card
     {
+        $batch = CardBatch::query()->withoutGlobalScopes()->findOrFail($card->batch_id);
+        $keySet = KeySet::query()->findOrFail($batch->key_set_id);
+        if ($batch->status === CardBatchStatus::Compromised || $keySet->status === KeySetStatus::Retired) {
+            // A card whose keys leaked never pays again; its balance moves to a new card (replacement).
+            return $this->guarded($actor, 'resume', $card->card_number, null, fn (): never => throw new CardStateException(
+                'The keys of this card are compromised. Replace it with a new card.',
+                ['reason' => 'keys_compromised'],
+            ));
+        }
+
         return $this->change($actor, $card, CardState::Active, $reason, [CardState::Suspended]);
     }
 

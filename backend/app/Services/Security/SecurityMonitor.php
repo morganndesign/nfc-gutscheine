@@ -83,9 +83,10 @@ final class SecurityMonitor
             ['name' => 'card.counter_gap', 'severity' => 'warning', 'subject' => $card,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::CardTap && $e->outcome === SecurityEventOutcome::Succeeded
                     && (int) ($e->data['counter_gap'] ?? 0) >= (int) config('giftcard.fraud.counter_gap', 50)],
-            // A chip that is not a genuine NXP NTAG 424 DNA at the station.
+            // A chip that is not a genuine NXP NTAG 424 DNA at the station (signature, product or UID do not fit).
             ['name' => 'card.counterfeit', 'severity' => 'critical', 'subject' => static fn (SecurityEvent $e): ?string => $e->data['batch_code'] ?? $card($e),
-                'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:not_genuine')],
+                'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:not_')
+                    || $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:uid_mismatch')],
             ['name' => 'card.unknown_keys', 'severity' => 'high', 'subject' => $card,
                 'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:auth:91AE')],
             // An app token used from another phone: the token was copied.

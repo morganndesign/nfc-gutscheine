@@ -152,7 +152,7 @@ final class CardLifecycleTest extends TestCase
         $this->cards()->transition($cards[2], CardState::Available, 'found', $this->actor());
     }
 
-    public function test_a_compromised_batch_revokes_every_card_not_yet_with_a_guest(): void
+    public function test_a_compromised_batch_revokes_stock_and_suspends_guests_cards(): void
     {
         [$batch, $cards] = $this->deliveredBatch();
         $batch = $this->batches()->receive($batch, 3, $cards[0], $this->actor());
@@ -161,7 +161,8 @@ final class CardLifecycleTest extends TestCase
 
         $this->batches()->changeStatus($batch, CardBatchStatus::Compromised, 'key leak', $this->actor());
 
-        $this->assertSame(CardState::Active, $cards[0]->refresh()->state, 'cards with guests stay for possession proof and replacement');
+        // Leaked keys make a guest's card clonable: it stops paying; the balance stays with the voucher for a replacement.
+        $this->assertSame(CardState::Suspended, $cards[0]->refresh()->state);
         $this->assertSame(CardState::Revoked, $cards[1]->refresh()->state);
         $this->assertSame(CardState::Revoked, $cards[2]->refresh()->state);
     }

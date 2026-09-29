@@ -6,6 +6,7 @@ namespace Tests\Feature\Cards;
 
 use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
+use App\Enums\KeySetStatus;
 use App\Enums\MediumStatus;
 use App\Enums\RoleSlug;
 use App\Enums\SecurityEventOutcome;
@@ -13,6 +14,7 @@ use App\Enums\SecurityEventType;
 use App\Jobs\SendVoucherNotification;
 use App\Models\Card;
 use App\Models\CardBatch;
+use App\Models\KeySet;
 use App\Models\Medium;
 use App\Models\NotificationLog;
 use App\Models\NotificationTemplate;
@@ -357,6 +359,34 @@ final class CardWorkflowTest extends TestCase
         $this->assertSame(CardState::Replaced, $cards[0]->refresh()->state);
         $this->postJson("/api/v1/vouchers/{$voucherId}/redemptions", ['amount' => 500, 'presentment_id' => $this->tapped($this->chip($cards[2]), 'spend')], $this->idempotency())
             ->assertCreated();
+    }
+
+    public function test_a_compromised_key_set_stops_every_card_and_guests_get_new_cards(): void
+    {
+        [, $cards] = $this->stock(3);
+        $voucherId = (string) $this->sellCard($this->chip($cards[0]), 4200)->json('data.id');
+
+        $this->artisan('cards:key-set:compromised', ['version' => 'ks-2026-01'])->assertFailed();
+        $this->artisan('cards:key-set:compromised', ['version' => 'ks-2026-01', '--confirm' => 'ks-2026-01'])->assertSuccessful();
+
+        $this->assertSame(KeySetStatus::Retired, KeySet::query()->where('version', 'ks-2026-01')->sole()->status);
+        $this->assertSame(CardState::Suspended, $cards[0]->refresh()->state, 'the guest keeps the balance, the card stops');
+        $this->assertSame(CardState::Revoked, $cards[1]->refresh()->state);
+        $this->assertSame(CardState::Revoked, $cards[2]->refresh()->state);
+
+        // No tap of the set is accepted any more, and nobody can switch the card back on.
+        $this->asManager();
+        $this->tapCard($this->chip($cards[0]), 'spend')->assertForbidden();
+        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/resume", ['reason' => 'found'])
+            ->assertStatus(409)->assertJsonPath('context.reason', 'keys_compromised');
+
+        // New keys, new cards: the owner moves the guest's balance to one.
+        $this->artisan('cards:key-set:create', ['version' => 'ks-2027-01'])->assertSuccessful();
+        [$batch, $fresh] = $this->deliveredCards($this->restaurant, 1, 'ks-2027-01');
+        $this->postJson("/api/v1/card-batches/{$batch->id}/receipt", ['count' => 1, 'presentment_id' => $this->tapped($this->chip($fresh[0]), 'receive')])->assertOk();
+        $this->asOwner();
+        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/replacement", ['presentment_id' => $this->tapped($this->chip($fresh[0]), 'bind'), 'reason' => 'keys compromised'])
+            ->assertOk()->assertJsonPath('data.voucher.id', $voucherId)->assertJsonPath('data.voucher.balance', 4200);
     }
 
     public function test_a_suspended_card_can_be_resumed(): void

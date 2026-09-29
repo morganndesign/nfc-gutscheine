@@ -7,6 +7,7 @@ namespace App\Services\Cards;
 use App\Crypto\CryptoProvider;
 use App\Crypto\Ntag424\CardKeys;
 use App\Crypto\Ntag424\CardProfile;
+use App\Crypto\Ntag424\ChipVersion;
 use App\Crypto\Ntag424\Ev2FirstAuthentication;
 use App\Crypto\Ntag424\Ev2Session;
 use App\Crypto\Ntag424\OriginalitySignature;
@@ -32,8 +33,8 @@ use Illuminate\Support\Str;
  * Personalises a blank NTAG 424 DNA chip at the in-house station (architecture §9.3), driven entirely by the
  * server: the station phone relays APDUs and never sees a key. Rounds:
  *
- * 1. `begin`: register the chip (`manufactured`) → select, write the NDEF template (free on a blank chip),
- *    AuthenticateEV2First with K0.
+ * 1. `begin`: register the chip (`manufactured`) → select, GetVersion (an NXP NTAG 424 DNA with the radio's UID),
+ *    Read_Sig (NXP's originality signature), write the NDEF template (free on a blank chip), AuthenticateEV2First with K0.
  * 2. `auth2`: answer the chip with the factory K0; a chip that refuses it gets a second try with its own K0
  *    (it was keyed before, the answer was lost).
  * 3. `versions`: GetKeyVersion 1–3 (CommMode.MAC): keys already at version 01 are not changed again.
@@ -94,7 +95,9 @@ final class CardPersonalizer
                 'batch' => $batch->getKey(),
                 'keySet' => $keySet->version,
                 'k0' => 'factory',
-            ], 'auth', ['select', 'signature', 'write', 'auth1'], [self::selectApplication(), self::READ_SIG, $write, self::authenticateFirst(0)]);
+            ], 'auth', ['select', 'version1', 'version2', 'version3', 'signature', 'write', 'auth1'], [
+                self::selectApplication(), ChipVersion::GET_VERSION, ChipVersion::NEXT_FRAME, ChipVersion::NEXT_FRAME, self::READ_SIG, $write, self::authenticateFirst(0),
+            ]);
         });
     }
 
@@ -129,11 +132,15 @@ final class CardPersonalizer
     {
         /** @var list<string> $expect */
         $expect = $state['expect'];
+        $version = [];
         foreach ($responses as $i => $response) {
             $kind = $expect[$i] ?? $this->fail('unexpected_response');
             $sw = self::statusWord($response);
             $ok = match ($kind) {
                 'select' => $sw === '9000',
+                'version1', 'version2' => $sw === '91AF' && ($version[] = substr($response, 0, -2)) !== '',
+                // Only an NXP NTAG 424 DNA whose production data carries the radio's UID.
+                'version3' => $sw === '9100' && $this->ntag424($card, $version, substr($response, 0, -2), $actor),
                 // Originality: only a genuine NXP NTAG 424 DNA holds NXP's signature of its UID.
                 'signature' => in_array($sw, ['9100', '9190'], true) && $this->genuine($card, substr($response, 0, -2), $actor),
                 // A chip keyed before no longer lets anyone write: its NDEF file was written first.
@@ -338,6 +345,8 @@ final class CardPersonalizer
         try {
             return $run();
         } catch (DomainException $refusal) {
+            // The batch names the incident: one alert per batch, not per chip.
+            $batch ??= $card !== null ? CardBatch::query()->withoutGlobalScopes()->find($card->batch_id) : null;
             $this->events->refused(SecurityEventType::CardPersonalize, $actor, $refusal, data: array_filter([
                 'card_number' => $card?->card_number,
                 'batch_code' => $batch?->batch_code,
@@ -392,22 +401,38 @@ final class CardPersonalizer
     /** Read_Sig (NT4H2421Gx §10.12.1): the 56-byte ECDSA signature of the UID, plain, before authentication. */
     private const READ_SIG = "\x90\x3C\x00\x00\x01\x00\x00";
 
+    /** @param list<string> $version the first two GetVersion frames */
+    private function ntag424(Card $card, array $version, string $production, Actor $actor): bool
+    {
+        $refusal = count($version) === 2 ? ChipVersion::refusal($version[0], $version[1], $production, $card->uid) : 'version_length';
+        if ($refusal !== null) {
+            $this->reject($card, $refusal, 'not an NXP NTAG 424 DNA', $actor);
+        }
+
+        return true;
+    }
+
     /** Checks the chip's originality signature against the configured NXP key and keeps it with the card. */
     private function genuine(Card $card, string $signature, Actor $actor): bool
     {
         $key = (string) config('giftcard.cards.originality_public_key');
         if (! OriginalitySignature::verify($card->uid, $signature, $key)) {
-            // Out of the batch for good: it never gets keys, and it frees its place for a genuine chip.
-            if ($card->state === CardState::Manufactured) {
-                $this->lifecycle->transition($card, CardState::QaFailed, 'not a genuine NXP chip', $actor);
-            }
-            $this->fail('not_genuine');
+            $this->reject($card, 'not_genuine', 'not a genuine NXP chip', $actor);
         }
         if ($card->originality_signature === null) {
             $card->forceFill(['originality_signature' => strtoupper(bin2hex($signature))])->save();
         }
 
         return true;
+    }
+
+    /** Out of the batch for good: it never gets keys, and it frees its place for a genuine chip. */
+    private function reject(Card $card, string $reason, string $cause, Actor $actor): never
+    {
+        if ($card->state === CardState::Manufactured) {
+            $this->lifecycle->transition($card, CardState::QaFailed, $cause, $actor);
+        }
+        $this->fail($reason);
     }
 
     private static function selectApplication(): string

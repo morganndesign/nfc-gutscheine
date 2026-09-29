@@ -37,6 +37,17 @@ final class Ntag424Chip
 
     private bool $applicationSelected = false;
 
+    /** The next GetVersion frame to send after `90 AF` (1, 2), or null outside GetVersion. */
+    private ?int $versionFrame = null;
+
+    /** GetVersion as an NTAG 424 DNA answers it; tests can make it look like another product. */
+    public string $hardwareVersion = "\x04\x04\x02\x30\x00\x11\x05";
+
+    public string $softwareVersion = "\x04\x04\x02\x01\x02\x11\x05";
+
+    /** Overrides the UID in the production data (an emulator answering with another chip's data). */
+    public ?string $productionUid = null;
+
     private ?int $file = null;
 
     /** @var array{key: int, rndB: string}|null */
@@ -124,8 +135,13 @@ final class Ntag424Chip
             return "\x6E\x00";
         }
         $data = strlen($apdu) > 5 ? substr($apdu, 5, ord($apdu[4])) : '';
+        if ($ins === 0xAF && $this->versionFrame !== null) {
+            return $this->getVersion();
+        }
+        $this->versionFrame = null;
 
         return match ($ins) {
+            0x60 => $this->getVersion(),
             0x3C => $this->readSig(),
             0x71 => $this->authenticatePart1($data),
             0xAF => $this->authenticatePart2($data),
@@ -213,6 +229,18 @@ final class Ntag424Chip
 
     /** NXP's signature of the UID (here: under the test stand-in key); null = not a genuine chip. */
     public ?string $originalitySignature = null;
+
+    private function getVersion(): string
+    {
+        $frame = $this->versionFrame ?? 0;
+        $this->versionFrame = $frame < 2 ? $frame + 1 : null;
+
+        return match ($frame) {
+            0 => $this->hardwareVersion."\x91\xAF",
+            1 => $this->softwareVersion."\x91\xAF",
+            default => ($this->productionUid ?? $this->uid)."\x00\x00\x00\x00\x00\x00\x2A\x26\x91\x00",
+        };
+    }
 
     private function readSig(): string
     {

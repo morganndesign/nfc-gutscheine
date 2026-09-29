@@ -191,6 +191,10 @@ final class CardBatchLifecycle
             [$target, $from] = $move;
             $moved = $this->cards->moveBatch($batch, $target, $from, $reason, $actor);
         }
+        if ($to === CardBatchStatus::Compromised) {
+            // Leaked keys make guests' cards clonable too: they stop paying at once; the owner replaces them.
+            $moved += $this->cards->moveBatch($batch, CardState::Suspended, [CardState::Active], 'keys compromised: '.$reason, $actor);
+        }
         if ($to === CardBatchStatus::Accepted) {
             $batch->setAttribute('accepted_at', Carbon::now());
         }
