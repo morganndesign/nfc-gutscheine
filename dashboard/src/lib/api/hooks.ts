@@ -236,6 +236,16 @@ export function useCancelSale() {
   })
 }
 
+/** A new printable QR for a lost or unprinted sheet (the previous QR stops). */
+export function useReissueQr() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ voucherId, reason }: { voucherId: string; reason: string }) =>
+      api<{ data: Voucher; printable: { payload: string; qr_svg: string } }>(`/vouchers/${voucherId}/printable`, { method: "POST", body: { reason } }),
+    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+  })
+}
+
 /** The till: scanning a voucher's QR creates a single-use presentment for the redemption that follows. */
 export function usePresent() {
   return useMutation({

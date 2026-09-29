@@ -287,6 +287,26 @@ final class VoucherLifecycleTest extends TestCase
         $this->postJson("/api/v1/transactions/{$txId}/reverse", ['reason' => 'Mistake'])->assertCreated();
     }
 
+    public function test_a_lost_sheet_gets_a_new_qr_and_the_old_one_stops(): void
+    {
+        $restaurant = $this->restaurant();
+        $sale = $this->sell($restaurant, 5000);
+        $this->actingAsStaff($restaurant, RoleSlug::Waiter);
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/printable", ['reason' => 'Guest lost it'])->assertForbidden();
+
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $new = $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/printable", ['reason' => 'Guest lost it'])->assertCreated()
+            ->assertHeader('Cache-Control', 'no-store, private')
+            ->assertJsonPath('data.balance', 5000)
+            ->json('printable.payload');
+        $this->assertNotSame($sale->printable->payload, $new);
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/printable", [])->assertStatus(422);
+
+        // The found old sheet pays nothing; the new one pays.
+        $this->present($sale->printable->payload)->assertStatus(422);
+        $this->redeemWithQr($sale->voucher, (string) $new, 1500)->assertCreated()->assertJsonPath('data.voucher.balance', 3500);
+    }
+
     public function test_sales_cannot_be_reversed(): void
     {
         $restaurant = $this->restaurant();

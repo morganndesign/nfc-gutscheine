@@ -25,6 +25,8 @@ enum Permission: string
     case VouchersRefund = 'vouchers.refund';
     /** Cancel an unused sale of today (booked by mistake); the money goes back the way it came. */
     case VouchersCancelSale = 'vouchers.cancel_sale';
+    /** A new printable QR for a lost or unprinted voucher; the previous QR stops at once. */
+    case VouchersReissue = 'vouchers.reissue';
 
     /** Physical cards of the restaurant: stock, lifecycle. */
     case CardsView = 'cards.view';

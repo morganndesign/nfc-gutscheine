@@ -61,6 +61,7 @@ enum RoleSlug: string
                 Permission::VouchersUnblock,
                 Permission::VouchersExport,
                 Permission::VouchersCancelSale,
+                Permission::VouchersReissue,
                 Permission::CardsView,
                 Permission::CardsReceive,
                 Permission::CardsBind,

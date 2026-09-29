@@ -6,6 +6,7 @@ namespace App\Services\Vouchers;
 
 use App\Data\IssueVoucherData;
 use App\Data\PaymentData;
+use App\Data\PrintableSecret;
 use App\Data\SaleResult;
 use App\Data\TransactionResult;
 use App\Enums\CardState;
@@ -657,6 +658,27 @@ final class VoucherService
     // ---------------------------------------------------------------------
     // Status changes (never touch the balance)
     // ---------------------------------------------------------------------
+
+    /**
+     * A new printable QR for a digital voucher whose sheet was lost or never printed: the previous QR stops at
+     * once (whoever finds the old sheet cannot pay with it), the balance and history stay. The payload is part of
+     * the result only; it is never stored.
+     */
+    public function reissuePrintable(Actor $actor, Voucher $voucher, string $reason): PrintableSecret
+    {
+        $this->assertOwnedByTenant($voucher);
+
+        return DB::transaction(function () use ($actor, $voucher, $reason): PrintableSecret {
+            $locked = $this->lock($voucher);
+            if ($locked->kind !== VoucherKind::Digital || $locked->status === VoucherStatus::Refunded) {
+                throw new InvalidVoucherStateException('Only an open voucher with a printed QR gets a new one.', ['kind' => $locked->kind->value, 'status' => $locked->status->value]);
+            }
+            $printable = $this->printables->issue($actor, $locked, mb_substr('reissued: '.$reason, 0, 120));
+            $this->audit->log('voucher.qr_reissued', $actor, $locked, null, null, ['reason' => $reason]);
+
+            return $printable;
+        }, self::DB_ATTEMPTS);
+    }
 
     public function block(Actor $actor, Voucher $voucher, string $reason): Voucher
     {

@@ -91,7 +91,7 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
           <CardContent className="space-y-4 pt-6 text-sm">
             <p>
               This sale was completed earlier on this or another device, so its QR code can no longer be shown here. If the guest did not receive a printed
-              voucher, block this voucher and sell a new one.
+              voucher, open it and choose “New QR code”.
             </p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>

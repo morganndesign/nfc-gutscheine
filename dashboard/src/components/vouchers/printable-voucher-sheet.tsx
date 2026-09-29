@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 /**
  * The printable voucher (P0-03): the QR, the restaurant, its branding and the value that was bought (ADR-003: the
  * value is part of the design, not a balance; the balance lives on the server). No voucher number is printed: the
- * QR is the voucher. The QR is shown only in the sale response, so this sheet exists only right after the sale.
+ * QR is the voucher. The QR is shown only in the response that created it (the sale or a new QR code), never again.
  */
 export function PrintableVoucherSheet({
   qrSvg,

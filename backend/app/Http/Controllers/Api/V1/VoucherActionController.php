@@ -20,6 +20,7 @@ use App\Http\Resources\TransactionResource;
 use App\Http\Resources\VoucherResource;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
+use App\Services\Vouchers\QrCodeService;
 use App\Services\Vouchers\VoucherHistoryService;
 use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
@@ -120,6 +121,17 @@ final class VoucherActionController extends Controller
         );
 
         return $this->moneyResponse($request, $result);
+    }
+
+    /** POST /vouchers/{voucher}/printable: a new QR for a lost or unprinted sheet; shown once, never stored. */
+    public function reissue(ReasonRequest $request, Voucher $voucher, QrCodeService $qr): JsonResponse
+    {
+        $printable = $this->vouchers->reissuePrintable(Actor::fromRequest($request), $voucher, (string) $request->validated('reason'));
+
+        return response()->json([
+            'data' => VoucherResource::make($voucher->refresh())->resolve($request),
+            'printable' => ['payload' => $printable->payload, 'qr_svg' => $qr->svg($printable->payload)],
+        ], 201)->header('Cache-Control', 'no-store, private');
     }
 
     public function block(ReasonRequest $request, Voucher $voucher): VoucherResource
