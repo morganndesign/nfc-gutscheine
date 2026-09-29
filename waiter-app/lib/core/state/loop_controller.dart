@@ -6,11 +6,13 @@ import 'package:flutter/foundation.dart';
 import '../api/api_failure.dart';
 import '../api/models.dart';
 import '../api/waiter_api.dart';
+import '../cards/ntag424_session.dart';
 import '../diagnostics/diagnostic_log.dart';
 import '../format/amount_entry.dart';
 import '../format/support_code.dart';
 import '../platform/connectivity_service.dart';
 import '../platform/feedback_service.dart';
+import '../platform/nfc_relay.dart';
 import '../storage/pending_redemptions.dart';
 import '../storage/recent_store.dart';
 import '../tokens/tokens.dart';
@@ -50,8 +52,10 @@ class LoopController extends ChangeNotifier {
     required PendingRedemptionStore pending,
     required ConnectivityService connectivity,
     required MonotonicClock clock,
+    NfcRelay nfc = const PlatformNfcRelay(),
     DiagnosticLog? log,
   }) : _session = session,
+       _nfc = nfc,
        _api = api,
        _feedback = feedback,
        _recent = recent,
@@ -92,7 +96,19 @@ class LoopController extends ChangeNotifier {
   final PendingRedemptionStore _pending;
   final ConnectivityService _connectivity;
   final MonotonicClock _clock;
+  final NfcRelay _nfc;
   final DiagnosticLog? _log;
+
+  /// The open card session (S11), closed when the card was checked or the waiter left.
+  CardLink? _card;
+
+  /// Texts of the iPhone card sheet, set by the screen that opens S11 (UI language).
+  ({String prompt, String checking, String done, String failed}) _cardTexts = (
+    prompt: 'Hold the card to the top of the phone.',
+    checking: 'Checking the card …',
+    done: 'Card checked',
+    failed: 'The card could not be checked.',
+  );
 
   late final StreamSubscription<SessionSignal> _sessionSubscription;
 
@@ -100,6 +116,9 @@ class LoopController extends ChangeNotifier {
   LoopState get state => _state;
 
   bool get isOnline => _connectivity.isOnline;
+
+  /// Whether this phone can read cards now (S05 offers "Tap card" only then).
+  Future<NfcAvailability> cardReaderAvailability() => _nfc.availability();
 
   /// Keep the screen on: everywhere except the camera.
   bool get wantsKeepAwake => switch (_state) {
@@ -156,7 +175,7 @@ class LoopController extends ChangeNotifier {
         break;
       case SuccessState():
         _successTimer?.cancel();
-      case QrScanState() || PresentingState() || ChargeState():
+      case QrScanState() || PresentingState() || ChargeState() || CardTapState():
         return;
     }
     _cancelTimers();
@@ -237,10 +256,125 @@ class LoopController extends ChangeNotifier {
     }
   }
 
-  /// S10 "Try again": the same QR text again (a new presentment).
+  /// S10 "Try again": the same QR text again (a new presentment), or the card held to the phone again.
   void retryPresent() {
     if (_state case ProblemState(:final String? retry) when retry != null) {
       unawaited(_present(retry));
+    } else if (_state case ProblemState(retryCard: true)) {
+      openCardTap();
+    }
+  }
+
+  // ------------------------------------------------------------------- card
+
+  /// S05 "Tap card", S09 / S10 again: a physical card, held to the phone (S11). [texts] are shown on the
+  /// iPhone's system sheet.
+  void openCardTap({({String prompt, String checking, String done, String failed})? texts}) {
+    switch (_state) {
+      case ReadyState() || ProblemState():
+        break;
+      case SuccessState():
+        _successTimer?.cancel();
+      case QrScanState() || PresentingState() || ChargeState() || CardTapState():
+        return;
+    }
+    if (texts != null) _cardTexts = texts;
+    _cancelTimers();
+    _carry = null;
+    _go(const CardTapState());
+    unawaited(_tapCard(++_generation));
+  }
+
+  /// Reads the card, lets the server challenge it through the phone, and opens S07 with the presentment. The
+  /// phone relays bytes; it never holds a key.
+  Future<void> _tapCard(int generation) async {
+    CardLink? card;
+    try {
+      card = await _nfc.start(prompt: _cardTexts.prompt);
+      if (_generation != generation) {
+        await card.close();
+        return;
+      }
+      _card = card;
+      _feedback.both(HapticToken.cardDetected, SoundToken.cardDetected);
+      _go(const CardTapState(phase: CardTapPhase.checking));
+      _slowTimer = _clock.timer(presentSlowAfter, () {
+        if (_generation == generation && _state is CardTapState) _go((_state as CardTapState).copyWith(slow: true));
+      });
+
+      final CardTap tap = await Ntag424Session.read(card);
+      final CancelToken token = CancelToken();
+      _inFlight = token;
+      final CardChallenge challenge = await _api.beginCardPresentment(tap, cancelToken: token);
+      if (_generation != generation) return;
+      final String answer = await Ntag424Session.answer(card, challenge.commandHex);
+      final Presentment presentment = await _api.completeCardPresentment(challenge.authentication, answer, cancelToken: token);
+      if (_generation != generation) return;
+      await card.close(message: _cardTexts.done);
+      _enterCharge(presentment);
+    } on NfcRelayException catch (e) {
+      if (_generation != generation) return;
+      await card?.close(message: _cardTexts.failed, failed: true);
+      _cardFailed(switch (e.failure) {
+        NfcFailure.cancelled || NfcFailure.timeout || NfcFailure.busy => null,
+        NfcFailure.disabled => const ProblemState(kind: ProblemKind.nfcOff, retryCard: true),
+        NfcFailure.unsupported => const ProblemState(kind: ProblemKind.nfcUnsupported),
+        NfcFailure.tagLost || NfcFailure.io => const ProblemState(kind: ProblemKind.cardMoved, retryCard: true),
+      });
+    } on CardProtocolException catch (e) {
+      // Not a card of this system (or not personalised): it answered the fixed commands differently.
+      _log?.record('card.protocol', e.step);
+      if (_generation != generation) return;
+      await card?.close(message: _cardTexts.failed, failed: true);
+      _cardFailed(const ProblemState(kind: ProblemKind.cardNotRecognized));
+    } on ApiCancelled {
+      await card?.close();
+    } on ApiFailure catch (e) {
+      if (_generation != generation) return;
+      await card?.close(message: _cardTexts.failed, failed: true);
+      _cardApiFailed(e);
+    } finally {
+      if (identical(_card, card)) _card = null;
+      _slowTimer?.cancel();
+    }
+  }
+
+  void _cardFailed(ProblemState? problem) {
+    // S10 plays its family's feedback.
+    _go(problem ?? const ReadyState());
+  }
+
+  void _cardApiFailed(ApiFailure failure) {
+    if (_session.handleFailure(failure, SessionContext.lookup)) {
+      _go(const ReadyState());
+      return;
+    }
+    final String support = SupportCode.fromRequestId(failure.requestId);
+    final String requestId = failure.requestId;
+    switch (failure) {
+      case ApiRejected(:final int status, :final Duration? retryAfter) when status == 429:
+        final Duration until = _clock.now() + (retryAfter ?? const Duration(seconds: 60));
+        _go(ProblemState(kind: ProblemKind.throttled, until: until));
+        _countdownTimer = _clock.timer(until - _clock.now(), () {
+          _feedback.haptic(HapticToken.select);
+          notifyListeners();
+        });
+      case ApiRejected(code: 'CARD_NOT_USABLE'):
+        _go(ProblemState(
+          kind: ProblemKind.cardNotUsable,
+          cardState: failure.contextString('state') ?? failure.contextString('reason'),
+          supportCode: support,
+          requestId: requestId,
+        ));
+      case ApiRejected(:final int status) when status < 500:
+        // Not a card of this restaurant, a copied tap, or a chip without the card's keys.
+        _go(ProblemState(kind: ProblemKind.cardNotRecognized, supportCode: support, requestId: requestId));
+      case ApiRejected() || ApiServerFault():
+        _go(ProblemState(kind: ProblemKind.server, retryCard: true, supportCode: support, requestId: requestId));
+      case ApiTransportFailure():
+        _go(const ProblemState(kind: ProblemKind.network, retryCard: true));
+      case ApiUnauthorized() || ApiCancelled():
+        _go(const ReadyState());
     }
   }
 
@@ -914,6 +1048,16 @@ class LoopController extends ChangeNotifier {
         _inFlight?.cancel();
         _slowTimer?.cancel();
         _go(origin == PresentOrigin.problem && problem != null ? problem : const QrScanState());
+        return true;
+      case CardTapState():
+        // Leaving S11 ends the card session; an answer that arrives later is ignored.
+        _generation++;
+        _inFlight?.cancel();
+        _slowTimer?.cancel();
+        final CardLink? card = _card;
+        _card = null;
+        unawaited(card?.close());
+        _go(const ReadyState());
         return true;
       case QrScanState() || ProblemState():
         _carry = null;

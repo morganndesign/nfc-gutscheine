@@ -11,7 +11,7 @@ where they differ.
 | Framework | Flutter 3.47 (Dart 3.13) |
 | Platforms | Android 9+ (API 28), iOS 16+, tablets and iPad |
 | Package / bundle id | `eu.tapredeem.waiter` (neutral id, spec 13 Q10) |
-| API | `POST /auth/token` (device-bound token), `GET /app/config`, `GET /auth/me`, `POST /presentments`, `POST /vouchers/{id}/redemptions`, `GET /vouchers/{id}/redemptions/{key}`, `POST /vouchers` (sell), `GET /devices/current`, `POST /auth/logout` — see [docs/API.md](../docs/API.md) |
+| API | `POST /auth/token` (device-bound token), `GET /app/config`, `GET /auth/me`, `POST /presentments`, `POST /presentments/cards` (+ `/{authentication}`), `POST /vouchers/{id}/redemptions`, `GET /vouchers/{id}/redemptions/{key}`, `POST /vouchers` (sell), `GET /devices/current`, `POST /auth/logout` — see [docs/API.md](../docs/API.md) |
 | Languages | German, English, Bosnian/Croatian/Serbian (from the master string table in spec 12) |
 
 ## How redeeming works
@@ -27,6 +27,14 @@ where they differ.
    `GET /vouchers/{id}/redemptions/{key}`, never by sending the debit again; while an attempt is unresolved its
    voucher accepts no other amount. "Not booked" counts only once the request can no longer be running on the server
    (60 s after it was sent). A gateway answer (401, 403, 429) after an unanswered request never closes an attempt.
+
+## Physical cards (S11, Android and iPhone alike)
+
+*Tap card* on S05: the phone reads the card's NDEF URL, starts AuthenticateEV2First with key 3, and relays: step 1
+(`POST /presentments/cards`: URL, radio UID, the card's challenge) returns one command for the card, step 2 relays
+the card's answer and returns the same single-use, 60-second presentment a scan gives. The native relays
+(`WaiterNfc.kt`: reader mode + IsoDep; `WaiterNfc.swift`: NFCTagReaderSession + NFCISO7816Tag) only transceive
+bytes; no key and no secret is ever on the phone. The iPhone App ID needs the NFC Tag Reading capability.
 
 ## Selling (S20)
 

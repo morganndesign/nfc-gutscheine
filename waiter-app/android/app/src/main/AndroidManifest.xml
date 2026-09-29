@@ -2,10 +2,13 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- NTAG 424 DNA relay: reader mode only, no NDEF intent filters (the app never reacts to a tag by itself). -->
+    <uses-permission android:name="android.permission.NFC" />
 
     <!-- Devices without a camera still install: they sell vouchers and show Recent. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
 
     <application
         android:label="${appLabel}"

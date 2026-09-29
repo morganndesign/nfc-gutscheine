@@ -56,7 +56,7 @@ void main() {
 
     // S05 → "Scan voucher" → S12 (camera denied by the platform)
     expect(find.byType(ReadyScreen), findsOneWidget);
-    expect(find.byType(SecondaryButton), findsNothing, reason: 'a waiter cannot sell');
+    expect(find.text('Sell voucher'), findsNothing, reason: 'a waiter cannot sell');
     await tester.tap(_primary('Scan voucher'));
     await settle(tester, 10);
     expect(app.loop.state, isA<QrScanState>());

@@ -28,6 +28,10 @@
   "@commonScanAgain": {
     "description": "Spec key: common.scanAgain (12 §5.1) · Max: 24 · Notes: 03b · §2.7"
   },
+  "commonTapAgain": "Tap card again",
+  "@commonTapAgain": {
+    "description": "Spec key: common.tapAgain (12 §5.1) · Max: 24 · Notes: Phase 4"
+  },
   "commonOpenSettings": "Open Settings",
   "@commonOpenSettings": {
     "description": "Spec key: common.openSettings (12 §5.1) · Max: 24 · Notes: 12 · = camera.denied.action (alias)"
@@ -491,6 +495,10 @@
   "@readyScan": {
     "description": "Spec key: ready.scan (12 §5.6) · Max: 24 · Notes: ADR-002 · primary"
   },
+  "readyTapCard": "Tap card",
+  "@readyTapCard": {
+    "description": "Spec key: ready.tapCard (12 §5.6) · Max: 24 · Notes: Phase 4 · secondary, only with NFC"
+  },
   "readySell": "Sell voucher",
   "@readySell": {
     "description": "Spec key: ready.sell (12 §5.6) · Max: 24 · Notes: ADR-002 · opens S20; only with vouchers.sell"
@@ -560,6 +568,30 @@
   "scanSlow": "Still checking\u00a0…",
   "@scanSlow": {
     "description": "Spec key: scan.slow (12 §5.7) · Max: 32 · Notes: 03a · L08 · alias lookup.stillLooking (03b)"
+  },
+  "cardTitle": "Tap card",
+  "@cardTitle": {
+    "description": "Spec key: card.title (12 §5.7) · Max: 24 · Notes: Phase 4 · S11 title"
+  },
+  "cardWaiting": "Hold the guest's card to the top of the phone.",
+  "@cardWaiting": {
+    "description": "Spec key: card.waiting (12 §5.7) · Max: 64 · Notes: Phase 4 · S11 and the iPhone sheet"
+  },
+  "cardChecking": "Checking the card\u00a0…",
+  "@cardChecking": {
+    "description": "Spec key: card.checking (12 §5.7) · Max: 32 · Notes: Phase 4 · card on the phone, server challenge"
+  },
+  "cardSlow": "Still checking – keep the card on the phone.",
+  "@cardSlow": {
+    "description": "Spec key: card.slow (12 §5.7) · Max: 48 · Notes: Phase 4 · after 3 s"
+  },
+  "cardDone": "Card checked",
+  "@cardDone": {
+    "description": "Spec key: card.done (12 §5.7) · Max: 24 · Notes: Phase 4 · iPhone sheet, success"
+  },
+  "cardFailed": "The card could not be checked.",
+  "@cardFailed": {
+    "description": "Spec key: card.failed (12 §5.7) · Max: 48 · Notes: Phase 4 · iPhone sheet, failure"
   },
   "balanceCardOverline": "Voucher",
   "@balanceCardOverline": {
@@ -942,6 +974,58 @@
   "problemNotRecognizedBody": "This code is not valid here. Ask the guest for another voucher or get a manager.",
   "@problemNotRecognizedBody": {
     "description": "Spec key: problem.notRecognized.body (12 §5.12) · Max: 90 · Notes: ADR-002"
+  },
+  "problemCardNotRecognizedTitle": "Card not accepted",
+  "@problemCardNotRecognizedTitle": {
+    "description": "Spec key: problem.cardNotRecognized.title (12 §5.12) · Max: 32 · Notes: Phase 4 · not a card of this restaurant, copied or unverifiable"
+  },
+  "problemCardNotRecognizedBody": "This card could not be confirmed as a voucher of this restaurant. Get a manager.",
+  "@problemCardNotRecognizedBody": {
+    "description": "Spec key: problem.cardNotRecognized.body (12 §5.12) · Max: 90 · Notes: Phase 4"
+  },
+  "problemCardNotUsableTitle": "This card cannot pay",
+  "@problemCardNotUsableTitle": {
+    "description": "Spec key: problem.cardNotUsable.title (12 §5.12) · Max: 32 · Notes: Phase 4 · CARD_NOT_USABLE"
+  },
+  "problemCardNotUsableNotActive": "The card is not activated yet.",
+  "@problemCardNotUsableNotActive": {
+    "description": "Spec key: problem.cardNotUsable.notActive (12 §5.12) · Max: 90 · Notes: Phase 4 · available, bound"
+  },
+  "problemCardNotUsableSuspended": "The card is temporarily blocked. A manager can help.",
+  "@problemCardNotUsableSuspended": {
+    "description": "Spec key: problem.cardNotUsable.suspended (12 §5.12) · Max: 90 · Notes: Phase 4 · suspended"
+  },
+  "problemCardNotUsableInvalid": "The card is no longer valid. A manager can help.",
+  "@problemCardNotUsableInvalid": {
+    "description": "Spec key: problem.cardNotUsable.invalid (12 §5.12) · Max: 90 · Notes: Phase 4 · replaced, revoked, lost, not bound"
+  },
+  "problemCardNotUsableOtherRestaurant": "This card belongs to another restaurant.",
+  "@problemCardNotUsableOtherRestaurant": {
+    "description": "Spec key: problem.cardNotUsable.otherRestaurant (12 §5.12) · Max: 90 · Notes: Phase 4"
+  },
+  "problemCardMovedTitle": "Card moved away",
+  "@problemCardMovedTitle": {
+    "description": "Spec key: problem.cardMoved.title (12 §5.12) · Max: 32 · Notes: Phase 4 · tag lost"
+  },
+  "problemCardMovedBody": "Hold the card still on the phone until it is checked.",
+  "@problemCardMovedBody": {
+    "description": "Spec key: problem.cardMoved.body (12 §5.12) · Max: 90 · Notes: Phase 4"
+  },
+  "problemNfcOffTitle": "NFC is off",
+  "@problemNfcOffTitle": {
+    "description": "Spec key: problem.nfcOff.title (12 §5.12) · Max: 32 · Notes: Phase 4 · Android"
+  },
+  "problemNfcOffBody": "Switch on NFC in the phone's settings to read cards.",
+  "@problemNfcOffBody": {
+    "description": "Spec key: problem.nfcOff.body (12 §5.12) · Max: 90 · Notes: Phase 4"
+  },
+  "problemNfcUnsupportedTitle": "This phone cannot read cards",
+  "@problemNfcUnsupportedTitle": {
+    "description": "Spec key: problem.nfcUnsupported.title (12 §5.12) · Max: 32 · Notes: Phase 4"
+  },
+  "problemNfcUnsupportedBody": "Scan QR vouchers, or use a phone with NFC for cards.",
+  "@problemNfcUnsupportedBody": {
+    "description": "Spec key: problem.nfcUnsupported.body (12 §5.12) · Max: 90 · Notes: Phase 4"
   },
   "problemThrottledTitle": "Too many scans",
   "@problemThrottledTitle": {

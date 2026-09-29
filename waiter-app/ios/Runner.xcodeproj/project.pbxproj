@@ -20,6 +20,7 @@
 		B3C7E0B29947083D0B7C0A37 /* WaiterPlatformPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4D6CC427CA5BBCDDEED542 /* WaiterPlatformPlugin.swift */; };
 		15F00CB93050DF54354C9D3B /* WaiterFeedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = 176E61559644EBEB2E69D4AB /* WaiterFeedback.swift */; };
 		F794DD79E63B4FEA26ACA43A /* WaiterSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0310B30244CF7505DC58F27 /* WaiterSystem.swift */; };
+		DEC5847FDA4A3050C03BB3A8 /* WaiterNfc.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4021395D323EB3E8AF3653E /* WaiterNfc.swift */; };
 		931EEDE6404C13A9227843D1 /* gcw_card_detected.caf in Resources */ = {isa = PBXBuildFile; fileRef = BFF1DA80CE46873C21CB935D /* gcw_card_detected.caf */; };
 		75868D4FD5A3398F73A0D01D /* gcw_success.caf in Resources */ = {isa = PBXBuildFile; fileRef = AB9FE162F2A9E84715CEDFFF /* gcw_success.caf */; };
 		755331A3392A1EEAD146590B /* gcw_warning.caf in Resources */ = {isa = PBXBuildFile; fileRef = 11EC4968B4F01A392B8200E9 /* gcw_warning.caf */; };
@@ -72,6 +73,7 @@
 		1E4D6CC427CA5BBCDDEED542 /* WaiterPlatformPlugin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterPlatformPlugin.swift; sourceTree = "<group>"; };
 		176E61559644EBEB2E69D4AB /* WaiterFeedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterFeedback.swift; sourceTree = "<group>"; };
 		F0310B30244CF7505DC58F27 /* WaiterSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterSystem.swift; sourceTree = "<group>"; };
+		C4021395D323EB3E8AF3653E /* WaiterNfc.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WaiterNfc.swift; sourceTree = "<group>"; };
 		BFF1DA80CE46873C21CB935D /* gcw_card_detected.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = gcw_card_detected.caf; sourceTree = "<group>"; };
 		AB9FE162F2A9E84715CEDFFF /* gcw_success.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = gcw_success.caf; sourceTree = "<group>"; };
 		11EC4968B4F01A392B8200E9 /* gcw_warning.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = gcw_warning.caf; sourceTree = "<group>"; };
@@ -152,6 +154,7 @@
 				1E4D6CC427CA5BBCDDEED542 /* WaiterPlatformPlugin.swift */,
 				176E61559644EBEB2E69D4AB /* WaiterFeedback.swift */,
 				F0310B30244CF7505DC58F27 /* WaiterSystem.swift */,
+				C4021395D323EB3E8AF3653E /* WaiterNfc.swift */,
 				9A29E95A87A77B985205717D /* Runner.entitlements */,
 				DB7B27C2B07B98DBB1FB1E49 /* InfoPlist.strings */,
 				B10567A1853CB06BEED49FD3 /* Sounds */,
@@ -340,6 +343,7 @@
 				B3C7E0B29947083D0B7C0A37 /* WaiterPlatformPlugin.swift in Sources */,
 				15F00CB93050DF54354C9D3B /* WaiterFeedback.swift in Sources */,
 				F794DD79E63B4FEA26ACA43A /* WaiterSystem.swift in Sources */,
+				DEC5847FDA4A3050C03BB3A8 /* WaiterNfc.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

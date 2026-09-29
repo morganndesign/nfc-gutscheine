@@ -5,3 +5,6 @@
 
 /* faceId.purpose */
 "NSFaceIDUsageDescription" = "Face ID wird nur zum Entsperren der App verwendet.";
+
+/* nfc.purpose */
+"NFCReaderUsageDescription" = "Die Karte des Gastes ans Handy halten, um sie zu prüfen.";

@@ -30,6 +30,9 @@ class AppLocalizationsSr extends AppLocalizations {
   String get commonScanAgain => 'Skeniraj ponovo';
 
   @override
+  String get commonTapAgain => 'Ponovo prislonite karticu';
+
+  @override
   String get commonOpenSettings => 'Otvori postavke';
 
   @override
@@ -359,6 +362,9 @@ class AppLocalizationsSr extends AppLocalizations {
   String get readyScan => 'Skeniraj vaučer';
 
   @override
+  String get readyTapCard => 'Prislonite karticu';
+
+  @override
   String get readySell => 'Prodaj vaučer';
 
   @override
@@ -404,6 +410,24 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get scanSlow => 'Još provjeravamo …';
+
+  @override
+  String get cardTitle => 'Prislonite karticu';
+
+  @override
+  String get cardWaiting => 'Prislonite karticu gosta uz gornji dio telefona.';
+
+  @override
+  String get cardChecking => 'Kartica se provjerava …';
+
+  @override
+  String get cardSlow => 'Još trenutak – držite karticu uz telefon.';
+
+  @override
+  String get cardDone => 'Kartica provjerena';
+
+  @override
+  String get cardFailed => 'Kartica se nije mogla provjeriti.';
 
   @override
   String get balanceCardOverline => 'Vaučer';
@@ -646,6 +670,52 @@ class AppLocalizationsSr extends AppLocalizations {
   @override
   String get problemNotRecognizedBody =>
       'Ovaj kôd ovdje ne važi. Zatražite od gosta drugi vaučer ili pozovite menadžera.';
+
+  @override
+  String get problemCardNotRecognizedTitle => 'Kartica nije prihvaćena';
+
+  @override
+  String get problemCardNotRecognizedBody =>
+      'Ova kartica nije potvrđena kao vaučer ovog restorana. Pozovite menadžera.';
+
+  @override
+  String get problemCardNotUsableTitle => 'Ovom karticom se ne može platiti';
+
+  @override
+  String get problemCardNotUsableNotActive => 'Kartica još nije aktivirana.';
+
+  @override
+  String get problemCardNotUsableSuspended =>
+      'Kartica je privremeno blokirana. Menadžer može pomoći.';
+
+  @override
+  String get problemCardNotUsableInvalid =>
+      'Kartica više nije važeća. Menadžer može pomoći.';
+
+  @override
+  String get problemCardNotUsableOtherRestaurant =>
+      'Ova kartica pripada drugom restoranu.';
+
+  @override
+  String get problemCardMovedTitle => 'Kartica je odmaknuta';
+
+  @override
+  String get problemCardMovedBody =>
+      'Držite karticu mirno uz telefon dok se ne provjeri.';
+
+  @override
+  String get problemNfcOffTitle => 'NFC je isključen';
+
+  @override
+  String get problemNfcOffBody =>
+      'Uključite NFC u postavkama telefona da biste čitali kartice.';
+
+  @override
+  String get problemNfcUnsupportedTitle => 'Ovaj telefon ne čita kartice';
+
+  @override
+  String get problemNfcUnsupportedBody =>
+      'Skenirajte QR vaučere ili za kartice koristite telefon s NFC-om.';
 
   @override
   String get problemThrottledTitle => 'Previše skeniranja';

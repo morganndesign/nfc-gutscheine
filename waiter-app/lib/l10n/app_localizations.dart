@@ -146,6 +146,12 @@ abstract class AppLocalizations {
   /// **'Scan again'**
   String get commonScanAgain;
 
+  /// Spec key: common.tapAgain (12 §5.1) · Max: 24 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'Tap card again'**
+  String get commonTapAgain;
+
   /// Spec key: common.openSettings (12 §5.1) · Max: 24 · Notes: 12 · = camera.denied.action (alias)
   ///
   /// In en, this message translates to:
@@ -704,6 +710,12 @@ abstract class AppLocalizations {
   /// **'Scan voucher'**
   String get readyScan;
 
+  /// Spec key: ready.tapCard (12 §5.6) · Max: 24 · Notes: Phase 4 · secondary, only with NFC
+  ///
+  /// In en, this message translates to:
+  /// **'Tap card'**
+  String get readyTapCard;
+
   /// Spec key: ready.sell (12 §5.6) · Max: 24 · Notes: ADR-002 · opens S20; only with vouchers.sell
   ///
   /// In en, this message translates to:
@@ -781,6 +793,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Still checking …'**
   String get scanSlow;
+
+  /// Spec key: card.title (12 §5.7) · Max: 24 · Notes: Phase 4 · S11 title
+  ///
+  /// In en, this message translates to:
+  /// **'Tap card'**
+  String get cardTitle;
+
+  /// Spec key: card.waiting (12 §5.7) · Max: 64 · Notes: Phase 4 · S11 and the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the guest\'s card to the top of the phone.'**
+  String get cardWaiting;
+
+  /// Spec key: card.checking (12 §5.7) · Max: 32 · Notes: Phase 4 · card on the phone, server challenge
+  ///
+  /// In en, this message translates to:
+  /// **'Checking the card …'**
+  String get cardChecking;
+
+  /// Spec key: card.slow (12 §5.7) · Max: 48 · Notes: Phase 4 · after 3 s
+  ///
+  /// In en, this message translates to:
+  /// **'Still checking – keep the card on the phone.'**
+  String get cardSlow;
+
+  /// Spec key: card.done (12 §5.7) · Max: 24 · Notes: Phase 4 · iPhone sheet, success
+  ///
+  /// In en, this message translates to:
+  /// **'Card checked'**
+  String get cardDone;
+
+  /// Spec key: card.failed (12 §5.7) · Max: 48 · Notes: Phase 4 · iPhone sheet, failure
+  ///
+  /// In en, this message translates to:
+  /// **'The card could not be checked.'**
+  String get cardFailed;
 
   /// Spec key: balanceCard.overline (12 §5.8) · Max: 16 · Notes: 12 · uppercased by style · ADR-002
   ///
@@ -1153,6 +1201,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This code is not valid here. Ask the guest for another voucher or get a manager.'**
   String get problemNotRecognizedBody;
+
+  /// Spec key: problem.cardNotRecognized.title (12 §5.12) · Max: 32 · Notes: Phase 4 · not a card of this restaurant, copied or unverifiable
+  ///
+  /// In en, this message translates to:
+  /// **'Card not accepted'**
+  String get problemCardNotRecognizedTitle;
+
+  /// Spec key: problem.cardNotRecognized.body (12 §5.12) · Max: 90 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'This card could not be confirmed as a voucher of this restaurant. Get a manager.'**
+  String get problemCardNotRecognizedBody;
+
+  /// Spec key: problem.cardNotUsable.title (12 §5.12) · Max: 32 · Notes: Phase 4 · CARD_NOT_USABLE
+  ///
+  /// In en, this message translates to:
+  /// **'This card cannot pay'**
+  String get problemCardNotUsableTitle;
+
+  /// Spec key: problem.cardNotUsable.notActive (12 §5.12) · Max: 90 · Notes: Phase 4 · available, bound
+  ///
+  /// In en, this message translates to:
+  /// **'The card is not activated yet.'**
+  String get problemCardNotUsableNotActive;
+
+  /// Spec key: problem.cardNotUsable.suspended (12 §5.12) · Max: 90 · Notes: Phase 4 · suspended
+  ///
+  /// In en, this message translates to:
+  /// **'The card is temporarily blocked. A manager can help.'**
+  String get problemCardNotUsableSuspended;
+
+  /// Spec key: problem.cardNotUsable.invalid (12 §5.12) · Max: 90 · Notes: Phase 4 · replaced, revoked, lost, not bound
+  ///
+  /// In en, this message translates to:
+  /// **'The card is no longer valid. A manager can help.'**
+  String get problemCardNotUsableInvalid;
+
+  /// Spec key: problem.cardNotUsable.otherRestaurant (12 §5.12) · Max: 90 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'This card belongs to another restaurant.'**
+  String get problemCardNotUsableOtherRestaurant;
+
+  /// Spec key: problem.cardMoved.title (12 §5.12) · Max: 32 · Notes: Phase 4 · tag lost
+  ///
+  /// In en, this message translates to:
+  /// **'Card moved away'**
+  String get problemCardMovedTitle;
+
+  /// Spec key: problem.cardMoved.body (12 §5.12) · Max: 90 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the card still on the phone until it is checked.'**
+  String get problemCardMovedBody;
+
+  /// Spec key: problem.nfcOff.title (12 §5.12) · Max: 32 · Notes: Phase 4 · Android
+  ///
+  /// In en, this message translates to:
+  /// **'NFC is off'**
+  String get problemNfcOffTitle;
+
+  /// Spec key: problem.nfcOff.body (12 §5.12) · Max: 90 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'Switch on NFC in the phone\'s settings to read cards.'**
+  String get problemNfcOffBody;
+
+  /// Spec key: problem.nfcUnsupported.title (12 §5.12) · Max: 32 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'This phone cannot read cards'**
+  String get problemNfcUnsupportedTitle;
+
+  /// Spec key: problem.nfcUnsupported.body (12 §5.12) · Max: 90 · Notes: Phase 4
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR vouchers, or use a phone with NFC for cards.'**
+  String get problemNfcUnsupportedBody;
 
   /// Spec key: problem.throttled.title (12 §5.12) · Max: 32 · Notes: 03b · L05
   ///

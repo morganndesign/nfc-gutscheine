@@ -41,8 +41,8 @@ void main() {
     }
   });
 
-  test('key count: 304 table keys (12 §5.22) = 302 ARB + 2 OS strings', () {
-    expect(messageKeys(template).length, 302);
+  test('key count: 326 table keys (12 §5.22) = 323 ARB + 3 OS strings', () {
+    expect(messageKeys(template).length, 323);
     final Set<String> plistKeys = <String>{};
     final String strings = File(
       'ios/Runner/en.lproj/InfoPlist.strings',
@@ -56,6 +56,7 @@ void main() {
     expect(plistKeys, <String>{
       'NSCameraUsageDescription',
       'NSFaceIDUsageDescription',
+      'NFCReaderUsageDescription',
     });
   });
 

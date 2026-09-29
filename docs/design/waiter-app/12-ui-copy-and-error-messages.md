@@ -420,6 +420,7 @@ Single source for every UI string. **Max** = character limit (§1.8) for the lon
 | `common.done` | Fertig | Done | Gotovo | 12 | 03b |
 | `common.tryAgain` | Erneut versuchen | Try again | Pokušaj ponovo | 24 | 03b · §2.7 |
 | `common.scanAgain` | Erneut scannen | Scan again | Skeniraj ponovo | 24 | 03b · §2.7 |
+| `common.tapAgain` | Karte erneut halten | Tap card again | Ponovo prislonite karticu | 24 | Phase 4 |
 | `common.openSettings` | Einstellungen öffnen | Open Settings | Otvori postavke | 24 | 12 · = `camera.denied.action` (alias) |
 | `common.backToSignIn` | Zur Anmeldung | Back to sign in | Nazad na prijavu | 24 | 03a |
 | `common.checkAgain` | Erneut prüfen | Check again | Provjeri ponovo | 24 | 12 · alias `suspended.retry` (03a) |
@@ -540,6 +541,7 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `ready.title` | Gutschein scannen | Scan the voucher | Skenirajte vaučer | 32 | ADR-002 |
 | `ready.hint` | Kamera auf den QR-Code des Gutscheins richten – gedruckt oder am Handy des Gastes. | Point the camera at the voucher's QR code – printed or on the guest's phone. | Usmjerite kameru na QR kôd vaučera – ispisan ili na telefonu gosta. | 90 | ADR-002 |
 | `ready.scan` | Gutschein scannen | Scan voucher | Skeniraj vaučer | 24 | ADR-002 · primary |
+| `ready.tapCard` | Karte ans Handy halten | Tap card | Prislonite karticu | 24 | Phase 4 · secondary, only with NFC |
 | `ready.sell` | Gutschein verkaufen | Sell voucher | Prodaj vaučer | 24 | ADR-002 · opens S20; only with `vouchers.sell` |
 | `ready.pending.title` | Einlösung noch nicht bestätigt | Redemption not confirmed yet | Iskorištavanje još nije potvrđeno | 32 | ADR-002 · banner while an attempt is unresolved (audit M1, M2, M6) |
 | `ready.pending.body` | {amount} auf Gutschein •••• {last4}. Wird automatisch geprüft – es wird nie doppelt gebucht. | {amount} on voucher •••• {last4}. Checked automatically – nothing is ever booked twice. | {amount} na vaučeru •••• {last4}. Provjerava se automatski – ništa se ne knjiži dvaput. | 90 | ADR-002 |
@@ -558,6 +560,12 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `scan.detected` | Gutschein erkannt | Voucher detected | Vaučer prepoznat | — | 03a · (a11y) announcement |
 | `scan.lookingUp` | Gutschein wird geprüft … | Checking voucher … | Provjeravamo vaučer … | 32 | 03a |
 | `scan.slow` | Prüfung dauert länger … | Still checking … | Još provjeravamo … | 32 | 03a · L08 · alias `lookup.stillLooking` (03b) |
+| `card.title` | Karte ans Handy halten | Tap card | Prislonite karticu | 24 | Phase 4 · S11 title |
+| `card.waiting` | Die Karte des Gastes oben an das Handy halten. | Hold the guest's card to the top of the phone. | Prislonite karticu gosta uz gornji dio telefona. | 64 | Phase 4 · S11 and the iPhone sheet |
+| `card.checking` | Karte wird geprüft … | Checking the card … | Kartica se provjerava … | 32 | Phase 4 · card on the phone, server challenge |
+| `card.slow` | Noch einen Moment – Karte am Handy lassen. | Still checking – keep the card on the phone. | Još trenutak – držite karticu uz telefon. | 48 | Phase 4 · after 3 s |
+| `card.done` | Karte geprüft | Card checked | Kartica provjerena | 24 | Phase 4 · iPhone sheet, success |
+| `card.failed` | Die Karte konnte nicht geprüft werden. | The card could not be checked. | Kartica se nije mogla provjeriti. | 48 | Phase 4 · iPhone sheet, failure |
 
 ### 5.8 S07 Charge — balance card, keypad, amount
 
@@ -645,6 +653,19 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 |---|---|---|---|---|---|
 | `problem.notRecognized.title` | Kein Gutschein dieses Lokals | Not a voucher of this restaurant | Nije vaučer ovog restorana | 32 | ADR-002 · unknown, revoked or foreign code |
 | `problem.notRecognized.body` | Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder Betriebsleitung holen. | This code is not valid here. Ask the guest for another voucher or get a manager. | Ovaj kôd ovdje ne važi. Zatražite od gosta drugi vaučer ili pozovite menadžera. | 90 | ADR-002 |
+| `problem.cardNotRecognized.title` | Karte nicht angenommen | Card not accepted | Kartica nije prihvaćena | 32 | Phase 4 · not a card of this restaurant, copied or unverifiable |
+| `problem.cardNotRecognized.body` | Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Betriebsleitung holen. | This card could not be confirmed as a voucher of this restaurant. Get a manager. | Ova kartica nije potvrđena kao vaučer ovog restorana. Pozovite menadžera. | 90 | Phase 4 |
+| `problem.cardNotUsable.title` | Mit dieser Karte nicht bezahlbar | This card cannot pay | Ovom karticom se ne može platiti | 32 | Phase 4 · CARD_NOT_USABLE |
+| `problem.cardNotUsable.notActive` | Die Karte ist noch nicht aktiviert. | The card is not activated yet. | Kartica još nije aktivirana. | 90 | Phase 4 · available, bound |
+| `problem.cardNotUsable.suspended` | Die Karte ist vorübergehend gesperrt. Die Betriebsleitung kann helfen. | The card is temporarily blocked. A manager can help. | Kartica je privremeno blokirana. Menadžer može pomoći. | 90 | Phase 4 · suspended |
+| `problem.cardNotUsable.invalid` | Die Karte ist nicht mehr gültig. Die Betriebsleitung kann helfen. | The card is no longer valid. A manager can help. | Kartica više nije važeća. Menadžer može pomoći. | 90 | Phase 4 · replaced, revoked, lost, not bound |
+| `problem.cardNotUsable.otherRestaurant` | Diese Karte gehört zu einem anderen Lokal. | This card belongs to another restaurant. | Ova kartica pripada drugom restoranu. | 90 | Phase 4 |
+| `problem.cardMoved.title` | Karte zu früh entfernt | Card moved away | Kartica je odmaknuta | 32 | Phase 4 · tag lost |
+| `problem.cardMoved.body` | Die Karte ruhig am Handy halten, bis sie geprüft ist. | Hold the card still on the phone until it is checked. | Držite karticu mirno uz telefon dok se ne provjeri. | 90 | Phase 4 |
+| `problem.nfcOff.title` | NFC ist ausgeschaltet | NFC is off | NFC je isključen | 32 | Phase 4 · Android |
+| `problem.nfcOff.body` | NFC in den Einstellungen des Handys einschalten, um Karten zu lesen. | Switch on NFC in the phone's settings to read cards. | Uključite NFC u postavkama telefona da biste čitali kartice. | 90 | Phase 4 |
+| `problem.nfcUnsupported.title` | Dieses Handy liest keine Karten | This phone cannot read cards | Ovaj telefon ne čita kartice | 32 | Phase 4 |
+| `problem.nfcUnsupported.body` | QR-Gutscheine scannen oder für Karten ein Handy mit NFC verwenden. | Scan QR vouchers, or use a phone with NFC for cards. | Skenirajte QR vaučere ili za kartice koristite telefon s NFC-om. | 90 | Phase 4 |
 | `problem.throttled.title` | Zu viele Scans | Too many scans | Previše skeniranja | 32 | 03b · L05 |
 | `problem.throttled.body` | Scannen ist in Kürze wieder möglich. | Scanning is possible again shortly. | Skeniranje će uskoro ponovo biti moguće. | 90 | 03b |
 | `problem.scanAgainIn` | Erneut scannen · {time} | Scan again · {time} | Skeniraj ponovo · {time} | 24 | 03b · disabled countdown button |
@@ -825,10 +846,11 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 |---|---|---|---|---|
 | `camera.purpose` | Die Kamera wird nur zum Scannen der QR-Codes von Gutscheinen verwendet. | The camera is only used to scan the QR codes of vouchers. | Kamera se koristi samo za skeniranje QR kodova vaučera. | 03a · ADR-002 · camera usage |
 | `faceId.purpose` | Face ID wird nur zum Entsperren der App verwendet. | Face ID is only used to unlock the app. | Face ID se koristi samo za otključavanje aplikacije. | 12 · Face ID usage (iOS) |
+| `nfc.purpose` | Die Karte des Gastes ans Handy halten, um sie zu prüfen. | Hold the guest's gift card to the phone to check it. | Prislonite poklon karticu gosta uz telefon da biste je provjerili. | Phase 4 · NFC usage (iOS) |
 
 ### 5.22 Key count and alias register
 
-The table holds **304 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **326 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

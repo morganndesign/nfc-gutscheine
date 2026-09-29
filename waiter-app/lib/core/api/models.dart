@@ -367,6 +367,28 @@ class Presentment {
   final PresentedVoucher voucher;
 }
 
+/// Step 1 of a card's live authentication (`POST /presentments/cards`): the
+/// command the phone relays to the card, valid [expiresIn].
+@immutable
+class CardChallenge {
+  const CardChallenge({required this.authentication, required this.commandHex, required this.expiresIn});
+
+  factory CardChallenge.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final String command = _string(data, 'command');
+    if (!RegExp(r'^[0-9A-F]{76}$').hasMatch(command)) throw const FormatException('command');
+    return CardChallenge(
+      authentication: _string(data, 'authentication'),
+      commandHex: command,
+      expiresIn: Duration(seconds: _int(data, 'expires_in')),
+    );
+  }
+
+  final String authentication;
+  final String commandHex;
+  final Duration expiresIn;
+}
+
 /// A booked redemption (`data.transaction`).
 @immutable
 class RedeemedTransaction {

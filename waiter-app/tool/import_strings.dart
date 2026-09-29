@@ -53,6 +53,7 @@ const Map<String, String> lprojLanguage = <String, String>{
 const Map<String, String> infoPlistKeyOf = <String, String>{
   'camera.purpose': 'NSCameraUsageDescription',
   'faceId.purpose': 'NSFaceIDUsageDescription',
+  'nfc.purpose': 'NFCReaderUsageDescription',
 };
 
 /// Placeholders that are integers (12 §4.2: `{count}`, `{seconds}`,

@@ -9,11 +9,13 @@ import '../app/money.dart';
 import '../components/components.dart';
 import '../components/support/announce.dart';
 import '../core/api/models.dart';
+import '../core/platform/nfc_relay.dart';
 import '../core/state/loop_controller.dart';
 import '../core/state/loop_state.dart';
 import '../core/storage/pending_redemptions.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
+import 'card_texts.dart';
 import 's13_recent.dart';
 import 's14_menu.dart';
 import 's20_sell_voucher.dart';
@@ -59,6 +61,10 @@ class _ReadyScreenState extends State<ReadyScreen> {
   bool _offline = false;
   Timer? _offlineTimer;
 
+  /// Cards are offered only on phones that can read them (NFC switched off still shows the button: S10 says how
+  /// to switch it on).
+  bool _cardReader = false;
+
   final FocusNode _scanFocus = FocusNode(debugLabel: 'S05 scan voucher', skipTraversal: true);
 
   @override
@@ -72,6 +78,11 @@ class _ReadyScreenState extends State<ReadyScreen> {
       _previous = loop.state;
       loop.addListener(_onLoop);
       _syncConnectivity(loop);
+      unawaited(
+        loop.cardReaderAvailability().then((NfcAvailability availability) {
+          if (mounted) setState(() => _cardReader = availability != NfcAvailability.unsupported);
+        }),
+      );
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showOutcomes();
       });
@@ -142,6 +153,10 @@ class _ReadyScreenState extends State<ReadyScreen> {
     if (!_offline) _loop!.openQr();
   }
 
+  void _tapCard() {
+    if (!_offline) _loop!.openCardTap(texts: cardTexts(_l10n));
+  }
+
   @override
   Widget build(BuildContext context) {
     final AppServices services = _services;
@@ -205,6 +220,13 @@ class _ReadyScreenState extends State<ReadyScreen> {
             disabledReason: offlineReason,
           ),
         ),
+        if (_cardReader)
+          SecondaryButton(
+            label: l10n.readyTapCard,
+            icon: WaiterIcon.nfcArcs,
+            onPressed: _offline ? null : _tapCard,
+            disabledReason: offlineReason,
+          ),
         // S20: shown to managers and owners; the server checks every sale.
         if (user?.canSell ?? false)
           SecondaryButton(

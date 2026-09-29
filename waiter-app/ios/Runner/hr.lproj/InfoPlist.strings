@@ -5,3 +5,6 @@
 
 /* faceId.purpose */
 "NSFaceIDUsageDescription" = "Face ID se koristi samo za otključavanje aplikacije.";
+
+/* nfc.purpose */
+"NFCReaderUsageDescription" = "Prislonite poklon karticu gosta uz telefon da biste je provjerili.";

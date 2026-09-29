@@ -30,6 +30,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get commonScanAgain => 'Erneut scannen';
 
   @override
+  String get commonTapAgain => 'Karte erneut halten';
+
+  @override
   String get commonOpenSettings => 'Einstellungen öffnen';
 
   @override
@@ -360,6 +363,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get readyScan => 'Gutschein scannen';
 
   @override
+  String get readyTapCard => 'Karte ans Handy halten';
+
+  @override
   String get readySell => 'Gutschein verkaufen';
 
   @override
@@ -405,6 +411,24 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get scanSlow => 'Prüfung dauert länger …';
+
+  @override
+  String get cardTitle => 'Karte ans Handy halten';
+
+  @override
+  String get cardWaiting => 'Die Karte des Gastes oben an das Handy halten.';
+
+  @override
+  String get cardChecking => 'Karte wird geprüft …';
+
+  @override
+  String get cardSlow => 'Noch einen Moment – Karte am Handy lassen.';
+
+  @override
+  String get cardDone => 'Karte geprüft';
+
+  @override
+  String get cardFailed => 'Die Karte konnte nicht geprüft werden.';
 
   @override
   String get balanceCardOverline => 'Gutschein';
@@ -647,6 +671,53 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get problemNotRecognizedBody =>
       'Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder Betriebsleitung holen.';
+
+  @override
+  String get problemCardNotRecognizedTitle => 'Karte nicht angenommen';
+
+  @override
+  String get problemCardNotRecognizedBody =>
+      'Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Betriebsleitung holen.';
+
+  @override
+  String get problemCardNotUsableTitle => 'Mit dieser Karte nicht bezahlbar';
+
+  @override
+  String get problemCardNotUsableNotActive =>
+      'Die Karte ist noch nicht aktiviert.';
+
+  @override
+  String get problemCardNotUsableSuspended =>
+      'Die Karte ist vorübergehend gesperrt. Die Betriebsleitung kann helfen.';
+
+  @override
+  String get problemCardNotUsableInvalid =>
+      'Die Karte ist nicht mehr gültig. Die Betriebsleitung kann helfen.';
+
+  @override
+  String get problemCardNotUsableOtherRestaurant =>
+      'Diese Karte gehört zu einem anderen Lokal.';
+
+  @override
+  String get problemCardMovedTitle => 'Karte zu früh entfernt';
+
+  @override
+  String get problemCardMovedBody =>
+      'Die Karte ruhig am Handy halten, bis sie geprüft ist.';
+
+  @override
+  String get problemNfcOffTitle => 'NFC ist ausgeschaltet';
+
+  @override
+  String get problemNfcOffBody =>
+      'NFC in den Einstellungen des Handys einschalten, um Karten zu lesen.';
+
+  @override
+  String get problemNfcUnsupportedTitle => 'Dieses Handy liest keine Karten';
+
+  @override
+  String get problemNfcUnsupportedBody =>
+      'QR-Gutscheine scannen oder für Karten ein Handy mit NFC verwenden.';
 
   @override
   String get problemThrottledTitle => 'Zu viele Scans';

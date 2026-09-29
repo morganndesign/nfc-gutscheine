@@ -35,6 +35,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get commonScanAgain => pseudoLocalize(base.commonScanAgain);
 
   @override
+  String get commonTapAgain => pseudoLocalize(base.commonTapAgain);
+
+  @override
   String get commonOpenSettings => pseudoLocalize(base.commonOpenSettings);
 
   @override
@@ -362,6 +365,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get readyScan => pseudoLocalize(base.readyScan);
 
   @override
+  String get readyTapCard => pseudoLocalize(base.readyTapCard);
+
+  @override
   String get readySell => pseudoLocalize(base.readySell);
 
   @override
@@ -408,6 +414,24 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get scanSlow => pseudoLocalize(base.scanSlow);
+
+  @override
+  String get cardTitle => pseudoLocalize(base.cardTitle);
+
+  @override
+  String get cardWaiting => pseudoLocalize(base.cardWaiting);
+
+  @override
+  String get cardChecking => pseudoLocalize(base.cardChecking);
+
+  @override
+  String get cardSlow => pseudoLocalize(base.cardSlow);
+
+  @override
+  String get cardDone => pseudoLocalize(base.cardDone);
+
+  @override
+  String get cardFailed => pseudoLocalize(base.cardFailed);
 
   @override
   String get balanceCardOverline => pseudoLocalize(base.balanceCardOverline);
@@ -641,6 +665,55 @@ class PseudoAppLocalizations extends AppLocalizations {
   @override
   String get problemNotRecognizedBody =>
       pseudoLocalize(base.problemNotRecognizedBody);
+
+  @override
+  String get problemCardNotRecognizedTitle =>
+      pseudoLocalize(base.problemCardNotRecognizedTitle);
+
+  @override
+  String get problemCardNotRecognizedBody =>
+      pseudoLocalize(base.problemCardNotRecognizedBody);
+
+  @override
+  String get problemCardNotUsableTitle =>
+      pseudoLocalize(base.problemCardNotUsableTitle);
+
+  @override
+  String get problemCardNotUsableNotActive =>
+      pseudoLocalize(base.problemCardNotUsableNotActive);
+
+  @override
+  String get problemCardNotUsableSuspended =>
+      pseudoLocalize(base.problemCardNotUsableSuspended);
+
+  @override
+  String get problemCardNotUsableInvalid =>
+      pseudoLocalize(base.problemCardNotUsableInvalid);
+
+  @override
+  String get problemCardNotUsableOtherRestaurant =>
+      pseudoLocalize(base.problemCardNotUsableOtherRestaurant);
+
+  @override
+  String get problemCardMovedTitle =>
+      pseudoLocalize(base.problemCardMovedTitle);
+
+  @override
+  String get problemCardMovedBody => pseudoLocalize(base.problemCardMovedBody);
+
+  @override
+  String get problemNfcOffTitle => pseudoLocalize(base.problemNfcOffTitle);
+
+  @override
+  String get problemNfcOffBody => pseudoLocalize(base.problemNfcOffBody);
+
+  @override
+  String get problemNfcUnsupportedTitle =>
+      pseudoLocalize(base.problemNfcUnsupportedTitle);
+
+  @override
+  String get problemNfcUnsupportedBody =>
+      pseudoLocalize(base.problemNfcUnsupportedBody);
 
   @override
   String get problemThrottledTitle =>

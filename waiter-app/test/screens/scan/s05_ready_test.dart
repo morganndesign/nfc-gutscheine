@@ -95,7 +95,8 @@ void main() {
       expect(text(en.readyTitle), findsOneWidget);
       expect(text(en.readyHint), findsOneWidget);
       expect(_primary(en.readyScan), findsOneWidget);
-      expect(find.byType(SecondaryButton), findsNothing);
+      expect(text(en.readyTapCard), findsOneWidget, reason: 'cards on iPhone exactly as on Android');
+      expect(text(en.readySell), findsNothing);
       await finishApp(tester, app);
     });
 
@@ -144,7 +145,7 @@ void main() {
       final TestApp app = await _app();
       await pumpWaiterApp(tester, app, size: androidFrame);
       expect(text(en.readySell), findsNothing);
-      expect(find.byType(SecondaryButton), findsNothing);
+      expect(find.byType(SecondaryButton), findsOneWidget, reason: 'only "Tap card"');
       await finishApp(tester, app);
     });
 

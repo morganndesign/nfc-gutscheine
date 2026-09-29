@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import '../cards/ntag424_session.dart';
 import 'api_client.dart';
 import 'api_failure.dart';
 import 'models.dart';
@@ -68,6 +69,35 @@ class WaiterApi {
       'POST',
       '/presentments',
       body: <String, Object?>{'purpose': 'spend', 'method': 'printable_qr', 'credential': credential},
+      timeout: ApiTimeouts.lookup,
+      cancelToken: cancelToken,
+    );
+    return _parse(r, Presentment.fromJson);
+  }
+
+  /// A card, step 1: what the phone read from it and the card's challenge.
+  Future<CardChallenge> beginCardPresentment(CardTap tap, {CancelToken? cancelToken}) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/presentments/cards',
+      body: <String, Object?>{
+        'purpose': 'spend',
+        'tap_url': tap.tapUrl,
+        'rf_uid': tap.rfUidHex,
+        'challenge': tap.challengeHex,
+      },
+      timeout: ApiTimeouts.lookup,
+      cancelToken: cancelToken,
+    );
+    return _parse(r, CardChallenge.fromJson);
+  }
+
+  /// A card, step 2: its answer to the relayed command. Returns the presentment, as a scan does.
+  Future<Presentment> completeCardPresentment(String authentication, String responseHex, {CancelToken? cancelToken}) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/presentments/cards/$authentication',
+      body: <String, Object?>{'response': responseHex},
       timeout: ApiTimeouts.lookup,
       cancelToken: cancelToken,
     );

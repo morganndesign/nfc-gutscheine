@@ -26,8 +26,9 @@ String doc(List<String> rows, {int? count, String aliasRow = ''}) {
     ..writeln('| `camera.purpose` | Kamera DE. | Camera EN. | Kamera BHS. | 03a |')
     ..writeln(
       '| `faceId.purpose` | Face ID. | Face ID EN. | Face ID BHS. | 12 |',
-    );
-  total += 2;
+    )
+    ..writeln('| `nfc.purpose` | NFC DE. | NFC EN. | NFC BHS. | Phase 4 |');
+  total += 3;
   out
     ..writeln('\n### 5.22 Key count and alias register\n')
     ..writeln('The table holds **${count ?? total} keys** (§5.1–5.21).\n')

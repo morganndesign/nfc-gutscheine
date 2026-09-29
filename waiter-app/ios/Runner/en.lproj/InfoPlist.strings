@@ -5,3 +5,6 @@
 
 /* faceId.purpose */
 "NSFaceIDUsageDescription" = "Face ID is only used to unlock the app.";
+
+/* nfc.purpose */
+"NFCReaderUsageDescription" = "Hold the guest's gift card to the phone to check it.";

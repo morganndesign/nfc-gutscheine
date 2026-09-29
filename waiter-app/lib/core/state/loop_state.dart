@@ -32,6 +32,25 @@ final class QrScanState extends LoopState {
   String get name => 'QrScan';
 }
 
+/// S11: a physical card, held to the phone. [waiting] until a card is on the
+/// phone, then [checking] while the server challenges it through the phone.
+enum CardTapPhase { waiting, checking }
+
+final class CardTapState extends LoopState {
+  const CardTapState({this.phase = CardTapPhase.waiting, this.slow = false});
+
+  final CardTapPhase phase;
+
+  /// Still checking after 3 s ("Still checking …").
+  final bool slow;
+
+  CardTapState copyWith({CardTapPhase? phase, bool? slow}) =>
+      CardTapState(phase: phase ?? this.phase, slow: slow ?? this.slow);
+
+  @override
+  String get name => 'CardTap';
+}
+
 /// The screen a presentment was started from; it stays visible while
 /// `POST /presentments` runs (S12 with its own progress, S10 with a busy
 /// "Try again").
@@ -300,15 +319,44 @@ enum ProblemKind {
 
   /// The server's answer could not be used.
   server,
+
+  /// A card that is not a voucher card of this restaurant, a copied tap, or a chip without the card's keys.
+  cardNotRecognized,
+
+  /// A genuine card that cannot pay now (not activated, blocked, no longer valid) — [ProblemState.cardState].
+  cardNotUsable,
+
+  /// The card moved away before the check was finished.
+  cardMoved,
+
+  /// NFC is switched off on this phone (Android).
+  nfcOff,
+
+  /// This phone cannot read cards.
+  nfcUnsupported,
 }
 
 final class ProblemState extends LoopState {
-  const ProblemState({required this.kind, this.retry, this.supportCode, this.requestId, this.until});
+  const ProblemState({
+    required this.kind,
+    this.retry,
+    this.retryCard = false,
+    this.cardState,
+    this.supportCode,
+    this.requestId,
+    this.until,
+  });
 
   final ProblemKind kind;
 
   /// The QR text for "Try again" (network / server).
   final String? retry;
+
+  /// "Try again" holds the card to the phone again (a card was being checked).
+  final bool retryCard;
+
+  /// [ProblemKind.cardNotUsable]: the card's state from the server (`available`, `suspended`, …).
+  final String? cardState;
   final String? supportCode;
 
   /// Full `X-Request-Id` behind [supportCode] (long-press copy).

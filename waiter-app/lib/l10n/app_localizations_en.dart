@@ -30,6 +30,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonScanAgain => 'Scan again';
 
   @override
+  String get commonTapAgain => 'Tap card again';
+
+  @override
   String get commonOpenSettings => 'Open Settings';
 
   @override
@@ -359,6 +362,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readyScan => 'Scan voucher';
 
   @override
+  String get readyTapCard => 'Tap card';
+
+  @override
   String get readySell => 'Sell voucher';
 
   @override
@@ -404,6 +410,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get scanSlow => 'Still checking …';
+
+  @override
+  String get cardTitle => 'Tap card';
+
+  @override
+  String get cardWaiting => 'Hold the guest\'s card to the top of the phone.';
+
+  @override
+  String get cardChecking => 'Checking the card …';
+
+  @override
+  String get cardSlow => 'Still checking – keep the card on the phone.';
+
+  @override
+  String get cardDone => 'Card checked';
+
+  @override
+  String get cardFailed => 'The card could not be checked.';
 
   @override
   String get balanceCardOverline => 'Voucher';
@@ -645,6 +669,52 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get problemNotRecognizedBody =>
       'This code is not valid here. Ask the guest for another voucher or get a manager.';
+
+  @override
+  String get problemCardNotRecognizedTitle => 'Card not accepted';
+
+  @override
+  String get problemCardNotRecognizedBody =>
+      'This card could not be confirmed as a voucher of this restaurant. Get a manager.';
+
+  @override
+  String get problemCardNotUsableTitle => 'This card cannot pay';
+
+  @override
+  String get problemCardNotUsableNotActive => 'The card is not activated yet.';
+
+  @override
+  String get problemCardNotUsableSuspended =>
+      'The card is temporarily blocked. A manager can help.';
+
+  @override
+  String get problemCardNotUsableInvalid =>
+      'The card is no longer valid. A manager can help.';
+
+  @override
+  String get problemCardNotUsableOtherRestaurant =>
+      'This card belongs to another restaurant.';
+
+  @override
+  String get problemCardMovedTitle => 'Card moved away';
+
+  @override
+  String get problemCardMovedBody =>
+      'Hold the card still on the phone until it is checked.';
+
+  @override
+  String get problemNfcOffTitle => 'NFC is off';
+
+  @override
+  String get problemNfcOffBody =>
+      'Switch on NFC in the phone\'s settings to read cards.';
+
+  @override
+  String get problemNfcUnsupportedTitle => 'This phone cannot read cards';
+
+  @override
+  String get problemNfcUnsupportedBody =>
+      'Scan QR vouchers, or use a phone with NFC for cards.';
 
   @override
   String get problemThrottledTitle => 'Too many scans';

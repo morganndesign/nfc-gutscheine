@@ -193,7 +193,7 @@ POST /presentments
 | Field | |
 |---|---|
 | `purpose` | `spend` |
-| `method` | `printable_qr` (verified); `live_auth` exists for physical cards and answers `422 PRESENTMENT_METHOD_UNAVAILABLE` until its verifier exists |
+| `method` | `printable_qr`. Physical cards use the two steps below; `live_auth` here answers `422 PRESENTMENT_METHOD_UNAVAILABLE` |
 | `credential` | The scanned QR text (max. 512 characters) |
 
 ```json
@@ -215,6 +215,35 @@ Rules: the presentment is valid 60 seconds and for one debit. It is bound to thi
 purpose, the user and the device (a presentment made without a device can only be used without one). Spending
 rules by kind: a `digital` voucher is spent only with a QR method, a `card` voucher only with `live_auth`. A failed
 presentment is recorded in the audit log (`presentment.failed`) and counts towards the lockout.
+
+### Card presentments (live authentication)
+
+A physical NTAG 424 DNA card is challenged by the server through the phone (A3). The phone relays bytes only.
+
+```http
+POST /presentments/cards
+{ "purpose": "spend", "tap_url": "https://t.giftcardpro.at/ks-2026-01?e=…&m=…", "rf_uid": "04A39493CC8680",
+  "challenge": "<32 hex: the card's answer to AuthenticateEV2First key 3, part 1>" }
+→ 200 { "data": { "authentication": "01J…", "command": "90AF000020…00", "expires_in": 30 } }
+
+POST /presentments/cards/{authentication}
+{ "response": "<68 hex: the card's answer to `command`, 32 bytes + 9100>" }
+→ 201 presentment (as above, `method` `live_auth`, `level` `A3`, plus `card: {card_number, state}`)
+```
+
+| Purpose | Permission | Card state | `voucher` |
+|---|---|---|---|
+| `spend` | vouchers.redeem | `active`, linked to a `card` voucher | the voucher |
+| `bind` | cards.bind | `available` | `null` |
+| `receive` | cards.receive | `delivered` | `null` |
+
+Step 1 verifies the SUN (the card's own MAC; the read counter must be higher than every earlier one, so a copied
+URL fails with `403 SUN_REPLAYED`), that the radio UID is the SUN's UID (`403 CARD_AUTHENTICATION_FAILED`, a copied
+NDEF on another chip), the restaurant and the state (`422 CARD_NOT_USABLE`, `context.reason` `state` with
+`context.state`, `other_restaurant` or `not_bound`). Step 2 is bound to the same user, device and restaurant, valid
+30 seconds and single use; a wrong answer is `403 CARD_AUTHENTICATION_FAILED`. Failures count towards the same
+lockout as failed scans (`429 PRESENTMENT_THROTTLED`). A redemption refuses a card suspended after its tap
+(`PRESENTMENT_INVALID`, `card_not_active`).
 
 ### Vouchers
 

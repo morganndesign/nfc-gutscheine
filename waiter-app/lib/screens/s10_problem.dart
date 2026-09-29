@@ -8,6 +8,7 @@ import 'package:giftcard_waiter/core/state/loop_controller.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
+import 'package:giftcard_waiter/screens/card_texts.dart';
 
 /// S10 — full-screen problems when a scanned QR gave no voucher (03b §5,
 /// 12 §3.1), rendered with the ProblemScreen template (05 §4.6).
@@ -129,6 +130,7 @@ class _ProblemPageState extends State<ProblemPage> {
       status: _retrying ? ButtonStatus.loading : null,
     );
     final ProblemAction scanAgain = ProblemAction(l10n.commonScanAgain, _loop.scanAgain);
+    final ProblemAction tapAgain = ProblemAction(l10n.commonTapAgain, () => _loop.openCardTap(texts: cardTexts(l10n)));
     final String? code = problem.supportCode;
     switch (problem.kind) {
       case ProblemKind.notRecognized:
@@ -162,7 +164,7 @@ class _ProblemPageState extends State<ProblemPage> {
           family: ProblemFamily.network,
           title: l10n.offlineTitle,
           body: l10n.problemNetworkBody,
-          primary: problem.retry == null ? scanAgain : tryAgain,
+          primary: problem.retry != null || problem.retryCard ? tryAgain : scanAgain,
         );
       case ProblemKind.server:
         return _problem(
@@ -170,8 +172,52 @@ class _ProblemPageState extends State<ProblemPage> {
           title: l10n.problemServerTitle,
           body: l10n.problemServerBody,
           visual: const ProblemVisual.icon(WaiterIcon.serverOff),
-          primary: problem.retry == null ? scanAgain : tryAgain,
+          primary: problem.retry != null || problem.retryCard ? tryAgain : scanAgain,
           code: code,
+        );
+      case ProblemKind.cardNotRecognized:
+        return _problem(
+          family: ProblemFamily.notFound,
+          title: l10n.problemCardNotRecognizedTitle,
+          body: l10n.problemCardNotRecognizedBody,
+          primary: ProblemAction(l10n.commonDone, _close),
+          code: code,
+        );
+      case ProblemKind.cardNotUsable:
+        return _problem(
+          family: ProblemFamily.verification,
+          title: l10n.problemCardNotUsableTitle,
+          body: switch (problem.cardState) {
+            'available' || 'bound' => l10n.problemCardNotUsableNotActive,
+            'suspended' => l10n.problemCardNotUsableSuspended,
+            'other_restaurant' => l10n.problemCardNotUsableOtherRestaurant,
+            _ => l10n.problemCardNotUsableInvalid,
+          },
+          primary: ProblemAction(l10n.commonDone, _close),
+          code: code,
+        );
+      case ProblemKind.cardMoved:
+        return _problem(
+          family: ProblemFamily.verification,
+          title: l10n.problemCardMovedTitle,
+          body: l10n.problemCardMovedBody,
+          primary: tapAgain,
+          secondary: ProblemAction(l10n.commonDone, _close),
+        );
+      case ProblemKind.nfcOff:
+        return _problem(
+          family: ProblemFamily.account,
+          title: l10n.problemNfcOffTitle,
+          body: l10n.problemNfcOffBody,
+          primary: tapAgain,
+          secondary: ProblemAction(l10n.commonDone, _close),
+        );
+      case ProblemKind.nfcUnsupported:
+        return _problem(
+          family: ProblemFamily.account,
+          title: l10n.problemNfcUnsupportedTitle,
+          body: l10n.problemNfcUnsupportedBody,
+          primary: ProblemAction(l10n.commonDone, _close),
         );
     }
   }

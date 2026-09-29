@@ -12,6 +12,7 @@ import '../screens/s05_ready.dart';
 import '../screens/s07_charge.dart';
 import '../screens/s09_success.dart';
 import '../screens/s10_problem.dart';
+import '../screens/s11_card_tap.dart';
 import '../screens/s12_qr_scan.dart';
 import '../screens/s15_session.dart';
 import '../screens/s17_intro.dart';
@@ -103,6 +104,7 @@ class WaiterRouterDelegate extends RouterDelegate<Object> with ChangeNotifier, P
             PresentOrigin.problem => _problem,
           },
         QrScanState() => _task('S12', 'qr', const QrScanScreen()),
+        CardTapState() => _task('S11', 'card', const CardTapScreen()),
         ChargeState() => _task('S07', 'charge', const ChargeScreen()),
         SuccessState() => _task('S09', 'success', const SuccessScreen()),
         ProblemState() => _problem,

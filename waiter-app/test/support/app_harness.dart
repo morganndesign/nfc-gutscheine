@@ -32,6 +32,10 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences_platform_interface/in_memory_shared_preferences_async.dart';
 import 'package:shared_preferences_platform_interface/shared_preferences_async_platform_interface.dart';
 
+import 'fake_nfc.dart';
+
+export 'fake_nfc.dart';
+
 /// Monotonic clock driven by `package:clock`, so `fakeAsync` / `tester.pump`
 /// advance it together with timers.
 class TestMonotonicClock implements MonotonicClock {
@@ -286,6 +290,25 @@ abstract final class Payloads {
     },
   };
 
+  static Map<String, Object?> cardChallenge({String authentication = cardAuthentication}) => <String, Object?>{
+    'data': <String, Object?>{
+      'authentication': authentication,
+      'command': '90AF000020${'35C3E05A752E0144BAC0DE51C1F22C56B34408A23D8AEA266CAB947EA8E0118D'}00',
+      'expires_in': 30,
+    },
+  };
+
+  static const String cardAuthentication = '01JQ7Z8X9Y0A1B2C3D4E5F6G7H';
+
+  static Map<String, Object?> cardPresentment({int balance = 5000, String status = 'active'}) {
+    final Map<String, Object?> p = presentment(balance: balance, status: status);
+    final Map<String, Object?> data = Map<String, Object?>.of(p['data']! as Map<String, Object?>)
+      ..['method'] = 'live_auth'
+      ..['level'] = 'A3'
+      ..['card'] = <String, Object?>{'card_number': 'B-2026-0001-0001', 'state': 'active'};
+    return <String, Object?>{'data': data};
+  }
+
   static Map<String, Object?> transaction({required int amount, required int balanceAfter}) => <String, Object?>{
     'id': 'tx-$amount-$balanceAfter',
     'type': 'redemption',
@@ -341,6 +364,7 @@ class TestApp {
     required this.localAuth,
     required this.feedbackCalls,
     required this.connectivity,
+    required this.nfc,
   });
 
   final AppServices services;
@@ -350,6 +374,9 @@ class TestApp {
   final MockLocalAuthentication localAuth;
   final List<MethodCall> feedbackCalls;
   final ConnectivityService connectivity;
+
+  /// The phone's card reader with a scripted card.
+  final FakeNfcRelay nfc;
 
   SessionController get session => services.session;
   LoopController get loop => services.loop;
@@ -378,7 +405,9 @@ class TestApp {
     Map<String, Object> prefs = const <String, Object>{},
     DateTime Function()? wallClock,
     AppEnvironment environment = const AppEnvironment(apiBaseUrl: 'https://cards.example.at/api/v1'),
+    FakeNfcRelay? nfc,
   }) async {
+    final FakeNfcRelay cardReader = nfc ?? FakeNfcRelay();
     SharedPreferencesAsyncPlatform.instance = InMemorySharedPreferencesAsync.withData(<String, Object>{
       'installed': true,
       'intro_done': introDone,
@@ -463,6 +492,7 @@ class TestApp {
       pending: pending,
       connectivity: connectivity,
       clock: monotonic,
+      nfc: cardReader,
       log: log,
     );
     environments.addListener(() => client.baseUrl = environments.current.apiBaseUrl);
@@ -492,6 +522,7 @@ class TestApp {
       localAuth: localAuth,
       feedbackCalls: feedbackCalls,
       connectivity: connectivity,
+      nfc: cardReader,
     );
   }
 }
