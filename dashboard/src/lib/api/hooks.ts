@@ -206,6 +206,23 @@ export function useReloadVoucher() {
   })
 }
 
+/** Pays the remaining balance back (never more than was paid) and closes the voucher: owners. */
+export function useRefundVoucher() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      voucherId,
+      input,
+      idempotencyKey,
+    }: {
+      voucherId: string
+      input: { payment: { method: "cash" | "card_terminal" | "bank_transfer"; reference?: string | null }; reason: string }
+      idempotencyKey: string
+    }) => api<MoneyResult>(`/vouchers/${voucherId}/refund`, { method: "POST", body: input, idempotencyKey }),
+    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+  })
+}
+
 /** The till: scanning a voucher's QR creates a single-use presentment for the redemption that follows. */
 export function usePresent() {
   return useMutation({

@@ -21,6 +21,8 @@ enum Permission: string
     case VouchersExpire = 'vouchers.expire';
     case VouchersReinstate = 'vouchers.reinstate';
     case VouchersExport = 'vouchers.export';
+    /** Pay the remaining balance back and close the voucher: owners only. */
+    case VouchersRefund = 'vouchers.refund';
 
     /** Physical cards of the restaurant: stock, lifecycle. */
     case CardsView = 'cards.view';

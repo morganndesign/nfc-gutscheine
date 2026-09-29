@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethod;
 use App\Models\Concerns\BelongsToRestaurant;
 use App\Models\Concerns\HashChained;
@@ -15,12 +16,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * The money received for a sale or reload (decision 25). Append-only and hash-chained: a payment is a fact.
+ * The money received for a sale or reload, or paid back with a refund (decision 25). Append-only and hash-chained: a payment is a fact.
  *
  * @property string $id
  * @property string $restaurant_id
  * @property string $voucher_id
  * @property PaymentMethod $method
+ * @property PaymentDirection $direction
  * @property int $amount
  * @property string $currency
  * @property string|null $reference
@@ -47,6 +49,7 @@ class Payment extends Model implements HashChainedRecord
     {
         return [
             'method' => PaymentMethod::class,
+            'direction' => PaymentDirection::class,
             'amount' => 'integer',
             'chain_seq' => 'integer',
             'created_at' => 'datetime',
@@ -61,7 +64,7 @@ class Payment extends Model implements HashChainedRecord
     public function chainAttributes(): array
     {
         return [
-            'id', 'restaurant_id', 'voucher_id', 'method', 'amount', 'currency', 'reference', 'approved_by', 'reason',
+            'id', 'restaurant_id', 'voucher_id', 'method', 'direction', 'amount', 'currency', 'reference', 'approved_by', 'reason',
             'received_by', 'device_id', 'created_at',
         ];
     }

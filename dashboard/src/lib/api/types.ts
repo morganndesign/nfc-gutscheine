@@ -1,9 +1,9 @@
 // Types mirror the Laravel API resources (backend/app/Http/Resources). Money = integer minor units (cents).
 
-export type VoucherStatus = "active" | "blocked" | "expired"
+export type VoucherStatus = "active" | "blocked" | "expired" | "refunded"
 /** card: spent only with its NTAG 424 DNA card; digital: spent only with its QR (decision 26). */
 export type VoucherKind = "card" | "digital"
-export type TransactionType = "issue" | "redemption" | "reload" | "reversal"
+export type TransactionType = "issue" | "redemption" | "reload" | "reversal" | "refund"
 export type PaymentMethod = "cash" | "card_terminal" | "bank_transfer" | "complimentary"
 export type RoleSlug = "platform_admin" | "owner" | "manager" | "waiter"
 
@@ -20,6 +20,7 @@ export type Permission =
   | "vouchers.expire"
   | "vouchers.reinstate"
   | "vouchers.export"
+  | "vouchers.refund"
   | "cards.view"
   | "cards.receive"
   | "cards.bind"
@@ -108,6 +109,8 @@ export interface Payment {
   id: string
   method: PaymentMethod
   method_label: string
+  /** in: received for a sale or reload; out: paid back with a refund. */
+  direction: "in" | "out"
   amount: number
   currency: string
   reference: string | null
@@ -245,6 +248,8 @@ export interface Voucher {
   issued_by?: { id: string; name: string } | null
   media?: Medium[]
   payments?: Payment[]
+  /** Detail view, for those who may refund: what a refund would pay back now. */
+  refundable?: number
   last_used_at: string | null
   created_at: string
   updated_at: string

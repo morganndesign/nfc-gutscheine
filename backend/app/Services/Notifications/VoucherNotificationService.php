@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Notifications;
 
-use App\Enums\PaymentMethod;
 use App\Mail\TemplatedMail;
 use App\Models\NotificationLog;
 use App\Models\NotificationTemplate;
@@ -95,12 +94,12 @@ final class VoucherNotificationService
             if ($transaction === null) {
                 return false;
             }
-            $method = $transaction->payment_id !== null
-                ? Payment::query()->withoutGlobalScopes()->whereKey($transaction->payment_id)->value('method')
-                : null;
-            $method = $method instanceof PaymentMethod ? $method : (is_string($method) ? PaymentMethod::tryFrom($method) : null);
+            /** @var Payment|null $payment */
+            $payment = $transaction->payment_id !== null ? Payment::query()->withoutGlobalScopes()->find($transaction->payment_id) : null;
+            $method = $payment?->method;
 
-            $variables['amount'] = Money::format(abs($transaction->amount), $voucher->currency, $restaurant->locale);
+            // The money that moved: received for a sale or reload, paid back with a refund.
+            $variables['amount'] = Money::format($payment->amount ?? abs($transaction->amount), $voucher->currency, $restaurant->locale);
             $variables['date'] = $transaction->created_at->timezone($restaurant->timezone)->format('d.m.Y');
             $variables['payment_method'] = $method !== null ? self::TEXT[$language]['method'][$method->value] : '—';
         }

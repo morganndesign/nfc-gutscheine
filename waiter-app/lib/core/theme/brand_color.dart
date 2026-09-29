@@ -144,7 +144,7 @@ Color desaturateOklch(Color color, double reduction) {
 
 /// Whether a voucher status renders desaturated: blocked and expired do; a
 /// zero balance does not (04 §8.6, brief §5).
-bool isDesaturatedVoucherStatus(String status) => status == 'blocked' || status == 'expired';
+bool isDesaturatedVoucherStatus(String status) => status == 'blocked' || status == 'expired' || status == 'refunded';
 
 /// Everything the BalanceCard paints, resolved from `brand_color`
 /// (04 §8.6, 05 §3.1).

@@ -5,7 +5,7 @@ import { ChartEmpty } from "@/components/charts/chart-empty"
 
 /** Voucher count per status as labelled bars (single hue — magnitude, not identity). */
 export function StatusBreakdown({ data, currency }: { data: { status: VoucherStatus; count: number; balance: number }[]; currency: string }) {
-  const order: VoucherStatus[] = ["active", "blocked", "expired"]
+  const order: VoucherStatus[] = ["active", "blocked", "expired", "refunded"]
   const rows = order.map((s) => data.find((d) => d.status === s) ?? { status: s, count: 0, balance: 0 }).filter((r) => r.count > 0)
   const max = Math.max(1, ...rows.map((r) => r.count))
 

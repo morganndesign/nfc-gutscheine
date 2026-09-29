@@ -6,7 +6,9 @@ namespace Tests\Feature;
 
 use App\Enums\RoleSlug;
 use App\Models\User;
+use App\Notifications\SignInEmailChanged;
 use App\Notifications\StaffInvitation;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Tests\TestCase;
@@ -25,6 +27,27 @@ final class StaffManagementTest extends TestCase
             ->assertJsonPath('data.restaurant_id', $restaurant->id);
 
         Notification::assertSentTo(User::query()->where('email', 'tom@example.com')->firstOrFail(), StaffInvitation::class);
+    }
+
+    public function test_changing_someones_sign_in_email_tells_the_old_address_and_signs_them_out(): void
+    {
+        Notification::fake();
+        $restaurant = $this->restaurant();
+        $waiter = $this->staff($restaurant, RoleSlug::Waiter, ['email' => 'anna@example.com']);
+        $token = $waiter->createToken('till', ['*'])->plainTextToken;
+        $this->actingAsStaff($restaurant, RoleSlug::Owner);
+
+        $this->patchJson("/api/v1/users/{$waiter->id}", ['email' => 'Anna.New@example.com'])->assertOk()->assertJsonPath('data.email', 'anna.new@example.com');
+
+        Notification::assertSentOnDemand(SignInEmailChanged::class, static fn (SignInEmailChanged $n, array $channels, AnonymousNotifiable $to): bool => $to->routes['mail'] === 'anna@example.com');
+        $this->app['auth']->forgetGuards();
+        $this->withToken($token)->getJson('/api/v1/auth/me')->assertUnauthorized();
+
+        // A name change alone signs nobody out.
+        Notification::fake();
+        $this->actingAsStaff($restaurant, RoleSlug::Owner);
+        $this->patchJson("/api/v1/users/{$waiter->id}", ['name' => 'Anna B.'])->assertOk();
+        Notification::assertNothingSent();
     }
 
     public function test_platform_role_cannot_be_assigned_by_owner(): void

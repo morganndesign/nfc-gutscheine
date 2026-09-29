@@ -111,6 +111,9 @@ final class SecurityMonitor
             // One person correcting many bookings in a day.
             ['name' => 'money.reversals', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherReverse && $e->outcome === SecurityEventOutcome::Succeeded && $user($e) !== null],
+            // One person paying out many refunds in a day.
+            ['name' => 'money.refunds', 'severity' => 'warning', 'subject' => $user, 'threshold' => 3, 'window' => 1440,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherRefund && $e->outcome === SecurityEventOutcome::Succeeded && $user($e) !== null],
             // One person giving away many vouchers in a day.
             ['name' => 'money.complimentary', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherIssue && $e->outcome === SecurityEventOutcome::Succeeded

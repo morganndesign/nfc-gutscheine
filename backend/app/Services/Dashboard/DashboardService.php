@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard;
 
+use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Enums\VoucherStatus;
+use App\Models\Payment;
 use App\Models\Restaurant;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
@@ -168,10 +170,16 @@ final class DashboardService
             ->all());
     }
 
-    /** Money received: sales and reloads that were paid (not complimentary) and not reversed. */
+    /** Money kept: sales and reloads that were paid (not complimentary) and not reversed, minus refunds paid out. */
     private function salesBetween(Carbon $from, ?Carbon $to): int
     {
-        return (int) VoucherTransaction::query()
+        $refunded = (int) Payment::query()
+            ->where('direction', PaymentDirection::Out->value)
+            ->where('created_at', '>=', $from)
+            ->when($to !== null, static fn (Builder $q) => $q->where('created_at', '<', $to))
+            ->sum('amount');
+
+        return -$refunded + (int) VoucherTransaction::query()
             ->ofType(TransactionType::Issue, TransactionType::Reload)
             ->notReversed()
             ->whereHas('payment', static fn (Builder $p) => $p->where('method', '!=', PaymentMethod::Complimentary->value))

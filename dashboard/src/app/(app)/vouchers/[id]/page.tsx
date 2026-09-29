@@ -2,13 +2,14 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowDownLeft, ArrowLeft, Ban, CheckCircle2, Clock, Loader2, MoreHorizontal, Pencil, RotateCcw } from "lucide-react"
+import { ArrowDownLeft, ArrowLeft, Ban, CheckCircle2, Clock, Loader2, MoreHorizontal, Pencil, RotateCcw, Undo2 } from "lucide-react"
 import { toast } from "sonner"
 import { StatusBadge, displayStatus } from "@/components/common/status-badge"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { VoucherVisual } from "@/components/vouchers/voucher-visual"
 import { VoucherHistory } from "@/components/vouchers/voucher-history"
 import { EditVoucherDialog } from "@/components/vouchers/edit-voucher-dialog"
+import { RefundDialog } from "@/components/vouchers/refund-dialog"
 import { ReloadDialog } from "@/components/vouchers/reload-dialog"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
@@ -25,7 +26,7 @@ import { useAuth } from "@/lib/auth"
 import { formatDate, formatDateTime, formatRelative, todayInput } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
 
-type DialogName = "reload" | "block" | "expire" | "reinstate" | "edit" | null
+type DialogName = "reload" | "block" | "expire" | "reinstate" | "edit" | "refund" | null
 
 function Detail({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -148,7 +149,12 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
                     <RotateCcw /> Reinstate
                   </DropdownMenuItem>
                 ) : null}
-                {can("vouchers.block") && voucher.status !== "blocked" ? (
+                {(voucher.refundable ?? 0) > 0 ? (
+                  <DropdownMenuItem variant="destructive" onSelect={() => setDialog("refund")}>
+                    <Undo2 /> Refund…
+                  </DropdownMenuItem>
+                ) : null}
+                {can("vouchers.block") && voucher.status !== "blocked" && voucher.status !== "refunded" ? (
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog("block")}>
                     <Ban /> Block voucher
                   </DropdownMenuItem>
@@ -286,6 +292,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
         onOpenChange={(o) => setDialog(o ? "reload" : null)}
       />
       {dialog === "edit" ? <EditVoucherDialog voucher={voucher} open onOpenChange={(o) => setDialog(o ? "edit" : null)} /> : null}
+      {dialog === "refund" ? <RefundDialog voucher={voucher} open onOpenChange={(o) => setDialog(o ? "refund" : null)} /> : null}
       {dialog === "reinstate" ? <ReinstateDialog voucher={voucher} open onOpenChange={(o) => setDialog(o ? "reinstate" : null)} /> : null}
       <ReasonDialog
         open={dialog === "block"}

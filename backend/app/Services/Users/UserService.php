@@ -13,12 +13,14 @@ use App\Jobs\SendPasswordResetLink;
 use App\Models\Restaurant;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\SignInEmailChanged;
 use App\Services\Audit\AuditLogger;
 use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
@@ -102,6 +104,13 @@ final class UserService
             if ($user->isDirty()) {
                 $new = $user->getDirty();
                 $user->save();
+                if (isset($new['email'])) {
+                    // Someone else moved the account to another address: the old one hears of it, every sign-in ends.
+                    $this->terminateAccess($user, $actor);
+                    $previous = (string) $old['email'];
+                    $notice = new SignInEmailChanged($user->name, $user->email, $actor->user->name ?? 'GiftCard Pro', $user->restaurant->name ?? 'GiftCard Pro');
+                    DB::afterCommit(static fn () => Notification::route('mail', $previous)->notify($notice->locale($user->locale ?? (string) config('giftcard.mail_locale'))));
+                }
                 $this->audit->log('user.updated', $actor, $user, array_intersect_key($old, $new), $new);
                 $this->events->record(SecurityEventType::StaffChange, $actor, subject: $user, data: array_filter([
                     'fields' => array_keys($new),

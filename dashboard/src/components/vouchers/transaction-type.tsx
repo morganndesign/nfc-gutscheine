@@ -1,4 +1,4 @@
-import { ArrowDownLeft, ArrowUpRight, CreditCard, RotateCcw } from "lucide-react"
+import { ArrowDownLeft, ArrowUpRight, CreditCard, RotateCcw, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { TransactionType } from "@/lib/api/types"
 
@@ -7,6 +7,7 @@ const TYPES: Record<TransactionType, { label: string; icon: typeof CreditCard; c
   reload: { label: "Reload", icon: ArrowDownLeft, className: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400" },
   redemption: { label: "Redemption", icon: ArrowUpRight, className: "bg-zinc-100 text-zinc-700 dark:bg-zinc-500/15 dark:text-zinc-300" },
   reversal: { label: "Reversal", icon: RotateCcw, className: "bg-sky-50 text-sky-700 dark:bg-sky-500/10 dark:text-sky-400" },
+  refund: { label: "Refund", icon: Undo2, className: "bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-400" },
 }
 
 export const TRANSACTION_TYPES = Object.keys(TYPES) as TransactionType[]

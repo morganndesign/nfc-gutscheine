@@ -1,16 +1,17 @@
-import { Ban, CheckCircle2, Circle, Clock } from "lucide-react"
+import { Ban, CheckCircle2, Circle, Clock, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { VoucherStatus } from "@/lib/api/types"
 
-/** Expired and blocked vouchers keep their balance; an empty active voucher is shown as "Empty". */
+/** Expired and blocked vouchers keep their balance; refunded ones are closed; an empty active voucher is "Empty". */
 const STATUS: Record<VoucherStatus | "empty", { label: string; className: string; icon: typeof Circle }> = {
   active: { label: "Active", className: "bg-emerald-50 text-emerald-700 ring-emerald-600/15 dark:bg-emerald-500/10 dark:text-emerald-400", icon: CheckCircle2 },
   empty: { label: "Empty", className: "bg-sky-50 text-sky-700 ring-sky-600/15 dark:bg-sky-500/10 dark:text-sky-400", icon: Circle },
   blocked: { label: "Blocked", className: "bg-red-50 text-red-700 ring-red-600/15 dark:bg-red-500/10 dark:text-red-400", icon: Ban },
   expired: { label: "Expired", className: "bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400", icon: Clock },
+  refunded: { label: "Refunded", className: "bg-zinc-100 text-zinc-700 ring-zinc-500/20 dark:bg-zinc-500/15 dark:text-zinc-300", icon: Undo2 },
 }
 
-export const VOUCHER_STATUSES: VoucherStatus[] = ["active", "blocked", "expired"]
+export const VOUCHER_STATUSES: VoucherStatus[] = ["active", "blocked", "expired", "refunded"]
 
 /** The badge status of a voucher: "empty" for an active voucher without balance. */
 export function displayStatus(voucher: { status: VoucherStatus; balance: number }): VoucherStatus | "empty" {

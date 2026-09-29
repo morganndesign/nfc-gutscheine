@@ -23,6 +23,7 @@ final class PaymentResource extends JsonResource
             'id' => $payment->id,
             'method' => $payment->method->value,
             'method_label' => $payment->method->label(),
+            'direction' => $payment->direction->value,
             'amount' => $payment->amount,
             'currency' => $payment->currency,
             'reference' => $payment->reference,

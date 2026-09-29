@@ -87,6 +87,8 @@ return new class extends Migration
             $table->foreignUuid('restaurant_id')->constrained()->restrictOnDelete();
             $table->foreignUuid('voucher_id')->constrained()->restrictOnDelete();
             $table->string('method', 20);
+            // in: received for a sale or reload; out: paid back to the guest (refund).
+            $table->string('direction', 3);
             $table->unsignedBigInteger('amount');
             $table->char('currency', 3);
             // Terminal receipt number, bank reference or provider payment id.

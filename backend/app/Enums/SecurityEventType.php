@@ -59,6 +59,8 @@ enum SecurityEventType: string
     case VoucherUnblock = 'voucher.unblock';
     case VoucherExpire = 'voucher.expire';
     case VoucherReinstate = 'voucher.reinstate';
+    /** The remaining balance was paid back and the voucher closed. */
+    case VoucherRefund = 'voucher.refund';
     /** A spending medium (printable QR) was issued or revoked. */
     case MediumIssue = 'voucher.medium_issue';
     case MediumRevoke = 'voucher.medium_revoke';
@@ -110,6 +112,7 @@ enum SecurityEventType: string
             self::VoucherReverse => ['transaction_id', 'reversed_transaction_id', 'reversed_type'],
             self::VoucherBlock, self::VoucherExpire, self::VoucherReinstate => ['previous_status'],
             self::VoucherUnblock => [],
+            self::VoucherRefund => ['payment_method', 'transaction_id', 'paid_out', 'forfeited', 'replayed'],
             self::MediumIssue => ['medium_type', 'cause'],
             self::MediumRevoke => ['medium_type', 'cause'],
             self::CardTransition => ['card_number', 'from_state', 'to_state', 'cause', 'batch_code'],

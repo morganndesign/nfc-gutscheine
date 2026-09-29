@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\Permission;
+use App\Enums\VoucherStatus;
 use App\Models\Medium;
+use App\Models\User;
 use App\Models\Voucher;
+use App\Services\Vouchers\VoucherService;
 use App\Support\VoucherNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -54,6 +58,13 @@ final class VoucherResource extends JsonResource
                 'revoked_at' => $m->revoked_at?->toIso8601String(),
             ])->values()->all()),
             'payments' => $this->whenLoaded('payments', static fn () => PaymentResource::collection($voucher->payments)->resolve()),
+            // What a refund would pay back now (detail view, for those who may refund).
+            'refundable' => $this->when(
+                $voucher->relationLoaded('payments') && $request->user() instanceof User && $request->user()->hasPermission(Permission::VouchersRefund),
+                static fn (): int => in_array($voucher->status, [VoucherStatus::Active, VoucherStatus::Blocked, VoucherStatus::Expired], true)
+                    ? min($voucher->balance, app(VoucherService::class)->paidIn($voucher))
+                    : 0,
+            ),
             'last_used_at' => $voucher->last_used_at?->toIso8601String(),
             'created_at' => $voucher->created_at->toIso8601String(),
             'updated_at' => $voucher->updated_at->toIso8601String(),

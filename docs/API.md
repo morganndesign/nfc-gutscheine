@@ -95,7 +95,7 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 
 | Header | Direction | Meaning |
 |---|---|---|
-| `Idempotency-Key` | request | **Required** for `POST /vouchers`, `POST /vouchers/{id}/redemptions` and `POST /vouchers/{id}/reloads` (8–96 characters `[A-Za-z0-9-_.]`). Use a UUID per logical attempt. A retry with the same key returns the original result (`"replayed": true`, HTTP 200) instead of booking twice; the same key for a different request → `409 IDEMPOTENCY_CONFLICT`. A key that should be looked up with `GET /vouchers/{id}/redemptions/{key}` must match `[A-Za-z0-9_-]{16,100}` (a UUID does). |
+| `Idempotency-Key` | request | **Required** for `POST /vouchers`, `POST /vouchers/{id}/redemptions`, `POST /vouchers/{id}/reloads` and `POST /vouchers/{id}/refund` (8–96 characters `[A-Za-z0-9-_.]`). Use a UUID per logical attempt. A retry with the same key returns the original result (`"replayed": true`, HTTP 200) instead of booking twice; the same key for a different request → `409 IDEMPOTENCY_CONFLICT`. A key that should be looked up with `GET /vouchers/{id}/redemptions/{key}` must match `[A-Za-z0-9_-]{16,100}` (a UUID does). |
 | `X-Device-Id` | request | Stable random id of the terminal (16–64 characters `[A-Za-z0-9-]`). Registers the device in the restaurant; a revoked device gets `403 DEVICE_REVOKED`. Required with a device token. |
 | `X-Request-Id` | both | Correlation id (8–64 characters; echoed, generated if absent). Stored in the audit log. |
 | `Retry-After` | response | On `429` from a rate limiter. |
@@ -264,6 +264,7 @@ lockout as failed scans (`429 PRESENTMENT_THROTTLED`). A redemption refuses a ca
 | POST | `/vouchers/{id}/redemptions` | vouchers.redeem | **Idempotency-Key** · below |
 | GET | `/vouchers/{id}/redemptions/{idempotencyKey}` | vouchers.redeem | Outcome of one of the caller's own redemption attempts, below |
 | POST | `/vouchers/{id}/reloads` | vouchers.reload | **Idempotency-Key** · `{amount, payment: {method, reference?, reason?}, note?}` → `201 {data: {voucher, transaction}, replayed}` |
+| POST | `/vouchers/{id}/refund` | vouchers.refund (owners) | **Idempotency-Key** · `{payment: {method: cash\|card_terminal\|bank_transfer, reference?}, reason}` — pays back `min(balance, money received − earlier payouts)` (complimentary value is forfeited), closes the voucher (`refunded`), revokes its QR and card → `201 {data: {voucher, transaction (type refund, payment.direction out)}, replayed}`; `422 VOUCHER_NOT_REFUNDABLE` when nothing was paid for. The voucher detail carries `refundable` for owners |
 | POST | `/vouchers/{id}/block` | vouchers.block | `{reason}` (3–500 characters) |
 | POST | `/vouchers/{id}/unblock` | vouchers.unblock | Back to `active`, or to `expired` when the expiry date passed while it was blocked |
 | POST | `/vouchers/{id}/expire` | vouchers.expire | `{reason}` — only `active` vouchers; **the balance is kept** |

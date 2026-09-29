@@ -21,6 +21,7 @@ const TEMPLATE_LABELS: Record<string, string> = {
   voucher_issued: "Voucher purchased",
   voucher_reloaded: "Voucher topped up",
   voucher_expiring: "Voucher expires soon",
+  voucher_refunded: "Voucher refunded",
   card_replaced: "Gift card replaced",
 }
 

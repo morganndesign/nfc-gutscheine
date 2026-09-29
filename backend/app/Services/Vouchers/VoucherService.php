@@ -9,6 +9,9 @@ use App\Data\PaymentData;
 use App\Data\SaleResult;
 use App\Data\TransactionResult;
 use App\Enums\CardState;
+use App\Enums\MediumStatus;
+use App\Enums\MediumType;
+use App\Enums\PaymentDirection;
 use App\Enums\PaymentMethod;
 use App\Enums\Permission;
 use App\Enums\PresentmentPurpose;
@@ -18,6 +21,7 @@ use App\Enums\VoucherKind;
 use App\Enums\VoucherStatus;
 use App\Events\VoucherIssued;
 use App\Events\VoucherRedeemed;
+use App\Events\VoucherRefunded;
 use App\Events\VoucherReloaded;
 use App\Exceptions\Domain\BalanceLimitExceededException;
 use App\Exceptions\Domain\ComplimentaryNotAllowedException;
@@ -35,7 +39,10 @@ use App\Exceptions\Domain\VelocityLimitExceededException;
 use App\Exceptions\Domain\VoucherBlockedException;
 use App\Exceptions\Domain\VoucherExpiredException;
 use App\Exceptions\Domain\VoucherNotRedeemableException;
+use App\Exceptions\Domain\VoucherNotRefundableException;
+use App\Models\Card;
 use App\Models\Customer;
+use App\Models\Medium;
 use App\Models\Payment;
 use App\Models\Presentment;
 use App\Models\Restaurant;
@@ -471,14 +478,134 @@ final class VoucherService
     }
 
     // ---------------------------------------------------------------------
+    // Refund
+    // ---------------------------------------------------------------------
+
+    /**
+     * Pays the remaining balance back to the guest and closes the voucher for good (`refunded`): a sale booked by
+     * mistake, or a guest who returns the voucher. Never more than the money actually received for the voucher
+     * (sales and reloads paid in, minus earlier payouts): complimentary value is not paid out and is forfeited with
+     * the close. Its media stop at once (QR revoked, card revoked). Owners only (`vouchers.refund`).
+     */
+    public function refund(Actor $actor, Voucher $voucher, PaymentData $payout, string $reason, string $idempotencyKey): TransactionResult
+    {
+        try {
+            $result = $this->performRefund($actor, $voucher, $payout, $reason, $idempotencyKey);
+        } catch (DomainException $e) {
+            $this->events->refused(SecurityEventType::VoucherRefund, $actor, $e, $voucher, $voucher->balance, $voucher->currency, data: [
+                'payment_method' => $payout->method,
+            ]);
+
+            throw $e;
+        }
+
+        return $result;
+    }
+
+    private function performRefund(Actor $actor, Voucher $voucher, PaymentData $payout, string $reason, string $idempotencyKey): TransactionResult
+    {
+        $this->assertOwnedByTenant($voucher);
+        if ($payout->method === PaymentMethod::Complimentary) {
+            throw new InvalidAmountException('A refund is paid in cash, to the card terminal or by bank transfer.');
+        }
+        if ($payout->method->requiresReference() && $payout->reference === null) {
+            throw new InvalidAmountException('This payment method needs a reference (terminal receipt or bank reference).', ['method' => $payout->method->value]);
+        }
+
+        $matches = static fn (VoucherTransaction $tx): bool => $tx->type === TransactionType::Refund
+            && $tx->voucher_id === $voucher->getKey()
+            && $tx->user_id === $actor->userId();
+
+        return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, function () use ($actor, $voucher, $payout, $reason, $idempotencyKey, $matches): TransactionResult {
+            $locked = $this->lock($voucher);
+            $replay = $this->findByKey($locked->restaurant_id, $idempotencyKey);
+            if ($replay !== null) {
+                return $this->replay($replay, $matches);
+            }
+            if (! in_array($locked->status, [VoucherStatus::Active, VoucherStatus::Blocked, VoucherStatus::Expired], true)) {
+                throw new VoucherNotRedeemableException('This voucher is closed.', ['status' => $locked->status->value]);
+            }
+            if ($locked->balance === 0) {
+                throw new InsufficientBalanceException('This voucher has no balance left to refund.', ['balance' => 0]);
+            }
+            $paidOut = min($locked->balance, $this->paidIn($locked));
+            if ($paidOut === 0) {
+                throw new VoucherNotRefundableException;
+            }
+            $closed = $locked->balance;
+
+            $payment = new Payment;
+            $payment->forceFill([
+                'restaurant_id' => $locked->restaurant_id,
+                'voucher_id' => $locked->getKey(),
+                'method' => $payout->method,
+                'direction' => PaymentDirection::Out,
+                'amount' => $paidOut,
+                'currency' => $locked->currency,
+                'reference' => $payout->reference,
+                'approved_by' => $actor->userId(),
+                'reason' => $reason,
+                'received_by' => $actor->userId(),
+                'device_id' => $actor->deviceId(),
+            ])->save();
+            $tx = $this->record($locked, TransactionType::Refund, -$closed, $actor, $idempotencyKey, note: $reason, payment: $payment);
+            $locked->status = VoucherStatus::Refunded;
+            $locked->save();
+
+            // Nothing spends a closed voucher: its QR and its card stop now.
+            $this->printables->revoke($actor, $locked, 'voucher refunded');
+            foreach (Medium::query()->where('voucher_id', $locked->getKey())->where('type', MediumType::NfcCard->value)->where('status', MediumStatus::Active->value)->lockForUpdate()->get() as $medium) {
+                /** @var Medium $medium */
+                $this->cardMedia->revoke($actor, $medium, $locked, 'voucher refunded');
+                /** @var Card $card */
+                $card = Card::query()->withoutGlobalScopes()->whereKey($medium->card_id)->lockForUpdate()->firstOrFail();
+                if ($card->state->canBecome(CardState::Revoked)) {
+                    $this->cards->transition($card, CardState::Revoked, 'voucher refunded', $actor, $locked);
+                }
+            }
+
+            $this->audit->log('voucher.refunded', $actor, $locked, ['balance' => $closed], [
+                'balance' => 0,
+                'status' => VoucherStatus::Refunded,
+                'paid_out' => $paidOut,
+                'forfeited' => $closed - $paidOut,
+                'payment_method' => $payout->method,
+            ], ['reason' => $reason, 'transaction_id' => $tx->getKey(), 'payment_id' => $payment->getKey()]);
+            $this->events->record(SecurityEventType::VoucherRefund, $actor, subject: $locked, amount: -$paidOut, data: [
+                'payment_method' => $payout->method,
+                'transaction_id' => $tx->getKey(),
+                'paid_out' => $paidOut,
+                'forfeited' => $closed - $paidOut,
+                'replayed' => false,
+            ]);
+            VoucherRefunded::dispatch($locked, $tx);
+
+            return new TransactionResult($locked, $tx);
+        });
+    }
+
+    /** What may still be paid back: money received for the voucher (not complimentary, not reversed) minus payouts. */
+    public function paidIn(Voucher $voucher): int
+    {
+        $received = (int) VoucherTransaction::query()->where('voucher_id', $voucher->getKey())
+            ->ofType(TransactionType::Issue, TransactionType::Reload)
+            ->notReversed()
+            ->whereHas('payment', static fn ($p) => $p->where('method', '!=', PaymentMethod::Complimentary->value))
+            ->sum('amount');
+        $paidBack = (int) Payment::query()->where('voucher_id', $voucher->getKey())->where('direction', PaymentDirection::Out->value)->sum('amount');
+
+        return max(0, $received - $paidBack);
+    }
+
+    // ---------------------------------------------------------------------
     // Status changes (never touch the balance)
     // ---------------------------------------------------------------------
 
     public function block(Actor $actor, Voucher $voucher, string $reason): Voucher
     {
         return $this->mutate($voucher, function (Voucher $locked) use ($actor, $reason): void {
-            if ($locked->status === VoucherStatus::Blocked) {
-                throw new InvalidVoucherStateException('This voucher is already blocked.', ['status' => $locked->status->value]);
+            if ($locked->status === VoucherStatus::Blocked || $locked->status === VoucherStatus::Refunded) {
+                throw new InvalidVoucherStateException('This voucher is already blocked or closed.', ['status' => $locked->status->value]);
             }
 
             $previous = $locked->status;
@@ -654,6 +781,7 @@ final class VoucherService
             'restaurant_id' => $voucher->restaurant_id,
             'voucher_id' => $voucher->getKey(),
             'method' => $data->method,
+            'direction' => PaymentDirection::In,
             'amount' => $amount,
             'currency' => $voucher->currency,
             'reference' => $data->reference,

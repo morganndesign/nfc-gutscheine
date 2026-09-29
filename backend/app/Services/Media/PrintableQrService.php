@@ -47,7 +47,7 @@ final class PrintableQrService
             throw new InvalidVoucherStateException('A printable QR can only be issued for a digital voucher.', ['kind' => $voucher->kind->value]);
         }
 
-        $this->revokeActive($actor, $voucher, $reason);
+        $this->revoke($actor, $voucher, $reason);
 
         $secret = random_bytes(self::SECRET_BYTES);
         $payload = self::PREFIX.rtrim(strtr(base64_encode($secret), '+/', '-_'), '=');
@@ -92,7 +92,8 @@ final class PrintableQrService
         return hash('sha256', $secret);
     }
 
-    private function revokeActive(Actor $actor, Voucher $voucher, string $reason): void
+    /** Revokes the voucher's active printable QR, if any. Inside the transaction that holds the voucher lock. */
+    public function revoke(Actor $actor, Voucher $voucher, string $reason): void
     {
         $active = Medium::query()
             ->where('voucher_id', $voucher->getKey())

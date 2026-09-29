@@ -11,6 +11,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Requests\ReasonRequest;
 use App\Http\Requests\Vouchers\RedeemVoucherRequest;
+use App\Http\Requests\Vouchers\RefundVoucherRequest;
 use App\Http\Requests\Vouchers\ReinstateVoucherRequest;
 use App\Http\Requests\Vouchers\ReloadVoucherRequest;
 use App\Http\Resources\PresentedVoucherResource;
@@ -83,6 +84,23 @@ final class VoucherActionController extends Controller
             PaymentData::fromArray($payment),
             (string) $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE),
             $request->validated('note'),
+        );
+
+        return $this->moneyResponse($request, $result);
+    }
+
+    /** POST /vouchers/{voucher}/refund: pays the remaining balance back and closes the voucher (owners). */
+    public function refund(RefundVoucherRequest $request, Voucher $voucher): JsonResponse
+    {
+        /** @var array{method: string, reference?: string|null} $payment */
+        $payment = $request->validated('payment');
+
+        $result = $this->vouchers->refund(
+            Actor::fromRequest($request),
+            $voucher,
+            PaymentData::fromArray($payment),
+            (string) $request->validated('reason'),
+            (string) $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE),
         );
 
         return $this->moneyResponse($request, $result);

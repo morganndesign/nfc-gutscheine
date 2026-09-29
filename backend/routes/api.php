@@ -84,6 +84,7 @@ Route::prefix('v1')->group(function (): void {
                 Route::middleware(['idempotent', 'throttle:voucher-operation'])->group(function (): void {
                     Route::post('redemptions', 'redeem')->middleware('can:vouchers.redeem');
                     Route::post('reloads', 'reload')->middleware('can:vouchers.reload');
+                    Route::post('refund', 'refund')->middleware('can:vouchers.refund');
                 });
                 // Same alphabet as the Idempotency-Key header (RequireIdempotencyKey).
                 Route::get('redemptions/{idempotencyKey}', 'redemptionOutcome')

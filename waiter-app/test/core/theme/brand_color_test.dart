@@ -135,6 +135,7 @@ void main() {
     test('status mapping', () {
       expect(isDesaturatedVoucherStatus('blocked'), isTrue);
       expect(isDesaturatedVoucherStatus('expired'), isTrue);
+      expect(isDesaturatedVoucherStatus('refunded'), isTrue);
       expect(isDesaturatedVoucherStatus('active'), isFalse);
     });
 

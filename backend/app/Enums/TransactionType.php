@@ -11,6 +11,8 @@ enum TransactionType: string
     case Reload = 'reload';
     /** Correction of an earlier redemption or reload: a new entry, the original is never touched. */
     case Reversal = 'reversal';
+    /** The remaining balance paid back to the guest; the voucher is closed (`refunded`). */
+    case Refund = 'refund';
 
     public function label(): string
     {
@@ -19,6 +21,7 @@ enum TransactionType: string
             self::Redemption => 'Redemption',
             self::Reload => 'Reload',
             self::Reversal => 'Reversal',
+            self::Refund => 'Refund',
         };
     }
 
