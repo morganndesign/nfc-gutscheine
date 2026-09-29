@@ -585,6 +585,16 @@ export function useResendInvitation() {
   })
 }
 
+/** The platform invites a new owner for a restaurant (handover, or the only owner lost access). */
+export function useInviteOwner() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ restaurantId, name, email }: { restaurantId: string; name: string; email: string }) =>
+      api<{ data: StaffUser }>(`/admin/restaurants/${restaurantId}/owners`, { method: "POST", body: { name, email } }),
+    onSettled: () => void qc.invalidateQueries({ queryKey: keys.admin }),
+  })
+}
+
 export function useMailStatus() {
   return useQuery({
     queryKey: [...keys.admin, "mail"],

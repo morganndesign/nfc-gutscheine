@@ -90,7 +90,7 @@ final class CustomerController extends Controller
                 'anonymized_at' => Carbon::now(),
             ])->save();
 
-            $customer->vouchers()->update(['recipient_name' => null]);
+            $customer->vouchers()->update(['recipient_name' => null, 'notes' => null]);
 
             // The e-mail address also lives in the delivery log of notifications sent to this customer.
             NotificationLog::query()

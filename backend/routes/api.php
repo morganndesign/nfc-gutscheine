@@ -171,6 +171,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('restaurants/{restaurant}/restore', [RestaurantController::class, 'restore'])->withTrashed();
             Route::delete('restaurants/{restaurant}', [RestaurantController::class, 'destroy'])->withTrashed();
             Route::post('restaurants/{restaurant}/invitation', [RestaurantController::class, 'resendOwnerInvitation']);
+            Route::post('restaurants/{restaurant}/owners', [RestaurantController::class, 'inviteOwner']);
             Route::post('restaurants/{restaurant}/users/{user}/invitation', [RestaurantController::class, 'resendUserInvitation']);
             Route::get('audit-logs', [PlatformController::class, 'auditLogs'])->middleware('can:platform.audit.view');
             Route::get('security-alerts', [SecurityAlertController::class, 'index'])->middleware('can:platform.audit.view');

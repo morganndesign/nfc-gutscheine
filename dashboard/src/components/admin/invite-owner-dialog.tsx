@@ -1,0 +1,71 @@
+"use client"
+
+import { useState } from "react"
+import { Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useInviteOwner } from "@/lib/api/hooks"
+import { errorMessage } from "@/lib/api/client"
+
+/** A new owner for the restaurant: a handover, or its only owner lost access. The previous owner stays until removed. */
+export function InviteOwnerDialog({ restaurantId, open, onOpenChange }: { restaurantId: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const mutation = useInviteOwner()
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) {
+          setName("")
+          setEmail("")
+        }
+        onOpenChange(o)
+      }}
+    >
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Invite a new owner</DialogTitle>
+          <DialogDescription>
+            For a handover, or when the only owner can no longer sign in. The new owner can then deactivate the previous one.
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            try {
+              await mutation.mutateAsync({ restaurantId, name: name.trim(), email: email.trim() })
+              toast.success(`Invitation sent to ${email.trim()}`)
+              onOpenChange(false)
+            } catch (err) {
+              toast.error(errorMessage(err))
+            }
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="owner-name">Name</Label>
+            <Input id="owner-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={160} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="owner-email">E-mail</Label>
+            <Input id="owner-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={191} required />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!name.trim() || !email.trim() || mutation.isPending}>
+              {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
+              Send invitation
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

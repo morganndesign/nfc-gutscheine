@@ -95,13 +95,14 @@ final class ReportingTest extends TestCase
 
         $id = $this->postJson('/api/v1/customers', ['first_name' => 'Klara', 'last_name' => 'Wolf', 'email' => 'klara@example.com'])
             ->assertCreated()->json('data.id');
-        $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer_id' => $id, 'recipient_name' => 'Klara'], $this->idempotency())->assertCreated();
+        $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer_id' => $id, 'recipient_name' => 'Klara', 'notes' => 'Klara Wolf, birthday 12 May'], $this->idempotency())->assertCreated();
 
         $this->getJson("/api/v1/customers/{$id}")->assertOk()->assertJsonCount(1, 'vouchers')->assertJsonPath('data.vouchers_balance', 5000);
 
         $this->postJson("/api/v1/customers/{$id}/anonymize")->assertOk()->assertJsonPath('data.email', null)->assertJsonPath('data.anonymized', true);
         $this->assertDatabaseMissing('customers', ['email' => 'klara@example.com']);
         $this->assertDatabaseMissing('vouchers', ['recipient_name' => 'Klara']);
+        $this->assertDatabaseMissing('vouchers', ['notes' => 'Klara Wolf, birthday 12 May']);
         $this->assertDatabaseHas('vouchers', ['customer_id' => $id, 'balance' => 5000]);
     }
 

@@ -227,6 +227,26 @@ final class RestaurantService
         return ['owner' => $owner, 'log' => $this->resendInvitation($actor, $restaurant, $owner, $corrections)];
     }
 
+    /**
+     * A new owner for the restaurant, invited by the platform: the restaurant changes hands, or its only owner lost
+     * access (left, e-mail gone). The previous owner stays until the new one deactivates them.
+     *
+     * @param  array{name: string, email: string}  $owner
+     */
+    public function inviteOwner(Actor $actor, Restaurant $restaurant, array $owner): User
+    {
+        if ($restaurant->trashed() || ! $restaurant->isActive()) {
+            throw new InvitationNotPossibleException('Enable or restore the restaurant first, otherwise the new owner cannot sign in.');
+        }
+
+        return DB::transaction(function () use ($actor, $restaurant, $owner): User {
+            $user = $this->users->create($actor, $restaurant, ['name' => $owner['name'], 'email' => $owner['email'], 'role' => RoleSlug::Owner->value]);
+            $this->audit->log('restaurant.owner_invited', $actor, $restaurant, null, ['owner' => $user->email], restaurantId: $restaurant->getKey());
+
+            return $user;
+        });
+    }
+
     /** @param array{name?: string|null, email?: string|null} $corrections */
     public function resendInvitation(Actor $actor, Restaurant $restaurant, User $user, array $corrections = []): NotificationLog
     {

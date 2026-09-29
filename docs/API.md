@@ -482,6 +482,7 @@ Platform administrators operate restaurants; they never act inside a restaurant 
 | POST | `/admin/restaurants/{id}/archive` `{reason?}` · `/restore` | Archive = soft delete: hidden, users and devices locked out, data kept |
 | DELETE | `/admin/restaurants/{id}` | `{confirm: "<slug>"}` — permanent; `409 RESTAURANT_NOT_DELETABLE` (counts in `context`) when vouchers, transactions or customers exist. The audit trail is kept |
 | POST | `/admin/restaurants/{id}/invitation` · `/admin/restaurants/{id}/users/{user}/invitation` | `{name?, email?}` — a new invitation (the previous link stops working; corrects a mistyped address). Sent from the queue: `202` while queued, `200` when sent, `422 INVITATION_NOT_DELIVERED` when the mail server refused it or the platform only logs e-mails; `409 INVITATION_NOT_POSSIBLE` for accepted, disabled or archived accounts |
+| POST | `/admin/restaurants/{id}/owners` | platform.restaurants.manage | `{name, email}` — invites a new owner (handover, or the only owner lost access); the previous owner stays until the new one deactivates them → `201 {data: User}` |
 | GET | `/admin/api-tokens?restaurant_id=&active=` | Every restaurant's tokens, integration and device (`kind`) |
 | POST | `/admin/api-tokens/{id}/revoke` | Incident response |
 | GET | `/admin/audit-logs?restaurant_id=&action=` | `[platform.audit.view]`, action = prefix |

@@ -2,14 +2,15 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, History, Mail, MoreHorizontal } from "lucide-react"
+import { ArrowLeft, History, Mail, MoreHorizontal, UserPlus } from "lucide-react"
 import { canInviteAgain, InvitationBadge } from "@/components/admin/invitation-badge"
 import { MailWarning } from "@/components/admin/mail-warning"
 import { InviteAgainDialog, RestaurantActions, RestaurantStatusBadge } from "@/components/admin/restaurant-actions"
+import { InviteOwnerDialog } from "@/components/admin/invite-owner-dialog"
 import { RestaurantTokens } from "@/components/admin/restaurant-tokens"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UserStatusBadge } from "@/components/common/user-status-badge"
@@ -22,6 +23,7 @@ import { formatMoney } from "@/lib/money"
 function RestaurantContent({ id }: { id: string }) {
   const { data, isLoading, isError } = useAdminRestaurant(id)
   const [inviting, setInviting] = useState<StaffUser | null>(null)
+  const [invitingOwner, setInvitingOwner] = useState(false)
 
   if (isError)
     return (
@@ -109,6 +111,11 @@ function RestaurantContent({ id }: { id: string }) {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Users</CardTitle>
+            <CardAction>
+              <Button variant="outline" size="sm" onClick={() => setInvitingOwner(true)}>
+                <UserPlus /> Invite owner
+              </Button>
+            </CardAction>
           </CardHeader>
           <CardContent className="px-0">
             <Table>
@@ -177,6 +184,7 @@ function RestaurantContent({ id }: { id: string }) {
           onOpenChange={(o) => (!o ? setInviting(null) : undefined)}
         />
       ) : null}
+      <InviteOwnerDialog restaurantId={r.id} open={invitingOwner} onOpenChange={setInvitingOwner} />
     </div>
   )
 }

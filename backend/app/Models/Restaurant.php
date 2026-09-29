@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Enums\RestaurantStatus;
 use App\Enums\RoleSlug;
+use App\Enums\UserStatus;
 use Database\Factories\RestaurantFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -99,7 +100,8 @@ class Restaurant extends Model
     {
         return $this->hasOne(User::class)->ofMany(
             ['created_at' => 'min', 'id' => 'min'],
-            static fn ($q) => $q->whereHas('role', static fn ($r) => $r->where('slug', RoleSlug::Owner->value)),
+            // The first owner who can still act for the restaurant (a deactivated one never).
+            static fn ($q) => $q->where('status', UserStatus::Active->value)->whereHas('role', static fn ($r) => $r->where('slug', RoleSlug::Owner->value)),
         );
     }
 

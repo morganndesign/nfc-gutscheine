@@ -133,6 +133,28 @@ final class OwnerInvitationTest extends TestCase
         $this->getJson('/api/v1/admin/restaurants')->assertJsonPath('data.0.owner.invitation.status', 'accepted');
     }
 
+    public function test_the_platform_invites_a_new_owner_when_the_restaurant_changes_hands(): void
+    {
+        $this->actingAsAdmin();
+        $restaurant = $this->onboard();
+        $old = User::query()->where('email', 'hanna@hirsch.test')->sole();
+
+        $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/owners", ['name' => 'Paul Neu', 'email' => 'hanna@hirsch.test'])->assertStatus(422);
+        $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/owners", ['name' => 'Paul Neu', 'email' => 'Paul@Neu.test'])->assertCreated()
+            ->assertJsonPath('data.role.slug', 'owner')
+            ->assertJsonPath('data.invitation.status', 'pending');
+        $this->assertCount(2, $this->sentMails());
+        $new = User::query()->where('email', 'paul@neu.test')->sole();
+
+        // The new owner takes over and deactivates the previous one; the restaurant's owner is now the active one.
+        Sanctum::actingAs($new, ['*']);
+        $this->postJson("/api/v1/users/{$old->id}/deactivate")->assertOk();
+        $this->assertSame($new->id, $restaurant->refresh()->owner()->first()?->id);
+
+        // Owners never invite other restaurants' owners through this path.
+        $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/owners", ['name' => 'X', 'email' => 'x@example.test'])->assertForbidden();
+    }
+
     public function test_invitation_link_expires_after_72_hours(): void
     {
         $this->actingAsAdmin();

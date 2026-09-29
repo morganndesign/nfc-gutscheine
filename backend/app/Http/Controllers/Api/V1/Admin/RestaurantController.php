@@ -24,6 +24,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Arr;
+use Illuminate\Validation\Rule;
 
 final class RestaurantController extends Controller
 {
@@ -136,6 +137,20 @@ final class RestaurantController extends Controller
         $this->restaurants->delete(Actor::fromRequest($request), $restaurant, (string) $request->validated('confirm'));
 
         return response()->json(['message' => "{$restaurant->name} was deleted."]);
+    }
+
+    /** POST /admin/restaurants/{restaurant}/owners: invite a new owner (handover, or the only owner lost access). */
+    public function inviteOwner(Request $request, Restaurant $restaurant): JsonResponse
+    {
+        /** @var array{name: string, email: string} $data */
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:160'],
+            'email' => ['required', 'email:rfc', 'max:191', Rule::unique('users', 'email')],
+        ]);
+        $owner = $this->restaurants->inviteOwner(Actor::fromRequest($request), $restaurant, $data)->load('role');
+        $this->attachInvitations([$owner]);
+
+        return response()->json(['data' => UserResource::make($owner)->resolve($request)], 201);
     }
 
     public function resendOwnerInvitation(ResendInvitationRequest $request, Restaurant $restaurant): JsonResponse
