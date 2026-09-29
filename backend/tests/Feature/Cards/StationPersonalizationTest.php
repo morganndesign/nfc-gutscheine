@@ -212,6 +212,24 @@ final class StationPersonalizationTest extends TestCase
         $this->assertSame('CARD_PERSONALIZATION_FAILED:auth:91AE', $refusal->reason);
     }
 
+    public function test_a_chip_that_is_not_a_genuine_nxp_chip_is_never_keyed(): void
+    {
+        $batch = $this->stationBatch(1);
+        $this->actingAsStation();
+        $fake = Ntag424Chip::counterfeit();
+
+        $this->station($fake, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_genuine');
+        $card = Card::query()->withoutGlobalScopes()->where('uid', $fake->uid)->firstOrFail();
+        $this->assertSame(CardState::QaFailed, $card->state);
+        $this->assertSame(0, $fake->keyVersion(0), 'no key was changed');
+        $this->station($fake, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'qa_failed');
+
+        // Its place in the order goes to a genuine chip.
+        $genuine = Ntag424Chip::factory();
+        $this->station($genuine, $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
+        $this->assertNotNull(Card::query()->withoutGlobalScopes()->where('uid', $genuine->uid)->value('originality_signature'));
+    }
+
     public function test_a_tampered_answer_breaks_the_session(): void
     {
         $batch = $this->stationBatch();

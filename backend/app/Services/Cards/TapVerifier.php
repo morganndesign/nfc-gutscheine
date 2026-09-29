@@ -31,26 +31,40 @@ final class TapVerifier
 
     public function verify(string $keySetVersion, string $e, string $m, Actor $actor, string $purpose = 'balance'): Card
     {
+        $card = null;
         try {
-            [$card, $counter] = $this->check($keySetVersion, $e, $m);
+            [$card, $counter, $previous] = $this->check($keySetVersion, $e, $m, $card);
         } catch (DomainException $refusal) {
-            $this->events->refused(SecurityEventType::CardTap, $actor, $refusal, data: ['key_set' => mb_substr($keySetVersion, 0, 32), 'purpose' => $purpose]);
+            // A replay names the genuine card whose URL was copied: fraud monitoring counts it per card.
+            $this->events->refused(SecurityEventType::CardTap, $actor, $refusal, data: array_filter([
+                'key_set' => mb_substr($keySetVersion, 0, 32),
+                'purpose' => $purpose,
+                'card_number' => $card?->card_number,
+            ], static fn (?string $v): bool => $v !== null), restaurantId: $card?->restaurant_id);
 
             throw $refusal;
         }
 
-        $this->events->record(SecurityEventType::CardTap, $actor, data: [
+        $this->events->record(SecurityEventType::CardTap, $actor, data: array_filter([
             'key_set' => $keySetVersion,
             'card_number' => $card->card_number,
             'counter' => $counter,
+            // Reads between two verified taps that never reached the server (skimming shows up here).
+            'counter_gap' => $previous !== null ? $counter - $previous : null,
             'purpose' => $purpose,
-        ], restaurantId: $card->restaurant_id);
+        ], static fn (mixed $v): bool => $v !== null), restaurantId: $card->restaurant_id);
 
         return $card;
     }
 
-    /** @return array{0: Card, 1: int} */
-    private function check(string $keySetVersion, string $e, string $m): array
+    /**
+     * @param  Card|null  $identified  set to the card as soon as its MAC is verified (also for a replay)
+     *
+     * @param-out Card $identified
+     *
+     * @return array{0: Card, 1: int, 2: int|null} card, accepted counter, the previous one
+     */
+    private function check(string $keySetVersion, string $e, string $m, ?Card &$identified): array
     {
         /** @var KeySet|null $keySet */
         $keySet = preg_match('/^[a-z0-9][a-z0-9._-]{0,31}$/', $keySetVersion) === 1
@@ -78,6 +92,8 @@ final class TapVerifier
         );
 
         /** @var Card $card */
+        $identified = $card;
+        $previous = $card->sdm_counter;
         $counter = $message->readCounter;
         // Compare-and-set: only a counter higher than every earlier one is accepted.
         $updated = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())
@@ -87,6 +103,6 @@ final class TapVerifier
             throw new SunReplayedException;
         }
 
-        return [$card->refresh(), $counter];
+        return [$card->refresh(), $counter, $previous];
     }
 }

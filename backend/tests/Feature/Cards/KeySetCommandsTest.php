@@ -11,6 +11,7 @@ use App\Enums\KeySetStatus;
 use App\Models\KeySet;
 use App\Services\Cards\CardLifecycle;
 use App\Support\Actor;
+use Tests\Support\TestOriginality;
 use Tests\Support\WithCards;
 use Tests\TestCase;
 
@@ -33,6 +34,7 @@ final class KeySetCommandsTest extends TestCase
         $this->app->forgetInstance(LocalKeystore::class);
         $this->app->forgetInstance(CryptoProvider::class);
         $this->artisan('crypto:keystore:init')->assertSuccessful();
+        config(['giftcard.cards.originality_public_key' => TestOriginality::publicKey()]);
     }
 
     protected function tearDown(): void

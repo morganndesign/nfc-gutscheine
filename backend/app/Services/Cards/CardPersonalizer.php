@@ -9,6 +9,7 @@ use App\Crypto\Ntag424\CardKeys;
 use App\Crypto\Ntag424\CardProfile;
 use App\Crypto\Ntag424\Ev2FirstAuthentication;
 use App\Crypto\Ntag424\Ev2Session;
+use App\Crypto\Ntag424\OriginalitySignature;
 use App\Crypto\Ntag424\SecureMessaging;
 use App\Crypto\Ntag424\TapUrl;
 use App\Enums\CardBatchStatus;
@@ -79,6 +80,8 @@ final class CardPersonalizer
                 $card = $this->lifecycle->register($batch, $rfUid, $actor);
             } elseif ($card->batch_id !== $batch->getKey()) {
                 $this->fail('other_batch');
+            } elseif ($card->state === CardState::QaFailed) {
+                $this->fail('qa_failed');
             } elseif (! in_array($card->state, [CardState::Manufactured, CardState::Personalized], true)) {
                 $this->fail('already_personalized');
             }
@@ -91,7 +94,7 @@ final class CardPersonalizer
                 'batch' => $batch->getKey(),
                 'keySet' => $keySet->version,
                 'k0' => 'factory',
-            ], 'auth', ['select', 'write', 'auth1'], [self::selectApplication(), $write, self::authenticateFirst(0)]);
+            ], 'auth', ['select', 'signature', 'write', 'auth1'], [self::selectApplication(), self::READ_SIG, $write, self::authenticateFirst(0)]);
         });
     }
 
@@ -109,7 +112,7 @@ final class CardPersonalizer
         $stage = (string) $state['stage'];
 
         return $this->guard($actor, $stage, null, $card, fn (): PersonalizationStep => match ($stage) {
-            'auth' => $this->afterAuthStart($card, $state, $responses),
+            'auth' => $this->afterAuthStart($card, $state, $responses, $actor),
             'auth2' => $this->afterAuthAnswer($card, $state, $responses),
             'versions' => $this->afterVersions($card, $state, $responses),
             'script' => $this->afterScript($card, $state, $responses, $actor),
@@ -122,7 +125,7 @@ final class CardPersonalizer
      * @param  array<string, mixed>  $state
      * @param  list<string>  $responses
      */
-    private function afterAuthStart(Card $card, array $state, array $responses): PersonalizationStep
+    private function afterAuthStart(Card $card, array $state, array $responses, Actor $actor): PersonalizationStep
     {
         /** @var list<string> $expect */
         $expect = $state['expect'];
@@ -131,6 +134,8 @@ final class CardPersonalizer
             $sw = self::statusWord($response);
             $ok = match ($kind) {
                 'select' => $sw === '9000',
+                // Originality: only a genuine NXP NTAG 424 DNA holds NXP's signature of its UID.
+                'signature' => in_array($sw, ['9100', '9190'], true) && $this->genuine($card, substr($response, 0, -2), $actor),
                 // A chip keyed before no longer lets anyone write: its NDEF file was written first.
                 'write' => $sw === '9100' || $sw === '919D',
                 default => $sw === '91AF' && strlen($response) === 18,
@@ -382,6 +387,27 @@ final class CardPersonalizer
         $batch = CardBatch::query()->withoutGlobalScopes()->findOrFail($card->batch_id);
 
         return ['card_number' => $card->card_number, 'batch_code' => $batch->batch_code, 'stage' => $stage];
+    }
+
+    /** Read_Sig (NT4H2421Gx §10.12.1): the 56-byte ECDSA signature of the UID, plain, before authentication. */
+    private const READ_SIG = "\x90\x3C\x00\x00\x01\x00\x00";
+
+    /** Checks the chip's originality signature against the configured NXP key and keeps it with the card. */
+    private function genuine(Card $card, string $signature, Actor $actor): bool
+    {
+        $key = (string) config('giftcard.cards.originality_public_key');
+        if (! OriginalitySignature::verify($card->uid, $signature, $key)) {
+            // Out of the batch for good: it never gets keys, and it frees its place for a genuine chip.
+            if ($card->state === CardState::Manufactured) {
+                $this->lifecycle->transition($card, CardState::QaFailed, 'not a genuine NXP chip', $actor);
+            }
+            $this->fail('not_genuine');
+        }
+        if ($card->originality_signature === null) {
+            $card->forceFill(['originality_signature' => strtoupper(bin2hex($signature))])->save();
+        }
+
+        return true;
     }
 
     private static function selectApplication(): string

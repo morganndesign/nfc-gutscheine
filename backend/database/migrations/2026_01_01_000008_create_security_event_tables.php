@@ -63,6 +63,34 @@ return new class extends Migration
             $table->timestamp('sealed_at', 6);
         });
 
+        // Fraud monitoring: rules over the event stream raise alerts for the platform (SecurityMonitor).
+        Schema::create('security_alerts', function (Blueprint $table): void {
+            $table->char('id', 26)->primary();
+            $table->string('rule', 48);
+            $table->string('severity', 16);
+            $table->uuid('restaurant_id')->nullable();
+            // What the alert is about, as the stream names it: a card number, a user, a device, a network.
+            $table->string('subject', 96)->nullable();
+            $table->unsignedInteger('occurrences');
+            $table->unsignedBigInteger('first_event_seq');
+            $table->unsignedBigInteger('last_event_seq');
+            $table->timestamp('first_seen_at', 6);
+            $table->timestamp('last_seen_at', 6);
+            $table->string('status', 16);
+            $table->uuid('acknowledged_by')->nullable();
+            $table->timestamp('acknowledged_at')->nullable();
+            $table->string('note', 500)->nullable();
+            $table->timestamps();
+            $table->index(['status', 'severity', 'last_seen_at']);
+            $table->index(['rule', 'subject', 'last_seen_at']);
+        });
+
+        Schema::create('security_monitor_cursors', function (Blueprint $table): void {
+            $table->string('name', 32)->primary();
+            $table->unsignedBigInteger('seq');
+            $table->timestamp('updated_at', 6)->nullable();
+        });
+
         AppendOnlyTriggers::create('security_events');
         AppendOnlyTriggers::create('security_event_seals');
     }
@@ -71,6 +99,8 @@ return new class extends Migration
     {
         AppendOnlyTriggers::drop('security_event_seals');
         AppendOnlyTriggers::drop('security_events');
+        Schema::dropIfExists('security_monitor_cursors');
+        Schema::dropIfExists('security_alerts');
         Schema::dropIfExists('security_event_seals');
         Schema::dropIfExists('security_events');
     }

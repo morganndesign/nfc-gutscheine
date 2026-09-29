@@ -48,6 +48,8 @@ trait WithCards
         $this->app->forgetInstance(CryptoProvider::class);
         $this->artisan('crypto:keystore:init')->assertSuccessful();
         $this->artisan('cards:key-set:create', ['version' => $keySet])->assertSuccessful();
+        // Simulated chips are signed by a stand-in for NXP's originality key.
+        config(['giftcard.cards.originality_public_key' => TestOriginality::publicKey()]);
     }
 
     protected function tearDownCardKeystore(): void

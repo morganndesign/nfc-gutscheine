@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
-use App\Crypto\Ntag424\CardKeys;
 use App\Crypto\Ntag424\CardProfile;
 use App\Crypto\Ntag424\TapUrl;
 use App\Crypto\Primitives\Aes;
@@ -15,8 +14,8 @@ use App\Crypto\Primitives\Cmac;
  * command builders: ISO select / read, WriteData, AuthenticateEV2First, GetKeyVersion (CommMode.MAC),
  * ChangeFileSettings and ChangeKey (CommMode.Full), SDM mirroring of encrypted PICCData and the SDM MAC.
  *
- * A factory chip has all-zero keys (version 00) and a freely writable NDEF file; {@see self::personalized()}
- * gives a chip as a manufacturer's personalisation would deliver it.
+ * A factory chip has all-zero keys (version 00), a freely writable NDEF file and an originality signature of its
+ * UID ({@see TestOriginality}).
  */
 final class Ntag424Chip
 {
@@ -49,7 +48,7 @@ final class Ntag424Chip
     /** Every APDU the chip received, for assertions. @var list<string> */
     public array $received = [];
 
-    public function __construct(public readonly string $uid)
+    public function __construct(public readonly string $uid, private readonly bool $genuine = true)
     {
         $this->keys = array_fill(0, 5, CardProfile::FACTORY_KEY);
         $this->ndef = str_repeat("\0", 256);
@@ -60,18 +59,10 @@ final class Ntag424Chip
         return new self($uid ?? "\x04".random_bytes(6));
     }
 
-    /** A chip carrying the GiftCard Pro profile with the keys the server derives for it. */
-    public static function personalized(CardKeys $keys, string $uid, string $keySet): self
+    /** A chip that behaves like an NTAG 424 DNA but was not made by NXP (no valid originality signature). */
+    public static function counterfeit(): self
     {
-        $chip = new self($uid);
-        $chip->keys = [$keys->masterKey($uid), $keys->metaReadKey(), $keys->sdmMacKey($uid), $keys->challengeKey($uid), CardProfile::FACTORY_KEY];
-        $chip->versions = [1, 1, 1, 1, 0];
-        $template = TapUrl::ndefTemplate($keySet);
-        $chip->ndef = str_pad($template['file'], 256, "\0");
-        $chip->access = "\x00\xE0";
-        $chip->sdm = ['metaRead' => 1, 'fileRead' => 2, 'picc' => $template['piccOffset'], 'macInput' => $template['macOffset'], 'mac' => $template['macOffset']];
-
-        return $chip;
+        return new self("\x04".random_bytes(6), genuine: false);
     }
 
     public function uidHex(): string
@@ -135,6 +126,7 @@ final class Ntag424Chip
         $data = strlen($apdu) > 5 ? substr($apdu, 5, ord($apdu[4])) : '';
 
         return match ($ins) {
+            0x3C => $this->readSig(),
             0x71 => $this->authenticatePart1($data),
             0xAF => $this->authenticatePart2($data),
             0x64 => $this->getKeyVersion($data),
@@ -217,6 +209,16 @@ final class Ntag424Chip
         $this->ndef = substr_replace($this->ndef, $content, $offset, $length);
 
         return "\x91\x00";
+    }
+
+    /** NXP's signature of the UID (here: under the test stand-in key); null = not a genuine chip. */
+    public ?string $originalitySignature = null;
+
+    private function readSig(): string
+    {
+        $this->originalitySignature ??= $this->genuine ? TestOriginality::sign($this->uid) : random_bytes(56);
+
+        return $this->originalitySignature."\x91\x00";
     }
 
     private function authenticatePart1(string $data): string

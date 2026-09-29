@@ -52,7 +52,9 @@ final class CardLifecycle
                 throw new CardStateException('Cards are registered only while their batch is in production.');
             }
             $registered = Card::query()->withoutGlobalScopes()->where('batch_id', $locked->getKey())->count();
-            if ($registered >= $locked->quantity_ordered) {
+            // Chips refused at the station (not genuine) keep their number but not their place in the order.
+            $usable = Card::query()->withoutGlobalScopes()->where('batch_id', $locked->getKey())->where('state', '!=', CardState::QaFailed->value)->count();
+            if ($usable >= $locked->quantity_ordered) {
                 throw new CardStateException('The batch already has every card it ordered.');
             }
             if (Card::query()->withoutGlobalScopes()->where('uid', $uid)->exists()) {

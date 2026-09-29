@@ -1,12 +1,23 @@
 <?php
 
 declare(strict_types=1);
+use App\Crypto\Ntag424\OriginalitySignature;
 
 return [
     'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
 
     // Origin written into every card's NDEF URL (https://t.giftcardpro.at/{k}?e=…&m=…). Only URLs of this origin
     // are accepted from a tapped card.
+    'fraud' => [
+        // Reads of a card between two verified taps above which the card is flagged (read elsewhere, skimming).
+        'counter_gap' => (int) env('FRAUD_COUNTER_GAP', 50),
+    ],
+
+    'cards' => [
+        // NXP's public key for the NTAG 424 DNA originality signature (AN12196). Only genuine chips are keyed.
+        'originality_public_key' => OriginalitySignature::NXP_PUBLIC_KEY,
+    ],
+
     'tap_url' => rtrim((string) env('TAP_URL', 'https://t.giftcardpro.at'), '/'),
 
     'voucher_number' => [

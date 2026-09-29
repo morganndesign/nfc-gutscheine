@@ -478,6 +478,8 @@ Platform administrators operate restaurants; they never act inside a restaurant 
 | GET | `/admin/api-tokens?restaurant_id=&active=` | Every restaurant's tokens, integration and device (`kind`) |
 | POST | `/admin/api-tokens/{id}/revoke` | Incident response |
 | GET | `/admin/audit-logs?restaurant_id=&action=` | `[platform.audit.view]`, action = prefix |
+| GET | `/admin/security-alerts?status=open\|acknowledged&severity=warning\|high\|critical` | `[platform.audit.view]` — fraud and attack alerts (`rule`, `severity`, `subject`, `occurrences`, first/last event `seq` for the JSONL export); open ones first |
+| POST | `/admin/security-alerts/{id}/acknowledge` | `[platform.audit.view]` `{note}` |
 | GET / PUT | `/admin/system-settings` | `[platform.settings.manage]` — PUT `{settings: [{key, value}]}` |
 | GET | `/admin/mail` | `[platform.settings.manage]` → `{mailer, delivers, from_address, from_name, host, port, problem}` (no credentials) |
 | POST | `/admin/mail/test` | `[platform.settings.manage]` `{to?}` — test e-mail to `to` or the signed-in administrator; the recipient is validated first (with `MAIL_VERIFY_DOMAINS`, its domain must have a mail server). `422 MAIL_RECIPIENT_REJECTED` (550–553), `422 MAIL_NOT_DELIVERED` for other failures |
@@ -513,7 +515,9 @@ POST /admin/personalizations/{personalization}
 `GET /admin/station/batches` lists the batches the station may take:
 `[{id, batch_code, restaurant, quantity_ordered, registered, qa_passed}]`.
 
-Rounds: register the chip (`manufactured`), write the NDEF tap URL, AuthenticateEV2First K0 (factory key, or the
+Rounds: register the chip (`manufactured`), check NXP's originality signature of its UID (Read_Sig, ECDSA
+secp224r1; a chip that is not a genuine NTAG 424 DNA becomes `qa_failed` with reason `not_genuine` and never gets
+keys), write the NDEF tap URL, AuthenticateEV2First K0 (factory key, or the
 card's own K0 when the chip was keyed before), GetKeyVersion 1–3, ChangeFileSettings (SDM: encrypted PICCData
 under K1, MAC under K2) and ChangeKey K1, K2, K3, K0 (only keys not yet at version 01; K0 last) → `personalized`;
 then a guest-style read (SUN verified, counter stored) and a K3 challenge → `qa_passed`. Each round is valid 60 s

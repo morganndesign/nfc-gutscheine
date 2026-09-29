@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\CardBatchController as AdminCardBatchContr
 use App\Http\Controllers\Api\V1\Admin\CardStationController;
 use App\Http\Controllers\Api\V1\Admin\PlatformController;
 use App\Http\Controllers\Api\V1\Admin\RestaurantController;
+use App\Http\Controllers\Api\V1\Admin\SecurityAlertController;
 use App\Http\Controllers\Api\V1\ApiTokenController;
 use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\AuditLogController;
@@ -166,6 +167,9 @@ Route::prefix('v1')->group(function (): void {
             Route::post('restaurants/{restaurant}/invitation', [RestaurantController::class, 'resendOwnerInvitation']);
             Route::post('restaurants/{restaurant}/users/{user}/invitation', [RestaurantController::class, 'resendUserInvitation']);
             Route::get('audit-logs', [PlatformController::class, 'auditLogs'])->middleware('can:platform.audit.view');
+            Route::get('security-alerts', [SecurityAlertController::class, 'index'])->middleware('can:platform.audit.view');
+            Route::post('security-alerts/{alert}/acknowledge', [SecurityAlertController::class, 'acknowledge'])
+                ->where('alert', '[0-9a-hjkmnp-tv-zA-HJKMNP-TV-Z]{26}')->middleware('can:platform.audit.view');
             // Incident response: list and revoke any restaurant's access tokens (audit S2).
             Route::get('api-tokens', [AdminApiTokenController::class, 'index']);
             Route::post('api-tokens/{token}/revoke', [AdminApiTokenController::class, 'revoke'])->whereUuid('token');

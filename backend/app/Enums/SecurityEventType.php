@@ -113,7 +113,7 @@ enum SecurityEventType: string
             self::MediumIssue => ['medium_type', 'cause'],
             self::MediumRevoke => ['medium_type', 'cause'],
             self::CardTransition => ['card_number', 'from_state', 'to_state', 'cause', 'batch_code'],
-            self::CardTap => ['key_set', 'card_number', 'counter', 'purpose'],
+            self::CardTap => ['key_set', 'card_number', 'counter', 'counter_gap', 'purpose'],
             self::CardAuthenticate => ['card_number', 'purpose', 'counter', 'presentment_id', 'stage'],
             self::CardBatchStatus => ['batch_code', 'from_status', 'to_status', 'cards_moved'],
             self::CardPersonalize => ['card_number', 'batch_code', 'stage'],

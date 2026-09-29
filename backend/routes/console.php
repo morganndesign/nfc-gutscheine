@@ -18,6 +18,8 @@ Schedule::command('vouchers:notify-expiring')->dailyAt('10:00')->timezone($tz)->
 
 // Security event stream: hash-chain settled events into seals (ADR-003).
 Schedule::command('giftcard:seal-security-events')->everyMinute()->withoutOverlapping()->onOneServer();
+// Fraud and attack rules over new events; high and critical alerts are e-mailed to operations.
+Schedule::command('giftcard:monitor-security-events')->everyMinute()->withoutOverlapping()->onOneServer();
 
 // Tamper evidence: recompute every hash chain, every voucher balance from its ledger and every event seal.
 Schedule::command('giftcard:verify-chains')->dailyAt('02:30')->timezone($tz)->withoutOverlapping()->onOneServer();
