@@ -93,7 +93,11 @@ class WaiterApi {
   }
 
   /// A card, step 2: its answer to the relayed command. Returns the presentment, as a scan does.
-  Future<Presentment> completeCardPresentment(String authentication, String responseHex, {CancelToken? cancelToken}) async {
+  Future<Presentment> completeCardPresentment(
+    String authentication,
+    String responseHex, {
+    CancelToken? cancelToken,
+  }) async {
     final ApiResponse r = await _client.send(
       'POST',
       '/presentments/cards/$authentication',
@@ -102,6 +106,34 @@ class WaiterApi {
       cancelToken: cancelToken,
     );
     return _parse(r, Presentment.fromJson);
+  }
+
+  /// Station: the batches waiting for personalisation.
+  Future<List<StationBatch>> stationBatches() async {
+    final ApiResponse r = await _client.send('GET', '/admin/station/batches');
+    return _parse(r, StationBatch.listFromJson);
+  }
+
+  /// Station, first round for a chip on the phone (its radio UID).
+  Future<PersonalizationRound> beginPersonalization(String batchId, String rfUidHex) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/admin/card-batches/$batchId/personalizations',
+      body: <String, Object?>{'rf_uid': rfUidHex},
+      timeout: ApiTimeouts.lookup,
+    );
+    return _parse(r, PersonalizationRound.fromJson);
+  }
+
+  /// Station, next round: the chip's answers to the last round's commands.
+  Future<PersonalizationRound> continuePersonalization(String id, List<String> responsesHex) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/admin/personalizations/$id',
+      body: <String, Object?>{'responses': responsesHex},
+      timeout: ApiTimeouts.lookup,
+    );
+    return _parse(r, PersonalizationRound.fromJson);
   }
 
   /// One redemption attempt. The same [idempotencyKey] on a retry replays the

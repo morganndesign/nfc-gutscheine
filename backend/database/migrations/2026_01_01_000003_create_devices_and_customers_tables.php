@@ -12,7 +12,8 @@ return new class extends Migration
     {
         Schema::create('devices', function (Blueprint $table): void {
             $table->uuid('id')->primary();
-            $table->foreignUuid('restaurant_id')->constrained()->restrictOnDelete();
+            // Null: a platform device (the personalisation station), never visible to a restaurant.
+            $table->foreignUuid('restaurant_id')->nullable()->constrained()->restrictOnDelete();
             $table->foreignUuid('registered_by')->nullable()->constrained('users')->nullOnDelete();
             $table->string('name', 120);
             $table->string('type', 30)->default('phone');

@@ -32,14 +32,18 @@ final class DeviceService
     ) {}
 
     /**
+     * @param  Restaurant|null  $restaurant  null: a platform device (the personalisation station)
      * @param  string|null  $name  Name reported by a native app on first sign-in ("Pixel 7"); browsers get a name derived from the user agent.
      */
-    public function resolve(Restaurant $restaurant, User $user, string $deviceId, ?string $userAgent, ?string $ip, ?string $name = null): Device
+    public function resolve(?Restaurant $restaurant, User $user, string $deviceId, ?string $userAgent, ?string $ip, ?string $name = null): Device
     {
-        $fingerprint = hash('sha256', $restaurant->getKey().'|'.$deviceId);
+        $fingerprint = self::fingerprint($restaurant?->getKey(), $deviceId);
+        $scoped = fn () => $restaurant !== null
+            ? Device::query()->forRestaurant($restaurant)
+            : Device::query()->withoutGlobalScopes()->whereNull('restaurant_id');
 
         /** @var Device|null $device */
-        $device = Device::query()->forRestaurant($restaurant)->withTrashed()->where('fingerprint', $fingerprint)->first();
+        $device = $scoped()->withTrashed()->where('fingerprint', $fingerprint)->first();
 
         if ($device === null) {
             $device = new Device;
@@ -50,7 +54,7 @@ final class DeviceService
                 'platform' => $userAgent !== null ? mb_substr($userAgent, 0, 120) : null,
             ]);
             $device->forceFill([
-                'restaurant_id' => $restaurant->getKey(),
+                'restaurant_id' => $restaurant?->getKey(),
                 'registered_by' => $user->getKey(),
                 'status' => DeviceStatus::Active,
                 'last_seen_at' => Carbon::now(),
@@ -58,10 +62,10 @@ final class DeviceService
                 'last_user_id' => $user->getKey(),
             ])->save();
 
-            $this->audit->log('device.registered', new Actor($user, $device, $ip, $userAgent), $device, null, ['name' => $device->name], restaurantId: $restaurant->getKey());
+            $this->audit->log('device.registered', new Actor($user, $device, $ip, $userAgent), $device, null, ['name' => $device->name], restaurantId: $restaurant?->getKey());
             $this->events->record(SecurityEventType::DeviceRegister, new Actor($user, $device, $ip, $userAgent), subject: $device, data: [
                 'platform' => $device->type,
-            ], restaurantId: $restaurant->getKey());
+            ], restaurantId: $restaurant?->getKey());
 
             return $device;
         }
@@ -69,7 +73,7 @@ final class DeviceService
         if ($device->last_seen_at === null
             || $device->last_seen_at->diffInSeconds(Carbon::now()) > self::TOUCH_INTERVAL_SECONDS
             || $device->last_user_id !== $user->getKey()) {
-            Device::query()->forRestaurant($restaurant)->whereKey($device->getKey())->update([
+            $scoped()->whereKey($device->getKey())->update([
                 'last_seen_at' => Carbon::now(),
                 'last_ip' => $ip,
                 'last_user_id' => $user->getKey(),
@@ -79,12 +83,18 @@ final class DeviceService
         return $device;
     }
 
+    /** A client's device id, bound to its restaurant (or the platform): the same phone is a new device elsewhere. */
+    public static function fingerprint(?string $restaurantId, string $deviceId): string
+    {
+        return hash('sha256', ($restaurantId ?? 'platform').'|'.$deviceId);
+    }
+
     /** The registered device for this client id, without registering a new one. */
     public function find(Restaurant $restaurant, string $deviceId): ?Device
     {
         /** @var Device|null */
         return Device::query()->forRestaurant($restaurant)
-            ->where('fingerprint', hash('sha256', $restaurant->getKey().'|'.$deviceId))
+            ->where('fingerprint', self::fingerprint($restaurant->getKey(), $deviceId))
             ->first();
     }
 

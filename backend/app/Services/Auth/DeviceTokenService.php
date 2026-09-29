@@ -25,7 +25,8 @@ use Laravel\Sanctum\NewAccessToken;
  * Sign-in tokens for the native waiter app (GiftCard Waiter).
  *
  * A token can present and redeem vouchers; for managers and owners (roles with `vouchers.sell`) it can also
- * sell a voucher in the app, owners also complimentary ones. It is bound to the phone that signed in (X-Device-Id), expires after
+ * sell a voucher in the app, owners also complimentary ones. Platform staff get a station token (platform device,
+ * personalisation only). It is bound to the phone that signed in (X-Device-Id), expires after
  * `device_token_days` without use and is renewed while the phone is in use. Revoking the device in
  * Devices stops the token immediately. One active token per person and phone: signing in again
  * replaces the previous token.
@@ -47,10 +48,16 @@ final class DeviceTokenService
     /** Physical cards in the app: confirm a delivery, link a card to a voucher (when the role has it). */
     public const CARD_ABILITIES = [Permission::CardsReceive->value, Permission::CardsBind->value];
 
+    /** Platform staff sign into the app only as the personalisation station (internal, never vouchers). */
+    public const STATION_ABILITIES = [Permission::PlatformCardsPersonalize->value];
+
     /** @return list<string> */
     public static function abilitiesFor(User $user): array
     {
         $granted = $user->role->permissionSlugs();
+        if ($user->isPlatformAdmin()) {
+            return array_values(array_intersect(self::STATION_ABILITIES, $granted));
+        }
         $issuing = in_array(Permission::VouchersSell->value, $granted, true) ? array_intersect(self::ISSUING_ABILITIES, $granted) : [];
 
         return [...self::ABILITIES, ...array_values($issuing), ...array_values(array_intersect(self::CARD_ABILITIES, $granted))];
@@ -66,12 +73,13 @@ final class DeviceTokenService
     {
         $restaurant = $user->restaurant;
         $granted = $user->role->permissionSlugs();
+        $station = $user->isPlatformAdmin();
 
-        if ($restaurant === null || array_diff(self::ABILITIES, $granted) !== []) {
+        if ($station ? self::abilitiesFor($user) === [] : ($restaurant === null || array_diff(self::ABILITIES, $granted) !== [])) {
             throw new AuthorizationException;
         }
 
-        $device = $this->devices->resolve($restaurant, $user, $deviceId, $request->userAgent(), $request->ip(), $deviceName);
+        $device = $this->devices->resolve($station ? null : $restaurant, $user, $deviceId, $request->userAgent(), $request->ip(), $deviceName);
 
         $actor = new Actor($user, $device, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'));
 
@@ -148,7 +156,7 @@ final class DeviceTokenService
             : null;
 
         $fingerprint = is_string($deviceHeader) && $deviceHeader !== ''
-            ? hash('sha256', $token->restaurant_id.'|'.$deviceHeader)
+            ? DeviceService::fingerprint($token->restaurant_id, $deviceHeader)
             : null;
 
         if ($device === null || $fingerprint === null || ! hash_equals($device->fingerprint, $fingerprint)) {

@@ -8,6 +8,7 @@ use App\Enums\Permission;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Models\Voucher;
+use App\Services\Auth\DeviceTokenService;
 use App\Services\Presentments\PresentmentService;
 use App\Services\Presentments\PresentmentVerifier;
 use App\Services\Presentments\PrintableQrVerifier;
@@ -84,9 +85,15 @@ final class AppServiceProvider extends ServiceProvider
 
             $user = $token->tokenable;
 
-            // Platform administrators never authenticate with a token (audit S2), only with a session.
-            if (! $user instanceof User || $user->isPlatformAdmin()) {
+            // Platform administrators never authenticate with a token (audit S2), only with a session. The one
+            // exception is the station token: bound to one registered device, personalisation only.
+            if (! $user instanceof User) {
                 return false;
+            }
+            if ($user->isPlatformAdmin()) {
+                return $token->device_id !== null
+                    && array_diff((array) $token->abilities, DeviceTokenService::STATION_ABILITIES) === []
+                    && $user->isActive();
             }
 
             // Waiter app tokens of a deactivated account still identify the caller, so EnforceDeviceToken can answer

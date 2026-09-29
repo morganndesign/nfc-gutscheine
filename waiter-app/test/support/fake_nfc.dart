@@ -14,6 +14,9 @@ class FakeNfcRelay implements NfcRelay {
   /// The card that will be tapped next; null: the waiter never taps (the future stays open until cancelled).
   FakeCard? card = FakeCard();
 
+  /// Cards tapped one after the other before [card] (the station's stack of blanks).
+  final List<FakeCard> queue = <FakeCard>[];
+
   /// Fails `start` with this instead of returning a card.
   NfcFailure? startFailure;
 
@@ -34,7 +37,7 @@ class FakeNfcRelay implements NfcRelay {
   Future<CardLink> start({required String prompt}) {
     prompts.add(prompt);
     if (startFailure != null) return Future<CardLink>.error(NfcRelayException(startFailure!));
-    final FakeCard? next = card;
+    final FakeCard? next = queue.isNotEmpty ? queue.removeAt(0) : card;
     if (next == null) {
       _waiting = Completer<CardLink>();
       return _waiting!.future;
@@ -43,7 +46,20 @@ class FakeNfcRelay implements NfcRelay {
   }
 
   /// The waiter closes the iPhone sheet while no card was tapped.
-  void cancelWaiting() => _waiting?.completeError(const NfcRelayException(NfcFailure.cancelled));
+  void cancelWaiting() {
+    final Completer<CardLink>? waiting = _waiting;
+    _waiting = null;
+    if (waiting != null && !waiting.isCompleted) waiting.completeError(const NfcRelayException(NfcFailure.cancelled));
+  }
+
+  /// How often the app ended a waiting session.
+  int cancels = 0;
+
+  @override
+  Future<void> cancel() async {
+    cancels++;
+    cancelWaiting();
+  }
 }
 
 class FakeCard {
@@ -64,6 +80,10 @@ class FakeCard {
 
   /// Answers this command (hex prefix) with this status word instead.
   ({String prefix, String sw})? refuse;
+
+  /// A chip driven by the server's commands (the station): the full answer (hex, with status word) for each
+  /// command, or null for the fixed answers above.
+  String? Function(String apduHex)? script;
 }
 
 class _FakeLink implements CardLink {
@@ -82,6 +102,8 @@ class _FakeLink implements CardLink {
     if (_card.loseOn != null && hex.startsWith(_card.loseOn!)) throw const NfcRelayException(NfcFailure.tagLost);
     final ({String prefix, String sw})? refuse = _card.refuse;
     if (refuse != null && hex.startsWith(refuse.prefix)) return _bytes(refuse.sw);
+    final String? scripted = _card.script?.call(hex);
+    if (scripted != null) return _bytes(scripted);
     if (hex.startsWith('00A40400')) return _bytes('9000');
     if (hex.startsWith('00A4000C')) return _bytes('9000');
     if (hex.startsWith('00B00000')) return Uint8List.fromList(<int>[..._ndefFile(_card.tapUrl), 0x90, 0x00]);

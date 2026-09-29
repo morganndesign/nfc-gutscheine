@@ -66,6 +66,9 @@ Send the token as `Authorization: Bearer …` together with the same `X-Device-I
   | POST | `/vouchers/{voucher}/redemptions` |
   | GET | `/vouchers/{voucher}/redemptions/{idempotencyKey}` |
   | POST | `/vouchers` (sale; needs `vouchers.sell`) |
+  | POST | `/presentments/cards`, `/presentments/cards/{authentication}` |
+  | GET | `/admin/station/batches` (station) |
+  | POST | `/admin/card-batches/{batch}/personalizations`, `/admin/personalizations/{id}` (station) |
 
 - works only with the `X-Device-Id` it was issued for (another id → `401 UNAUTHENTICATED`);
 - stops at once when the device is revoked under **Devices** (`403 DEVICE_REVOKED`) and works again when it is
@@ -75,8 +78,10 @@ Send the token as `Authorization: Bearer …` together with the same `X-Device-I
   reset or change revokes it.
 
 Sign-in has the same lockout, rate limit and account checks as `/auth/login`. A deactivated account gets
-`401 ACCOUNT_DEACTIVATED` here and on every later request with its token. Platform administrators and roles without
-`vouchers.redeem` get `403 FORBIDDEN`. Device tokens are not listed under Settings → API; platform administrators
+`401 ACCOUNT_DEACTIVATED` here and on every later request with its token. Roles without `vouchers.redeem` get
+`403 FORBIDDEN`. Platform staff get a **station token** instead: ability `platform.cards.personalize` only, bound to
+a platform device (no restaurant), reaching only the station paths; the profile has `restaurant: null`. It is the
+only token a platform administrator can use (audit S2). Device tokens are not listed under Settings → API; platform administrators
 see them under `/admin/api-tokens` (`kind: device`).
 
 ### Sign-in failures
@@ -466,6 +471,9 @@ POST /admin/personalizations/{personalization}
 → 200 next round (`stage` auth2, versions, script, qa) … until `stage: done`, `personalization: null`,
       `card.state: qa_passed`
 ```
+
+`GET /admin/station/batches` lists the batches the station may take:
+`[{id, batch_code, restaurant, quantity_ordered, registered, qa_passed}]`.
 
 Rounds: register the chip (`manufactured`), write the NDEF tap URL, AuthenticateEV2First K0 (factory key, or the
 card's own K0 when the chip was keyed before), GetKeyVersion 1–3, ChangeFileSettings (SDM: encrypted PICCData

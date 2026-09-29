@@ -44,6 +44,10 @@ final class EnforceDeviceToken
         ['GET', 'api/v1/vouchers/*/redemptions/*'],
         // Managers and owners: sell a voucher (the role and permissions decide).
         ['POST', 'api/v1/vouchers'],
+        // Platform staff: the personalisation station.
+        ['GET', 'api/v1/admin/station/batches'],
+        ['POST', 'api/v1/admin/card-batches/*/personalizations'],
+        ['POST', 'api/v1/admin/personalizations/*'],
     ];
 
     public function __construct(

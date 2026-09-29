@@ -1056,7 +1056,8 @@ class LoopController extends ChangeNotifier {
         _slowTimer?.cancel();
         final CardLink? card = _card;
         _card = null;
-        unawaited(card?.close());
+        // No card yet: end the waiting session (Android reader mode, the iPhone sheet).
+        unawaited(card != null ? card.close() : _nfc.cancel());
         _go(const ReadyState());
         return true;
       case QrScanState() || ProblemState():

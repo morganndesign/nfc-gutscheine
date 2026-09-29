@@ -317,7 +317,7 @@ class SessionController extends ChangeNotifier {
         deviceName: _deviceName,
         platform: _platform,
       );
-      if (!result.user.canRedeem || result.user.restaurant == null) {
+      if (!result.user.canUseApp) {
         _feedback.haptic(HapticToken.error);
         return const SignInNoPermission();
       }
@@ -503,7 +503,7 @@ class SessionController extends ChangeNotifier {
   Future<RecheckOutcome> recheck() async {
     try {
       final SessionUser user = await _api.me();
-      if (!user.canRedeem) {
+      if (!user.canUseApp) {
         _feedback.haptic(HapticToken.warning);
         return RecheckOutcome.stillBlocked;
       }
@@ -624,7 +624,7 @@ class SessionController extends ChangeNotifier {
   Future<void> refreshUser() async {
     try {
       final SessionUser user = await _api.me();
-      if (!user.canRedeem) {
+      if (!user.canUseApp) {
         _block(BlockedKind.forbidden, '');
         return;
       }

@@ -1126,6 +1126,41 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get intro3Body => pseudoLocalize(base.intro3Body);
 
   @override
+  String get stationTitle => pseudoLocalize(base.stationTitle);
+
+  @override
+  String get stationChoose => pseudoLocalize(base.stationChoose);
+
+  @override
+  String get stationEmpty => pseudoLocalize(base.stationEmpty);
+
+  @override
+  String stationBatch(int count) =>
+      pseudoLocalize(base.stationBatch(count), <String>[]);
+
+  @override
+  String get stationWaiting => pseudoLocalize(base.stationWaiting);
+
+  @override
+  String get stationWorking => pseudoLocalize(base.stationWorking);
+
+  @override
+  String stationDone(String number) =>
+      pseudoLocalize(base.stationDone(pseudoMarker(0)), <String>[number]);
+
+  @override
+  String get stationFailed => pseudoLocalize(base.stationFailed);
+
+  @override
+  String get stationRejected => pseudoLocalize(base.stationRejected);
+
+  @override
+  String get stationUnknownChip => pseudoLocalize(base.stationUnknownChip);
+
+  @override
+  String get stationFinish => pseudoLocalize(base.stationFinish);
+
+  @override
   String a11ySpokenAmount(int euros, String cents) => pseudoLocalize(
     base.a11ySpokenAmount(euros, pseudoMarker(0)),
     <String>[cents],

@@ -218,6 +218,46 @@ abstract final class Payloads {
     },
   };
 
+  /// Platform staff signed in as the personalisation station: no restaurant.
+  static Map<String, Object?> stationUser() => <String, Object?>{
+    'id': 'u-9',
+    'name': 'Stefan Station',
+    'email': 'station@giftcardpro.at',
+    'role': <String, Object?>{'slug': 'platform_admin'},
+    'permissions': <String>['platform.cards.personalize'],
+    'restaurant': null,
+  };
+
+  static Map<String, Object?> stationBatches() => <String, Object?>{
+    'data': <Object?>[
+      <String, Object?>{
+        'id': 'b-1',
+        'batch_code': 'B-2026-001',
+        'restaurant': 'Zum Goldenen Hirschen',
+        'quantity_ordered': 50,
+        'registered': 3,
+        'qa_passed': 2,
+      },
+    ],
+  };
+
+  /// A personalisation round (`personalization: null` and no commands when done).
+  static Map<String, Object?> round({
+    String? id,
+    String stage = 'auth',
+    List<String> commands = const <String>[],
+    String number = 'B-2026-001-0003',
+    String state = 'manufactured',
+  }) => <String, Object?>{
+    'data': <String, Object?>{
+      'personalization': id,
+      'stage': stage,
+      'commands': commands,
+      'expires_in': id == null ? null : 60,
+      'card': <String, Object?>{'card_number': number, 'state': state},
+    },
+  };
+
   /// A manager or owner: selling (owners also complimentary).
   static Map<String, Object?> manager({String role = 'manager', bool selling = true}) => <String, Object?>{
     ...user(),
@@ -514,6 +554,7 @@ class TestApp {
         buildNumber: '1',
         isTablet: false,
         api: api,
+        nfc: cardReader,
         printer: printer,
       ),
       backend: backend,

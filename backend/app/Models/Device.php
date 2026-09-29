@@ -18,7 +18,7 @@ use Illuminate\Support\Carbon;
  * A waiter phone / tablet / POS terminal that performs card operations.
  *
  * @property string $id
- * @property string $restaurant_id
+ * @property string|null $restaurant_id null for a platform device (personalisation station)
  * @property string|null $registered_by
  * @property string $name
  * @property string $type

@@ -15,6 +15,7 @@ import '../core/l10n/l10n.dart';
 import '../core/platform/biometrics_service.dart';
 import '../core/platform/connectivity_service.dart';
 import '../core/platform/feedback_service.dart';
+import '../core/platform/nfc_relay.dart';
 import '../core/platform/system_service.dart';
 import '../core/state/business_calendar.dart';
 import '../core/state/client_identity.dart';
@@ -105,7 +106,9 @@ Future<AppServices> bootstrap() async {
     deviceName: facts.model,
     log: log,
   );
+  const NfcRelay nfc = PlatformNfcRelay();
   final LoopController loop = LoopController(
+    nfc: nfc,
     session: session,
     api: api,
     feedback: feedback,
@@ -138,5 +141,6 @@ Future<AppServices> bootstrap() async {
     buildNumber: package.buildNumber,
     isTablet: facts.isTablet,
     api: api,
+    nfc: nfc,
   );
 }

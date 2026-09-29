@@ -2011,6 +2011,72 @@ abstract class AppLocalizations {
   /// **'Redeeming only works online. Your shift\'s redemptions are under \"Recent\".'**
   String get intro3Body;
 
+  /// Spec key: station.title (12 §5.19) · Max: 28 · Notes: Station · S21 title
+  ///
+  /// In en, this message translates to:
+  /// **'Personalise cards'**
+  String get stationTitle;
+
+  /// Spec key: station.choose (12 §5.19) · Max: 28 · Notes: Station · batch list
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a batch'**
+  String get stationChoose;
+
+  /// Spec key: station.empty (12 §5.19) · Max: 60 · Notes: Station · empty list
+  ///
+  /// In en, this message translates to:
+  /// **'No batch is waiting for personalisation.'**
+  String get stationEmpty;
+
+  /// Spec key: station.batch (12 §5.19) · Max: 28 · Notes: Station · list row subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {{count} card done} other {{count} cards done}}'**
+  String stationBatch(int count);
+
+  /// Spec key: station.waiting (12 §5.19) · Max: 48 · Notes: Station · also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a blank card to the phone.'**
+  String get stationWaiting;
+
+  /// Spec key: station.working (12 §5.19) · Max: 48 · Notes: Station · rounds running
+  ///
+  /// In en, this message translates to:
+  /// **'Personalising – keep the card still.'**
+  String get stationWorking;
+
+  /// Spec key: station.done (12 §5.19) · Max: 40 · Notes: Station · {number} = inventory number
+  ///
+  /// In en, this message translates to:
+  /// **'Card {number} done'**
+  String stationDone(String number);
+
+  /// Spec key: station.failed (12 §5.19) · Max: 48 · Notes: Station · resumable failure
+  ///
+  /// In en, this message translates to:
+  /// **'Card not finished. Hold it again.'**
+  String get stationFailed;
+
+  /// Spec key: station.rejected (12 §5.19) · Max: 80 · Notes: Station · other_batch, already_personalized
+  ///
+  /// In en, this message translates to:
+  /// **'Card is not from this batch or is already done.'**
+  String get stationRejected;
+
+  /// Spec key: station.unknownChip (12 §5.19) · Max: 48 · Notes: Station · keys unknown (auth:91AE)
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown card – set it aside.'**
+  String get stationUnknownChip;
+
+  /// Spec key: station.finish (12 §5.19) · Max: 24 · Notes: Station · back to the list
+  ///
+  /// In en, this message translates to:
+  /// **'Finish batch'**
+  String get stationFinish;
+
   /// Spec key: a11y.spokenAmount (12 §5.20) · Politeness: — · Notes: 12 · cents omitted when 0; "{cents} Cent / cents / centi" when euros = 0 (§1.4)
   ///
   /// In en, this message translates to:

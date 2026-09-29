@@ -48,11 +48,7 @@ DateTime? _dateOrNull(Map<String, Object?> json, String field) {
 /// `GET /app/config`.
 @immutable
 class AppConfigData {
-  const AppConfigData({
-    required this.updateRequired,
-    required this.maintenanceNotice,
-    required this.supportEmail,
-  });
+  const AppConfigData({required this.updateRequired, required this.maintenanceNotice, required this.supportEmail});
 
   factory AppConfigData.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> data = _map(json['data'], 'data');
@@ -165,6 +161,9 @@ abstract final class Permissions {
   static const String redeem = 'vouchers.redeem';
   static const String sell = 'vouchers.sell';
   static const String sellComplimentary = 'vouchers.sell_complimentary';
+
+  /// Platform staff: the personalisation station (station token).
+  static const String personalize = 'platform.cards.personalize';
 }
 
 /// `/auth/me` and the `user` part of `POST /auth/token`.
@@ -223,6 +222,12 @@ class SessionUser {
 
   bool get canRedeem => permissions.contains(Permissions.redeem);
 
+  /// Platform staff signed in as the personalisation station: no restaurant, cards only.
+  bool get isStation => restaurant == null && permissions.contains(Permissions.personalize);
+
+  /// Whether this account may use the app at all: a restaurant's till, or the station.
+  bool get canUseApp => (canRedeem && restaurant != null) || isStation;
+
   /// "Sell voucher" (S20).
   bool get canSell => permissions.contains(Permissions.sell);
 
@@ -237,10 +242,7 @@ class SignInResult {
 
   factory SignInResult.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> data = _map(json['data'], 'data');
-    return SignInResult(
-      token: _string(data, 'token'),
-      user: SessionUser.fromJson(_map(data['user'], 'user')),
-    );
+    return SignInResult(token: _string(data, 'token'), user: SessionUser.fromJson(_map(data['user'], 'user')));
   }
 
   final String token;
@@ -387,6 +389,77 @@ class CardChallenge {
   final String authentication;
   final String commandHex;
   final Duration expiresIn;
+}
+
+/// A card batch the station may personalise (`GET /admin/station/batches`).
+@immutable
+class StationBatch {
+  const StationBatch({
+    required this.id,
+    required this.batchCode,
+    required this.restaurant,
+    required this.quantityOrdered,
+    required this.qaPassed,
+  });
+
+  factory StationBatch.fromJson(Map<String, Object?> json) => StationBatch(
+    id: _string(json, 'id'),
+    batchCode: _string(json, 'batch_code'),
+    restaurant: _string(json, 'restaurant'),
+    quantityOrdered: _int(json, 'quantity_ordered'),
+    qaPassed: _int(json, 'qa_passed'),
+  );
+
+  static List<StationBatch> listFromJson(Map<String, Object?> json) {
+    final Object? data = json['data'];
+    if (data is! List) throw const FormatException('data');
+    return <StationBatch>[for (final Object? row in data) StationBatch.fromJson(_map(row, 'batch'))];
+  }
+
+  final String id;
+  final String batchCode;
+  final String restaurant;
+  final int quantityOrdered;
+  final int qaPassed;
+}
+
+/// One round of a station personalisation: the APDUs to relay next, or done (no id, no commands).
+@immutable
+class PersonalizationRound {
+  const PersonalizationRound({
+    required this.id,
+    required this.stage,
+    required this.commandsHex,
+    required this.cardNumber,
+    required this.cardState,
+  });
+
+  factory PersonalizationRound.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Object? commands = data['commands'];
+    final Object? id = data['personalization'];
+    final Map<String, Object?> card = _map(data['card'], 'card');
+    if (commands is! List || (id != null && id is! String)) throw const FormatException('personalization');
+    final List<String> hex = commands.whereType<String>().toList();
+    if (hex.length != commands.length || hex.any((String c) => !RegExp(r'^(?:[0-9A-F]{2}){4,261}$').hasMatch(c))) {
+      throw const FormatException('commands');
+    }
+    return PersonalizationRound(
+      id: id as String?,
+      stage: _string(data, 'stage'),
+      commandsHex: hex,
+      cardNumber: _string(card, 'card_number'),
+      cardState: _string(card, 'state'),
+    );
+  }
+
+  final String? id;
+  final String stage;
+  final List<String> commandsHex;
+  final String cardNumber;
+  final String cardState;
+
+  bool get done => id == null;
 }
 
 /// A booked redemption (`data.transaction`).

@@ -1137,6 +1137,50 @@ class AppLocalizationsBs extends AppLocalizations {
       'Iskorištavanje radi samo uz vezu. Iskorištavanja iz smjene su pod „Nedavno\".';
 
   @override
+  String get stationTitle => 'Personalizacija kartica';
+
+  @override
+  String get stationChoose => 'Odaberite seriju';
+
+  @override
+  String get stationEmpty => 'Nijedna serija ne čeka personalizaciju.';
+
+  @override
+  String stationBatch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kartica gotovo',
+      few: '$count kartice gotove',
+      one: '$count kartica gotova',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get stationWaiting => 'Prislonite praznu karticu uz telefon.';
+
+  @override
+  String get stationWorking => 'Personalizacija – ne pomičite karticu.';
+
+  @override
+  String stationDone(String number) {
+    return 'Kartica $number gotova';
+  }
+
+  @override
+  String get stationFailed => 'Kartica nije gotova. Prislonite je ponovo.';
+
+  @override
+  String get stationRejected => 'Kartica nije iz ove serije ili je već gotova.';
+
+  @override
+  String get stationUnknownChip => 'Nepoznata kartica – odvojite je.';
+
+  @override
+  String get stationFinish => 'Završi seriju';
+
+  @override
   String a11ySpokenAmount(int euros, String cents) {
     String _temp0 = intl.Intl.pluralLogic(
       euros,

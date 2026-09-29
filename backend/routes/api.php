@@ -163,6 +163,7 @@ Route::prefix('v1')->group(function (): void {
 
         // ------------------------------------------------------ personalisation station (internal)
         Route::prefix('admin')->middleware(['can:platform.cards.personalize', 'throttle:presentment'])->group(function (): void {
+            Route::get('station/batches', [CardStationController::class, 'batches']);
             Route::post('card-batches/{batch}/personalizations', [CardStationController::class, 'begin'])->whereUuid('batch');
             Route::post('personalizations/{personalization}', [CardStationController::class, 'continue'])
                 ->where('personalization', '[0-9A-HJKMNP-TV-Z]{26}');

@@ -16,6 +16,7 @@ import '../screens/s11_card_tap.dart';
 import '../screens/s12_qr_scan.dart';
 import '../screens/s15_session.dart';
 import '../screens/s17_intro.dart';
+import '../screens/s21_station.dart';
 import 'app_scope.dart';
 import 'page_transitions.dart';
 
@@ -87,6 +88,9 @@ class WaiterRouterDelegate extends RouterDelegate<Object> with ChangeNotifier, P
           WaiterPage(key: ValueKey<String>('S15-update'), name: 'updateRequired', child: UpdateRequiredScreen()),
         ];
       case AccessPhase.active:
+        if (services.session.user?.isStation ?? false) {
+          return const <Page<void>>[WaiterPage(key: ValueKey<String>('S21'), name: 'station', child: StationScreen())];
+        }
         final Page<void>? layer = _layer(services.loop.state);
         return <Page<void>>[
           const WaiterPage(key: _ready, name: 'ready', child: ReadyScreen()),

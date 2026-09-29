@@ -35,6 +35,7 @@ void main() {
       await tester.tap(find.bySemanticsLabel(en.commonClose).first);
       await settle(tester, 20);
       expect(find.byType(CardTapScreen), findsNothing);
+      expect(nfc.cancels, 1, reason: 'the reader (Android reader mode, iPhone sheet) is stopped');
 
       nfc.card = FakeCard();
       await tester.tap(text(en.readyTapCard));

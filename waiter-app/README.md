@@ -36,6 +36,27 @@ the card's answer and returns the same single-use, 60-second presentment a scan 
 (`WaiterNfc.kt`: reader mode + IsoDep; `WaiterNfc.swift`: NFCTagReaderSession + NFCISO7816Tag) only transceive
 bytes; no key and no secret is ever on the phone. The iPhone App ID needs the NFC Tag Reading capability.
 
+## Personalisation station (S21, internal)
+
+Platform staff sign in with their platform account and get a station token (personalisation only, bound to the
+phone). S21 lists the batches ordered for the station that are in production; after choosing one, blank NTAG 424
+DNA cards are held to the phone one after the other. Each card runs the server's rounds (write tap URL, EV2
+authentication with K0, key versions, SDM settings, keys K1–K3 then K0, SUN read and K3 check) and ends
+`qa_passed`. A card that leaves the field is simply held again; the server resumes safely.
+
+Hardware test with real cards (Android phone, a pack of blank NTAG 424 DNA cards):
+
+1. Server: keystore with a key set (`crypto:keystore:init`, `crypto:key:generate ks-…/root-k0 … root-k3`), `TAP_URL`
+   pointing at the server the phones reach; a batch ordered with `in_house_station` and moved to `in_production`.
+2. Station phone: sign in as platform staff, choose the batch, personalise a few cards (S21 shows each inventory
+   number; `card_events` shows manufactured → personalized → qa_passed).
+3. Any phone: open the card's URL by tapping it (guest balance page); tap again — the counter moves, a copied URL
+   is refused (`SUN_REPLAYED`).
+4. Move the batch on (QA, acceptance, shipping, delivery, receipt) and bind a card to a voucher; on the till, *Tap
+   card* (Android and iPhone) must reach S07 with the card's voucher; the same URL on another chip is refused.
+5. Interrupt a personalisation (pull the card away mid-run) and hold it again: it must finish; a card from another
+   system is reported as unknown (set aside).
+
 ## Selling (S20)
 
 Managers and owners (`vouchers.sell`): value (within the restaurant's limits) → how the guest paid (cash, card

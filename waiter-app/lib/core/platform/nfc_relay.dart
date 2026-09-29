@@ -68,6 +68,9 @@ abstract interface class NfcRelay {
 
   /// Waits for a card; [prompt] is the text of the iPhone system sheet.
   Future<CardLink> start({required String prompt});
+
+  /// Ends a session that is still waiting for a card (its [start] fails with [NfcFailure.cancelled]).
+  Future<void> cancel();
 }
 
 class PlatformNfcRelay implements NfcRelay {
@@ -103,6 +106,17 @@ class PlatformNfcRelay implements NfcRelay {
       throw NfcRelayException.from(e);
     } on MissingPluginException {
       throw const NfcRelayException(NfcFailure.unsupported);
+    }
+  }
+
+  @override
+  Future<void> cancel() async {
+    try {
+      await _channel.invokeMethod<void>('stop', <String, Object?>{'message': null, 'failed': false});
+    } on PlatformException {
+      // Nothing open.
+    } on MissingPluginException {
+      // No reader on this platform.
     }
   }
 }

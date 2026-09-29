@@ -1135,6 +1135,50 @@ class AppLocalizationsEn extends AppLocalizations {
       'Redeeming only works online. Your shift\'s redemptions are under \"Recent\".';
 
   @override
+  String get stationTitle => 'Personalise cards';
+
+  @override
+  String get stationChoose => 'Choose a batch';
+
+  @override
+  String get stationEmpty => 'No batch is waiting for personalisation.';
+
+  @override
+  String stationBatch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards done',
+      one: '$count card done',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get stationWaiting => 'Hold a blank card to the phone.';
+
+  @override
+  String get stationWorking => 'Personalising – keep the card still.';
+
+  @override
+  String stationDone(String number) {
+    return 'Card $number done';
+  }
+
+  @override
+  String get stationFailed => 'Card not finished. Hold it again.';
+
+  @override
+  String get stationRejected =>
+      'Card is not from this batch or is already done.';
+
+  @override
+  String get stationUnknownChip => 'Unknown card – set it aside.';
+
+  @override
+  String get stationFinish => 'Finish batch';
+
+  @override
   String a11ySpokenAmount(int euros, String cents) {
     String _temp0 = intl.Intl.pluralLogic(
       euros,

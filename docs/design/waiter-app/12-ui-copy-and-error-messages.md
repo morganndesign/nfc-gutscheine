@@ -810,7 +810,7 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `camera.unavailable.title` | Kamera nicht verfügbar | Camera not available | Kamera nije dostupna | 32 | 12 · P05 |
 | `camera.unavailable.body` | Andere Apps mit Kamera schließen, dann erneut versuchen. | Close other apps using the camera, then try again. | Zatvorite druge aplikacije koje koriste kameru, pa pokušajte ponovo. | 90 | 12 |
 
-### 5.19 S17 First-run intro
+### 5.19 S17 First-run intro · S21 Personalisation station
 
 | Key | DE | EN | BHS | Max | Notes |
 |---|---|---|---|---|---|
@@ -824,6 +824,22 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `intro.2.body` | Guthaben sehen, Betrag tippen, fertig. Ab {threshold} zum Bestätigen gedrückt halten. | See the balance, type the amount, done. From {threshold}, press and hold to confirm. | Pogledajte stanje, unesite iznos, gotovo. Od {threshold} držite za potvrdu. | 90 | 03a |
 | `intro.3.title` | Nie doppelt gebucht | Never booked twice | Nikad dvaput knjiženo | 28 | 03a |
 | `intro.3.body` | Eingelöst wird nur mit Verbindung. Alle Einlösungen der Schicht stehen unter „Verlauf". | Redeeming only works online. Your shift's redemptions are under "Recent". | Iskorištavanje radi samo uz vezu. Iskorištavanja iz smjene su pod „Nedavno". | 90 | 03a |
+
+S21 is the internal personalisation station (platform staff, station token only; never shown to restaurants).
+
+| Key | DE | EN | BHS | Max | Notes |
+|---|---|---|---|---|---|
+| `station.title` | Karten personalisieren | Personalise cards | Personalizacija kartica | 28 | Station · S21 title |
+| `station.choose` | Charge wählen | Choose a batch | Odaberite seriju | 28 | Station · batch list |
+| `station.empty` | Keine Charge wartet auf Personalisierung. | No batch is waiting for personalisation. | Nijedna serija ne čeka personalizaciju. | 60 | Station · empty list |
+| `station.batch` | {count, plural, one {# Karte fertig} other {# Karten fertig}} | {count, plural, one {# card done} other {# cards done}} | {count, plural, one {# kartica gotova} few {# kartice gotove} other {# kartica gotovo}} | 28 | Station · list row subtitle |
+| `station.waiting` | Leere Karte ans Handy halten. | Hold a blank card to the phone. | Prislonite praznu karticu uz telefon. | 48 | Station · also the iPhone sheet |
+| `station.working` | Wird personalisiert – Karte nicht bewegen. | Personalising – keep the card still. | Personalizacija – ne pomičite karticu. | 48 | Station · rounds running |
+| `station.done` | Karte {number} fertig | Card {number} done | Kartica {number} gotova | 40 | Station · `{number}` = inventory number |
+| `station.failed` | Karte nicht fertig. Erneut anhalten. | Card not finished. Hold it again. | Kartica nije gotova. Prislonite je ponovo. | 48 | Station · resumable failure |
+| `station.rejected` | Karte gehört nicht zu dieser Charge oder ist schon fertig. | Card is not from this batch or is already done. | Kartica nije iz ove serije ili je već gotova. | 80 | Station · `other_batch`, `already_personalized` |
+| `station.unknownChip` | Unbekannte Karte – aussortieren. | Unknown card – set it aside. | Nepoznata kartica – odvojite je. | 48 | Station · keys unknown (`auth:91AE`) |
+| `station.finish` | Charge beenden | Finish batch | Završi seriju | 24 | Station · back to the list |
 
 ### 5.20 Screen-reader announcements and spoken forms
 
@@ -850,7 +866,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **326 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **337 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

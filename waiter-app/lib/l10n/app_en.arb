@@ -1581,6 +1581,60 @@
   "@intro3Body": {
     "description": "Spec key: intro.3.body (12 §5.19) · Max: 90 · Notes: 03a"
   },
+  "stationTitle": "Personalise cards",
+  "@stationTitle": {
+    "description": "Spec key: station.title (12 §5.19) · Max: 28 · Notes: Station · S21 title"
+  },
+  "stationChoose": "Choose a batch",
+  "@stationChoose": {
+    "description": "Spec key: station.choose (12 §5.19) · Max: 28 · Notes: Station · batch list"
+  },
+  "stationEmpty": "No batch is waiting for personalisation.",
+  "@stationEmpty": {
+    "description": "Spec key: station.empty (12 §5.19) · Max: 60 · Notes: Station · empty list"
+  },
+  "stationBatch": "{count, plural, one {{count} card done} other {{count} cards done}}",
+  "@stationBatch": {
+    "description": "Spec key: station.batch (12 §5.19) · Max: 28 · Notes: Station · list row subtitle",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "stationWaiting": "Hold a blank card to the phone.",
+  "@stationWaiting": {
+    "description": "Spec key: station.waiting (12 §5.19) · Max: 48 · Notes: Station · also the iPhone sheet"
+  },
+  "stationWorking": "Personalising – keep the card still.",
+  "@stationWorking": {
+    "description": "Spec key: station.working (12 §5.19) · Max: 48 · Notes: Station · rounds running"
+  },
+  "stationDone": "Card {number} done",
+  "@stationDone": {
+    "description": "Spec key: station.done (12 §5.19) · Max: 40 · Notes: Station · {number} = inventory number",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "stationFailed": "Card not finished. Hold it again.",
+  "@stationFailed": {
+    "description": "Spec key: station.failed (12 §5.19) · Max: 48 · Notes: Station · resumable failure"
+  },
+  "stationRejected": "Card is not from this batch or is already done.",
+  "@stationRejected": {
+    "description": "Spec key: station.rejected (12 §5.19) · Max: 80 · Notes: Station · other_batch, already_personalized"
+  },
+  "stationUnknownChip": "Unknown card – set it aside.",
+  "@stationUnknownChip": {
+    "description": "Spec key: station.unknownChip (12 §5.19) · Max: 48 · Notes: Station · keys unknown (auth:91AE)"
+  },
+  "stationFinish": "Finish batch",
+  "@stationFinish": {
+    "description": "Spec key: station.finish (12 §5.19) · Max: 24 · Notes: Station · back to the list"
+  },
   "a11ySpokenAmount": "{euros, plural, one {{euros} euro} other {{euros} euros}} {cents}",
   "@a11ySpokenAmount": {
     "description": "Spec key: a11y.spokenAmount (12 §5.20) · Politeness: — · Notes: 12 · cents omitted when 0; \"{cents} Cent / cents / centi\" when euros = 0 (§1.4)",

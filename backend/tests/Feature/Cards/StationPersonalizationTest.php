@@ -254,6 +254,24 @@ final class StationPersonalizationTest extends TestCase
             SecurityEvent::query()->where('outcome', 'refused')->orderBy('seq')->pluck('reason')->all());
     }
 
+    public function test_the_station_lists_the_batches_it_may_personalise(): void
+    {
+        $batch = $this->stationBatch(2);
+        $this->stationBatch(personalization: 'manufacturer');
+        $this->stationBatch(inProduction: false);
+        $this->actingAsStation();
+        $this->station(Ntag424Chip::factory(), $batch)->assertOk();
+
+        $this->getJson('/api/v1/admin/station/batches')->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $batch->id)
+            ->assertJsonPath('data.0.batch_code', $batch->batch_code)
+            ->assertJsonPath('data.0.restaurant', 'Zum Goldenen Hirschen')
+            ->assertJsonPath('data.0.quantity_ordered', 2)
+            ->assertJsonPath('data.0.registered', 1)
+            ->assertJsonPath('data.0.qa_passed', 1);
+    }
+
     public function test_the_station_is_platform_only(): void
     {
         $batch = $this->stationBatch();

@@ -202,11 +202,32 @@ final class WaiterAppTokenTest extends TestCase
         $this->assertSame(0, PersonalAccessToken::query()->count());
     }
 
-    public function test_platform_admins_and_suspended_restaurants_get_no_token(): void
+    public function test_platform_staff_get_a_station_token_for_personalisation_only(): void
     {
         User::factory()->platformAdmin()->create(['email' => 'admin@example.com']);
-        $this->signIn('admin@example.com')->assertForbidden()->assertJsonPath('code', 'FORBIDDEN');
+        $token = (string) $this->signIn('admin@example.com')->assertCreated()
+            ->assertJsonPath('data.user.permissions', ['platform.cards.personalize'])
+            ->assertJsonPath('data.user.restaurant', null)
+            ->json('data.token');
 
+        // A platform device: no restaurant ever sees it.
+        $this->assertNull(Device::query()->withoutGlobalScopes()->sole()->restaurant_id);
+
+        $this->bearer($token)->getJson('/api/v1/admin/station/batches')->assertOk();
+        $this->bearer($token)->getJson('/api/v1/admin/restaurants')->assertForbidden();
+        $this->bearer($token)->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'printable_qr', 'credential' => 'x'])->assertForbidden();
+        $this->bearer($token, 'c1a2c3d4-e5f6-4711-8899-aabbccddeeff')->getJson('/api/v1/admin/station/batches')->assertUnauthorized();
+    }
+
+    public function test_waiters_cannot_personalise(): void
+    {
+        [, , $token] = $this->signedInWaiter();
+
+        $this->bearer($token)->getJson('/api/v1/admin/station/batches')->assertForbidden();
+    }
+
+    public function test_suspended_restaurants_get_no_token(): void
+    {
         $restaurant = $this->restaurant();
         $this->staff($restaurant, RoleSlug::Waiter, ['email' => 'anna@example.com']);
         $restaurant->forceFill(['status' => 'suspended'])->save();

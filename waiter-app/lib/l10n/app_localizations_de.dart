@@ -1138,6 +1138,50 @@ class AppLocalizationsDe extends AppLocalizations {
       'Eingelöst wird nur mit Verbindung. Alle Einlösungen der Schicht stehen unter „Verlauf\".';
 
   @override
+  String get stationTitle => 'Karten personalisieren';
+
+  @override
+  String get stationChoose => 'Charge wählen';
+
+  @override
+  String get stationEmpty => 'Keine Charge wartet auf Personalisierung.';
+
+  @override
+  String stationBatch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Karten fertig',
+      one: '$count Karte fertig',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get stationWaiting => 'Leere Karte ans Handy halten.';
+
+  @override
+  String get stationWorking => 'Wird personalisiert – Karte nicht bewegen.';
+
+  @override
+  String stationDone(String number) {
+    return 'Karte $number fertig';
+  }
+
+  @override
+  String get stationFailed => 'Karte nicht fertig. Erneut anhalten.';
+
+  @override
+  String get stationRejected =>
+      'Karte gehört nicht zu dieser Charge oder ist schon fertig.';
+
+  @override
+  String get stationUnknownChip => 'Unbekannte Karte – aussortieren.';
+
+  @override
+  String get stationFinish => 'Charge beenden';
+
+  @override
   String a11ySpokenAmount(int euros, String cents) {
     return '$euros Euro $cents';
   }

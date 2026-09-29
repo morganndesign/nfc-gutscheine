@@ -7,6 +7,7 @@ import '../core/diagnostics/diagnostic_log.dart';
 import '../core/platform/biometrics_service.dart';
 import '../core/platform/connectivity_service.dart';
 import '../core/platform/feedback_service.dart';
+import '../core/platform/nfc_relay.dart';
 import '../core/platform/voucher_printer.dart';
 import '../core/platform/system_service.dart';
 import '../core/state/client_identity.dart';
@@ -35,6 +36,7 @@ class AppServices {
     required this.buildNumber,
     required this.isTablet,
     required this.api,
+    required this.nfc,
     this.printer,
   });
 
@@ -63,6 +65,9 @@ class AppServices {
 
   /// The API (S20 sells vouchers directly; the loop and the session own their calls).
   final WaiterApi api;
+
+  /// The card reader (the loop's card taps, the personalisation station).
+  final NfcRelay nfc;
 
   /// Printing of the sold voucher (S20); tests inject a fake.
   final VoucherPrinter? printer;
