@@ -6,7 +6,7 @@ namespace App\Services\Users;
 
 use App\Enums\RoleSlug;
 use App\Enums\UserStatus;
-use App\Exceptions\Domain\InvalidVoucherStateException;
+use App\Exceptions\Domain\LastOwnerException;
 use App\Exceptions\Domain\RoleAssignmentException;
 use App\Jobs\SendPasswordResetLink;
 use App\Models\Restaurant;
@@ -111,7 +111,7 @@ final class UserService
             throw new RoleAssignmentException('You cannot deactivate your own account.');
         }
         if ($user->roleSlug() === RoleSlug::Owner && $this->activeOwnerCount($user) <= 1) {
-            throw new InvalidVoucherStateException('A restaurant must keep at least one active owner.');
+            throw new LastOwnerException;
         }
 
         return DB::transaction(function () use ($actor, $user): User {

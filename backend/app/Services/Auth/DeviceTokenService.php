@@ -23,7 +23,7 @@ use Laravel\Sanctum\NewAccessToken;
  * Sign-in tokens for the native waiter app (GiftCard Waiter).
  *
  * A token can present and redeem vouchers; for managers and owners (roles with `vouchers.sell`) it can also
- * sell a voucher in the app. It is bound to the phone that signed in (X-Device-Id), expires after
+ * sell a voucher in the app, owners also complimentary ones. It is bound to the phone that signed in (X-Device-Id), expires after
  * `device_token_days` without use and is renewed while the phone is in use. Revoking the device in
  * Devices stops the token immediately. One active token per person and phone: signing in again
  * replaces the previous token.
@@ -34,21 +34,23 @@ final class DeviceTokenService
     public const ABILITIES = [Permission::VouchersRedeem->value];
 
     /**
-     * Selling vouchers in the app: granted only when the role has the permission. The role is still checked on
-     * every request (a token never grants more than the role, see User::hasPermission).
+     * Selling vouchers in the app, each granted only when the role has that permission (a complimentary voucher
+     * additionally needs `vouchers.sell_complimentary`, owners by default). The role is still checked on every
+     * request: a token never grants more than the role (see User::hasPermission).
      *
      * @var list<string>
      */
-    public const ISSUING_ABILITIES = [Permission::VouchersSell->value];
+    public const ISSUING_ABILITIES = [Permission::VouchersSell->value, Permission::VouchersSellComplimentary->value];
 
     /** @return list<string> */
     public static function abilitiesFor(User $user): array
     {
         $granted = $user->role->permissionSlugs();
+        if (! in_array(Permission::VouchersSell->value, $granted, true)) {
+            return self::ABILITIES;
+        }
 
-        return array_diff(self::ISSUING_ABILITIES, $granted) === []
-            ? [...self::ABILITIES, ...self::ISSUING_ABILITIES]
-            : self::ABILITIES;
+        return [...self::ABILITIES, ...array_values(array_intersect(self::ISSUING_ABILITIES, $granted))];
     }
 
     public function __construct(

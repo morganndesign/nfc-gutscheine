@@ -116,6 +116,9 @@ final class AppServiceProvider extends ServiceProvider
         RateLimiter::for('presentment', static fn (Request $request): Limit => Limit::perMinute(90)->by($perTerminal($request)));
 
         RateLimiter::for('voucher-operation', static fn (Request $request): Limit => Limit::perMinute(90)->by($perTerminal($request)));
+        // Asking for the outcome of an earlier attempt: its own budget, so a phone with several unresolved
+        // attempts never slows down real redemptions.
+        RateLimiter::for('redemption-outcome', static fn (Request $request): Limit => Limit::perMinute(60)->by($perTerminal($request)));
     }
 
     private function configureRouteBindings(): void

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\DB;
  * event may ever be modified or deleted"): the database itself rejects UPDATE and DELETE, whatever code or
  * person sends them. Corrections are new rows (a reversal, a new status event).
  *
- * In production the application's database user additionally has no UPDATE/DELETE grant on these tables
- * (Phase 9, three database users); the triggers make the rule hold in every environment, tests included.
+ * The triggers make the rule hold in every environment, tests included. Separate database users without
+ * UPDATE/DELETE grants on these tables follow in Phase 9.
  */
 return new class extends Migration
 {

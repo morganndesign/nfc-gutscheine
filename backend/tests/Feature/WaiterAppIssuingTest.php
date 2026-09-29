@@ -62,11 +62,15 @@ final class WaiterAppIssuingTest extends TestCase
         $this->staff($restaurant, RoleSlug::Owner, ['email' => 'otto@example.com']);
         $this->staff($restaurant, RoleSlug::Waiter, ['email' => 'anna@example.com']);
 
-        foreach (['mia@example.com' => 'manager', 'otto@example.com' => 'owner'] as $email => $role) {
+        $expected = [
+            'mia@example.com' => ['manager', ['vouchers.redeem', 'vouchers.sell']],
+            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary']],
+        ];
+        foreach ($expected as $email => [$role, $abilities]) {
             $permissions = $this->signIn($email)->assertCreated()
                 ->assertJsonPath('data.user.role.slug', $role)
                 ->json('data.user.permissions');
-            $this->assertEqualsCanonicalizing(['vouchers.redeem', 'vouchers.sell'], $permissions, $role);
+            $this->assertEqualsCanonicalizing($abilities, $permissions, $role);
         }
 
         $this->signIn('anna@example.com')->assertCreated()
@@ -84,6 +88,7 @@ final class WaiterAppIssuingTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.balance', 5000)
             ->assertJsonMissingPath('data.voucher_number')
+            ->assertJsonPath('data.expires_at', null)
             ->assertJsonPath('payment.method', 'cash')
             ->assertJsonPath('replayed', false);
         $voucherId = (string) $created->json('data.id');
@@ -95,6 +100,28 @@ final class WaiterAppIssuingTest extends TestCase
             ->postJson('/api/v1/vouchers', $this->sale())
             ->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('data.id', $voucherId);
         $this->assertSame(1, Voucher::query()->count());
+    }
+
+    public function test_an_owner_records_a_complimentary_voucher_in_the_app(): void
+    {
+        $owner = $this->tokenFor(RoleSlug::Owner, 'otto@example.com');
+        $this->bearer($owner)->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+            ->postJson('/api/v1/vouchers', $this->complimentary())
+            ->assertCreated()->assertJsonPath('payment.method', 'complimentary');
+    }
+
+    public function test_a_manager_cannot_record_a_complimentary_voucher(): void
+    {
+        $manager = $this->tokenFor(RoleSlug::Manager, 'mia@example.com');
+        $this->bearer($manager)->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+            ->postJson('/api/v1/vouchers', $this->complimentary())
+            ->assertForbidden();
+    }
+
+    /** @return array<string, mixed> */
+    private function complimentary(): array
+    {
+        return ['value' => 2000, 'form' => 'printable', 'payment' => ['method' => 'complimentary', 'reason' => 'Regular guest birthday']];
     }
 
     public function test_the_app_token_reaches_nothing_else(): void

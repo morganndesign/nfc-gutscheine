@@ -28,6 +28,29 @@ final class ChainVerifier
      */
     public function verify(): array
     {
+        $connection = DB::connection();
+        if ($connection->getDriverName() !== 'mysql' || $connection->transactionLevel() > 0) {
+            return $this->verifyAll();
+        }
+
+        // One consistent snapshot for the whole run. Writes committed meanwhile (a sale adds payment, ledger and
+        // audit rows and moves their chain heads) would otherwise show up as a head ahead of its rows or a balance
+        // that differs from its ledger. The server default is READ COMMITTED, so the level is set for this
+        // transaction only.
+        $connection->statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+        $connection->unprepared('START TRANSACTION WITH CONSISTENT SNAPSHOT, READ ONLY');
+        try {
+            return $this->verifyAll();
+        } finally {
+            $connection->unprepared('COMMIT');
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function verifyAll(): array
+    {
         $problems = [];
 
         foreach (self::CHAINED as $class) {

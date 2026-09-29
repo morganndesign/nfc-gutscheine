@@ -55,7 +55,14 @@ final class VoucherController extends Controller
         return response()->json([
             'data' => $user->hasPermission('vouchers.view')
                 ? VoucherResource::make($voucher)->resolve($request)
-                : ['id' => $voucher->id, 'kind' => $voucher->kind->value, 'balance' => $voucher->balance, 'currency' => $voucher->currency],
+                // The app's sale view: enough for the printed sheet, no voucher number and no customer data.
+                : [
+                    'id' => $voucher->id,
+                    'kind' => $voucher->kind->value,
+                    'balance' => $voucher->balance,
+                    'currency' => $voucher->currency,
+                    'expires_at' => $voucher->expires_at?->toIso8601String(),
+                ],
             'transaction' => TransactionResource::make($result->transaction)->resolve($request),
             'payment' => PaymentResource::make($result->payment)->resolve($request),
             'printable' => $result->printable !== null ? [

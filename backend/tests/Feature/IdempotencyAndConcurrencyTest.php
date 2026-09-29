@@ -126,6 +126,20 @@ final class IdempotencyAndConcurrencyTest extends TestCase
         $this->assertSame(1, VoucherTransaction::query()->where('idempotency_key', $key['Idempotency-Key'])->count());
     }
 
+    public function test_a_retry_is_answered_with_its_sale_even_after_the_limits_changed(): void
+    {
+        $restaurant = $this->restaurant();
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $key = $this->idempotency();
+        $body = ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment()];
+        $first = $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertCreated();
+
+        // The answer was lost; meanwhile the owner lowered the maximum value.
+        $restaurant->settings->forceFill(['max_voucher_balance' => 2000])->save();
+        $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)
+            ->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('data.id', $first->json('data.id'));
+    }
+
     public function test_a_late_or_foreign_sale_retry_never_shows_the_qr_again(): void
     {
         Carbon::setTestNow('2026-10-01 12:00:00');

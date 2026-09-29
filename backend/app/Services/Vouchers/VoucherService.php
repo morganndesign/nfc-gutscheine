@@ -89,13 +89,15 @@ final class VoucherService
         $restaurant = $this->tenant->require();
         $settings = $restaurant->settings;
 
-        $this->assertAmountInRange($data->value, $settings->min_voucher_value, $settings->max_voucher_balance);
-        $this->assertPaymentAllowed($actor, $data->payment);
-
+        // A retry is answered with the sale it repeats, whatever changed in the settings or the role since:
+        // the client must never read a lost answer as "nothing sold".
         $existing = $this->findByKey($restaurant->getKey(), $data->idempotencyKey);
         if ($existing !== null) {
             return $this->replaySale($actor, $existing, $data);
         }
+
+        $this->assertAmountInRange($data->value, $settings->min_voucher_value, $settings->max_voucher_balance);
+        $this->assertPaymentAllowed($actor, $data->payment);
 
         try {
             $result = DB::transaction(function () use ($actor, $data, $restaurant, $settings): SaleResult {
@@ -237,7 +239,6 @@ final class VoucherService
     ): TransactionResult {
         $this->assertOwnedByTenant($voucher);
         $this->assertPositive($amount);
-        $this->assertPaymentAllowed($actor, $payment);
 
         $matches = static fn (VoucherTransaction $tx): bool => $tx->type === TransactionType::Reload
             && $tx->voucher_id === $voucher->getKey()
@@ -251,6 +252,7 @@ final class VoucherService
                 return $this->replay($replay, $matches);
             }
 
+            $this->assertPaymentAllowed($actor, $payment);
             $settings = $this->settings();
             if (! $settings->allow_reload) {
                 throw new ReloadNotAllowedException;
