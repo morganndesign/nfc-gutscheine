@@ -8,10 +8,11 @@
 
 ## 1. Was ist ein Sicherheitsvorfall?
 
-Ein Sicherheitsvorfall ist jedes Ereignis, das die **Vertraulichkeit, Integrität oder Verfügbarkeit** von GiftCard Pro, von Kartenguthaben oder von personenbezogenen Daten beeinträchtigt oder beeinträchtigen könnte. Beispiele:
+Ein Sicherheitsvorfall ist jedes Ereignis, das die **Vertraulichkeit, Integrität oder Verfügbarkeit** von GiftCard Pro, von Gutscheinguthaben oder von personenbezogenen Daten beeinträchtigt oder beeinträchtigen könnte. Beispiele:
 
 - unbefugter Zugriff auf ein Konto eines Lokals oder der Plattform-Administration,
-- kopierte oder manipulierte Karten, ungewöhnliche Einlösungen,
+- missbrauchte Gutscheine (fotografierte oder weitergegebene QR-Codes), gehäufte fehlgeschlagene Vorlagen, ungewöhnliche Einlösungen,
+- eine fehlgeschlagene Integritätsprüfung (`giftcard:verify-chains`): Hash-Kette oder Guthaben stimmen nicht,
 - Verlust eines Geräts mit offener Sitzung,
 - veröffentlichtes oder weitergegebenes API-Token,
 - Hinweise auf Zugriff auf Server, Datenbank oder Sicherungen,
@@ -23,12 +24,12 @@ Ein Sicherheitsvorfall ist jedes Ereignis, das die **Vertraulichkeit, Integritä
 
 | Phase | Ziel | Kernaufgaben |
 |---|---|---|
-| **1. Vorbereiten** | handlungsfähig sein, bevor etwas passiert | Rollen und Vertretung festlegen, Kontaktliste, Zugänge (Passwortmanager, Hetzner, GitHub, DNS), Protokolle und Warnungen eingerichtet, Übungen |
-| **2. Erkennen** | Vorfälle früh bemerken | Sicherheitswarnungen im Audit-Log und Anwendungsprotokoll (`warning`: *Suspicious gift card scan*, *Account locked*), Verfügbarkeitsüberwachung über `/up`, Meldungen von Lokalen an security@, Warteschlangen-Überwachung |
-| **3. Analysieren** | Art, Umfang, Schweregrad bestimmen | Zeitlinie, betroffene Lokale, Karten, Benutzer, Daten; Datenschutzbezug prüfen |
-| **4. Eindämmen** | Schaden stoppen | Geräte sperren, Benutzer deaktivieren, Tokens widerrufen, Karten sperren, Lokal suspendieren, Server isolieren |
+| **1. Vorbereiten** | handlungsfähig sein, bevor etwas passiert | Rollen und Vertretung festlegen, Kontaktliste, Zugänge (Passwortmanager, Hetzner, Coolify, GitHub, DNS), Protokolle und Warnungen eingerichtet, `OPS_ALERT_EMAIL` erreicht die Bereitschaft, Übungen |
+| **2. Erkennen** | Vorfälle früh bemerken | Audit-Log (`presentment.failed`, `presentment.rejected`, `auth.locked`), Anwendungsprotokoll (`warning`: *Account locked after repeated failed logins*; `critical`: *Integrity check failed*), E-Mail der nächtlichen Integritätsprüfung, Verfügbarkeitsüberwachung über `/up`, Meldungen von Lokalen an security@, Warteschlangen-Überwachung |
+| **3. Analysieren** | Art, Umfang, Schweregrad bestimmen | Zeitlinie, betroffene Lokale, Gutscheine, Benutzer, Geräte, Daten; Datenschutzbezug prüfen |
+| **4. Eindämmen** | Schaden stoppen | Geräte sperren, Benutzer deaktivieren, Tokens widerrufen (auch plattformweit unter `/admin/api-tokens`), Gutscheine sperren, Lokal deaktivieren, Server isolieren |
 | **5. Beseitigen** | Ursache entfernen | Schwachstelle beheben, Geheimnisse erneuern, kompromittierte Systeme neu aufbauen |
-| **6. Wiederherstellen** | sicherer Normalbetrieb | Dienste freigeben, Daten korrigieren (Stornos, Ersatzkarten), verstärkt überwachen |
+| **6. Wiederherstellen** | sicherer Normalbetrieb | Dienste freigeben, Buchungen korrigieren (Storni als neue Einträge), `giftcard:verify-chains` ohne Befund, verstärkt überwachen |
 | **7. Lernen** | Wiederholung verhindern | Bericht, Maßnahmen, Tests ergänzen, Dokumentation aktualisieren |
 
 ---
@@ -37,10 +38,10 @@ Ein Sicherheitsvorfall ist jedes Ereignis, das die **Vertraulichkeit, Integritä
 
 | Stufe | Beschreibung | Beispiele | Reaktion | Information der Lokale |
 |---|---|---|---|---|
-| **SEV-1 kritisch** | Plattformweiter Schaden oder Verdacht auf Datenabfluss | Server kompromittiert, Plattform-Admin-Konto übernommen, Datenbankauszug im Umlauf, Mandantentrennung durchbrochen | sofort, rund um die Uhr | alle bzw. alle betroffenen, unverzüglich |
-| **SEV-2 hoch** | Schaden in einem oder wenigen Lokalen, Geld oder Personendaten betroffen | Owner-Konto übernommen, Kopierwelle mit Geldschaden, API-Token mit Schreibrechten veröffentlicht | innerhalb 1 Stunde | betroffene Lokale unverzüglich |
-| **SEV-3 mittel** | begrenztes Risiko, eingedämmt oder ohne Schaden | einzelne kopierte Karte abgewiesen, Handy verloren und gesperrt, Brute-Force-Versuch mit Kontosperre | am selben Werktag | betroffenes Lokal |
-| **SEV-4 niedrig** | Auffälligkeit ohne erkennbares Risiko | einzelne Fehlversuche, Scan einer fremden Karte | im Regelbetrieb | nicht nötig |
+| **SEV-1 kritisch** | Plattformweiter Schaden, Verdacht auf Datenabfluss oder Manipulation der Finanzhistorie | Server kompromittiert, Plattform-Admin-Konto übernommen, Datenbankauszug im Umlauf, Mandantentrennung durchbrochen, Integritätsprüfung meldet einen Befund | sofort, rund um die Uhr | alle bzw. alle betroffenen, unverzüglich |
+| **SEV-2 hoch** | Schaden in einem oder wenigen Lokalen, Geld oder Personendaten betroffen | Owner-Konto übernommen, Welle missbrauchter Gutscheine mit Geldschaden, API-Token mit Schreibrechten veröffentlicht | innerhalb 1 Stunde | betroffene Lokale unverzüglich |
+| **SEV-3 mittel** | begrenztes Risiko, eingedämmt oder ohne Schaden | gehäufte fehlgeschlagene Vorlagen auf einem Gerät (gedrosselt), Handy verloren und gesperrt, Brute-Force-Versuch mit Kontosperre | am selben Werktag | betroffenes Lokal |
+| **SEV-4 niedrig** | Auffälligkeit ohne erkennbares Risiko | einzelne Fehlversuche, Scan eines Gutscheins eines anderen Lokals | im Regelbetrieb | nicht nötig |
 
 Im Zweifel die **höhere** Stufe wählen und später herabstufen.
 
@@ -54,7 +55,7 @@ Im Zweifel die **höhere** Stufe wählen und später herabstufen.
 | **Technik** | Analyse, Eindämmung, Beseitigung, Beweissicherung |
 | **Kommunikation** | Lokale, ggf. Partner und Öffentlichkeit informieren; Vorlagen verwenden |
 | **Datenschutz** | prüft, ob eine Datenschutzverletzung vorliegt; bereitet Informationen an die Verantwortlichen bzw. die Meldung an die Datenschutzbehörde vor; Kontakt datenschutz@giftcardpro.at |
-| **Lokal (Kunde)** | setzt Maßnahmen im eigenen Konto um (Geräte, Team, Karten); als Verantwortlicher zuständig für die Meldung an die Datenschutzbehörde bei Gästedaten |
+| **Lokal (Kunde)** | setzt Maßnahmen im eigenen Konto um (Geräte, Team, Gutscheine); als Verantwortlicher zuständig für die Meldung an die Datenschutzbehörde bei Gästedaten |
 
 In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitung liegt bei [Name], Gründerin, Vertretung [Name].
 
@@ -67,12 +68,12 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 - [ ] Meldung bzw. Warnung dokumentieren: Uhrzeit, Quelle, wer meldet, was genau.
 - [ ] Incident-Leitung bestimmen, Ticket bzw. Vorfallsdokument anlegen, Zeitlinie beginnen (UTC und Wiener Zeit).
 - [ ] Vorläufigen Schweregrad festlegen.
-- [ ] **Keine** Beweise vernichten: nichts löschen, Server nicht neu starten, Protokolle nicht rotieren lassen.
+- [ ] **Keine** Beweise vernichten: nichts löschen, Server nicht neu starten, Container nicht neu ausrollen (ein neuer Container beginnt ein neues Log), Protokolle sichern, bevor sie rotieren.
 
 **Minute 15–30: Eindämmen**
 
-- [ ] Betroffene Konten, Geräte, Tokens, Karten identifizieren (Audit-Log, Kartenverlauf, Scan-Protokoll, Request-IDs).
-- [ ] Sofortmaßnahmen nach Playbook (Abschnitt 7): Gerät sperren, Benutzer deaktivieren, Token widerrufen, Karte sperren, notfalls Lokal suspendieren oder Server isolieren.
+- [ ] Betroffene Konten, Geräte, Tokens, Gutscheine identifizieren (Audit-Log, Gutscheinverlauf, Request-IDs).
+- [ ] Sofortmaßnahmen nach Playbook (Abschnitt 7): Gerät sperren, Benutzer deaktivieren, Token widerrufen, Gutschein sperren, notfalls Lokal deaktivieren oder Server isolieren.
 - [ ] Bei SEV-1/SEV-2: weitere Teammitglieder und Vertretung verständigen.
 
 **Minute 30–60: Bewerten und informieren**
@@ -89,16 +90,17 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 
 | Quelle | Inhalt | Sicherung |
 |---|---|---|
-| **Audit-Log** (Datenbank, unveränderlich) | Aktion, Person, Gerät, IP-Adresse, Zeit (Mikrosekunden), Request-ID, alte/neue Werte (Personendaten geschwärzt) | Export der relevanten Einträge (Dashboard bzw. Plattform-Audit) |
-| **Kartenverlauf / Journal** | jede Buchung mit Saldo vorher/nachher, Idempotenzschlüssel, Gerät, Person | CSV-Export Transactions; Datenbankauszug |
-| **Scan-Protokoll** (`nfc_scans`) | jeder Scan inkl. Fehlschlag, Grund (z. B. UID-Abweichung, ungültige Signatur, Replay), IP | Datenbankauszug |
-| **Anwendungsprotokoll** (Laravel) | Warnungen *Suspicious gift card scan*, *Account locked*, Fehler | `docker compose logs api` in Datei sichern |
-| **Proxy-Protokoll** (Caddy, JSON) | jede HTTP-Anfrage mit Zeit, IP, Pfad, Status | `docker compose logs caddy` in Datei sichern |
+| **Audit-Log** (Datenbank, append-only, Hash-Kette) | Aktion, Person, Gerät, IP-Adresse, Zeit (Mikrosekunden), Request-ID, alte/neue Werte (Personendaten geschwärzt), auch jede fehlgeschlagene Vorlage und Anmeldung | Export der relevanten Einträge (Dashboard bzw. Plattform-Audit) |
+| **Ledger und Zahlungen** (append-only, Hash-Kette) | jede Buchung mit Saldo vorher/nachher, Idempotenzschlüssel, verbrauchter Vorlage, Zahlung, Gerät, Person | CSV-Export Transactions; Datenbankauszug |
+| **Vorlagen** (`presentments`) | jede erfolgreiche Vorlage mit Methode, Person, Gerät, Ablauf und Verbrauch | Datenbankauszug |
+| **Integritätsprüfung** | Ergebnis von `php artisan giftcard:verify-chains` (welche Kette, ab welcher Zeile) | Ausgabe in Datei sichern, **bevor** etwas geändert wird |
+| **Anwendungsprotokoll** (Laravel) | Warnungen *Account locked…*, *Integrity check failed…*, Fehler | Coolify → *Logs* → `api`/`scheduler` bzw. am Server `docker logs <container>` in Datei sichern |
+| **Gateway-Protokoll** (Caddy, JSON) | jede HTTP-Anfrage mit Zeit, IP, Pfad, Status (ohne Tokens und Geheimnisse) | `docker logs <gateway-container>` in Datei sichern |
 | **API-Tokens** | letzte Verwendung (Zeit, IP), Ersteller, Berechtigungen | Datenbankauszug |
 | **Geräte** | Gerätekennung, Name, letzte Aktivität, Status | Datenbankauszug |
-| **Server** | Dateisystem, Prozesse, Anmeldungen | Hetzner-Snapshot vor jeder Veränderung |
+| **Server** | Dateisystem, Prozesse, Anmeldungen | Hetzner-Snapshot und frischer Datenbank-Dump vor jeder Veränderung |
 
-**Request-ID:** Jede Anfrage erhält eine Korrelationskennung (`X-Request-Id`), die im Audit-Log und in der Antwort steht. Damit lassen sich Audit-Einträge, Anwendungs- und Proxy-Protokoll einer einzelnen Anfrage zuordnen.
+**Request-ID:** Jede Anfrage erhält eine Korrelationskennung (`X-Request-Id`), die im Audit-Log und in der Antwort steht. Damit lassen sich Audit-Einträge, Anwendungs- und Gateway-Protokoll einer einzelnen Anfrage zuordnen.
 
 **Regeln:** Kopien mit Zeitstempel und SHA-256-Prüfsumme ablegen, Zugriff auf die Incident-Leitung beschränken, jede Handlung mit Uhrzeit in der Zeitlinie vermerken. Personenbezogene Daten in Beweismitteln nur so weit wie nötig verwenden.
 
@@ -110,32 +112,33 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 
 *Anzeichen: Buchungen außerhalb der Arbeitszeit, unbekanntes Gerät, Meldung der Person, Kontosperre ohne eigene Fehlversuche.*
 
-1. **Lokal (Owner):** Team → ⋯ → **„Deactivate"**. Beendet alle Sitzungen und widerruft alle API-Tokens der Person.
+1. **Lokal (Owner):** Team → ⋯ → **„Deactivate"**. Beendet alle Sitzungen und widerruft alle Tokens der Person (auch die Anmeldung der Kellner-App).
 2. Unter **Devices** unbekannte Geräte sperren.
-3. Audit-Log und Transaktionen der Person ab dem vermuteten Zeitpunkt prüfen; unberechtigte Einlösungen stornieren, betroffene Karten ggf. sperren und ersetzen.
+3. Audit-Log und Transaktionen der Person ab dem vermuteten Zeitpunkt prüfen; unberechtigte Einlösungen stornieren, betroffene Gutscheine ggf. sperren. Jede Einlösung verlangte eine Vorlage des Gutscheins – prüfen, auf welchen Geräten die Vorlagen entstanden.
 4. Mit der Person klären, wie das Passwort bekannt wurde (Wiederverwendung, Phishing, notiert).
-5. Reaktivieren erst nach Passwort-Reset über **„Send password reset"**; die Person setzt ein neues Passwort.
+5. Reaktivieren erst nach Passwort-Reset über **„Send password reset"**; die Person setzt ein neues Passwort (das widerruft erneut alle Tokens und „Keep me signed in“).
 6. Bei Owner-Konto: Schweregrad SEV-2; GiftCard Pro unterstützt über security@. Wurden Kundendaten eingesehen oder exportiert, Datenschutzprüfung (Abschnitt 8).
 
 ### 7.2 Gestohlenes oder verlorenes Handy
 
-1. **Devices** → Gerät → **„Revoke"**. Wirkt ab der nächsten Anfrage; auch eine noch offene Sitzung wird abgewiesen.
+1. **Devices** → Gerät → **„Revoke"**. Wirkt ab der nächsten Anfrage; auch eine noch offene Sitzung oder eine angemeldete Kellner-App wird abgewiesen, und „Keep me signed in“ der Personen dieses Geräts endet.
 2. Passwort der Person zurücksetzen, falls es auf dem Gerät gespeichert war oder das Gerät nicht gesperrt war.
 3. Audit-Log: Aktivität dieses Geräts ab dem Verlustzeitpunkt prüfen.
 4. Wiedergefundenes Gerät: **„Restore"**.
 
-### 7.3 Kopierwelle (Card Cloning)
+### 7.3 Missbrauchte Gutscheine
 
-*Anzeichen: mehrere Warnungen „Cloned card rejected" oder Replay-Warnungen, Gäste berichten von Guthaben, das sie nicht verbraucht haben, gleiche Karte in kurzer Zeit an verschiedenen Tischen.*
+*Anzeichen: Gäste berichten von Guthaben, das sie nicht verbraucht haben; derselbe Gutschein wird in kurzer Zeit an verschiedenen Tischen oder in auffälligen Mustern eingelöst; gehäufte `presentment.failed` auf einem Gerät oder `429 PRESENTMENT_THROTTLED`.*
 
-1. Betroffene Karten sofort **sperren** (Grund: Suspicious use).
-2. Scan-Protokoll auswerten: welche Karten, welche Geräte, welche IP-Adressen, welche Uhrzeiten.
-3. Prüfen, ob Kopierschutz aktiviert ist und die Karten an ihre Chip-Seriennummer gebunden sind. Nicht gebundene Karten (z. B. ohne Seriennummer als beschrieben markiert) nachträglich absichern: Ersatzkarte mit Bindung ausgeben.
-4. Einlösungen, die nachweislich mit Kopien erfolgt sind, dokumentieren; das Guthaben rechtmäßiger Inhaberinnen und Inhaber per **„Replace lost card"** auf eine neue Karte übertragen.
-5. Missbrauchsgrenzen senken (Einlösungen pro Stunde, maximaler Einzelbetrag).
-6. Servicekräfte informieren: nur Android-Scan (mit Seriennummernprüfung) verwenden, rote Warnungen ernst nehmen.
-7. Mittelfristig: für hohe Werte auf NTAG 424 DNA umstellen.
-8. Bei Geldschaden: Anzeige durch das Lokal erwägen; GiftCard Pro stellt die Protokolle bereit.
+Ein QR-Code trägt ein 256-Bit-Geheimnis; er lässt sich nicht erraten, wohl aber fotografieren oder weitergeben. Die interne Gutscheinnummer ist nie ein Berechtigungsnachweis.
+
+1. Betroffene Gutscheine sofort **sperren** (Grund angeben).
+2. Verlauf und Audit-Log auswerten: welche Gutscheine, welche Geräte, welche Personen, welche Uhrzeiten. Jede Einlösung ist mit Vorlage, Person und Gerät verknüpft.
+3. Gehäufte Fehlversuche auf einem Gerät: Gerät prüfen und bei Verdacht unter **Devices** widerrufen; die Person befragen.
+4. Einlösungen, die nachweislich missbräuchlich erfolgt sind, dokumentieren; mit dem rechtmäßigen Gast klären, wie mit dem Guthaben verfahren wird (Storno einer Einlösung nur, wenn sie nachweislich falsch gebucht wurde).
+5. Missbrauchsgrenzen senken (Einlösungen pro Stunde, Betrag je Einlösung und je Tag).
+6. Servicekräfte informieren: nur per Scan einlösen, gesperrte oder merkwürdige Gutscheine nicht annehmen; Lokal an den Umgang mit Druckblättern erinnern (wie Bargeld).
+7. Bei Geldschaden: Anzeige durch das Lokal erwägen; GiftCard Pro stellt die Protokolle bereit.
 
 ### 7.4 Verdacht auf Datenschutzverletzung
 
@@ -154,22 +157,36 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 
 *Anzeichen: Token in Code-Repository, Chat, E-Mail, Screenshot; „zuletzt verwendet" von unbekannter IP.*
 
-1. **Settings → API → Revoke** – sofort, ohne Rückfrage. Tokens beginnen mit `gcp_`; das erleichtert die Suche in Repositories.
+1. **Settings → API → Revoke** – sofort, ohne Rückfrage; bei Bedarf widerruft die Plattform-Administration das Token unter `/admin/api-tokens`. Tokens beginnen mit `gcp_`; das erleichtert die Suche in Repositories.
 2. Audit-Log und Transaktionen der vom Token ausgelösten Aktionen prüfen (Token handelt als die erstellende Person, mit deren Kennung protokolliert).
-3. Unberechtigte Buchungen stornieren, betroffene Karten sperren oder ersetzen.
+3. Unberechtigte Buchungen stornieren, betroffene Gutscheine sperren. Ein Token allein kann nicht einlösen – jede Einlösung verlangt eine Vorlage des gescannten Gutscheins; Verkäufe und Aufladungen sind dagegen möglich, wenn das Token die Berechtigung hatte.
 4. Neues Token mit minimalen Berechtigungen und kurzer Laufzeit erstellen, sicher in der Zielanwendung hinterlegen.
 5. Ursache beseitigen (z. B. Token aus Repository-Verlauf entfernen, Integrationspartner informieren).
 
 ### 7.6 Kompromittierung eines Plattform-Administrationskontos
 
-*Schweregrad immer SEV-1 – dieses Konto kann in jedem Lokal handeln.*
+*Schweregrad immer SEV-1 – dieses Konto kann Lokale deaktivieren, archivieren und löschen (nur ohne Geschäftsdaten), Einladungen neu senden, Tokens widerrufen und Systemeinstellungen ändern. Es kann nie innerhalb eines Lokals handeln, keine Gutscheine, Buchungen oder Kundendaten sehen und keine API-Tokens anlegen oder verwenden.*
 
-1. Konto sofort serverseitig sperren: Status des Benutzers in der Datenbank auf inaktiv setzen (inaktive Benutzer werden bei der nächsten Anfrage abgewiesen), offene API-Tokens widerrufen, Sitzungen in Redis beenden. Für Plattform-Konten gibt es dafür derzeit keine eigene Oberfläche; die Schritte erfolgen über Server-Konsole bzw. Datenbank und werden in der Zeitlinie dokumentiert.
-2. Plattform-Audit auswerten: Welche Lokale wurden über „Open restaurant" geöffnet? Welche Aktionen, Exporte, Einstellungen, Suspendierungen, Systemeinstellungen?
-3. Passwörter aller weiteren Plattform-Administrationskonten erneuern; bei Bedarf ein neues Konto mit `php artisan platform:create-admin` anlegen.
-4. Prüfen, ob neue Konten, Einladungen oder API-Tokens angelegt wurden; diese widerrufen.
-5. Bei Verdacht auf weitergehenden Serverzugriff: Disaster-Recovery-Szenario 5.4 (Neuaufbau, alle Geheimnisse erneuern).
+1. Konto sofort serverseitig sperren: Status des Benutzers in der Datenbank auf inaktiv setzen (inaktive Benutzer werden bei der nächsten Anfrage abgewiesen) und Sitzungen in Redis beenden. Für Plattform-Konten gibt es dafür keine eigene Oberfläche; die Schritte erfolgen über Server-Konsole bzw. Datenbank und werden in der Zeitlinie dokumentiert.
+2. Plattform-Audit auswerten: Welche Lokale wurden angelegt, deaktiviert, archiviert oder gelöscht? Welche Einladungen neu gesendet (mit geänderter Adresse)? Welche Tokens widerrufen, welche Systemeinstellungen geändert (z. B. Wartungshinweis, Mindestversionen der App)?
+3. Neu gesendete Einladungen prüfen: Wurde die Adresse eines noch nicht angenommenen Kontos geändert, Einladung an die richtige Adresse erneut senden; das vorige Token ist damit ungültig.
+4. Passwörter aller weiteren Plattform-Administrationskonten erneuern; bei Bedarf ein neues Konto mit `php artisan platform:create-admin` anlegen.
+5. Bei Verdacht auf weitergehenden Serverzugriff: Disaster-Recovery-Szenario 5.4 (Neuaufbau, alle Geheimnisse erneuern) und `php artisan giftcard:verify-chains`.
 6. Alle betroffenen Lokale informieren; Datenschutzprüfung.
+
+### 7.7 Integritätsprüfung meldet einen Befund
+
+*Anzeichen: E-Mail an `OPS_ALERT_EMAIL`, `critical`-Eintrag „Integrity check failed: financial history or audit log does not verify“; `giftcard:verify-chains` meldet eine gebrochene Kette oder ein Guthaben, das nicht der Summe der Buchungen entspricht.*
+
+Schweregrad immer **SEV-1**: Die Anwendung selbst kann Ledger, Zahlungen und Audit-Log nicht ändern (Datenbank-Trigger, `IMMUTABLE_RECORD`); ein Befund bedeutet einen Eingriff an der Anwendung vorbei, einen Datenbankfehler oder einen fehlerhaften Restore.
+
+1. **Nichts ändern.** Keine Korrektur per SQL, kein Redeploy, kein Restore, bevor die Beweise gesichert sind.
+2. Frischen Datenbank-Dump ziehen und die vorhandenen Backups sichern (Off-site-Kopie schützen); Hetzner-Snapshot anlegen.
+3. Ausgabe von `php artisan giftcard:verify-chains` sichern: betroffene Kette (Lokal oder Plattform), erste abweichende Zeile, betroffene Gutscheine.
+4. Zugänge prüfen: Wer hatte Datenbank- oder Serverzugriff (Coolify-Terminal, SSH, Datenbank-Root)? Server-Anmeldungen und Coolify-Aktivität sichten.
+5. Letzten Dump, der die Prüfung besteht, in eine Restore-Datenbank einspielen und vergleichen ([Restore-Anleitung](../06-technical/restore-guide.md), Szenario A): Welche Zeilen fehlen, sind verändert oder eingefügt?
+6. Entscheidung dokumentieren: Wiederherstellung aus dem letzten guten Dump (Szenario B) mit Nacherfassung, oder Klärung eines technischen Fehlers. Erst danach wieder freigeben; `giftcard:verify-chains` muss ohne Befund sein.
+7. Betroffene Lokale informieren; bei Hinweisen auf unbefugten Zugriff Datenschutzprüfung (Abschnitt 8).
 
 ---
 
@@ -198,7 +215,7 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 > am [Datum, Uhrzeit] haben wir [kurze, sachliche Beschreibung] festgestellt. Betroffen ist nach aktuellem Stand [Umfang].
 >
 > **Bereits umgesetzt:** [z. B. Token widerrufen, Gerät gesperrt].
-> **Bitte veranlassen Sie:** [z. B. Passwörter zurücksetzen, Karten prüfen].
+> **Bitte veranlassen Sie:** [z. B. Passwörter zurücksetzen, Gutscheine prüfen].
 >
 > Wir melden uns spätestens am [Datum, Uhrzeit] mit weiteren Informationen. Ansprechperson: [Name], security@giftcardpro.at, [Telefon].
 >
@@ -215,7 +232,7 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 >
 > 1. **Zeitpunkt:** Verletzung am/seit [Datum, Uhrzeit]; uns bekannt seit [Datum, Uhrzeit].
 > 2. **Art der Verletzung:** [unbefugter Zugriff / Offenlegung / Verlust / Veränderung].
-> 3. **Kategorien betroffener Personen:** [z. B. Gäste, die Gutscheinkarten gekauft haben; Empfängerinnen und Empfänger].
+> 3. **Kategorien betroffener Personen:** [z. B. Gäste, die Gutscheine gekauft haben; Empfängerinnen und Empfänger].
 > 4. **Ungefähre Zahl betroffener Personen:** [Zahl]; **Datensätze:** [Zahl].
 > 5. **Kategorien personenbezogener Daten:** [Name, E-Mail-Adresse, Telefonnummer, Notizen, Empfängername].
 > 6. **Wahrscheinliche Folgen:** [z. B. Risiko von Phishing-E-Mails].
@@ -255,7 +272,7 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 | Zeitlinie | Erkennung, Eindämmung, Behebung, Abschluss (mit Uhrzeiten) |
 | Zusammenfassung | 3–5 Sätze, verständlich für Lokale |
 | Ursache (Root Cause) | |
-| Auswirkung | betroffene Lokale, Karten, Personen, Geldbeträge, Ausfallzeit |
+| Auswirkung | betroffene Lokale, Gutscheine, Personen, Geldbeträge, Ausfallzeit |
 | Datenschutz | Datenschutzverletzung ja/nein, Begründung, Meldungen (wer, wann) |
 | Was gut funktioniert hat | |
 | Was nicht gut funktioniert hat | |
@@ -273,4 +290,4 @@ Sicherheitslücken und Verdachtsfälle bitte an **security@giftcardpro.at**. Wir
 
 ---
 
-Version 1.0 · Stand: September 2026
+Version 2.0 · Stand: September 2026

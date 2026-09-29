@@ -12,11 +12,11 @@ Internet ──HTTPS──▶ Coolify proxy (TLS certificate for your domain)
                       │
                       ▼ HTTP, internal network
                     gateway :80  (Caddy, infra/docker/gateway)
-                      ├─ /api/*  /sanctum/*  /up  /reset-password/*  ──FastCGI──▶ api :9000   (Laravel, php-fpm)
-                      └─ everything else  ──────────────────────────────HTTP────▶ web :3000   (Next.js dashboard)
+                      ├─ /api/*  /sanctum/*  /up  ──FastCGI──▶ api :9000   (Laravel, php-fpm)
+                      └─ everything else  ─────────HTTP────▶ web :3000   (Next.js dashboard and web till)
 
-  worker    queue:work (e-mails, notifications)
-  scheduler schedule:work (nightly expiry, reminders…)
+  worker    queue:work (every e-mail is sent from the queue)
+  scheduler schedule:work (nightly expiry, integrity check, reminders…)
   mysql     MySQL 8.4            volume mysql-data
   redis     Redis 7.4 (AOF)      volume redis-data     sessions, cache, locks, queues
   backup    daily mysqldump      volume mysql-backups  (kept 14 days)
@@ -33,14 +33,15 @@ Internet ──HTTPS──▶ Coolify proxy (TLS certificate for your domain)
 | `redis` | image `redis:7.4-alpine` | no | `redis-cli ping` | unless-stopped | `redis-data` |
 | `backup` | image `mysql:8.4` | no | — | unless-stopped | `mysql-backups` |
 
-Why a gateway: the product is **one origin** — the dashboard, the API, the Sanctum cookies and the card links
-(`https://<domain>/c/<token>`) share one domain. The gateway does this path routing inside the stack, so Coolify only
+Why a gateway: the product is **one origin** — the dashboard, the web till, the API and the Sanctum cookies share
+one domain. The gateway does this path routing inside the stack, so Coolify only
 has to route one domain to one container, and nothing depends on proxy-specific path rules.
 
 Start order: the compose file has **no `depends_on`** — Coolify starts all eight containers at once. The order is
 enforced inside the Laravel containers (`infra/docker/php/entrypoint.sh`): wait until MySQL and Redis accept
 connections (up to 15 minutes on fresh volumes) → run the migrations (a Redis lock lets exactly one container
-migrate, the others wait until nothing is pending) → `api` seeds reference data → start. Until then the gateway
+migrate, the others wait until nothing is pending) → `api` seeds reference data (roles and permissions, e-mail
+templates, system settings) → start. Until then the gateway
 answers 502 for the API. A failing migration stops the container with the error in its log (resource → *Logs*).
 
 ## What you need
@@ -80,7 +81,7 @@ answers 502 for the API. A failing migration stops the container with the error 
    (asks for a password, min. 12 characters, upper/lower case and a digit).
 8. **Check:**
    - `https://app.giftcardpro.at/up` → green page ("Application up"; checks database and cache)
-   - `https://app.giftcardpro.at/api/v1/app/config?platform=android&version=1.4.2` → JSON
+   - `https://app.giftcardpro.at/api/v1/app/config?platform=android&version=2.0.0` → JSON
    - `https://app.giftcardpro.at` → sign-in page; sign in, onboard a test restaurant, confirm the welcome e-mail arrives.
 9. **Back up the APP_KEY** (generated on the first deploy): *Terminal* → container **api** →
    `cat storage/app/.app-key`. Store it in your password manager, and ideally paste it as `APP_KEY` into the
@@ -94,17 +95,27 @@ comes from the environment variables of the Coolify resource.
 ## Updates
 
 Push to `main` (or press *Redeploy*). Coolify builds the new images, then replaces the containers; the first new
-Laravel container runs the new migrations, and `api`/`worker`/`scheduler` only start serving after that. Expect a few seconds of interruption while
-containers are replaced. Migrations are written to be backwards compatible with the previous release
-(expand → migrate → contract).
+Laravel container runs pending migrations, and `api`/`worker`/`scheduler` only start serving after that. Expect a
+few seconds of interruption while containers are replaced.
 
-**Rollback:** resource → *Deployments* → pick an earlier deployment → *Redeploy*. The database is not rolled back:
-migrations only go forward; restore a backup only for real data loss.
+**Rebuilding the database.** The schema is the set of migrations `2026_01_01_000001` … `000007`
+([DATABASE.md](DATABASE.md#installing-the-schema)). A database that was created from an earlier schema is rebuilt
+once, which deletes all its data: *Terminal* → container **api** →
+
+```bash
+php artisan migrate:fresh --seed --force
+php artisan platform:create-admin you@giftcardpro.at --name="Your Name"
+php artisan giftcard:verify-chains
+```
+
+**Rollback:** resource → *Deployments* → pick an earlier deployment → *Redeploy*. The database is not rolled back;
+restore a backup only for real data loss.
 
 ## Backups
 
 The `backup` service writes `giftcard_pro_<UTC timestamp>.sql.gz` into the volume `mysql-backups` every day at
-`BACKUP_TIME` (UTC, default 01:30) and deletes dumps older than `BACKUP_KEEP_DAYS` (default 14).
+`BACKUP_TIME` (UTC, default 01:30) and deletes dumps older than `BACKUP_KEEP_DAYS` (default 14). Dumps are
+consistent (`--single-transaction`) and include the append-only triggers (`--triggers`).
 
 - **Off-site copy (required for real data):** the volume lives on the same disk as the database. On the server,
   find it with `docker volume ls | grep mysql-backups` and sync its `_data` directory off-site, e.g. a root cron job
@@ -117,7 +128,8 @@ The `backup` service writes `giftcard_pro_<UTC timestamp>.sql.gz` into the volum
 1. *Terminal* → container **api** → `php artisan down` (the dashboard and app show maintenance).
 2. *Terminal* → container **backup** →
    `gunzip -c /backups/<file>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"`
-3. Resource → *Redeploy* (runs migrations newer than the dump, brings the app back up).
+3. Resource → *Redeploy* (brings the app back up).
+4. *Terminal* → container **api** → `php artisan giftcard:verify-chains` (the restored chains and balances must verify).
 
 Test a restore once a month into a scratch database: in the backup container
 `mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE restore_test"`, restore into `restore_test`,
@@ -129,14 +141,14 @@ check it, `DROP DATABASE restore_test`.
 |---|---|
 | Logs of a service | resource → *Logs* (all services log to stdout/stderr; Laravel uses `LOG_CHANNEL=stderr`) |
 | Artisan command | *Terminal* → **api** → `php artisan …` (e.g. `migrate:status`, `schedule:list`, `queue:failed`) |
-| NFC 424 keys | *Terminal* → **api** → `php artisan giftcard:nfc-keys` → add both to the Environment Variables → *Redeploy* |
+| Integrity check now | *Terminal* → **api** → `php artisan giftcard:verify-chains` (recomputes every hash chain and every voucher balance) |
 | Change a setting | *Environment Variables* → *Redeploy* (configuration is cached at container start) |
-| Waiter app links | set `WAITER_ANDROID_PACKAGE`, `WAITER_ANDROID_CERT_SHA256`, `WAITER_IOS_APP_IDS` → *Redeploy*; check `/.well-known/assetlinks.json` and `/.well-known/apple-app-site-association` |
-| Monitoring | an uptime check on `https://<domain>/up` (Better Stack, UptimeRobot…); `OPS_ALERT_EMAIL` gets a mail when a queue exceeds 500 jobs |
+| Monitoring | an uptime check on `https://<domain>/up` (Better Stack, UptimeRobot…); `OPS_ALERT_EMAIL` gets a mail when a queue exceeds 500 jobs and when the nightly integrity check fails. A failed integrity check is a security incident: preserve the database and the backups before changing anything |
+| Logs without secrets | The gateway's access and error logs drop tokens, e-mail query parameters, cookies, `Authorization`, `X-Device-Id` and `Idempotency-Key`; every service rotates its Docker log at 10 MB × 5 files |
 
-Nightly jobs (scheduler, times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): 00:15 `giftcards:expire`,
-03:30 `queue:prune-failed`, 10:00 `giftcards:notify-expiring`, every 15 min `auth:clear-resets`, every 5 min
-`queue:monitor`. Check with `php artisan schedule:list` in the api container.
+Nightly jobs (scheduler, times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): 00:15 `vouchers:expire`,
+02:30 `giftcard:verify-chains`, 03:30 `queue:prune-failed`, 10:00 `vouchers:notify-expiring`, every 15 min
+`auth:clear-resets`, every 5 min `queue:monitor`. Check with `php artisan schedule:list` in the api container.
 
 ## Staging
 

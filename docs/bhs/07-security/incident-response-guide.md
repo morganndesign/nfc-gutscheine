@@ -8,10 +8,11 @@
 
 ## 1. Šta je sigurnosni incident?
 
-Sigurnosni incident je svaki događaj koji narušava ili bi mogao narušiti **povjerljivost, integritet ili dostupnost** GiftCard Pro, stanja na karticama ili ličnih podataka. Primjeri:
+Sigurnosni incident je svaki događaj koji narušava ili bi mogao narušiti **povjerljivost, integritet ili dostupnost** GiftCard Pro, stanja na vaučerima ili ličnih podataka. Primjeri:
 
 - neovlašten pristup računu restorana ili administracije platforme,
-- kopirane ili izmanipulisane kartice, neuobičajena iskorištavanja,
+- zloupotrijebljeni vaučeri (fotografisani ili proslijeđeni QR kodovi), nagomilana neuspjela predočenja, neuobičajena iskorištavanja,
+- neuspjela provjera integriteta (`giftcard:verify-chains`): hash lanac ili stanje se ne slažu,
 - gubitak uređaja s otvorenom sesijom,
 - objavljen ili proslijeđen API token,
 - znaci pristupa serveru, bazi podataka ili sigurnosnim kopijama,
@@ -23,12 +24,12 @@ Sigurnosni incident je svaki događaj koji narušava ili bi mogao narušiti **po
 
 | Faza | Cilj | Ključni zadaci |
 |---|---|---|
-| **1. Pripremiti** | biti spreman za djelovanje prije nego što se nešto dogodi | odrediti uloge i zamjenu, lista kontakata, pristupi (menadžer lozinki, Hetzner, GitHub, DNS), postavljeni zapisnici i upozorenja, vježbe |
-| **2. Otkriti** | rano primijetiti incidente | sigurnosna upozorenja u zapisniku aktivnosti i zapisniku aplikacije (`warning`: *Suspicious gift card scan*, *Account locked*), nadzor dostupnosti preko `/up`, prijave restorana na security@, nadzor redova čekanja |
-| **3. Analizirati** | odrediti vrstu, obim i nivo ozbiljnosti | vremenska linija, pogođeni restorani, kartice, korisnici, podaci; provjeriti vezu sa zaštitom podataka |
-| **4. Obuzdati** | zaustaviti štetu | blokirati uređaje, deaktivirati korisnike, opozvati tokene, blokirati kartice, suspendovati restoran, izolovati server |
+| **1. Pripremiti** | biti spreman za djelovanje prije nego što se nešto dogodi | odrediti uloge i zamjenu, lista kontakata, pristupi (menadžer lozinki, Hetzner, Coolify, GitHub, DNS), postavljeni zapisnici i upozorenja, `OPS_ALERT_EMAIL` stiže do dežurstva, vježbe |
+| **2. Otkriti** | rano primijetiti incidente | zapisnik aktivnosti (`presentment.failed`, `presentment.rejected`, `auth.locked`), zapisnik aplikacije (`warning`: *Account locked after repeated failed logins*; `critical`: *Integrity check failed*), e-mail noćne provjere integriteta, nadzor dostupnosti preko `/up`, prijave restorana na security@, nadzor redova čekanja |
+| **3. Analizirati** | odrediti vrstu, obim i nivo ozbiljnosti | vremenska linija, pogođeni restorani, vaučeri, korisnici, uređaji, podaci; provjeriti vezu sa zaštitom podataka |
+| **4. Obuzdati** | zaustaviti štetu | blokirati uređaje, deaktivirati korisnike, opozvati tokene (i na nivou platforme pod `/admin/api-tokens`), blokirati vaučere, onemogućiti restoran, izolovati server |
 | **5. Otkloniti** | ukloniti uzrok | otkloniti slabost, obnoviti tajne, ponovo izgraditi kompromitovane sisteme |
-| **6. Oporaviti** | siguran normalan rad | osloboditi servise, ispraviti podatke (storna, zamjenske kartice), pojačano nadzirati |
+| **6. Oporaviti** | siguran normalan rad | osloboditi servise, ispraviti knjiženja (storna kao novi zapisi), `giftcard:verify-chains` bez nalaza, pojačano nadzirati |
 | **7. Učiti** | spriječiti ponavljanje | izvještaj, mjere, dopuniti testove, ažurirati dokumentaciju |
 
 ---
@@ -37,10 +38,10 @@ Sigurnosni incident je svaki događaj koji narušava ili bi mogao narušiti **po
 
 | Nivo | Opis | Primjeri | Reakcija | Informisanje restorana |
 |---|---|---|---|---|
-| **SEV-1 kritično** | šteta na nivou cijele platforme ili sumnja na odliv podataka | server kompromitovan, preuzet račun administratora platforme, izvod iz baze podataka u opticaju, probijeno odvajanje klijenata | odmah, 24/7 | svi odnosno svi pogođeni, bez odgađanja |
-| **SEV-2 visoko** | šteta u jednom ili nekoliko restorana, pogođeni novac ili lični podaci | preuzet Owner račun, talas kopiranja sa štetom, objavljen API token s pravima pisanja | u roku od 1 sata | pogođeni restorani bez odgađanja |
-| **SEV-3 srednje** | ograničen rizik, obuzdan ili bez štete | odbijena pojedinačna kopirana kartica, izgubljen i blokiran telefon, brute-force pokušaj sa zaključavanjem računa | istog radnog dana | pogođeni restoran |
-| **SEV-4 nisko** | upadljivost bez prepoznatljivog rizika | pojedinačni neuspjeli pokušaji, skeniranje strane kartice | u redovnom radu | nije potrebno |
+| **SEV-1 kritično** | šteta na nivou cijele platforme, sumnja na odliv podataka ili manipulaciju finansijske historije | server kompromitovan, preuzet račun administratora platforme, izvod iz baze podataka u opticaju, probijeno odvajanje klijenata, provjera integriteta javlja nalaz | odmah, 24/7 | svi odnosno svi pogođeni, bez odgađanja |
+| **SEV-2 visoko** | šteta u jednom ili nekoliko restorana, pogođeni novac ili lični podaci | preuzet Owner račun, talas zloupotrijebljenih vaučera sa štetom, objavljen API token s pravima pisanja | u roku od 1 sata | pogođeni restorani bez odgađanja |
+| **SEV-3 srednje** | ograničen rizik, obuzdan ili bez štete | nagomilana neuspjela predočenja na jednom uređaju (ograničeno), izgubljen i blokiran telefon, brute-force pokušaj sa zaključavanjem računa | istog radnog dana | pogođeni restoran |
+| **SEV-4 nisko** | upadljivost bez prepoznatljivog rizika | pojedinačni neuspjeli pokušaji, skeniranje vaučera drugog restorana | u redovnom radu | nije potrebno |
 
 U slučaju sumnje odabrati **viši** nivo i kasnije ga smanjiti.
 
@@ -54,7 +55,7 @@ U slučaju sumnje odabrati **viši** nivo i kasnije ga smanjiti.
 | **Tehnika** | analiza, obuzdavanje, otklanjanje, osiguranje dokaza |
 | **Komunikacija** | obavještava restorane, po potrebi partnere i javnost; koristi predloške |
 | **Zaštita podataka** | provjerava postoji li povreda zaštite podataka; priprema informacije za voditelje obrade odnosno prijavu tijelu za zaštitu podataka; kontakt datenschutz@giftcardpro.at |
-| **Restoran (korisnik)** | provodi mjere u vlastitom računu (uređaji, tim, kartice); kao voditelj obrade nadležan za prijavu tijelu za zaštitu podataka kod podataka o gostima |
+| **Restoran (korisnik)** | provodi mjere u vlastitom računu (uređaji, tim, vaučeri); kao voditelj obrade nadležan za prijavu tijelu za zaštitu podataka kod podataka o gostima |
 
 U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime], osnivačica, zamjena [Ime].
 
@@ -67,12 +68,12 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 - [ ] Dokumentovati prijavu odnosno upozorenje: vrijeme, izvor, ko prijavljuje, šta tačno.
 - [ ] Odrediti rukovodstvo incidenta, otvoriti tiket odnosno dokument incidenta, započeti vremensku liniju (UTC i bečko vrijeme).
 - [ ] Odrediti privremeni nivo ozbiljnosti.
-- [ ] **Ne** uništavati dokaze: ništa ne brisati, ne restartovati server, ne dozvoliti rotaciju zapisnika.
+- [ ] **Ne** uništavati dokaze: ništa ne brisati, ne restartovati server, ne uvoditi kontejnere ponovo (novi kontejner počinje novi log), zapisnike osigurati prije nego što se rotiraju.
 
 **Minuta 15–30: Obuzdati**
 
-- [ ] Identifikovati pogođene račune, uređaje, tokene, kartice (zapisnik aktivnosti, historija kartice, zapisnik skeniranja, Request-ID-ovi).
-- [ ] Hitne mjere prema playbooku (odjeljak 7): blokirati uređaj, deaktivirati korisnika, opozvati token, blokirati karticu, po potrebi suspendovati restoran ili izolovati server.
+- [ ] Identifikovati pogođene račune, uređaje, tokene, vaučere (zapisnik aktivnosti, historija vaučera, Request-ID-ovi).
+- [ ] Hitne mjere prema playbooku (odjeljak 7): blokirati uređaj, deaktivirati korisnika, opozvati token, blokirati vaučer, po potrebi onemogućiti restoran ili izolovati server.
 - [ ] Kod SEV-1/SEV-2: obavijestiti druge članove tima i zamjenu.
 
 **Minuta 30–60: Procijeniti i obavijestiti**
@@ -89,16 +90,17 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 
 | Izvor | Sadržaj | Osiguranje |
 |---|---|---|
-| **Zapisnik aktivnosti** (baza podataka, nepromjenjiv) | radnja, osoba, uređaj, IP adresa, vrijeme (mikrosekunde), Request-ID, stare/nove vrijednosti (lični podaci zatamnjeni) | izvoz relevantnih zapisa (kontrolna tabla odnosno audit platforme) |
-| **Historija kartice / dnevnik** | svako knjiženje sa stanjem prije/poslije, ključ idempotentnosti, uređaj, osoba | CSV izvoz Transactions; izvod iz baze podataka |
-| **Zapisnik skeniranja** (`nfc_scans`) | svako skeniranje uklj. neuspjeh, razlog (npr. odstupanje UID-a, nevažeći potpis, replay), IP | izvod iz baze podataka |
-| **Zapisnik aplikacije** (Laravel) | upozorenja *Suspicious gift card scan*, *Account locked*, greške | `docker compose logs api` sačuvati u datoteku |
-| **Zapisnik proxyja** (Caddy, JSON) | svaki HTTP zahtjev s vremenom, IP adresom, putanjom, statusom | `docker compose logs caddy` sačuvati u datoteku |
+| **Zapisnik aktivnosti** (baza podataka, append-only, hash lanac) | radnja, osoba, uređaj, IP adresa, vrijeme (mikrosekunde), Request-ID, stare/nove vrijednosti (lični podaci zatamnjeni), i svako neuspjelo predočenje i prijava | izvoz relevantnih zapisa (kontrolna tabla odnosno audit platforme) |
+| **Ledger i plaćanja** (append-only, hash lanac) | svako knjiženje sa stanjem prije/poslije, ključ idempotentnosti, potrošeno predočenje, plaćanje, uređaj, osoba | CSV izvoz Transactions; izvod iz baze podataka |
+| **Predočenja** (`presentments`) | svako uspješno predočenje s metodom, osobom, uređajem, istekom i potrošnjom | izvod iz baze podataka |
+| **Provjera integriteta** | rezultat `php artisan giftcard:verify-chains` (koji lanac, od kojeg reda) | izlaz sačuvati u datoteku **prije** bilo kakve izmjene |
+| **Zapisnik aplikacije** (Laravel) | upozorenja *Account locked…*, *Integrity check failed…*, greške | Coolify → *Logs* → `api`/`scheduler` odnosno na serveru `docker logs <container>` sačuvati u datoteku |
+| **Zapisnik gatewaya** (Caddy, JSON) | svaki HTTP zahtjev s vremenom, IP adresom, putanjom, statusom (bez tokena i tajni) | `docker logs <gateway-container>` sačuvati u datoteku |
 | **API tokeni** | posljednja upotreba (vrijeme, IP), kreator, dozvole | izvod iz baze podataka |
 | **Uređaji** | identifikator uređaja, naziv, posljednja aktivnost, status | izvod iz baze podataka |
-| **Server** | datotečni sistem, procesi, prijave | Hetzner snapshot prije svake promjene |
+| **Server** | datotečni sistem, procesi, prijave | Hetzner snapshot i svjež dump baze prije svake promjene |
 
-**Request-ID:** Svaki zahtjev dobija identifikator korelacije (`X-Request-Id`) koji se nalazi u zapisniku aktivnosti i u odgovoru. Time se zapisi u zapisniku aktivnosti, zapisniku aplikacije i proxyja mogu povezati s jednim zahtjevom.
+**Request-ID:** Svaki zahtjev dobija identifikator korelacije (`X-Request-Id`) koji se nalazi u zapisniku aktivnosti i u odgovoru. Time se zapisi u zapisniku aktivnosti, zapisniku aplikacije i gatewaya mogu povezati s jednim zahtjevom.
 
 **Pravila:** Kopije spremati s vremenskom oznakom i SHA-256 kontrolnim zbirom, pristup ograničiti na rukovodstvo incidenta, svaku radnju s vremenom zabilježiti u vremenskoj liniji. Lične podatke u dokazima koristiti samo u mjeri u kojoj je potrebno.
 
@@ -110,32 +112,33 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 
 *Znaci: knjiženja izvan radnog vremena, nepoznat uređaj, prijava osobe, zaključavanje računa bez vlastitih neuspjelih pokušaja.*
 
-1. **Restoran (Owner):** Team → ⋯ → **„Deactivate"**. Završava sve sesije i opoziva sve API tokene osobe.
+1. **Restoran (Owner):** Team → ⋯ → **„Deactivate"**. Završava sve sesije i opoziva sve tokene osobe (i prijavu u aplikaciji za konobare).
 2. Pod **Devices** blokirati nepoznate uređaje.
-3. Provjeriti zapisnik aktivnosti i transakcije osobe od pretpostavljenog trenutka; neovlaštena iskorištavanja stornirati, pogođene kartice po potrebi blokirati i zamijeniti.
+3. Provjeriti zapisnik aktivnosti i transakcije osobe od pretpostavljenog trenutka; neovlaštena iskorištavanja stornirati, pogođene vaučere po potrebi blokirati. Svako iskorištavanje zahtijevalo je predočenje vaučera – provjeriti na kojim uređajima su predočenja nastala.
 4. S osobom razjasniti kako je lozinka postala poznata (ponovna upotreba, phishing, zapisana).
-5. Ponovo aktivirati tek nakon reseta lozinke preko **„Send password reset"**; osoba postavlja novu lozinku.
+5. Ponovo aktivirati tek nakon reseta lozinke preko **„Send password reset"**; osoba postavlja novu lozinku (to ponovo opoziva sve tokene i „Keep me signed in“).
 6. Kod Owner računa: nivo SEV-2; GiftCard Pro pomaže preko security@. Ako su podaci o kupcima pregledani ili izvezeni, provjera zaštite podataka (odjeljak 8).
 
 ### 7.2 Ukraden ili izgubljen telefon
 
-1. **Devices** → uređaj → **„Revoke"**. Djeluje od sljedećeg zahtjeva; odbija se i još otvorena sesija.
+1. **Devices** → uređaj → **„Revoke"**. Djeluje od sljedećeg zahtjeva; odbija se i još otvorena sesija ili prijavljena aplikacija za konobare, a „Keep me signed in“ osoba s tog uređaja prestaje.
 2. Resetovati lozinku osobe ako je bila spremljena na uređaju ili uređaj nije bio zaključan.
 3. Zapisnik aktivnosti: provjeriti aktivnost tog uređaja od trenutka gubitka.
 4. Pronađen uređaj: **„Restore"**.
 
-### 7.3 Talas kopiranja (card cloning)
+### 7.3 Zloupotrijebljeni vaučeri
 
-*Znaci: više upozorenja „Cloned card rejected" ili replay upozorenja, gosti prijavljuju stanje koje nisu potrošili, ista kartica u kratkom vremenu za različitim stolovima.*
+*Znaci: gosti prijavljuju stanje koje nisu potrošili; isti vaučer se u kratkom vremenu iskorištava za različitim stolovima ili po upadljivim obrascima; nagomilani `presentment.failed` na jednom uređaju ili `429 PRESENTMENT_THROTTLED`.*
 
-1. Pogođene kartice odmah **blokirati** (razlog: Suspicious use).
-2. Analizirati zapisnik skeniranja: koje kartice, koji uređaji, koje IP adrese, koja vremena.
-3. Provjeriti je li zaštita od kopiranja aktivirana i jesu li kartice vezane za serijski broj čipa. Nevezane kartice (npr. označene kao upisane bez serijskog broja) naknadno osigurati: izdati zamjensku karticu s vezivanjem.
-4. Dokumentovati iskorištavanja koja su dokazano izvršena kopijama; stanje zakonitih vlasnika prenijeti pomoću **„Replace lost card"** na novu karticu.
-5. Smanjiti ograničenja protiv zloupotrebe (iskorištavanja na sat, maksimalan pojedinačni iznos).
-6. Informisati konobare: koristiti samo skeniranje Androidom (s provjerom serijskog broja), ozbiljno shvatiti crvena upozorenja.
-7. Srednjoročno: za visoke vrijednosti preći na NTAG 424 DNA.
-8. Kod novčane štete: restoran razmatra prijavu policiji; GiftCard Pro stavlja zapisnike na raspolaganje.
+QR kod nosi 256-bitnu tajnu; ne može se pogoditi, ali se može fotografisati ili proslijediti. Interni broj vaučera nikada nije dokaz ovlaštenja.
+
+1. Pogođene vaučere odmah **blokirati** (navesti razlog).
+2. Analizirati historiju i zapisnik aktivnosti: koji vaučeri, koji uređaji, koje osobe, koja vremena. Svako iskorištavanje povezano je s predočenjem, osobom i uređajem.
+3. Nagomilani neuspjeli pokušaji na jednom uređaju: provjeriti uređaj i kod sumnje ga opozvati pod **Devices**; razgovarati s osobom.
+4. Dokumentovati iskorištavanja koja su dokazano zloupotrijebljena; sa zakonitim gostom razjasniti postupanje sa stanjem (storno iskorištavanja samo ako je dokazano pogrešno proknjiženo).
+5. Smanjiti ograničenja protiv zloupotrebe (iskorištavanja na sat, iznos po iskorištavanju i po danu).
+6. Informisati konobare: iskorištavati samo skeniranjem, ne prihvatati blokirane ili čudne vaučere; podsjetiti restoran na postupanje s listovima za štampu (kao s gotovinom).
+7. Kod novčane štete: restoran razmatra prijavu policiji; GiftCard Pro stavlja zapisnike na raspolaganje.
 
 ### 7.4 Sumnja na povredu zaštite podataka
 
@@ -154,22 +157,36 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 
 *Znaci: token u repozitoriju koda, chatu, e-mailu, na snimku ekrana; „posljednja upotreba" s nepoznate IP adrese.*
 
-1. **Settings → API → Revoke** – odmah, bez dodatnih pitanja. Tokeni počinju s `gcp_`; to olakšava pretragu u repozitorijima.
+1. **Settings → API → Revoke** – odmah, bez dodatnih pitanja; po potrebi token opoziva administracija platforme pod `/admin/api-tokens`. Tokeni počinju s `gcp_`; to olakšava pretragu u repozitorijima.
 2. Provjeriti zapisnik aktivnosti i transakcije radnji koje je pokrenuo token (token djeluje kao osoba koja ga je kreirala i bilježi se s njenim identifikatorom).
-3. Neovlaštena knjiženja stornirati, pogođene kartice blokirati ili zamijeniti.
+3. Neovlaštena knjiženja stornirati, pogođene vaučere blokirati. Sam token ne može iskoristiti vaučer – svako iskorištavanje zahtijeva predočenje skeniranog vaučera; prodaje i dopune su, međutim, moguće ako je token imao dozvolu.
 4. Kreirati novi token s minimalnim dozvolama i kratkim trajanjem, sigurno ga pohraniti u ciljnoj aplikaciji.
 5. Otkloniti uzrok (npr. ukloniti token iz historije repozitorija, obavijestiti partnera za integraciju).
 
 ### 7.6 Kompromitacija računa administracije platforme
 
-*Nivo ozbiljnosti uvijek SEV-1 – ovaj račun može djelovati u svakom restoranu.*
+*Nivo ozbiljnosti uvijek SEV-1 – ovaj račun može onemogućiti, arhivirati i brisati restorane (samo bez poslovnih podataka), ponovo slati pozivnice, opozivati tokene i mijenjati sistemske postavke. Nikada ne može djelovati unutar restorana, ne vidi vaučere, knjiženja ni podatke kupaca i ne može kreirati niti koristiti API tokene.*
 
-1. Račun odmah blokirati na strani servera: status korisnika u bazi podataka postaviti na neaktivan (neaktivni korisnici se odbijaju pri sljedećem zahtjevu), opozvati otvorene API tokene, završiti sesije u Redisu. Za račune platforme za to trenutno ne postoji posebno sučelje; koraci se izvode preko serverske konzole odnosno baze podataka i dokumentuju se u vremenskoj liniji.
-2. Analizirati audit platforme: koji su restorani otvoreni preko „Open restaurant"? koje radnje, izvozi, postavke, suspenzije, sistemske postavke?
-3. Obnoviti lozinke svih ostalih računa administracije platforme; po potrebi kreirati novi račun s `php artisan platform:create-admin`.
-4. Provjeriti jesu li kreirani novi računi, pozivnice ili API tokeni; opozvati ih.
-5. Kod sumnje na širi pristup serveru: scenarij 5.4 iz plana oporavka od katastrofe (ponovna izgradnja, obnova svih tajni).
+1. Račun odmah blokirati na strani servera: status korisnika u bazi podataka postaviti na neaktivan (neaktivni korisnici se odbijaju pri sljedećem zahtjevu) i završiti sesije u Redisu. Za račune platforme za to ne postoji posebno sučelje; koraci se izvode preko serverske konzole odnosno baze podataka i dokumentuju se u vremenskoj liniji.
+2. Analizirati audit platforme: koji su restorani kreirani, onemogućeni, arhivirani ili obrisani? koje pozivnice su ponovo poslane (s izmijenjenom adresom)? koji tokeni opozvani, koje sistemske postavke izmijenjene (npr. obavještenje o održavanju, minimalne verzije aplikacije)?
+3. Provjeriti ponovo poslane pozivnice: ako je adresa još neprihvaćenog računa izmijenjena, ponovo poslati pozivnicu na pravu adresu; prethodni token time postaje nevažeći.
+4. Obnoviti lozinke svih ostalih računa administracije platforme; po potrebi kreirati novi račun s `php artisan platform:create-admin`.
+5. Kod sumnje na širi pristup serveru: scenarij 5.4 iz plana oporavka od katastrofe (ponovna izgradnja, obnova svih tajni) i `php artisan giftcard:verify-chains`.
 6. Obavijestiti sve pogođene restorane; provjera zaštite podataka.
+
+### 7.7 Provjera integriteta javlja nalaz
+
+*Znaci: e-mail na `OPS_ALERT_EMAIL`, zapis `critical` „Integrity check failed: financial history or audit log does not verify“; `giftcard:verify-chains` javlja prekinut lanac ili stanje koje ne odgovara zbiru knjiženja.*
+
+Nivo ozbiljnosti uvijek **SEV-1**: sama aplikacija ne može mijenjati ledger, plaćanja ni zapisnik aktivnosti (okidači u bazi, `IMMUTABLE_RECORD`); nalaz znači zahvat mimo aplikacije, grešku baze ili neispravno vraćanje podataka.
+
+1. **Ništa ne mijenjati.** Bez ispravke SQL-om, bez redeploya, bez vraćanja podataka prije nego što su dokazi osigurani.
+2. Napraviti svjež dump baze i osigurati postojeće sigurnosne kopije (zaštititi off-site kopiju); napraviti Hetzner snapshot.
+3. Sačuvati izlaz `php artisan giftcard:verify-chains`: pogođeni lanac (restoran ili platforma), prvi red koji odstupa, pogođeni vaučeri.
+4. Provjeriti pristupe: ko je imao pristup bazi ili serveru (Coolify terminal, SSH, root baze)? Pregledati prijave na server i aktivnost u Coolifyju.
+5. Posljednji dump koji prolazi provjeru uvesti u bazu za vraćanje i uporediti ([Uputstvo za vraćanje podataka](../06-technical/restore-guide.md), scenarij A): koji redovi nedostaju, izmijenjeni su ili umetnuti?
+6. Dokumentovati odluku: vraćanje iz posljednjeg ispravnog dumpa (scenarij B) s naknadnim unosom, ili razjašnjenje tehničke greške. Tek tada ponovo pustiti u rad; `giftcard:verify-chains` mora biti bez nalaza.
+7. Obavijestiti pogođene restorane; kod znakova neovlaštenog pristupa provjera zaštite podataka (odjeljak 8).
 
 ---
 
@@ -198,7 +215,7 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 > dana [datum, vrijeme] utvrdili smo [kratak, činjeničan opis]. Prema trenutnom stanju pogođeno je [obim].
 >
 > **Već provedeno:** [npr. token opozvan, uređaj blokiran].
-> **Molimo Vas da poduzmete:** [npr. resetovati lozinke, provjeriti kartice].
+> **Molimo Vas da poduzmete:** [npr. resetovati lozinke, provjeriti vaučere].
 >
 > Javit ćemo se najkasnije [datum, vrijeme] s daljnjim informacijama. Kontakt osoba: [ime], security@giftcardpro.at, [Telefon].
 >
@@ -215,7 +232,7 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 >
 > 1. **Vrijeme:** povreda dana/od [datum, vrijeme]; poznata nam je od [datum, vrijeme].
 > 2. **Vrsta povrede:** [neovlašten pristup / otkrivanje / gubitak / izmjena].
-> 3. **Kategorije pogođenih osoba:** [npr. gosti koji su kupili poklon kartice; primaoci].
+> 3. **Kategorije pogođenih osoba:** [npr. gosti koji su kupili vaučere; primaoci].
 > 4. **Približan broj pogođenih osoba:** [broj]; **zapisa:** [broj].
 > 5. **Kategorije ličnih podataka:** [ime, e-mail adresa, broj telefona, bilješke, ime primaoca].
 > 6. **Vjerovatne posljedice:** [npr. rizik od phishing e-mailova].
@@ -255,7 +272,7 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 | Vremenska linija | otkrivanje, obuzdavanje, otklanjanje, završetak (s vremenima) |
 | Sažetak | 3–5 rečenica, razumljivo za restorane |
 | Uzrok (root cause) | |
-| Učinak | pogođeni restorani, kartice, osobe, novčani iznosi, vrijeme ispada |
+| Učinak | pogođeni restorani, vaučeri, osobe, novčani iznosi, vrijeme ispada |
 | Zaštita podataka | povreda zaštite podataka da/ne, obrazloženje, prijave (ko, kada) |
 | Šta je dobro funkcionisalo | |
 | Šta nije dobro funkcionisalo | |
@@ -273,4 +290,4 @@ Sigurnosne propuste i sumnjive slučajeve molimo prijavite na **security@giftcar
 
 ---
 
-Verzija 1.0 · Stanje: septembar 2026.
+Verzija 2.0 · Stanje: septembar 2026.

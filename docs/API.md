@@ -1,281 +1,420 @@
 # API reference — v1
 
-Base URL: `https://<APP_DOMAIN>/api/v1` · JSON only · UTF-8 · all amounts in **minor units (cents)** ·
-all timestamps ISO 8601 (UTC) · all IDs UUID.
+Base URL: `https://<domain>/api/v1` · JSON only · UTF-8 · amounts in **minor units (cents)**, strict integers ·
+timestamps ISO 8601 (UTC) · IDs UUID.
+
+Routes: `backend/routes/api.php`. Resource shapes: `backend/app/Http/Resources/*`, mirrored field by field in
+`dashboard/src/lib/api/types.ts`.
+
+## Concepts
+
+- **Voucher** — the account that holds a balance. `kind` is `card` or `digital`; `status` is `active`, `blocked` or
+  `expired`. An *empty* voucher is an `active` voucher with `balance` 0 (there is no separate status).
+  `voucher_number` is an internal 16-digit number for staff and support. It is never printed on a voucher and is
+  never accepted as a credential.
+- **Medium** — how a voucher is presented. Today the only medium is the **printable QR** of a digital voucher
+  (`GCPV1.` + 43 base64url characters = a 256-bit random secret). The server stores only its SHA-256 hash; the
+  payload is returned once, in the response of the sale.
+- **Presentment** — proof that a voucher's medium is here, now. Every debit consumes one. Single use, valid 60
+  seconds, bound to restaurant, voucher, purpose, user and device.
+- **Payment** — how a sale or reload was paid: `cash`, `card_terminal`, `bank_transfer`, `complimentary`.
+- **Ledger** — `voucher_transactions` (`issue`, `redemption`, `reload`, `reversal`). Ledger, payments and audit log
+  are append-only and hash-chained.
 
 ## Authentication
 
-### Browser (dashboard, web waiter mode) — Sanctum SPA cookies
+### Browser (dashboard, web till) — Sanctum SPA cookies
 
 ```http
-GET  /sanctum/csrf-cookie                     → sets XSRF-TOKEN cookie
-POST /api/v1/auth/login                       headers: X-XSRF-TOKEN: <cookie value>
-     {"email":"…","password":"…","remember":true}
+GET  /sanctum/csrf-cookie                     → sets the XSRF-TOKEN cookie
+POST /api/v1/auth/login                       header X-XSRF-TOKEN: <cookie value>
+     {"email":"…","password":"…","remember":false}
 ```
 
-The session cookie is `httpOnly`, `Secure`, `SameSite=Lax`. Every state-changing request must send
-`X-XSRF-TOKEN`. Requests must come from a host listed in `SANCTUM_STATEFUL_DOMAINS`.
+The session cookie is `httpOnly`, `Secure`, `SameSite=Lax`. Every state-changing request sends `X-XSRF-TOKEN`.
+Requests must come from a host in `SANCTUM_STATEFUL_DOMAINS`. A session is pinned to the `X-Device-Id` it first
+sent; another id on the same session cookie signs the session out (`401`). A session restored from a "remember me"
+cookie is accepted only on an active device this person has used before; otherwise `401` and a new sign-in.
 
 ### Integrations (POS, accounting) — API tokens
 
-Create a token under **Settings → API** (owner). Send it as:
-
-```http
-Authorization: Bearer gcp_…
-```
-
-A token acts as the user who created it, **restricted to the abilities chosen** (subset of that user's
-permissions), expires after at most `API_TOKEN_MAX_DAYS`, and can be revoked at any time.
+An owner creates a token under **Settings → API** and sends it as `Authorization: Bearer gcp_…`. A token acts as the
+user who created it, restricted to the abilities chosen (a subset of that user's permissions), expires after at
+most `API_TOKEN_MAX_DAYS` and can be revoked at any time. Platform administrators cannot create or use tokens.
 
 ### Native waiter app (GiftCard Waiter) — device-bound tokens
 
 ```http
 POST /api/v1/auth/token
-     {"email":"…","password":"…","device_id":"<16–64 chars>","device_name":"Pixel 7","platform":"android"|"ios"}
+     {"email":"…","password":"…","device_id":"<16–64 chars [A-Za-z0-9-]>","device_name":"Pixel 7","platform":"android"|"ios"}
 → 201 {"data": {"token": "gcp_…", "expires_at": "…", "user": SessionUser}}
 ```
 
-Send the token as `Authorization: Bearer …` **together with the same `X-Device-Id`**. The token:
+Send the token as `Authorization: Bearer …` together with the same `X-Device-Id`. The token:
 
-- can scan and redeem (abilities `cards.scan`, `cards.redeem`); for managers and owners (roles with `cards.create`
-  and `cards.write_nfc`) also sell and program cards (abilities `cards.create`, `cards.write_nfc`, since 1.4.3);
-- only reaches `auth/me`, `auth/logout`, `scan`, `cards/{id}/redeem`, `devices/current` and — for selling —
-  `POST cards`, `cards/{id}/nfc`, `cards/{id}/nfc/check`, `cards/{id}/nfc/lock`, `cards/{id}/nfc/attempts`.
-  Everything else (card lists, card details, reload, expire, customers, reports, settings) needs the web app,
-  even for owners. Every request is checked against the role **and** the token: a demoted manager loses selling at
-  once; the abilities follow the role at the daily renewal (or the next sign-in);
-- works only with the `X-Device-Id` it was issued for (another id → `401`);
-- stops at once when the device is revoked under **Devices** (`403 DEVICE_REVOKED`) and works again when it is restored;
+- has the ability `vouchers.redeem`; for roles with `vouchers.sell` (managers, owners) also `vouchers.sell`. The
+  role is checked on every request as well, and once a day, when the token is renewed, its abilities follow the
+  role;
+- reaches only these method and path pairs (`EnforceDeviceToken`); anything else answers `403 FORBIDDEN`:
+
+  | Method | Path |
+  |---|---|
+  | GET | `/auth/me` |
+  | POST | `/auth/logout` |
+  | GET | `/devices/current` |
+  | POST | `/presentments` |
+  | POST | `/vouchers/{voucher}/redemptions` |
+  | GET | `/vouchers/{voucher}/redemptions/{idempotencyKey}` |
+  | POST | `/vouchers` (sale; needs `vouchers.sell`) |
+
+- works only with the `X-Device-Id` it was issued for (another id → `401 UNAUTHENTICATED`);
+- stops at once when the device is revoked under **Devices** (`403 DEVICE_REVOKED`) and works again when it is
+  restored;
 - expires after `DEVICE_TOKEN_DAYS` (30) without use and is renewed while the phone is used;
-- is replaced when the same person signs in again on the same phone; `POST /auth/logout` revokes it.
+- is replaced when the same person signs in again on the same phone; `POST /auth/logout` revokes it; a password
+  reset or change revokes it.
 
-Same lockout (`423 ACCOUNT_LOCKED`), rate limit and account checks as `/auth/login`; a deactivated account gets
-`401 ACCOUNT_DEACTIVATED` here and on every later request with its token. Platform administrators
-and roles without scan and redeem get `403 FORBIDDEN`. Device tokens are not listed under Settings → API.
+Sign-in has the same lockout, rate limit and account checks as `/auth/login`. A deactivated account gets
+`401 ACCOUNT_DEACTIVATED` here and on every later request with its token. Platform administrators and roles without
+`vouchers.redeem` get `403 FORBIDDEN`. Device tokens are not listed under Settings → API; platform administrators
+see them under `/admin/api-tokens` (`kind: device`).
+
+### Sign-in failures
+
+A wrong password, an unknown address and a temporarily locked account all answer the same
+`422 VALIDATION_FAILED` with the same message on `email`. The password is always hashed, so the timing is the same
+too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is locked for `LOGIN_LOCKOUT_MINUTES`
+(15).
 
 ## Common headers
 
 | Header | Direction | Meaning |
 |---|---|---|
-| `Idempotency-Key` | request | **Required** for `redeem`, `reload`, `transfer`; optional for `POST /cards`. 8–96 chars `[A-Za-z0-9-_.]` (`:` is reserved for internal ledger legs), use a UUID per logical attempt. Retrying with the same key returns the original result (`"replayed": true`) instead of booking twice; reusing it for a *different* request → `409 IDEMPOTENCY_CONFLICT`. |
-| `X-Device-Id` | request | Stable random id of the terminal (16–64 chars). Registers the device; revoked devices get `403 DEVICE_REVOKED`. A browser session is pinned to the device id it signed in with — a different id on the same session cookie → `401`. |
-| `X-Restaurant-Id` | request | Platform administrators only: act inside a restaurant. |
-| `X-Request-Id` | both | Correlation id (echoed; generated if absent). Appears in audit logs. |
-| `Retry-After` | response | On `429`. |
+| `Idempotency-Key` | request | **Required** for `POST /vouchers`, `POST /vouchers/{id}/redemptions` and `POST /vouchers/{id}/reloads` (8–96 characters `[A-Za-z0-9-_.]`). Use a UUID per logical attempt. A retry with the same key returns the original result (`"replayed": true`, HTTP 200) instead of booking twice; the same key for a different request → `409 IDEMPOTENCY_CONFLICT`. A key that should be looked up with `GET /vouchers/{id}/redemptions/{key}` must match `[A-Za-z0-9_-]{16,100}` (a UUID does). |
+| `X-Device-Id` | request | Stable random id of the terminal (16–64 characters `[A-Za-z0-9-]`). Registers the device in the restaurant; a revoked device gets `403 DEVICE_REVOKED`. Required with a device token. |
+| `X-Request-Id` | both | Correlation id (8–64 characters; echoed, generated if absent). Stored in the audit log. |
+| `Retry-After` | response | On `429` from a rate limiter. |
 
 ## Errors
 
 ```json
-{ "message": "The gift card balance is insufficient for this amount.",
+{ "message": "The voucher balance is insufficient for this amount.",
   "code": "INSUFFICIENT_BALANCE",
   "context": { "balance": 3150, "requested": 3151 } }
 ```
 
+`context` is present only when it has content.
+
 | HTTP | `code` | When |
 |---|---|---|
-| 400 | `IDEMPOTENCY_KEY_REQUIRED` | Missing/invalid `Idempotency-Key` |
-| 401 | `UNAUTHENTICATED` | No/expired session or token |
-| 401 | `ACCOUNT_DEACTIVATED` | Waiter app only (sign-in and every request with a device token): the account was deactivated |
-| 403 | `FORBIDDEN` | Missing permission |
-| 403 | `TENANT_NOT_RESOLVED` | Platform admin called a restaurant endpoint without `X-Restaurant-Id` |
-| 403 | `RESTAURANT_SUSPENDED` | Restaurant suspended |
-| 403 | `DEVICE_REVOKED` | Terminal revoked |
-| 403 | `CARD_FOREIGN_RESTAURANT` | Card belongs to another restaurant |
-| 403 | `NFC_UID_MISMATCH` | Chip differs from the bound chip (suspected clone) |
-| 403 | `NFC_SIGNATURE_INVALID` | NTAG 424 SUN MAC invalid / missing |
-| 403 | `NFC_REPLAY_DETECTED` | NTAG 424 tap counter not increasing (copied URL) |
-| 403 | `ROLE_ASSIGNMENT_FORBIDDEN` | Role/user management beyond your rank |
-| 404 | `NOT_FOUND`, `CARD_NOT_FOUND` | Unknown (or other tenant's) resource |
-| 409 | `INVALID_CARD_STATE` | Action not allowed in the card's status |
-| 409 | `NFC_TAG_IN_USE` | The chip is linked to another usable card (this or another restaurant; `context.card_number` only for your own) |
-| 409 | `NFC_ATTEMPT_INVALID` | NFC programming step without a matching open attempt (check first) |
-| 409 | `NFC_CARD_ALREADY_PROGRAMMED` | Programming station (`only_if_unprogrammed`): the card got a tag on another device in the meantime |
+| 400 | `IDEMPOTENCY_KEY_REQUIRED` | Missing or malformed `Idempotency-Key` |
+| 401 | `UNAUTHENTICATED` | No or expired session or token; device token with another `X-Device-Id`; session used from another device |
+| 401 | `ACCOUNT_DEACTIVATED` | Waiter app sign-in and every request with a device token of a deactivated account |
+| 403 | `FORBIDDEN` | Missing permission, or a device token outside its allowed requests |
+| 403 | `TENANT_NOT_RESOLVED` | Restaurant endpoint called without a restaurant (platform administrators) |
+| 403 | `TENANT_MISMATCH` | A record of another restaurant was addressed |
+| 403 | `RESTAURANT_SUSPENDED` | The restaurant is suspended |
+| 403 | `DEVICE_REVOKED` | The terminal was revoked |
+| 403 | `ROLE_ASSIGNMENT_FORBIDDEN` | Role or token beyond your own rank or permissions; platform administrator creating a token |
+| 403 | `COMPLIMENTARY_NOT_ALLOWED` | `complimentary` payment without `vouchers.sell_complimentary` |
+| 404 | `NOT_FOUND` | Unknown resource, or one of another restaurant |
 | 409 | `IDEMPOTENCY_CONFLICT` | Key reused for a different request |
-| 409 | `TRANSACTION_NOT_REVERSIBLE` | Already reversed / wrong type |
-| 419 | `CSRF_TOKEN_MISMATCH` | Refresh `/sanctum/csrf-cookie` and retry |
-| 422 | `VALIDATION_FAILED` | `errors` holds field messages |
-| 422 | `NFC_VERIFICATION_FAILED` | Tag read back after writing does not match (`context.reason`: `URL_MISMATCH` or `TAG_SWAPPED`); nothing saved |
-| 422 | `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`, `CARD_BLOCKED`, `CARD_EXPIRED`, `CARD_NOT_REDEEMABLE`, `BALANCE_LIMIT_EXCEEDED`, `RELOAD_NOT_ALLOWED` | Business rules |
-| 423 | `ACCOUNT_LOCKED` | Too many failed logins (`retry_after` seconds, also in `context`) |
-| 429 | `TOO_MANY_REQUESTS`, `SCAN_THROTTLED`, `VELOCITY_LIMIT_EXCEEDED` | Rate limits / fraud limits. `VELOCITY_LIMIT_EXCEEDED` carries `context.retry_after` (seconds until the card's one-hour window frees a slot) |
+| 409 | `INVALID_VOUCHER_STATE` | Status change not allowed in the current status |
+| 409 | `TRANSACTION_NOT_REVERSIBLE` | Wrong type or already reversed |
+| 409 | `IMMUTABLE_RECORD` | Attempt to change an append-only record |
+| 409 | `RESTAURANT_NOT_DELETABLE`, `INVITATION_NOT_POSSIBLE` | Platform administration (see there) |
+| 419 | `CSRF_TOKEN_MISMATCH` | Fetch `/sanctum/csrf-cookie` again and retry |
+| 422 | `VALIDATION_FAILED` | `errors` holds the field messages (also every failed sign-in) |
+| 422 | `MEDIUM_NOT_RECOGNIZED` | The scanned text is not a valid voucher of this restaurant (unknown, revoked and foreign look the same) |
+| 422 | `PRESENTMENT_METHOD_UNAVAILABLE` | The method has no verifier (`live_auth`) |
+| 422 | `PRESENTMENT_METHOD_NOT_ALLOWED` | The voucher's kind cannot be spent with this method |
+| 422 | `PRESENTMENT_INVALID` | The presentment cannot pay for this redemption; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked` |
+| 422 | `VOUCHER_BLOCKED`, `VOUCHER_EXPIRED`, `VOUCHER_NOT_REDEEMABLE` | Voucher status |
+| 422 | `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`, `BALANCE_LIMIT_EXCEEDED`, `RELOAD_NOT_ALLOWED` | Business rules |
+| 422 | `DEBIT_LIMIT_EXCEEDED` | `context.limit`: `per_transaction` or `per_voucher_per_day`, `context.max`, for the daily limit also `context.remaining` |
+| 422 | `INVITATION_NOT_DELIVERED`, `MAIL_NOT_DELIVERED`, `MAIL_RECIPIENT_REJECTED` | Platform administration (see there) |
+| 429 | `TOO_MANY_REQUESTS` | Rate limiter (`retry_after`) |
+| 429 | `PRESENTMENT_THROTTLED` | Too many failed presentments on this restaurant, user and device (`context.retry_after`) |
+| 429 | `VELOCITY_LIMIT_EXCEEDED` | Redemptions per voucher per hour reached (`context.retry_after`: seconds until a slot frees) |
 
 ## Rate limits
 
-| Limiter | Limit |
-|---|---|
-| `login` | 5/min per e-mail+IP, 30/min per IP (web and waiter app sign-in) |
-| `app-config` | 60/min per IP |
-| `password-reset` | 5/min per IP |
-| `public-card` | 20/min per IP |
-| `card-scan` | 90/min per user **per terminal** (`X-Device-Id`); failed or suspicious lookups (not found, foreign card, UID mismatch, bad SUN signature, replay) additionally 10 per 5 min per user and per IP |
-| `card-operation` | 90/min per user per terminal |
-| `api` | 240/min per user |
+| Limiter | Limit | Applies to |
+|---|---|---|
+| `login` | 5/min per e-mail + IP, 30/min per IP | `/auth/login`, `/auth/token` |
+| `password-reset` | 5/min per IP | `/auth/forgot-password`, `/auth/reset-password` |
+| `app-config` | 60/min per IP | `/app/config` |
+| `presentment` | 90/min per user and `X-Device-Id` | `POST /presentments` |
+| `voucher-operation` | 90/min per user and `X-Device-Id` | sale, redemption, reload, redemption outcome |
+| `api` | 240/min per user | every authenticated request |
+
+Failed presentments (the scanned text proves nothing) count separately: after `PRESENTMENT_FAILURE_LIMIT` (10)
+within `PRESENTMENT_FAILURE_DECAY` (300 s) per restaurant, user and device, `POST /presentments` answers
+`429 PRESENTMENT_THROTTLED`. Other guests' scans behind the same public IP address never count.
 
 ## Pagination
 
 List endpoints accept `page` and `per_page` (≤ 100) and return:
 
 ```json
-{ "data": [ … ], "links": { "next": "…" }, "meta": { "current_page": 1, "last_page": 4, "per_page": 25, "total": 88 } }
+{ "data": [ … ], "links": { … }, "meta": { "current_page": 1, "last_page": 4, "per_page": 25, "total": 88 } }
 ```
 
 ---
 
 ## Endpoints
 
-Permissions are shown in brackets. `→` shows the response body.
+Permissions in brackets. All endpoints except *Public* and *Auth* sign-in require authentication; restaurant
+endpoints also require a restaurant (platform administrators get `403 TENANT_NOT_RESOLVED`).
 
 ### Auth
 
 | Method | Path | |
 |---|---|---|
-| POST | `/auth/login` | `{email, password, remember}` → `{data: SessionUser}` |
-| POST | `/auth/token` | Native waiter app sign-in (see above) → `201 {data: {token, expires_at, user}}` |
-| POST | `/auth/logout` | Ends the session (or revokes the current API token) |
-| GET | `/auth/me` | Session user incl. `permissions[]` and restaurant settings |
-| PUT | `/auth/profile` | `{name?, locale?}` |
-| PUT | `/auth/password` | `{current_password, password, password_confirmation}` — signs out other sessions |
-| POST | `/auth/forgot-password` | `{email}` — always 200 (no account enumeration) |
-| POST | `/auth/reset-password` | `{token, email, password, password_confirmation}` |
+| POST | `/auth/login` | `{email, password, remember?}` → `{data: SessionUser}` |
+| POST | `/auth/token` | Native waiter app sign-in (above) → `201 {data: {token, expires_at, user}}` |
+| POST | `/auth/logout` | Ends the session, or revokes the current token |
+| GET | `/auth/me` | `SessionUser`: `id, name, email, locale, role {slug, name}, is_platform_admin, permissions[]` (with a token: only what the token may do), `restaurant {id, name, slug, currency, timezone, locale, status, settings}`, `platform {support_email, notice}` |
+| PUT | `/auth/profile` | `{name?, locale? (en \| de)}` |
+| PUT | `/auth/password` | `{current_password, password, password_confirmation}` — revokes every token and "remember me" of this person |
+| POST | `/auth/forgot-password` | `{email}` — always the same `200`; the link is sent from the queue, only to active accounts that accepted their invitation |
+| POST | `/auth/reset-password` | `{token, email, password, password_confirmation}` — also accepts an invitation (activates the account); revokes every token and "remember me". Every failure answers the same `422` |
 
-### Scan — the waiter entry point `[cards.scan]`
+Reset and invitation links carry the token in the URL fragment (`/reset-password#token=…&email=…`), which the
+browser never sends to a server.
+
+### Presentments `[vouchers.redeem]`
 
 ```http
-POST /scan
-{ "method": "nfc", "token": "https://app.example.com/c/3f2b…a6c", "nfc_uid": "04:A2:3F:1B:6C:80:12" }
+POST /presentments
+{ "purpose": "spend", "method": "printable_qr", "credential": "GCPV1.q7Jx…" }
 ```
 
 | Field | |
 |---|---|
-| `method` | `nfc` · `qr` · `link` · `manual` · `api` |
-| `token` | Raw URL or token read from the tag/QR (SUN `picc`/`cmac` parameters are picked up from the URL) |
-| `card_number` | Instead of `token` for manual entry |
-| `nfc_uid` | Chip serial number (Web NFC `serialNumber`) — enables clone detection. A `nfc` scan of a card with a bound chip **without** `nfc_uid` is refused (`NFC_UID_MISMATCH`) while *Enforce chip binding* is on |
-| `picc`, `cmac` | NTAG 424 DNA SUN values (if not in the URL) |
+| `purpose` | `spend` |
+| `method` | `printable_qr` (verified); `live_auth` exists for physical cards and answers `422 PRESENTMENT_METHOD_UNAVAILABLE` until its verifier exists |
+| `credential` | The scanned QR text (max. 512 characters) |
 
 ```json
-→ { "data": { "id": "…", "restaurant_name": "Trattoria Bella Vista", "card_number": "1223 5616 2557 6350",
-     "status": "active", "currency": "EUR", "balance": 3390, "expires_at": "2029-09-13T21:59:59+00:00",
-     "is_expired": false, "blocked_reason": null, "allow_partial_redemption": true,
-     "actions": { "redeem": true, "reload": false, "history": false, "block": false, "activate": false } } }
+→ 201 { "data": {
+    "id": "…", "purpose": "spend", "method": "printable_qr", "level": "A1",
+    "expires_at": "2026-09-29T12:01:00+00:00", "expires_in": 60,
+    "voucher": { "id": "…", "kind": "digital", "restaurant_name": "Trattoria Bella Vista",
+      "voucher_number": "1223 5616 2557 6350", "status": "active", "currency": "EUR", "balance": 3390,
+      "expires_at": null, "is_expired": false, "blocked_reason": null,
+      "allow_partial_redemption": true, "max_debit_per_transaction": 25000,
+      "actions": { "redeem": true } } } }
 ```
 
-No customer data is ever returned by `/scan`.
+`expires_in` is the number of seconds left as seen by the server; clients count down from receipt, independent of
+their own clock. The voucher part (`PresentedVoucher`) never contains customer data. Response header
+`Cache-Control: no-store, private`.
 
-### Cards
+Rules: the presentment is valid 60 seconds and for one debit. It is bound to this restaurant, this voucher, the
+purpose, the user and the device (a presentment made without a device can only be used without one). Spending
+rules by kind: a `digital` voucher is spent only with a QR method, a `card` voucher only with `live_auth`. A failed
+presentment is recorded in the audit log (`presentment.failed`) and counts towards the lockout.
+
+### Vouchers
 
 | Method | Path | Permission | Body / notes |
 |---|---|---|---|
-| GET | `/cards` | cards.view | `search, status[] (csv), customer_id, created_from/to, expires_from/to, min_balance, max_balance, nfc_status (unprogrammed · unverified · verified), card_number_after, sort (±created_at, ±balance, ±expires_at, ±card_number, ±last_used_at), page, per_page` |
-| GET | `/cards/export` | cards.export | Same filters → streamed CSV (`;`, UTF-8 BOM, decimal comma for German locales, readable status names, formula-injection safe) |
-| POST | `/cards` | cards.create | `{value, expires_at?, customer_id? \| customer{first_name,last_name,email,phone}?, recipient_name?, notes?, activate?=true, nfc_tag_type?}` → `{data: GiftCard, transaction, nfc: {url, tag_type_hint, ndef_template}}` |
-| GET | `/cards/{id}` | cards.view | |
-| PATCH | `/cards/{id}` | cards.update | `{customer_id?, recipient_name?, notes?, expires_at?}` |
+| GET | `/vouchers` | vouchers.view | `search` (voucher number digits, recipient, notes, customer), `status[]` or comma list (`active`, `blocked`, `expired`), `kind`, `customer_id`, `created_from/to`, `expires_from/to`, `min_balance`, `max_balance`, `sort` (±`created_at`, ±`balance`, ±`expires_at`, ±`voucher_number`, ±`last_used_at`), `page`, `per_page` |
+| GET | `/vouchers/export` | vouchers.export | Same filters → streamed CSV (`;`, UTF-8 BOM, decimal comma for German locales, readable status names, formula-injection safe) |
+| POST | `/vouchers` | vouchers.sell | **Idempotency-Key** · sale of a digital voucher, below |
+| GET | `/vouchers/{id}` | vouchers.view | `Voucher` with `customer`, `issued_by`, `media[]`, `payments[]` |
+| PATCH | `/vouchers/{id}` | vouchers.update | `{customer_id?, recipient_name?, notes?}` |
+| POST | `/vouchers/{id}/redemptions` | vouchers.redeem | **Idempotency-Key** · below |
+| GET | `/vouchers/{id}/redemptions/{idempotencyKey}` | vouchers.redeem | Outcome of one of the caller's own redemption attempts, below |
+| POST | `/vouchers/{id}/reloads` | vouchers.reload | **Idempotency-Key** · `{amount, payment: {method, reference?, reason?}, note?}` → `201 {data: {voucher, transaction}, replayed}` |
+| POST | `/vouchers/{id}/block` | vouchers.block | `{reason}` (3–500 characters) |
+| POST | `/vouchers/{id}/unblock` | vouchers.unblock | Back to `active`, or to `expired` when the expiry date passed while it was blocked |
+| POST | `/vouchers/{id}/expire` | vouchers.expire | `{reason}` — only `active` vouchers; **the balance is kept** |
+| POST | `/vouchers/{id}/reinstate` | vouchers.reinstate | `{reason, expires_on?}` — only `expired` vouchers; `expires_on` (`YYYY-MM-DD`, after today) is the new last valid day in the restaurant's timezone, missing or `null` = no expiry |
+| GET | `/vouchers/{id}/history` | vouchers.view | Ledger entries and status events, newest first: `{id, kind: transaction \| event, type, label, amount, balance_after, reference, note, payment_method, reversed, user, device, created_at}` |
 
-**Expiry semantics** (`expires_at` is a local date `YYYY-MM-DD`): the card is valid until 23:59:59 of that day in the restaurant's timezone. On `POST /cards`, *omitting* the key applies the restaurant's default validity; sending `null` explicitly creates a card without expiry. Past dates → `422`.
-| POST | `/cards/{id}/redeem` | cards.redeem | **Idempotency-Key** · `{amount, reference?, note?}` → `201 {data:{card, transaction}, replayed}` |
-| POST | `/cards/{id}/reload` | cards.reload | **Idempotency-Key** · `{amount, reference?, note?}` |
-| POST | `/cards/{id}/transfer` | cards.transfer | **Idempotency-Key** · `{target_card_id \| target_card_number, amount? (default: all), note?}` |
-| POST | `/cards/{id}/activate` | cards.activate | inactive → active |
-| POST | `/cards/{id}/block` | cards.block | `{reason}` |
-| POST | `/cards/{id}/unblock` | cards.unblock | |
-| POST | `/cards/{id}/expire` | cards.expire | `{reason?}` — writes off the balance |
-| POST | `/cards/{id}/replace` | cards.replace | `{reason, nfc_tag_type?}` → new card (201) with the remaining balance; old card `replaced` |
-| GET | `/cards/{id}/history` | cards.view | Ledger + events, newest first |
-| GET | `/cards/{id}/nfc` | cards.write_nfc | NFC payload (URL, NTAG 424 template, lock policy) |
-| POST | `/cards/{id}/nfc/check` | cards.write_nfc | Programming step 2: `{attempt_id (uuid), uid, current_url?, only_if_unprogrammed?}` → `{data: {status: available \| already_programmed \| refused, reason, message, conflict: {card_id, card_number}?, content: blank \| this_card \| other_card \| retired_card \| stale_copy \| foreign, replaces_tag, locked, expected_url, attempt_id}}` |
-| POST | `/cards/{id}/nfc` | cards.write_nfc | Record the tag. `method: web_nfc` → `{attempt_id, tag_type: ntag213 \| ntag215 \| ntag216, uid, read_back: {uid, url}}` — the chip is saved only if the tag read back is the same chip and carries exactly the card URL (`nfc.verified_at`). Optional `timings: {detect_ms, write_ms, verify_ms, total_ms}`, `only_if_unprogrammed`. `method: manual` (`tag_type` ntag21x) · `provisioned` (`ntag424_dna`, `locked?`) · `printed` (`qr_only`) — never with a `uid` |
-| POST | `/cards/{id}/nfc/lock` | cards.write_nfc | `{attempt_id}` — the verified tag was made read-only (`nfc.locked`); also after `already_programmed` |
-| POST | `/cards/{id}/nfc/attempts` | cards.write_nfc | Report a failure the browser saw: `{attempt_id, stage (read · check · detect · write · verify · lock · bind), result (failed · refused · cancelled), error_code, message?, uid?, tag_type?, previous_url?, read_back_url?, timings?}` → 201. The `POST` programming endpoints are limited to 180 requests per minute per user and device |
-| GET | `/cards/{id}/nfc/attempts` | cards.write_nfc | Last 50 programming attempts of the card (result, stage, error, chip, type, user, time) |
-| GET | `/cards/{id}/qr` | cards.write_nfc | `image/svg+xml` QR code of the card URL |
+`Voucher`: `id, kind, voucher_number, voucher_number_formatted, status, currency, initial_value, balance,
+total_loaded, total_redeemed, expires_at, is_expired, blocked_at, blocked_reason, expired_at, recipient_name,
+notes, customer, issued_by, media[] {id, type, role, status, created_at, revoked_at}, payments[], last_used_at,
+created_at, updated_at`. `total_loaded` = sale + reloads.
 
-Example — redeem with curl:
+**Expiry.** Without a validity setting a voucher has no expiry. With one (`validity_months`, at least 36) the last
+valid day is set at the sale, in the restaurant's timezone. At expiry the voucher becomes `expired` and keeps its
+balance; an owner can reinstate it.
+
+#### Sale
+
+```http
+POST /vouchers
+Idempotency-Key: 7b1c…
+{ "value": 5000, "form": "printable",
+  "payment": { "method": "card_terminal", "reference": "4711" },
+  "customer": { "first_name": "Anna", "email": "anna@example.com" },
+  "recipient_name": "Anna", "notes": "Birthday" }
+```
+
+| Field | |
+|---|---|
+| `value` | Minor units; within the restaurant's `min_voucher_value` and `max_voucher_balance` |
+| `form` | `printable` (a digital voucher with a printable QR) |
+| `payment.method` | `cash`, `card_terminal` (needs `reference`: terminal receipt), `bank_transfer` (needs `reference`), `complimentary` (needs `reason`, 3–500 characters, and `vouchers.sell_complimentary`) |
+| `customer_id` or `customer` | Optional: an existing customer, or a new one (`first_name, last_name, email, phone, marketing_consent`) |
+| `recipient_name`, `notes` | Optional |
+
+```json
+→ 201 { "data": Voucher, "transaction": Transaction, "payment": Payment,
+        "printable": { "payload": "GCPV1.q7Jx…", "qr_svg": "<svg …>" }, "replayed": false }
+```
+
+Without `vouchers.view` (e.g. a manager's app token) `data` is only `{id, kind, balance, currency}`.
+`printable.payload` is returned only here and cannot be fetched again; the print sheet shows the QR and the
+restaurant, never the voucher number or the value. A retry with the same key returns the same sale
+(`"replayed": true`, 200). When the retry comes from the same user and device within 15 minutes and the voucher is
+still active and unused, it carries a fresh QR and the unseen one is revoked; otherwise `printable` is `null`.
+
+#### Redemption
+
+```http
+POST /vouchers/{voucher}/redemptions
+Idempotency-Key: 3f0e…
+{ "amount": 1850, "presentment_id": "…", "reference": "Bill 4711", "note": null }
+```
+
+```json
+→ 201 { "data": { "voucher": Voucher | PresentedVoucher, "transaction": Transaction }, "replayed": false }
+```
+
+The voucher part is the full `Voucher` for users with `vouchers.view`, otherwise `PresentedVoucher`. In one
+database transaction the server locks the presentment and the voucher row, looks the idempotency key up again
+(a retry that waited on the lock replays the first result), consumes the presentment, checks status, balance,
+partial redemption, the per-redemption and per-day limits and the hourly limit, and appends the ledger entry. A
+redemption that is refused leaves the presentment unused; it stays valid until it expires.
+
+#### Redemption outcome
+
+```http
+GET /vouchers/{voucher}/redemptions/{idempotencyKey}
+→ 200 { "data": { "status": "not_booked" } }
+→ 200 { "data": { "status": "booked", "voucher": PresentedVoucher, "transaction": Transaction } }
+```
+
+A till whose request went unanswered asks here instead of sending the debit again. Only the caller's own attempts
+on that voucher are visible; asking never books anything. `not_booked` is final only once the attempt can no
+longer be running on the server; clients wait 60 seconds after their last request before treating it as final.
+`Cache-Control: no-store, private`.
+
+#### Example with curl
 
 ```bash
-curl -X POST https://app.example.com/api/v1/cards/$CARD/redeem \
-  -H "Authorization: Bearer $TOKEN" -H "Accept: application/json" -H "Content-Type: application/json" \
+P=$(curl -s -X POST https://app.example.com/api/v1/presentments \
+  -H "Authorization: Bearer $TOKEN" -H "X-Device-Id: $DEVICE" -H "Content-Type: application/json" -H "Accept: application/json" \
+  -d "{\"purpose\":\"spend\",\"method\":\"printable_qr\",\"credential\":\"$QR\"}")
+curl -X POST "https://app.example.com/api/v1/vouchers/$(echo "$P" | jq -r .data.voucher.id)/redemptions" \
+  -H "Authorization: Bearer $TOKEN" -H "X-Device-Id: $DEVICE" -H "Content-Type: application/json" -H "Accept: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"amount": 1850, "reference": "Bill 4711"}'
+  -d "{\"amount\": 1850, \"presentment_id\": \"$(echo "$P" | jq -r .data.id)\", \"reference\": \"Bill 4711\"}"
 ```
 
 ### Transactions
 
 | Method | Path | Permission | |
 |---|---|---|---|
-| GET | `/transactions` | transactions.view | `type[] (csv), gift_card_id, user_id, from, to (restaurant-local dates), search` |
-| GET | `/transactions/export` | transactions.export | CSV with readable type names (`Sale`, `Redemption`, `Reload`, `Transfer in/out`, …) |
+| GET | `/transactions` | transactions.view | `type[]` or comma list (`issue`, `redemption`, `reload`, `reversal`), `voucher_id`, `user_id`, `from`, `to` (restaurant-local dates), `search` (reference or voucher number) |
+| GET | `/transactions/export` | transactions.export | CSV with readable type names (`Sale`, `Redemption`, `Reload`, `Reversal`) and the payment method |
 | GET | `/transactions/{id}` | transactions.view | |
-| POST | `/transactions/{id}/reverse` | transactions.reverse | `{reason}` — counter-entry for a redemption or reload |
+| POST | `/transactions/{id}/reverse` | transactions.reverse | `{reason}` — a new, opposite entry for a redemption or reload; at most once per entry, within the balance cap → `201 {data: Transaction}` |
+
+`Transaction`: `id, type, type_label, amount` (signed), `balance_before, balance_after, currency, reference, note,
+reversed, reversed_at, reversible, related_transaction_id, payment, voucher {id, kind, voucher_number, status},
+user, device, created_at`. `reversed` is derived from the reversal entry that points at the original; no entry is
+ever changed. `Payment`: `id, method, method_label, amount, currency, reference, reason, created_at`.
 
 ### Dashboard `[dashboard.view]`
 
-| GET | `/dashboard/stats` | KPIs: `outstanding_balance` + `outstanding_cards` (open liability and the number of cards carrying it), `monthly_revenue` / `previous_month_revenue`, `monthly_redeemed` / `today_redeemed`, cards sold (total / this month / active), `expiring_soon` |
+| Method | Path | |
 |---|---|---|
-| GET | `/dashboard/charts?days=7\|30\|90` | `daily[] {date, sold, redeemed, transactions}`, `monthly[]` (12 months), `status_distribution[]` |
-| GET | `/dashboard/activity?limit=10` | Latest transactions |
+| GET | `/dashboard/stats` | `currency, vouchers_sold, vouchers_sold_this_month, vouchers_active, vouchers_empty, vouchers_blocked, vouchers_expired, outstanding_balance, outstanding_vouchers, today_transactions, today_redeemed, monthly_revenue, previous_month_revenue, monthly_redeemed, expiring_soon` |
+| GET | `/dashboard/charts?days=7\|30\|90` | `daily[] {date, sold, redeemed, transactions}`, `monthly[] {month, revenue, redeemed}` (12 months), `status_distribution[] {status, count, balance}` |
+| GET | `/dashboard/activity?limit=10` | Latest transactions (max. 50) |
 
 ### Customers
 
-| GET `/customers` [customers.view] · POST `/customers` [customers.manage] · GET/PATCH `/customers/{id}` · POST `/customers/{id}/anonymize` (GDPR erasure; ledger stays intact) |
-|---|
+| Method | Path | Permission | |
+|---|---|---|---|
+| GET | `/customers` | customers.view | `search` |
+| POST | `/customers` | customers.manage | `{first_name, last_name?, email?, phone?, notes?, marketing_consent?}` |
+| GET | `/customers/{id}` | customers.view | `{data: Customer, vouchers: Voucher[]}` |
+| PATCH | `/customers/{id}` | customers.manage | Same fields; anonymized customers cannot be edited (`409`) |
+| POST | `/customers/{id}/anonymize` | customers.manage | GDPR erasure: personal data, recipient names of their vouchers and their e-mail address in the notification log are removed; the ledger stays intact |
 
 ### Team, roles, devices
 
 | Method | Path | Permission |
 |---|---|---|
 | GET | `/roles` | users.view |
-| GET / POST | `/users` | users.view / users.manage — POST `{name, email, role: owner\|manager\|waiter, password?}` sends a welcome invitation (72 h link) when no password is given |
+| GET / POST | `/users` | users.view / users.manage — POST `{name, email, role: owner \| manager \| waiter, password?, locale?}`; without a password the person gets an invitation (72 h link) |
 | GET / PATCH | `/users/{id}` | users.view / users.manage |
-| POST | `/users/{id}/deactivate` · `/activate` · `/password-reset` | users.manage — deactivation revokes tokens and sessions; `password-reset` re-sends the invitation for users who never signed in |
+| POST | `/users/{id}/deactivate` · `/activate` · `/password-reset` | users.manage — deactivation revokes tokens and sessions; `password-reset` sends the invitation again to people who never signed in |
 | GET | `/devices` | devices.view |
-| GET | `/devices/current` | any |
-| PATCH | `/devices/{id}` · POST `/devices/{id}/revoke` · `/restore` | devices.manage |
+| GET | `/devices/current` | any — the device of this request, or `null` |
+| PATCH | `/devices/{id}` | devices.manage — `{name?, type? (phone, tablet, desktop, pos, integration)}` |
+| POST | `/devices/{id}/revoke` · `/restore` | devices.manage — revoking also ends "remember me" of its users |
 
 ### Settings `[settings.manage]`
 
-| GET `/settings` | Restaurant + card settings |
-|---|---|
-| PUT `/settings/restaurant` | Profile, locale, timezone |
-| PUT `/settings/cards` | Card rules (see `restaurant_settings`) |
-| GET `/settings/notification-templates` | Effective templates (override or default) |
-| PUT `/settings/notification-templates/{key}` | `{locale, subject, body, is_active}` — creates a restaurant override |
-| GET / POST `/api-tokens`, POST `/api-tokens/{id}/revoke` | `[api_tokens.manage]` — POST returns `plain_text_token` **once** |
-| GET `/audit-logs` | `[audit.view]` `action` (prefix), `user_id`, `auditable_id`, `from`, `to` |
+| Method | Path | |
+|---|---|---|
+| GET | `/settings` | Restaurant and voucher settings (with the platform ceilings) |
+| PUT | `/settings/restaurant` | Profile, address, `country`, `timezone`, `locale` (`de-AT`, `de-DE`, `de-CH`, `en-GB`, `en-US`) |
+| PUT | `/settings/vouchers` | `validity_months` (`null` = no expiry, otherwise 36–360), `min_voucher_value`, `max_voucher_balance`, `max_debit_per_transaction`, `max_debit_per_voucher_per_day` (each at most the platform ceiling), `max_redemptions_per_voucher_per_hour` (0 = off), `allow_reload`, `allow_partial_redemption`, `send_customer_emails`, `brand_color`, `receipt_footer` |
+| GET | `/settings/notification-templates` | Effective guest e-mail templates (`voucher_issued`, `voucher_reloaded`, `voucher_expiring`) |
+| PUT | `/settings/notification-templates/{key}` | `{subject, body, is_active?, locale? (en \| de)}` — creates a restaurant override |
+
+Guest e-mails never contain a balance, an amount, the voucher number or a link to the voucher.
+
+| Method | Path | Permission | |
+|---|---|---|---|
+| GET / POST | `/api-tokens` | api_tokens.manage | POST `{name, abilities[], expires_at?}` → `{data: ApiToken, plain_text_token}` (shown **once**) |
+| POST | `/api-tokens/{id}/revoke` | api_tokens.manage | |
+| GET | `/audit-logs` | audit.view | `action` (prefix), `user_id`, `auditable_id`, `from`, `to` |
 
 ### Public
 
-| GET | `/public/cards/{token}` | Anonymous balance page data (masked number, balance, status, expiry, restaurant name). Can be disabled per restaurant. 20/min per IP. |
+| Method | Path | |
 |---|---|---|
-| GET | `/app/config?platform=android\|ios&version=1.2.0` | Waiter app start-up config → `{data: {min_version: {android, ios}, update_required, maintenance_notice, support_email, card_domains}}`. `update_required` is `null` without `platform`/`version`. Minimum versions are system settings (`app.min_version.*`). `Cache-Control: public, max-age=60`. |
+| GET | `/app/config?platform=android\|ios&version=2.0.0` | Waiter app start-up configuration → `{data: {min_version: {android, ios}, update_required, maintenance_notice, support_email}}`. `update_required` is `null` without `platform` and `version`. Minimum versions are system settings (`app.min_version.*`). `Cache-Control: public, max-age=60` |
+| GET | `/up` (outside `/api/v1`) | Health check: database and cache |
 
-### Platform administration `[platform.*]`
+There is no public voucher page and no public voucher lookup.
 
-| GET | `/admin/stats` — incl. `restaurants_archived` |
-|---|---|
-| GET | `/admin/restaurants?search=&status=active\|suspended\|archived` — each with `owner {id, name, email, status, last_login_at, invitation}` and `archived_at` |
-| POST | `/admin/restaurants` `{name, …, owner:{name, email, password?}}` — creates restaurant + owner account and e-mails the invitation; response `owner.invitation.delivery` = `sent` \| `failed` \| `logged` |
-| GET | `/admin/restaurants/{id}` — also archived ones; `users` (each with `invitation`), `business_data {gift_cards, transactions, customers}` |
-| PATCH | `/admin/restaurants/{id}` — profile fields plus `plan`, `currency` (currency only before the first gift card) |
-| POST | `/admin/restaurants/{id}/suspend` `{reason}` · `/reactivate` ("Disable" / "Enable") |
-| POST | `/admin/restaurants/{id}/archive` `{reason?}` · `/restore` — archive = soft delete: hidden, users and devices locked out, data kept |
-| DELETE | `/admin/restaurants/{id}` `{confirm: "<slug>"}` — permanent; `409 RESTAURANT_NOT_DELETABLE` (with counts in `context`) when gift cards, transactions or customers exist |
-| POST | `/admin/restaurants/{id}/invitation` `{name?, email?}` — owner's invitation again (new link, old one invalid; corrects a mistyped address) · `/admin/restaurants/{id}/users/{user}/invitation` for other pending accounts. `409 INVITATION_NOT_POSSIBLE` (accepted, disabled, archived), `422 INVITATION_NOT_DELIVERED` (mail server refused / log mailer) |
-| GET | `/admin/audit-logs?restaurant_id=&action=` (action = prefix) |
-| GET / PUT | `/admin/system-settings` — PUT `{settings: [{key, value}]}` |
-| GET | `/admin/mail` → `{mailer, delivers, from_address, from_name, host, port, problem}` (SMTP server without credentials) |
-| POST | `/admin/mail/test` `{to?}` — test e-mail to `to` or, without it, the signed-in platform admin; the recipient is logged ("Platform test e-mail requested") and validated first (`422 VALIDATION_FAILED` on `to` when missing, invalid or — with `MAIL_VERIFY_DOMAINS` — its domain has no mail server). `422 MAIL_RECIPIENT_REJECTED` when the server refuses the recipient (550–553), `422 MAIL_NOT_DELIVERED` for other failures; response `data {recipient, mailer, guard}` |
+### Platform administration `[platform.restaurants.manage]`
+
+Platform administrators operate restaurants; they never act inside a restaurant and never touch vouchers.
+
+| Method | Path | |
+|---|---|---|
+| GET | `/admin/stats` | `restaurants_total, restaurants_active, restaurants_archived, vouchers_total, vouchers_active, transactions_this_month, volume_sold_this_month` |
+| GET | `/admin/restaurants?search=&status=active\|suspended\|archived` | Each with `owner {…, invitation}` and `archived_at` |
+| POST | `/admin/restaurants` | `{name, slug?, …, currency? (EUR, CHF, USD, GBP), owner: {name, email, password?}}` — creates the restaurant and the owner account and sends the invitation → `201 {data, owner}` |
+| GET | `/admin/restaurants/{id}` | Also archived ones: `{data, users[], business_data {vouchers, transactions, customers}}` |
+| PATCH | `/admin/restaurants/{id}` | Profile fields, `plan`, `currency` |
+| POST | `/admin/restaurants/{id}/suspend` `{reason}` · `/reactivate` | "Disable" / "Enable" |
+| POST | `/admin/restaurants/{id}/archive` `{reason?}` · `/restore` | Archive = soft delete: hidden, users and devices locked out, data kept |
+| DELETE | `/admin/restaurants/{id}` | `{confirm: "<slug>"}` — permanent; `409 RESTAURANT_NOT_DELETABLE` (counts in `context`) when vouchers, transactions or customers exist. The audit trail is kept |
+| POST | `/admin/restaurants/{id}/invitation` · `/admin/restaurants/{id}/users/{user}/invitation` | `{name?, email?}` — a new invitation (the previous link stops working; corrects a mistyped address). Sent from the queue: `202` while queued, `200` when sent, `422 INVITATION_NOT_DELIVERED` when the mail server refused it or the platform only logs e-mails; `409 INVITATION_NOT_POSSIBLE` for accepted, disabled or archived accounts |
+| GET | `/admin/api-tokens?restaurant_id=&active=` | Every restaurant's tokens, integration and device (`kind`) |
+| POST | `/admin/api-tokens/{id}/revoke` | Incident response |
+| GET | `/admin/audit-logs?restaurant_id=&action=` | `[platform.audit.view]`, action = prefix |
+| GET / PUT | `/admin/system-settings` | `[platform.settings.manage]` — PUT `{settings: [{key, value}]}` |
+| GET | `/admin/mail` | `[platform.settings.manage]` → `{mailer, delivers, from_address, from_name, host, port, problem}` (no credentials) |
+| POST | `/admin/mail/test` | `[platform.settings.manage]` `{to?}` — test e-mail to `to` or the signed-in administrator; the recipient is validated first (with `MAIL_VERIFY_DOMAINS`, its domain must have a mail server). `422 MAIL_RECIPIENT_REJECTED` (550–553), `422 MAIL_NOT_DELIVERED` for other failures |
 
 Invitations: the account exists from the start with an unknown random password. The e-mail carries a single-use
-token of the `invitations` password broker (random, stored hashed, valid 72 h; a new invitation replaces it).
-Choosing a password with `POST /auth/reset-password` activates the account (`user.invitation_accepted` in the
-audit log). Every attempt is recorded in `notification_logs` (`template_key = staff_invitation`). The e-mail is German by
-default: its language is the restaurant's (`de-AT`/`de-DE`/`de-CH` → `de`, `en-GB`/`en-US` → `en`) when a translation
-exists, otherwise `MAIL_LOCALE` (default `de`). Wording: `backend/lang/<locale>/invitation.php`; button fallback line
-and footer: `backend/lang/<locale>.json`. A new language = copy `lang/en/invitation.php` + `lang/en.json` to
-`lang/<xx>/…`, translate, add `<xx>` to `giftcard.mail_locales`.
-
-## Resource shapes
-
-See `dashboard/src/lib/api/types.ts` — it mirrors every resource (`GiftCard`, `ScannedCard`, `Transaction`,
-`HistoryEntry`, `Customer`, `StaffUser`, `Device`, `Restaurant`, `AuditLog`, `ApiToken`, …) field by field.
+token of the `invitations` password broker (own table `invitation_tokens`, stored hashed, valid 72 h; a new
+invitation replaces it). Choosing a password with `POST /auth/reset-password` activates the account
+(`user.invitation_accepted` in the audit log). Every attempt is recorded in `notification_logs`
+(`template_key = staff_invitation`). The e-mail uses the restaurant's language when a translation exists
+(`de-*` → `de`, `en-*` → `en`), otherwise `MAIL_LOCALE` (default `de`). Wording:
+`backend/lang/<locale>/invitation.php` and `backend/lang/<locale>.json`; a new language is added to
+`giftcard.mail_locales`.

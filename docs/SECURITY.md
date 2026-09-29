@@ -1,60 +1,81 @@
 # Security
 
-Security is the first design constraint of GiftCard Pro: a gift card is money, and every restaurant's data
-must be invisible to every other restaurant. This document lists the threats and the concrete control that
-addresses each one, with the code that implements it.
+A voucher is money, and every restaurant's data must be invisible to every other restaurant. This document lists
+the threats and the control that addresses each one, with the code that implements it.
 
 ## Principles
 
-1. **The card carries no value and no personal data** — only `https://…/c/{UUID v4}`.
-2. **The server is the only source of truth** for balances; every change is atomic, locked, idempotent and ledgered.
-3. **Deny by default** — every endpoint declares a permission; tenant scoping is automatic and enforced at several layers.
-4. **Nothing is ever deleted** — revocation, soft deletes, append-only ledger and audit log.
-5. **Defence in depth** — client checks are convenience only; the API re-validates everything.
+1. **Spending needs proof of presence.** Every debit consumes a presentment: single use, 60 seconds, bound to user,
+   device, restaurant and voucher. A voucher number is never a credential.
+2. **The server is the only source of truth** for balances; every change is atomic, locked, idempotent and recorded
+   in the ledger.
+3. **Financial history is immutable.** Ledger, payments and audit log are append-only (database triggers) and
+   hash-chained; a nightly job verifies every chain and every balance.
+4. **Deny by default.** Every endpoint declares a permission; tenant scoping is automatic and enforced at several
+   layers; tokens are limited further by their abilities and, for the waiter app, by method and path.
+5. **Defence in depth.** Client checks are convenience only; the API validates everything again.
 
 ## Threats and controls
 
 | Threat | Controls | Code |
 |---|---|---|
-| **Cross-tenant access** | Global `RestaurantScope`; write guard (`TenantMismatchException`); tenant-scoped route binding (404 for foreign IDs); `RequireTenant`; tenant-scoped `exists` rules; service-level ownership assertions; foreign card scans rejected and logged without leaking the other restaurant | `Models/Concerns/BelongsToRestaurant`, `Http/Middleware/ResolveTenant`, `Services/GiftCards/*`, `tests/Feature/TenantIsolationTest` |
-| **Privilege escalation** | Permission gates on every route (`can:`), role ranks (managers cannot create owners, nobody can assign `platform_admin`), no self-role-change, last-owner protection, token abilities ⊆ creator permissions | `Providers/AppServiceProvider::configureAuthorization`, `Services/Users/UserService`, `Services/ApiTokens/ApiTokenService` |
-| **SQL injection** | Eloquent / query builder with bound parameters everywhere; `LIKE` wildcards escaped; sort columns whitelisted; driver-specific date bucket uses integer offsets only | `GiftCard::scopeSearch`, `CardIndexRequest::SORTS`, `ReportingTest` |
-| **XSS** | React escapes by default; no `dangerouslySetInnerHTML`; strict CSP (`default-src 'self'`, `frame-ancestors 'none'`); session cookie is `httpOnly` (not readable by scripts); e-mail templates escape every placeholder and only substitute whitelisted keys | `next.config.ts`, `Services/Notifications/TemplateRenderer`, `NotificationTest` |
-| **CSRF** | Sanctum SPA: `XSRF-TOKEN` double-submit + `SameSite=Lax` cookies; same-origin deployment with CORS explicitly disabled (`config/cors.php` → no cross-origin grants); API tokens never use cookies | `bootstrap/app.php (statefulApi)`, `lib/api/client.ts` |
-| **Double spending / race conditions** | `SELECT … FOR UPDATE` on the card row inside a DB transaction for every balance change; deterministic lock order for transfers (no deadlocks); deadlock retries; `UNSIGNED` balance column; balance re-read from the locked row, never from the request | `GiftCardService`, `IdempotencyAndConcurrencyTest` — verified live with 20 concurrent requests on MariaDB |
-| **Duplicate redemption / replayed requests** | Mandatory `Idempotency-Key` on money endpoints, unique per restaurant in the ledger; replays return the original transaction; key reuse with different payload → 409; UI keeps the key across network retries | `RequireIdempotencyKey`, `GiftCardService::idempotent` |
-| **Replay of NFC reads** | NTAG 424 DNA: SUN message verified with AES-CMAC; 24-bit tap counter must strictly increase (atomic compare-and-set) | `Services/Nfc/*`, `CardScanService::verifyChip`, `CardScanTest` |
-| **Card cloning** | NTAG21x: chip UID bound only after the written tag was read back and verified, mismatching UID rejected and audited (configurable); one chip cannot be bound to two usable cards (unique index `nfc_uid_active`, platform-wide); tags of other cards are refused before writing; every programming attempt logged (`nfc_write_attempts`); optional permanent tag lock; NTAG 424 DNA: cryptographic proof of the genuine chip (per-chip diversified keys) | `CardScanService`, `GiftCardService::bindNfcTag`, `NfcProgrammingService`, `NfcProgrammingTest`, [NFC.md](NFC.md) |
-| **Guessing card tokens / numbers** | 122-bit random UUID v4 tokens; card numbers random (not sequential) with Luhn check; failed *and suspicious* lookups (UID mismatch, bad signature, replay) throttled per user and per IP; every attempt logged in `nfc_scans`; suspicious results also written to the application log as `warning` for alerting | `CardNumberGenerator`, `CardScanService`, `config/giftcard.php` |
-| **Brute-force login** | Rate limit (5/min per e-mail+IP, 30/min per IP); account lock after 10 consecutive failures (atomic counter, logged as `warning`); constant-time comparison with a dummy hash for unknown e-mails; generic error messages; password reset answers identically for unknown addresses | `AuthController`, `PasswordController`, `AuthenticationTest` |
-| **Abuse of a stolen card** | Block card (any staff with `cards.block`), velocity limit per card per hour, max single redemption, replacement issues a new token and permanently retires the old one | `GiftCardService`, `RestaurantSetting` |
-| **Lost / stolen phone** | Devices are identified and can be revoked instantly; deactivating a user revokes all tokens and sessions; a browser session is pinned to the device it signed in on (a copied session cookie is useless on another device); sessions expire after inactivity; password change invalidates other sessions (`AuthenticateSession`) | `TrackDevice`, `DeviceService`, `UserService::deactivate` |
-| **Leaked API token** | Tokens hashed (SHA-256) at rest, prefixed `gcp_` for secret scanning, shown once, scoped abilities, max lifetime, revocable, `last_used_at` / `last_used_ip` tracking | `ApiTokenService`, `PersonalAccessToken` |
-| **Tampering / repudiation** | Immutable ledger & audit log (model-level guards), actor/device/IP/request id on every entry, microsecond timestamps, reversals as counter-entries instead of edits | `Models/Concerns/Immutable`, `AuditLogger` |
-| **Data loss** | No hard deletes; RESTRICT foreign keys; daily consistent dumps (`backup` service) + off-site sync; server snapshots | [DEPLOYMENT.md](DEPLOYMENT.md#backups) |
-| **Transport security** | HTTPS only (Coolify proxy with automatic certificates; the gateway adds HSTS), `Secure` cookies, `TrustProxies` and the gateway trust only private network ranges (a client cannot spoof its IP via `X-Forwarded-For`), no service publishes a host port | `infra/docker/gateway/Caddyfile`, `docker-compose.coolify.yml` |
-| **Clickjacking / MIME sniffing** | `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff` on API and web | `SecurityHeaders`, `next.config.ts` |
-| **Cache leaks** | `Cache-Control: no-store, private` on every API response | `SecurityHeaders` |
-| **CSV / formula injection** | Exported cells starting with `= + - @` are neutralised (plain numbers such as `-12,50` are left intact) | `Support/CsvSanitizer` |
-| **Sensitive data in logs** | Audit values redact passwords/tokens/public tokens; personal data (customer names, e-mail, phone, notes, recipient names) is never copied into the audit log — only the fact that it changed; the public token never appears in API responses except to users allowed to write tags | `AuditLogger::REDACTED`, `GiftCardResource` |
-| **Mass assignment** | Money/state columns are not fillable; only the service layer changes them with `forceFill` | `GiftCard::$fillable` |
-| **Staff onboarding** | New users never receive a password: they get a one-time invitation link (72 h, separate broker from the 60-min password reset) and choose their own password | `StaffInvitation`, `UserService::invite`, `config/auth.php` |
-| **Dependency vulnerabilities** | `composer audit` and `npm audit` in CI | `.github/workflows/ci.yml` |
+| **Spending without the voucher** | Every redemption consumes a verified, unexpired `spend` presentment of that voucher, made by the same user on the same device, in the same database transaction (lock order presentment → voucher). Presentments are single use (`verified → consumed`), valid 60 s, and a ledger entry references at most one (`UNIQUE`). Spending rules by kind: digital vouchers only with a QR method, card vouchers only with `live_auth`, which has no verifier yet. Every refused presentment is audited (`presentment.failed`, `presentment.rejected`) | `Services/Presentments/*`, `Services/Vouchers/VoucherService::redeem`, `tests/Feature/Abuse/PresentmentAbuseTest` |
+| **Guessing or copying a voucher** | The printable QR carries a 256-bit random secret (`GCPV1.` + base64url); only its SHA-256 hash is stored, the payload is returned once at the sale and never logged. It is not a URL, so it never lands in web server logs or browser histories. Voucher numbers are random, Luhn-checked and never accepted as a credential. Failed presentments are limited per restaurant, user and device (10 per 5 min), never per IP | `Services/Media/PrintableQrService`, `Services/Vouchers/VoucherNumberGenerator`, `PresentmentService` |
+| **Cross-tenant access** | Global `RestaurantScope`; write guard (`TenantMismatchException`); tenant-scoped route binding (404 for foreign ids); `RequireTenant`; tenant-scoped `exists` rules; ownership assertions in the services; a QR of another restaurant is "not recognised", like an unknown one | `Models/Concerns/BelongsToRestaurant`, `Http/Middleware/ResolveTenant`, `RequireTenant`, `tests/Feature/TenantIsolationTest` |
+| **Privilege escalation** | Permission gates on every route (`can:`); role ranks (managers cannot create owners, nobody can assign `platform_admin`); no self role change; last-owner protection; token abilities ⊆ the creator's permissions; platform administrators never act inside a restaurant and cannot create or use tokens | `Providers/AppServiceProvider`, `Services/Users/UserService`, `Services/ApiTokens/ApiTokenService`, `tests/Feature/Abuse/AccessControlAbuseTest` |
+| **Stolen waiter app token** | Bound to the phone's `X-Device-Id` (fingerprint per restaurant); limited to the seven method + path pairs the app uses; stops at once when the device is revoked; revoked on sign-out, password reset or change; 30-day rolling expiry | `Http/Middleware/EnforceDeviceToken`, `Services/Auth/DeviceTokenService`, `tests/Feature/WaiterAppTokenTest` |
+| **Stolen "remember me" cookie** | A session restored from the cookie is accepted only on an active device this person already used; platform administrators always sign in explicitly; revoking a device rotates the remember token of its users; "remember me" is off by default | `Http/Middleware/BindRememberedSignIn`, `Services/Auth/AccessRevoker`, `Services/Devices/DeviceService::revoke` |
+| **Compromised password** | A password reset or change revokes every token (device and integration) and rotates the remember token; other browser sessions end through `AuthenticateSession` | `Services/Auth/AccessRevoker`, `PasswordController` |
+| **Brute-force sign-in** | Rate limit (5/min per e-mail + IP, 30/min per IP); lock after 10 consecutive failures (atomic counter, logged as `warning`); a locked account, a wrong password and an unknown address answer the same `422` with the same timing (the password is always hashed) | `Services/Auth/CredentialVerifier`, `tests/Feature/AuthenticationTest` |
+| **Account enumeration and token confusion** | `forgot-password` answers identically for every address and sends from the queue; every reset failure answers the same message; invitation and reset tokens live in separate tables (`invitation_tokens`, `password_reset_tokens`) with separate lifetimes (72 h, 60 min), so a reset request can never replace an invitation; accounts with a pending invitation get no reset link | `PasswordController`, `Jobs/SendPasswordResetLink`, `config/auth.php` |
+| **Double spending / race conditions** | `SELECT … FOR UPDATE` on the voucher row inside a DB transaction for every balance change; deadlock retries; `UNSIGNED` balance columns; the balance is re-read from the locked row, never taken from the request | `VoucherService`, `tests/Feature/IdempotencyAndConcurrencyTest` (also run on MySQL in CI) |
+| **Duplicate booking / lost answers** | Mandatory `Idempotency-Key` on sale, redemption and reload, unique per restaurant in the ledger; the key is checked again after the row lock, so a retry that waited replays the first result; the same key for another request → 409. A till whose answer was lost asks `GET /vouchers/{id}/redemptions/{key}` instead of sending the debit again, and never shows "nothing was booked" while the outcome is unknown | `Http/Middleware/RequireIdempotencyKey`, `VoucherService::idempotent`, `VoucherActionController::redemptionOutcome`, waiter app `PendingRedemptionStore` |
+| **Tampering / repudiation** | Ledger, payments and audit log: database triggers reject `UPDATE` and `DELETE`, the model layer refuses them earlier (`IMMUTABLE_RECORD`); each row is linked into a per-restaurant SHA-256 hash chain; `giftcard:verify-chains` recomputes every chain and every balance nightly and e-mails `OPS_ALERT_EMAIL` on any difference. Corrections are new entries (reversal, reinstatement); actor, device, IP and request id on every entry; microsecond timestamps | `database/migrations/…000007_make_financial_history_append_only.php`, `Models/Concerns/Immutable`, `Models/Concerns/HashChained`, `Services/Integrity/ChainVerifier`, `tests/Feature/Abuse/IntegrityTest` |
+| **Money without payment** | Every sale and reload records the payment that funded it (`cash`, `card_terminal` + receipt reference, `bank_transfer` + reference, `complimentary` + reason); complimentary needs `vouchers.sell_complimentary` (owners) | `VoucherService::recordPayment`, `tests/Feature/Abuse/PaymentAbuseTest` |
+| **Losing a guest's money** | No default expiry; a restaurant validity is at least 36 months; expiry keeps the balance and an owner can reinstate the voucher; manual expiry is owner-only with a reason; blocked vouchers are skipped by the nightly job | `VoucherService::expire`, `reinstate`, `expireDue` |
+| **Abuse of a voucher** | Block (with reason); limits per redemption, per voucher per day and redemptions per voucher per hour, checked under the row lock; platform ceilings for every restaurant limit | `VoucherService::assertDebitLimits`, `assertVelocity`, `config/giftcard.php → limits` |
+| **Lost / stolen phone** | Devices are identified and can be revoked instantly; deactivating a user revokes tokens and sessions; a browser session is pinned to its device; sessions expire after inactivity | `TrackDevice`, `DeviceService`, `UserService::deactivate` |
+| **Leaked integration token** | Tokens hashed (SHA-256) at rest, prefixed `gcp_` for secret scanning, shown once, scoped abilities, maximum lifetime, revocable by the owner and by platform administrators, `last_used_at` / `last_used_ip` | `ApiTokenService`, `Admin/ApiTokenController` |
+| **SQL injection** | Eloquent / query builder with bound parameters; `LIKE` wildcards escaped; sort columns whitelisted; date buckets use integer offsets only | `Voucher::scopeSearch`, `VoucherIndexRequest::SORTS`, `tests/Feature/ReportingTest` |
+| **XSS** | React escapes by default; strict CSP (`default-src 'self'`, `frame-ancestors 'none'`); httpOnly session cookie; e-mail templates escape every placeholder and accept only whitelisted keys | `dashboard/next.config.ts`, `Services/Notifications/TemplateRenderer`, `tests/Feature/NotificationTest` |
+| **CSRF** | Sanctum SPA: `XSRF-TOKEN` double submit + `SameSite=Lax`; same-origin deployment, no cross-origin grants; tokens never use cookies | `bootstrap/app.php`, `dashboard/src/lib/api/client.ts` |
+| **Slow requests exhausting the API** | Mail is always sent from the queue (`MAIL_TIMEOUT=10`); php-fpm ends any request after 30 s (`request_terminate_timeout`) | `Jobs/*`, `infra/docker/php/www.conf` |
+| **Secrets in logs** | Reset and invitation tokens travel in the URL fragment (never sent to a server); the gateway's access and error logs drop the query parameters `token`, `email`, `e`, `m` and the `Cookie`, `Authorization`, `X-Device-Id`, `Idempotency-Key` and `Set-Cookie` headers; Docker log rotation on every service (10 MB × 5); audit values redact passwords, tokens and secret hashes; guest personal data is never copied into the audit log, only the fact that it changed | `infra/docker/gateway/Caddyfile`, `docker-compose.coolify.yml`, `Services/Audit/AuditLogger` |
+| **Data loss** | Restaurants, users, devices and customers are soft-deleted; `RESTRICT` foreign keys from financial tables; daily consistent dumps with triggers (`backup` service) plus an off-site copy | [DEPLOYMENT.md](DEPLOYMENT.md#backups) |
+| **Transport security** | HTTPS only (Coolify proxy with automatic certificates; gateway and API add HSTS), `Secure` cookies, only private network ranges may set `X-Forwarded-*`, no service publishes a host port | `infra/docker/gateway/Caddyfile`, `bootstrap/app.php`, `docker-compose.coolify.yml` |
+| **Clickjacking / MIME sniffing / caching** | `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `nosniff`; `Cache-Control: no-store, private` on every API response except `/app/config` | `Http/Middleware/SecurityHeaders`, `next.config.ts` |
+| **CSV / formula injection** | Exported cells starting with `= + - @` are neutralised (plain numbers such as `-12,50` stay intact) | `Support/CsvSanitizer` |
+| **Mass assignment** | Money and status columns are not fillable; only the service layer changes them with `forceFill` | `Models/Voucher` |
+| **Dependency vulnerabilities** | `composer audit` and `npm audit --audit-level=high` in CI | `.github/workflows/ci.yml` |
+
+Every rule above that forbids something has an abuse test that tries the forbidden path (`backend/tests/Feature/Abuse/`),
+including every removed path (`RemovedPathsTest`).
+
+## Keys and secrets
+
+- Signing keys (Android upload key and its passwords) live in `signing/`, which is never committed (`.gitignore`,
+  `.dockerignore`). iOS signing uses an App Store Connect API key stored only as GitHub secrets.
+- Production configuration lives only in the Coolify resource's environment variables; the repository holds no
+  `.env`.
+- Card keys for NTAG 424 DNA are designed to live in a hardware security module behind the crypto service
+  ([NFC.md](NFC.md)); no card key is part of the production configuration.
 
 ## GDPR notes
 
 - Customer data is optional and minimal (name, e-mail, phone, notes, marketing consent).
-- **Right to erasure:** *Anonymize* removes all personal data of a customer (and recipient names on their cards)
-  while keeping the financial ledger required for bookkeeping. E-mail addresses in the notification log are scrubbed too, and the audit log never contained them.
-- **Data residency:** the reference deployment runs in Hetzner's German data centres.
+- **Right to erasure:** *Anonymize* removes a customer's personal data, the recipient names on their vouchers and
+  their address in the notification log, while keeping the financial ledger required for bookkeeping. The audit log
+  never contained it.
+- Guest e-mails carry no balance, amount, voucher number or link.
+- **Data residency:** the deployment guide places the server in a German data centre (Hetzner).
 - A data-processing agreement (AVV/DPA) with each restaurant is recommended; the platform is the processor.
 
 ## Legal note (Austria / EU)
 
-Gift cards ("Gutscheine") in Austria are generally subject to the 30-year limitation period; shorter expiry
-periods can be considered grossly disadvantageous to consumers unless objectively justified. The default
-validity is configurable per restaurant (0 = no expiry). Restaurants should confirm their terms with their
-legal advisor.
+Vouchers ("Gutscheine") in Austria are generally subject to the 30-year limitation period; shorter validity periods
+can be considered grossly disadvantageous to consumers unless objectively justified. Vouchers have no expiry unless
+the restaurant sets a validity of at least 36 months, and an expired voucher keeps its balance. Restaurants should
+confirm their terms with their legal advisor.
 
 ## Reporting a vulnerability
 

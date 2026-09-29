@@ -20,12 +20,12 @@ The Laravel image is built from `backend/Dockerfile` for three services, selecte
 |---|---|---|
 | `app` | `php-fpm` | HTTP API, reached by the gateway over FastCGI (:9000). |
 | `worker` | `php artisan queue:work redis …` | E-mails, notifications, other queued jobs. |
-| `scheduler` | `php artisan schedule:work` | Nightly card expiry, reminders, housekeeping. |
+| `scheduler` | `php artisan schedule:work` | Nightly voucher expiry, expiry reminders, hash-chain verification, housekeeping. |
 
 There is no `depends_on` and no one-shot service; on start every Laravel container generates the APP_KEY once
 (first deploy, unless set), waits for MySQL and Redis, runs `migrate --force --isolated` (one container at a time)
 and waits until no migration is pending; `app` then seeds reference data. Then config, routes, views and events
-are cached and the process starts. The entrypoint derives `APP_URL`, `FRONTEND_URL`, `CARD_BASE_URL`, `SESSION_DOMAIN`
+are cached and the process starts. The entrypoint derives `APP_URL`, `FRONTEND_URL`, `SESSION_DOMAIN`
 and `SANCTUM_STATEFUL_DOMAINS` from the gateway domain Coolify assigns.
 
 ## Stack

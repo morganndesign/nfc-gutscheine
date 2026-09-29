@@ -44,8 +44,8 @@ Prisilna, periodična promjena lozinke namjerno **nije** predviđena. Iskustvo p
 |---|---|
 | Pokušaji prijave | najviše 5 u minuti po e-mail adresi i IP adresi, 30 u minuti po IP adresi |
 | Zaključavanje računa | nakon **10 uzastopnih neuspjelih pokušaja** na **15 minuta** |
-| Bilježenje | zaključavanja se pojavljuju u zapisniku aktivnosti kao sigurnosno upozorenje i u zapisniku aplikacije |
-| Poruke o greškama | ne otkrivaju postoji li e-mail adresa |
+| Bilježenje | neuspjeli pokušaji na poznatim računima i zaključavanja pojavljuju se u zapisniku aktivnosti (`auth.failed`, `auth.locked`); zaključavanje dodatno kao upozorenje u zapisniku aplikacije |
+| Jedinstven odgovor | pogrešna lozinka, nepoznata adresa i zaključan račun dobijaju **istu** poruku u istom vremenu odgovora (lozinka se uvijek provjerava) – odgovor ne otkriva ni postoji li adresa ni je li račun zaključan |
 | Zaboravljena lozinka | najviše 5 zahtjeva u minuti po IP adresi; odgovor je identičan za poznate i nepoznate adrese |
 
 Nakon isteka zaključavanja osoba se može ponovo prijaviti. Ko nije sam izazvao zaključavanje, to prijavljuje vlasniku odnosno vlasnici – to može biti pokušaj napada.
@@ -57,9 +57,11 @@ Nakon isteka zaključavanja osoba se može ponovo prijaviti. Ko nije sam izazvao
 | Radnja | Pravilo |
 |---|---|
 | Novi član tima | dobija e-mailom **jednokratni link pozivnice**, važi **72 sata**, i sam bira lozinku |
-| Istekla pozivnica | **„Resend invitation"** generiše novi link |
+| Istekla pozivnica | nova pozivnica generiše novi link; stari više ne radi |
 | Zaboravljena lozinka / resetovanje | link e-mailom, važi **60 minuta**, može se koristiti samo jednom |
-| Odvojeni postupci | pozivnice i resetovanja koriste odvojene postupke tokena s vlastitim rokovima važenja |
+| Odvojeni postupci | pozivnice i resetovanja koriste odvojena spremišta tokena s vlastitim rokovima važenja; zahtjev „zaboravljena lozinka“ nikada ne može zamijeniti otvorenu pozivnicu, a računi s otvorenom pozivnicom ne dobijaju link za resetovanje |
+| Bez tokena u logovima | token se nalazi u fragmentu URL-a (`#token=…`), koji preglednik nikada ne šalje serveru |
+| Učinak | resetovanje opoziva sve tokene osobe i završava „Keep me signed in“ |
 | Novi vlasnik / nova vlasnica restorana | pri postavljanju ga/je administracija platforme također poziva linkom pozivnice |
 
 ---
@@ -84,30 +86,31 @@ Lozinku treba **odmah** promijeniti (**Account** → promjena lozinke) odnosno v
 - zapisnik aktivnosti pokazuje radnje koje osoba nije sama izvršila,
 - je došlo do zaključavanja računa koje osoba nije sama izazvala.
 
-Promjena lozinke automatski odjavljuje **sve druge sesije** osobe [tehnički provedeno].
+Promjena ili resetovanje lozinke opoziva **sve tokene** osobe (aplikacija za konobare i integracije), završava „Keep me signed in“ i automatski odjavljuje **sve druge sesije** [tehnički provedeno].
 
 ---
 
 ## 8. Sesije [tehnički provedeno]
 
-- Sesije ističu nakon **8 sati neaktivnosti**, osim ako je odabrana opcija „Keep me signed in on this device". Tu opciju koristite samo na vlastitim, zaključanim uređajima.
+- Sesije ističu nakon **8 sati neaktivnosti**, osim ako je odabrana opcija „Keep me signed in on this device“. Ona je standardno isključena; tako obnovljena sesija prihvata se samo na aktivnom uređaju koji je osoba već koristila. Tu opciju koristite samo na vlastitim, zaključanim uređajima.
 - Svaka sesija je vezana za uređaj na kojem je započeta.
+- Prijava u aplikaciji za konobare važi samo na telefonu za koji je izdata i ističe nakon 30 dana bez korištenja.
 - Blokirani uređaji i deaktivirani korisnici se odbijaju pri sljedećem zahtjevu.
 
 ---
 
 ## 9. Dodatna pravila za administraciju platforme [organizaciono]
 
-Računi administracije platforme mogu djelovati u svakom restoranu. Za njih dodatno važi:
+Računi administracije platforme upravljaju platformom: kreiraju restorane, onemogućavaju ih i arhiviraju te održavaju sistemske postavke. Nikada ne djeluju unutar restorana, nikada ne diraju vaučere i ne mogu kreirati niti koristiti API tokene [tehnički provedeno]. Za njih dodatno važi:
 
 1. Lozinka iz menadžera lozinki, slučajno generisana, najmanje **20 znakova**.
 2. Prijava samo s održavanih uređaja sa šifrovanjem diska, zaključavanjem ekrana i aktuelnim ažuriranjima; nikada s tuđih ili dijeljenih uređaja.
-3. Bez „Keep me signed in on this device".
-4. Pristupi za Hetzner, GitHub, registrar domene, slanje e-mailova i menadžer lozinki zaštićeni su dvofaktorskom autentifikacijom.
-5. „Open restaurant" koristiti samo za postavljanje, podršku ili na izričit zahtjev restorana; svaka radnja se bilježi.
+3. Računi platforme uvijek se prijavljuju izričito; „Keep me signed in on this device“ za njih ne važi [tehnički provedeno].
+4. Pristupi za Hetzner, Coolify, GitHub, registrar domene, slanje e-mailova i menadžer lozinki zaštićeni su dvofaktorskom autentifikacijom.
+5. Podrška restoranu odvija se preko samog restorana (vlasnik ili vlasnica dijeli ekran ili opisuje korake); svaka radnja platforme bilježi se u zapisniku aktivnosti cijele platforme.
 6. Računi platforme kreiraju se samo preko serverske konzole i nikada se ne dodjeljuju u restoranu.
 7. Lista računa administracije platforme provjerava se tromjesečno; računi koji više nisu potrebni odmah se deaktiviraju.
-8. Serverske tajne (`APP_KEY`, lozinke baze podataka, NTAG 424 ključevi) čuvaju se isključivo u menadžeru lozinki.
+8. Serverske tajne (`APP_KEY`, SMTP pristupni podaci, ključevi za potpisivanje aplikacije za konobare) čuvaju se isključivo u menadžeru lozinki odnosno u Coolifyju i GitHub secrets. Ključevi kartica nikada nisu dio konfiguracije; nalaze se u hardverskom sigurnosnom modulu iza kripto servisa.
 
 ---
 
@@ -115,13 +118,13 @@ Računi administracije platforme mogu djelovati u svakom restoranu. Za njih doda
 
 | Pravilo | Provedba |
 |---|---|
-| Kreiranje | samo osobe s dozvolom `api_tokens.manage` (standardno Owner) pod **Settings → API** [tehnički provedeno] |
+| Kreiranje | samo osobe s dozvolom `api_tokens.manage` (standardno Owner) pod **Settings → API**; nikada administracija platforme [tehnički provedeno] |
 | Dozvole | slobodno odabrane abilities, **najviše dozvole osobe koja kreira token** [tehnički provedeno]; odabrati samo neophodno [organizaciono] |
 | Trajanje | najviše **365 dana** [tehnički provedeno]; preporučeno kraće trajanje [organizaciono] |
 | Prikaz | tekst tokena prikazuje se **samo jednom**; sprema se samo SHA-256 hash [tehnički provedeno] |
 | Prepoznatljivost | tokeni počinju s `gcp_` kako bi se mogli pronaći u kodu i dokumentima |
 | Praćenje | spremaju se vrijeme i IP adresa posljednje upotrebe |
-| Opoziv | moguć u svakom trenutku; automatski kada se osoba koja ga je kreirala deaktivira [tehnički provedeno] |
+| Opoziv | moguć u svakom trenutku; automatski kada se osoba koja ga je kreirala deaktivira ili promijeni odnosno resetuje lozinku [tehnički provedeno] |
 | Čuvanje | samo u menadžeru lozinki ili direktno u ciljnoj aplikaciji; nikada u e-mailovima, chatovima, tabelama ili repozitorijima koda [organizaciono] |
 
 ---
@@ -141,9 +144,9 @@ Računi administracije platforme mogu djelovati u svakom restoranu. Za njih doda
 
 - Tehnička pravila aplikacija provodi automatski; lozinke koje ih ne ispunjavaju se odbijaju.
 - Kršenja organizacionih pravila (npr. dijeljeni računi, proslijeđene lozinke) svaki restoran uređuje interno. GiftCard Pro preporučuje da se ova politika uvrsti u radne upute za tim.
-- Kod sumnje na zloupotrebu GiftCard Pro može radi zaštite platforme privremeno blokirati račune odnosno suspendovati restoran i bez odgađanja obavještava pogođeni restoran.
+- Kod sumnje na zloupotrebu GiftCard Pro može radi zaštite platforme opozvati tokene odnosno onemogućiti restoran i bez odgađanja obavještava pogođeni restoran.
 - Ova politika se provjerava godišnje i nakon sigurnosno relevantnih incidenata.
 
 ---
 
-Verzija 1.0 · Stanje: septembar 2026.
+Verzija 2.0 · Stanje: septembar 2026.

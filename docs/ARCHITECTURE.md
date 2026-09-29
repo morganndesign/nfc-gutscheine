@@ -1,144 +1,184 @@
 # Architecture
 
+This document describes the code as it is. The target architecture it implements is
+[architecture/giftcard-pro-v2-architecture.md](architecture/giftcard-pro-v2-architecture.md); the order in which the
+remaining parts are built is [implementation/v2-implementation-plan.md](implementation/v2-implementation-plan.md).
+
 ## System overview
 
 ```
-┌──────────────┐   HTTPS (one origin)   ┌─────────┐  /api /sanctum /up   ┌──────────────────────────┐
-│ Browser      │ ─────────────────────▶ │ Gateway │ ───────────────────▶ │ Laravel 12 (PHP-FPM)     │
-│ · Dashboard  │                        │         │                      │  HTTP → Services → Models│
-│ · Waiter app │ ◀── Next.js pages ──── │ (Caddy) │ ──── everything else ─▶ Next.js 15 (standalone)  │
-│ · Balance pg │                        └─────────┘                      └──────┬──────────┬────────┘
-└──────┬───────┘                                                               │          │
-       │ Web NFC / camera / iOS link                                    MySQL 8.4    Redis 7
- ┌─────┴─────┐                                                   (ledger, tenants) (sessions, cache,
- │ NFC card  │  stores only https://…/c/{uuid-v4}                                    queues, locks)
- └───────────┘                                          queue worker ─┘   scheduler ─┘
+┌────────────────────┐ HTTPS (one origin) ┌─────────┐ /api /sanctum /up ┌──────────────────────────┐
+│ Browser            │ ─────────────────▶ │ Gateway │ ────────────────▶ │ Laravel 12 (PHP-FPM)     │
+│ · Dashboard        │                    │ (Caddy) │                   │  HTTP → Services → Models│
+│ · Web till /waiter │ ◀── Next.js pages ─│         │ ── everything else ▶ Next.js 15 (standalone) │
+└────────────────────┘                    └─────────┘                   └──────┬──────────┬────────┘
+┌────────────────────┐   Bearer token + X-Device-Id  ▲                         │          │
+│ GiftCard Waiter    │ ───────────────────────────────┘                   MySQL 8.4    Redis 7.4
+│ (Android, iPhone)  │   camera → QR → presentment → redemption          (ledger,      (sessions, cache,
+└────────────────────┘                                                    tenants)      queues, locks)
+                                                          queue worker ─┘   scheduler ─┘
 ```
 
-**Why one origin?** Sanctum's cookie-based SPA authentication is the most secure option for a browser app:
-httpOnly session cookie (not readable by JavaScript → immune to token theft via XSS), SameSite=Lax plus
-CSRF tokens. Serving the SPA and the API from the same host removes CORS entirely.
+**One origin.** Sanctum's cookie-based SPA authentication keeps the session in an httpOnly cookie (not readable by
+JavaScript), with SameSite=Lax and CSRF tokens. Serving the dashboard and the API from the same host removes CORS
+entirely. The native app uses device-bound bearer tokens against the same API.
+
+## Spending a voucher
+
+A voucher is spent only with proof that its medium is present: a **presentment**.
+
+```
+Waiter app / web till                         API
+ scan QR "GCPV1.…"  ── POST /presentments ──▶  PresentmentService::present
+                                               ├ lockout check (restaurant + user + device)
+                                               ├ verifier for the method (printable_qr → hash lookup in media)
+                                               ├ kind rule: digital ↔ QR, card ↔ live_auth
+                                               └ INSERT presentments (verified, expires in 60 s,
+                                                  bound to restaurant, voucher, purpose, user, device)
+ ◀── 201 {id, expires_in, voucher} ──
+ enter amount
+ POST /vouchers/{id}/redemptions  (Idempotency-Key, presentment_id)
+                                         ──▶   RequireIdempotencyKey
+                                               VoucherService::redeem
+                                               ├ key already booked? → replay (200) or 409
+                                               └ DB::transaction (3 attempts on deadlock)
+                                                   ├ SELECT presentment FOR UPDATE, SELECT voucher FOR UPDATE
+                                                   ├ key booked meanwhile? → replay
+                                                   ├ consume presentment (verified → consumed; checks expiry,
+                                                   │  purpose, voucher, user, device, kind, medium active)
+                                                   ├ status, balance, partial rule, per-transaction and daily
+                                                   │  limits, redemptions per hour
+                                                   ├ INSERT voucher_transactions (hash-chained, key UNIQUE)
+                                                   ├ UPDATE vouchers (balance, total_redeemed, last_used_at)
+                                                   ├ INSERT audit_logs (hash-chained)
+                                                   └ COMMIT → VoucherRedeemed (after commit)
+ ◀── 201 {voucher, transaction} ──
+ answer lost? → GET /vouchers/{id}/redemptions/{key} → booked | not_booked (never a second debit)
+```
+
+Presentment methods are verifier classes behind one interface (`PresentmentVerifier`). `printable_qr` is
+implemented (`PrintableQrVerifier`, assurance level A1). `live_auth` (A3, physical cards) is an enum case without a
+verifier; it is added with the crypto service and the NFC relay ([NFC.md](NFC.md)).
+
+## Selling and reloading
+
+`POST /vouchers` sells a **digital** voucher: one transaction records the payment, the `issue` ledger entry and the
+audit entries, then issues the printable QR (`PrintableQrService`: 256-bit secret, only its SHA-256 hash stored). The
+QR payload is part of that response only. Reloads record a payment the same way. Every sale and reload is
+idempotent; the chain order inside a transaction is payments → ledger → audit log.
+
+## Voucher lifecycle
+
+```
+                 sell (payment)                    reload (payment) · redeem (presentment)
+   ─────────────────────────────▶  active  ◀───────────────────────────────┐
+                                   │  ▲  └─────────────────────────────────┘
+                     block (reason)│  │unblock (→ expired if the date passed meanwhile)
+                                   ▼  │
+                                 blocked
+   active ── expire (owner, reason) or nightly job at the expiry date ──▶ expired   (balance kept)
+   expired ── reinstate (owner, reason, new date or none) ──────────────▶ active
+```
+
+"Empty" is an `active` voucher with balance 0. Corrections are reversals: a new ledger entry that points at the
+original. Nothing in the ledger, the payments or the audit log is ever updated or deleted.
 
 ## Backend layers
 
 ```
-Http/Middleware   AssignRequestId → (Sanctum) → ResolveTenant → RequireTenant → throttle → bindings → TrackDevice → can:
+Http/Middleware   AssignRequestId → (Sanctum) → BindRememberedSignIn → EnforceDeviceToken → ResolveTenant
+                  → RequireTenant → throttle → bindings → TrackDevice → can:
 Http/Requests     input validation only (FormRequest)
 Http/Controllers  thin: parse request → call service → return Resource
 Services          business rules, transactions, locking, auditing   ← the only place state changes happen
-Models            persistence, casts, relations, tenant scope, immutability guards
-Data / Support    DTOs (IssueGiftCardData, ScanInput, TransactionResult), Actor, Money, CardNumber, TenantContext
+Models            persistence, casts, relations, tenant scope, append-only guards, hash chains
+Data / Support    DTOs (IssueVoucherData, PaymentData, SaleResult, TransactionResult, PrintableSecret),
+                  Actor, Money, VoucherNumber, HashChain, CsvSanitizer, TenantContext
 ```
 
-- **Service layer** — `GiftCardService` owns every balance/status change; `CardScanService` owns lookup and
-  anti-fraud; `UserService`, `RestaurantService`, `DeviceService`, `ApiTokenService`, `DashboardService`,
-  `CardNotificationService`, `AuditLogger`.
-- **No repository layer.** Eloquent already is a repository/data-mapper hybrid; wrapping it would add
-  indirection without value. Query logic that is reused lives in model scopes (`search`, `outstanding`,
-  `forRestaurant`).
-- **Actor** — every service call receives an `Actor` (user, device, IP, user agent, request id) so ledger
-  and audit entries are attributable in HTTP, queue and console contexts alike.
-- **Domain exceptions** — each business rule violation is a typed exception with a stable error code
-  (`INSUFFICIENT_BALANCE`, `CARD_BLOCKED`, …) rendered as JSON by `bootstrap/app.php`.
-- **Events** (`GiftCardIssued/Reloaded/Redeemed`) implement `ShouldDispatchAfterCommit`: listeners (e-mails)
-  only run once the money movement is durable.
+- **Services** — `VoucherService` owns every change of a voucher's money or status; `PresentmentService` and its
+  verifiers own proof of presence; `PrintableQrService` owns QR media; `VoucherHistoryService`,
+  `VoucherNumberGenerator`, `ChainVerifier`, `CredentialVerifier`, `DeviceTokenService`, `AccessRevoker`,
+  `UserService`, `InvitationService`, `RestaurantService`, `DeviceService`, `ApiTokenService`, `DashboardService`,
+  `VoucherNotificationService`, `AuditLogger`.
+- **No repository layer.** Reused query logic lives in model scopes (`search`, `forRestaurant`, `ofType`,
+  `notReversed`).
+- **Actor** — every service call receives an `Actor` (user, device, IP, user agent, request id), so ledger and
+  audit entries are attributable in HTTP, queue and console contexts alike.
+- **Domain exceptions** — each business-rule violation is a typed exception with a stable error code
+  (`INSUFFICIENT_BALANCE`, `PRESENTMENT_INVALID`, …), rendered as JSON by `bootstrap/app.php`.
+- **Events** (`VoucherIssued`, `VoucherReloaded`, `VoucherRedeemed`) implement `ShouldDispatchAfterCommit`:
+  listeners (guest e-mails) run only once the money movement is durable.
+- **Append-only and hash-chained models** — `Payment`, `VoucherTransaction`, `AuditLog` use the `Immutable` and
+  `HashChained` concerns; database triggers enforce the same rule.
 
 ## Multi-tenancy
 
 Single database, shared schema, `restaurant_id` on every tenant-owned table.
 
-1. `ResolveTenant` middleware binds the authenticated user's restaurant to the request-scoped
-   `TenantContext` (platform admins may opt in via `X-Restaurant-Id`).
-2. `BelongsToRestaurant` trait adds `RestaurantScope` (all reads filtered), stamps `restaurant_id` on create,
-   and throws `TenantMismatchException` if code ever tries to write a row into another tenant or move a row.
-3. Route model binding resolves `{card}`, `{customer}`, `{device}`, `{transaction}` through the scope →
-   foreign IDs are indistinguishable from non-existent ones (404).
-4. `RequireTenant` refuses restaurant endpoints when no tenant is bound, so a missing tenant can never
-   widen a query to all restaurants.
-5. Validation rules use `existsInTenant()` so foreign IDs fail validation.
-6. Services re-assert ownership (`assertOwnedByTenant`) — defence in depth.
+1. `ResolveTenant` binds the authenticated user's restaurant to the request-scoped `TenantContext`. Platform
+   administrators have no restaurant and never act inside one.
+2. `BelongsToRestaurant` adds `RestaurantScope` (all reads filtered), stamps `restaurant_id` on create and throws
+   `TenantMismatchException` when code tries to write a row into another tenant.
+3. Route model binding resolves `{voucher}`, `{customer}`, `{device}`, `{transaction}` through the scope, so foreign
+   ids are indistinguishable from non-existent ones (404).
+4. `RequireTenant` refuses restaurant endpoints without a tenant, so a missing tenant can never widen a query.
+5. Validation rules use `existsInTenant()`; services re-assert ownership (`assertOwnedByTenant`).
+6. A printable QR is looked up only among the current restaurant's media.
 
-Users are resolved before a tenant exists (authentication), so the `User` model is not globally scoped;
-every staff query filters by `restaurant_id` explicitly and `{user}` binding is tenant-constrained.
+Users are resolved before a tenant exists, so `User` is not globally scoped; every staff query filters by
+`restaurant_id` explicitly and the `{user}` binding is tenant-constrained.
 
-## Money flow (redeem)
+## Clients
 
-```
-POST /cards/{id}/redeem  (Idempotency-Key: uuid)
- └ RequireIdempotencyKey
- └ GiftCardService::redeem
-     ├ existing transaction with this key?  → return it (replayed: true) or 409 if the request differs
-     └ DB::transaction (3 attempts on deadlock)
-         ├ SELECT … FROM gift_cards WHERE id = ? FOR UPDATE      ← serialises concurrent redemptions
-         ├ checks: status, expiry, balance, max single redemption, partial allowed, velocity limit
-         ├ INSERT gift_card_transactions (amount -x, balance_before, balance_after, key UNIQUE per restaurant)
-         ├ UPDATE gift_cards SET balance, total_redeemed, status (redeemed at 0)
-         ├ INSERT audit_logs
-         └ COMMIT → GiftCardRedeemed (after commit) → queued e-mail if balance crossed the low threshold
-```
-
-Invariants (asserted by tests):
-
-- `gift_cards.balance == SUM(gift_card_transactions.amount)` for every card.
-- `balance` is `UNSIGNED` — the database itself rejects negative balances.
-- Ledger rows are never updated (except `reversed_at`) and never deleted.
-- Money is stored as integer minor units (cents); no floating point anywhere.
-
-## Card lifecycle
-
-```
-            issue(activate=false)            activate
-   ┌────────────▶ inactive ─────────────────────┐
-issue ─────────────────────────────────────────▶ active ◀──── reload ──── redeemed
-                                                 │  └── redeem to 0 ─────────▲
-                           block ◀──────────────┤
-                   blocked ── unblock ──────────▶┘
-   any open state ── expire (manual / scheduler) ──▶ expired   (balance written off)
-   any open state ── replace (lost card) ──────────▶ replaced  (balance moved to new card)
-```
-
-## Frontend
+### Dashboard (`dashboard/`, Next.js)
 
 ```
 src/app
- ├ (auth)/login, forgot-password, reset-password
- ├ (app)/…            dashboard, cards, transactions, customers, team, devices, audit, settings, account, admin/*
- ├ waiter/            mobile terminal (tap → amount → redeem)
- ├ c/[token]/         URL on the card: staff → terminal with card opened; guests → public balance
- └ print/cards/[id]   ID-1 card print layout with QR
+ ├ (auth)/login, forgot-password, reset-password     tokens read from the URL fragment
+ ├ (app)/dashboard, vouchers, vouchers/new, vouchers/[id], transactions, customers, team, devices,
+ │       audit, settings, account, admin/*
+ └ waiter/            web till: scan QR → presentment → amount → redemption
 src/lib
- ├ api/client.ts      fetch wrapper (CSRF, device id, idempotency, typed ApiError)
+ ├ api/client.ts      fetch wrapper (CSRF, device id, idempotency key, typed ApiError)
  ├ api/hooks.ts       React Query hooks per domain (cache keys, invalidation)
- ├ api/types.ts       types mirroring the Laravel API resources
- ├ auth.tsx           session provider, permission checks (`can()`)
- ├ nfc.ts             Web NFC read/write/lock wrapper
- └ money.ts, format.ts
+ ├ api/types.ts       types mirroring the Laravel resources
+ ├ auth.tsx           session provider, permission checks (can())
+ ├ outcome.ts         which errors leave a money request's outcome unknown
+ └ payment.ts, guest-copy.ts, money.ts, format.ts, regional.ts, audit.ts
 src/components
  ├ ui/                shadcn/ui primitives (Radix)
- ├ layout/            sidebar shell, guards, acting banner
- ├ cards/, waiter/, charts/, settings/, common/
+ ├ vouchers/          payment fields, reload dialog, printable voucher sheet, history
+ ├ waiter/            terminal, QR scanner, keypad
+ └ layout/, charts/, settings/, admin/, dashboard/, common/
 ```
 
-- **Server state** lives only in React Query; mutations invalidate by key prefix (`["cards"]`, `["dashboard"]`…).
-- **Forms** use React Hook Form + Zod (client validation mirrors server rules; the server stays authoritative
-  and its field errors are mapped back onto the form).
-- **Permissions** are delivered with the session (`/auth/me`) and hide UI the user cannot use. Every rule
-  is enforced again by the API.
-- **Idempotency in the UI** — each money dialog holds a key for its current attempt. Network failures keep
-  the key (retry cannot double charge); definitive rejections (4xx) rotate it.
+- **Server state** lives only in React Query; mutations invalidate by key prefix.
+- **Forms** use React Hook Form + Zod; the server stays authoritative and its field errors are mapped back.
+- **Permissions** arrive with the session (`/auth/me`) and hide what the user cannot use; the API enforces every
+  rule again.
+- **Money requests** keep their idempotency key while the outcome is unknown (network error, timeout, 5xx); the
+  web till then offers only *Check again*, which repeats the request with the same key. Definitive rejections
+  (4xx) end the attempt.
+- **Printing** — after a sale the printable sheet shows the QR and the restaurant, never the voucher number or
+  the value. The QR payload exists only in that response.
 
-### Charts
+### Waiter app (`waiter-app/`, Flutter, Android and iPhone)
 
-Charts use Recharts via shadcn's `ChartContainer`. Series colours come from a validated categorical palette
-(`--chart-1` blue for sold, `--chart-2` orange for redeemed) with separate dark-mode steps; status breakdown
-uses a single hue (magnitude, not identity) with text labels, so identity never depends on colour alone.
+Scan a voucher's QR (camera) → `POST /presentments` → amount → `POST /vouchers/{id}/redemptions`. Every redemption
+attempt is written encrypted to `PendingRedemptionStore` before its first request and removed only on a definitive
+answer; unknown outcomes are resolved with `GET /vouchers/{id}/redemptions/{key}`. Managers and owners sell
+printable vouchers (S20) and print them with the system print dialog. Details:
+[waiter-app/README.md](../waiter-app/README.md).
 
-## Scheduled & queued work
+## Scheduled and queued work
 
-| Job | Schedule | Purpose |
+| Job | Schedule (`SCHEDULE_TIMEZONE`) | Purpose |
 |---|---|---|
-| `giftcards:expire` | daily 00:15 | Expire due cards per restaurant, write off balance via ledger |
-| `giftcards:notify-expiring` | daily 09:00 | Queue one reminder per card N days before expiry |
-| `queue:prune-failed` | daily | Housekeeping |
-| `auth:clear-resets` | every 15 min | Remove stale password reset tokens |
-| `SendCardNotification` | queued (`notifications`) | Unique per card/template/transaction, 5 tries with back-off |
+| `vouchers:expire` | daily 00:15 | Expire active vouchers whose last valid day has ended; balances are kept, blocked vouchers are skipped |
+| `giftcard:verify-chains` | daily 02:30 | Recompute every hash chain and every voucher balance; e-mail `OPS_ALERT_EMAIL` on a problem |
+| `queue:prune-failed --hours=720` | daily 03:30 | Housekeeping |
+| `vouchers:notify-expiring` | daily 10:00 | One reminder per voucher with a balance, `VOUCHER_EXPIRING_NOTICE_DAYS` before expiry |
+| `auth:clear-resets` | every 15 min | Remove expired reset tokens |
+| `queue:monitor` | every 5 min (Redis queues) | Alert when a queue holds more than 500 jobs |
+| `SendVoucherNotification`, `SendStaffInvitation`, `SendPasswordResetLink` | queued | Every e-mail is sent from the queue, with retries |

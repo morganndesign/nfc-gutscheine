@@ -6,34 +6,33 @@ builds and signing keys — lives here, and nowhere else.
 ```
 GiftCardPro/
 ├── backend/            Laravel API (PHP)                                  source
-├── dashboard/          Next.js web app: dashboard, admin, web waiter, guest page   source
+├── dashboard/          Next.js web app: dashboard, admin, web till                 source
 ├── waiter-app/         GiftCard Waiter, native Android + iPhone app (Flutter)      source
-├── nfc/                Signpost: where the NFC code, tests and guides are          docs only
+├── nfc/                Signpost to the NFC documentation                          docs only
 ├── docs/               All documentation (technical, business, design, reports)    source
 ├── e2e/                Browser and API acceptance tests                           source
 ├── infra/              Container config: gateway (Caddy), PHP-FPM + entrypoint     source
 ├── scripts/            Project scripts: collect a release, verify this structure   source
 ├── assets/             Store listing images                                       source
 ├── releases/           Release outputs (APK, AAB, symbols, source snapshots)       generated · NOT in Git
-│   ├── 1.4.1/          current release
+│   ├── 1.4.1/          latest filed release (see CURRENT_VERSION.md)
 │   ├── previous/       older releases (1.4.0, 1.3.0)
 │   └── latest -> 1.4.1
 ├── signing/            Android upload key + passwords                             SECRET · NOT in Git
-├── .github/workflows/  CI (tests, builds); deployment is done by Coolify
+├── .github/workflows/  CI (tests, builds) and the TestFlight upload; deployment is done by Coolify
 ├── README.md                 product overview
 ├── PROJECT_STRUCTURE.md      this file
 ├── CURRENT_VERSION.md        which version is current, where its builds are
 ├── RUNNING_THE_PROJECT.md    how to install, run, test and release everything
 ├── QUICK_COMMANDS.md         cheat sheet
 ├── CHANGELOG.md              every change with its reason
-├── docker-compose.coolify.yml production stack for Coolify (gateway, api, migrate, worker, scheduler, web, MySQL, Redis, backup)
+├── docker-compose.coolify.yml production stack for Coolify (gateway, api, worker, scheduler, web, MySQL, Redis, backup)
 ├── docker-compose.dev.yml    local services (MySQL, Redis, Mailpit)
 └── .env.production.example   reference of the Coolify environment variables
 ```
 
-There is **no customer app**. Guests use the web page a card opens (`https://<domain>/c/<token>`), which is part of
-`dashboard/` (`dashboard/src/app/c/[token]`). There is **no separate NFC program** either: tags are programmed in the
-dashboard — see [nfc/README.md](nfc/README.md).
+There is **no customer app**: a guest's voucher is a printed sheet with a QR code. There is **no NFC program**: the
+platform does not read or write tags today — see [docs/NFC.md](docs/NFC.md).
 
 ## Legend
 
@@ -48,17 +47,17 @@ dashboard — see [nfc/README.md](nfc/README.md).
 | Folder / file | Contains | Type | Git | Delete? |
 |---|---|---|---|---|
 | `backend/` | Laravel 12 API: business logic, database schema, e-mails, tests | Source | Yes | No |
-| `dashboard/` | Next.js 15 web app: owner/manager dashboard, platform admin, NFC programming station, web waiter terminal (`/waiter`), guest balance page (`/c/<token>`), print layout | Source | Yes | No |
+| `dashboard/` | Next.js 15 web app: owner/manager dashboard, platform admin, web till (`/waiter`), printable voucher sheet | Source | Yes | No |
 | `waiter-app/` | GiftCard Waiter (Flutter): Android + iOS app for waiters | Source | Yes | No |
-| `nfc/` | One README pointing to the NFC code in dashboard, backend and waiter app | Source (docs) | Yes | Yes, but keep it: it is the map |
+| `nfc/` | One README pointing to [docs/NFC.md](docs/NFC.md) | Source (docs) | Yes | Yes, but `scripts/verify-structure.sh` expects it |
 | `docs/` | All documentation (below) | Source | Yes | No |
-| `e2e/` | Acceptance tests: `pilot-journey.mjs` (browser), `waiter-api.mjs` (API of the native app), `nfc-programming.mjs` (simulated NFC) | Source | Yes | No |
-| `infra/` | `docker/gateway/` (Caddy image: path routing to Laravel/Next.js), `docker/php/` (PHP config + entrypoint with the roles migrate/app/worker/scheduler) | Source | Yes | No |
+| `e2e/` | Acceptance tests: `pilot-journey.mjs` (browser), `waiter-api.mjs` (API of the native app), `platform-admin.mjs` (platform administration) | Source | Yes | No |
+| `infra/` | `docker/gateway/` (Caddy image: path routing to Laravel/Next.js, log redaction), `docker/php/` (PHP config, FPM pool, entrypoint with the roles app/worker/scheduler) | Source | Yes | No |
 | `scripts/` | `collect-release.sh` (files a finished release into `releases/`), `verify-structure.sh` (checks this layout) | Source | Yes | No |
 | `assets/` | `store/`: Play and App Store icons (see [assets/README.md](assets/README.md)) | Source | Yes | No (re-exportable from the app icon) |
 | `releases/` | Built apps, symbols, source snapshots per version (below) | Generated | **No** (too large, binary) — back it up instead | **Careful**: builds can be remade, but the uploaded AAB/IPA and its symbols belong together; keep at least the current and the previous release |
 | `signing/` | `giftcard-waiter-upload.jks` (Android upload key), `ANDROID_SIGNING.md` (passwords, fingerprints), `upload_certificate.pem` | **Secret** | **Never** | **No** — without the key no Play updates until Google resets it. Keep a copy in your password manager. |
-| `.github/workflows/` | `ci.yml` (all tests + builds on every push, including the Coolify stack build) | Source | Yes | No |
+| `.github/workflows/` | `ci.yml` (all tests + builds on every push, including an unsigned iOS build and the Coolify stack build), `testflight.yml` (signed TestFlight upload on merges to `main`; App Store Connect key in GitHub secrets) | Source | Yes | No |
 | `README.md`, `PROJECT_STRUCTURE.md`, `CURRENT_VERSION.md`, `RUNNING_THE_PROJECT.md`, `QUICK_COMMANDS.md`, `CHANGELOG.md` | Project documentation | Source | Yes | No |
 | `docker-compose.coolify.yml`, `docker-compose.dev.yml`, `.env.production.example`, `.gitignore`, `.dockerignore`, `.editorconfig` | Stack and tool configuration | Source | Yes | No |
 | Production secrets | Live only in Coolify (resource → *Environment Variables*); nothing on disk | Secret | Never | — |
@@ -84,8 +83,8 @@ dashboard — see [nfc/README.md](nfc/README.md).
 
 | Path | Contains | Type | Git | Delete? |
 |---|---|---|---|---|
-| `src/app/` | Pages (routes): `(app)/` dashboard + admin, `(auth)/` login, `waiter/` web terminal, `c/[token]` guest page, `print/` | Source | Yes | No |
-| `src/components/`, `src/hooks/`, `src/lib/` | UI components, hooks, API client, NFC programming logic (`lib/nfc*.ts`) + unit tests (`*.test.ts`) | Source | Yes | No |
+| `src/app/` | Pages (routes): `(app)/` dashboard + admin, `(auth)/` login, `waiter/` web till | Source | Yes | No |
+| `src/components/`, `src/hooks/`, `src/lib/` | UI components, hooks, API client, helpers + unit tests (`*.test.ts`) | Source | Yes | No |
 | `public/` | Static files | Source | Yes | No |
 | `package.json`, `package-lock.json`, `next.config.ts`, `tsconfig.json`, `eslint.config.mjs`, `Dockerfile`, … | Dependencies and tool config | Source | Yes | No |
 | `.env.example` | Template (`BACKEND_INTERNAL_URL` for local development) | Source | Yes | No |
@@ -98,18 +97,17 @@ dashboard — see [nfc/README.md](nfc/README.md).
 | Path | Contains | Type | Git | Delete? |
 |---|---|---|---|---|
 | `lib/` | Dart app code (screens, components, API, state, platform channels) | Source | Yes | No |
-| `android/`, `ios/` | Native projects: Kotlin/Swift NFC, haptics, manifest, entitlements, icons, splash | Source | Yes | No |
-| `test/` | 601 Flutter tests | Source | Yes | No |
+| `android/`, `ios/` | Native projects: Kotlin/Swift platform channels (haptics, biometrics, device facts, printing), manifest, icons, splash | Source | Yes | No |
+| `test/` | Flutter unit, component, screen and journey tests | Source | Yes | No |
 | `assets/`, `tokens/`, `l10n.yaml`, `lib/l10n/` | Fonts, icons, illustrations, design tokens, translations (DE/EN/BHS) | Source | Yes | No |
-| `config/` | `development.json`, `staging.json`, `production.json`: server address, card domains, environment of each build ([waiter-app/config/README.md](waiter-app/config/README.md)) | Source | Yes | No |
+| `config/` | `development.json`, `staging.json`, `production.json`: server address and environment of each build ([waiter-app/config/README.md](waiter-app/config/README.md)) | Source | Yes | No |
 | `config/*.local.json` | Your own addresses (e.g. your Mac's LAN IP) | Local | Never | Yes |
 | `tool/` | `release.sh` (builds for an environment), generators for tokens, strings, icons, sounds; `brand/` icon sources | Source | Yes | No |
-| `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml` | Version (`1.4.2+2`), dependencies, lints | Source | Yes | No |
+| `pubspec.yaml`, `pubspec.lock`, `analysis_options.yaml` | Version (`2.0.0+4`), dependencies, lints | Source | Yes | No |
 | `android/key.properties` | Path + passwords of the upload key (points to `../../signing/`) | Secret | Never | Careful (recreate from `signing/ANDROID_SIGNING.md`) |
 | `android/local.properties` | Android SDK / Flutter path of this machine | Local | Never | Yes (Flutter recreates it) |
 | `ios/Flutter/Generated.xcconfig`, `ios/Flutter/flutter_export_environment.sh`, `ios/Flutter/ephemeral/` | Flutter build settings incl. the dart-defines of the last build | Generated | Never | Yes (`flutter pub get` / `tool/release.sh ios`) |
 | `ios/Flutter/Team.xcconfig` | Your Apple Team ID for scripted builds | Local | Never | Yes (`tool/release.sh ios-ipa` writes it) |
-| `ios/Flutter/Environment.xcconfig` | App-link host (`CARD_DOMAIN`) of the environment last built | Generated | Never | Yes (`tool/release.sh ios …` writes it) |
 | `ios/Pods/`, `ios/Podfile.lock`* | CocoaPods | Generated | Pods: never | Yes (`pod install`, run by Flutter) |
 | `build/` | Flutter/Gradle build output, test caches (several GB); `build/dist/` holds the finished `giftcard-waiter-<environment>-<version>.apk/.aab` + symbols of each `tool/release.sh` run | Generated | Never | Yes — but first run `scripts/collect-release.sh` if it holds a production build you shipped |
 | `.dart_tool/`, `.flutter-plugins-dependencies`, `.idea/`, `*.iml` | Tool caches, IDE files | Generated / Local | Never | Yes |
@@ -120,11 +118,12 @@ dashboard — see [nfc/README.md](nfc/README.md).
 
 | Path | Contains | Type | Git | Delete? |
 |---|---|---|---|---|
-| `*.md` (top level) | Technical docs in English: `ARCHITECTURE`, `API`, `DATABASE`, `ENVIRONMENT`, `INSTALLATION`, `DEVELOPMENT`, `DOCKER`, `DEPLOYMENT`, `SECURITY`, `NFC`, `NFC-RELEASE-TEST`, `MOBILE_RELEASE`, `PILOT_CHECKLIST`, `USER_GUIDE`, `FOLDER_STRUCTURE` (file-level map of the code) | Source | Yes | No |
+| `*.md` (top level) | Technical docs in English: `ARCHITECTURE`, `API`, `DATABASE`, `ENVIRONMENT`, `INSTALLATION`, `DEVELOPMENT`, `DOCKER`, `DEPLOYMENT`, `SECURITY`, `NFC`, `MOBILE_RELEASE`, `PILOT_CHECKLIST`, `USER_GUIDE`, `FOLDER_STRUCTURE` (file-level map of the code) | Source | Yes | No |
+| `architecture/`, `implementation/` | Target architecture (v2, ADRs, NTAG 424 DNA platform) and the implementation plan with its status | Source | Yes | No |
 | `de/`, `bhs/` | Business, product, sales, marketing, customer-success, technical, security, legal and brand documents; German master + BHS translation with identical file names | Source | Yes | No |
 | `design/waiter-app/` | Locked design specification of the waiter app (15 documents) | Source | Yes | No |
-| `reports/` | Dated audit reports: implementation audit, NFC audit (before 1.4.0), NFC final pass (1.4.1). Historical, not updated | Source | Yes | No |
-| `screenshots/` | Screenshots used by `README.md` | Source | Yes | No |
+| `reports/` | Dated audit reports. Historical, not updated | Source | Yes | No |
+| `screenshots/` | Screenshots of the interface before 2.0.0, used by the business documents in `de/` and `bhs/` | Source | Yes | No |
 
 ## releases/
 
@@ -133,7 +132,7 @@ older releases move to `previous/` (done by `scripts/collect-release.sh`).
 
 ```
 releases/
-├── 1.4.1/                              ← CURRENT (latest)
+├── 1.4.1/                              ← latest filed release
 │   ├── RELEASE.md                      what is in this release
 │   ├── SHA256SUMS                      checksums of every file
 │   ├── android/app-release.apk         for test phones

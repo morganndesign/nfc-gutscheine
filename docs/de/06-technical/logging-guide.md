@@ -1,8 +1,6 @@
 # Logging-Leitfaden
 
-> **Hinweis (Coolify-Deployment):** Produktion läuft seit 1.4.2 auf **Coolify** mit `docker-compose.coolify.yml` (Build aus dem Quellcode, kein GHCR, keine Deploy-Skripte). Befehle mit `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` oder Caddy auf dem Host in diesem Dokument sind überholt. Maßgeblich sind [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (Deployment, Backups, Restore, Betrieb) und [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
-
-*Log-Quellen von GiftCard Pro, Log-Level, Abgrenzung zu Audit-Log und Scan-Protokoll, personenbezogene Daten, Korrelation über X-Request-Id, Suche, Aufbewahrung und DSGVO.*
+*Log-Quellen von GiftCard Pro, Log-Level, Abgrenzung zu Audit-Log und Ledger, personenbezogene Daten, Korrelation über X-Request-Id, Suche, Aufbewahrung und DSGVO.*
 
 ---
 
@@ -12,109 +10,99 @@ GiftCard Pro kennt drei Arten von Aufzeichnungen mit unterschiedlichem Zweck:
 
 | Art | Speicherort | Zweck | Aufbewahrung |
 |---|---|---|---|
-| **Betriebslogs** | Docker-Logs der Container (stdout/stderr) | Fehlersuche, Monitoring, Sicherheitsalarme | kurz (Rotation, siehe Abschnitt 3) |
-| **Audit-Log** | Tabelle `audit_logs` (append-only) | Nachvollziehbarkeit sicherheits- und geldrelevanter Aktionen für Restaurants und Plattform | dauerhaft (nichts wird gelöscht) |
-| **Scan-Protokoll** | Tabelle `nfc_scans` (append-only) | jede Kartenabfrage mit Ergebnis – Betrugserkennung | dauerhaft |
+| **Betriebslogs** | Docker-Logs der Container (stdout/stderr), in Coolify unter Ressource → *Logs* | Fehlersuche, Monitoring, Sicherheitsalarme | kurz (Rotation, siehe Abschnitt 3) |
+| **Audit-Log** | Tabelle `audit_logs` (append-only, Hash-Kette je Lokal) | Nachvollziehbarkeit sicherheits- und geldrelevanter Aktionen für Lokale und Plattform, auch jede fehlgeschlagene Vorlage | dauerhaft (nichts wird geändert oder gelöscht) |
+| **Ledger und Zahlungen** | Tabellen `voucher_transactions`, `payments` (append-only, Hash-Kette je Lokal) | Buchhalterische Wahrheit: jede Guthabenänderung mit Person, Gerät, IP und Zeitstempel; jede Zahlung eines Verkaufs oder einer Aufladung | dauerhaft |
 
-Das **Ledger** (`gift_card_transactions`) ist keine Log-Datei, sondern die buchhalterische Wahrheit: Jede Guthabenänderung ist dort mit Person, Gerät, IP und Zeitstempel gespeichert.
+Datenbank-Trigger lehnen `UPDATE` und `DELETE` auf Ledger, Zahlungen und Audit-Log ab; `php artisan giftcard:verify-chains` prüft jede Nacht, dass keine Zeile geändert, gelöscht, eingefügt oder umsortiert wurde.
 
 ## 2. Log-Quellen
 
 | Quelle | Container | Format | Inhalt |
 |---|---|---|---|
 | Laravel (API) | `api` | Text, eine Zeile pro Eintrag, Kontext als JSON (Monolog-Standardformat) | Fehler und Ausnahmen, Sicherheitswarnungen, Hinweise |
-| PHP-FPM | `api` | Text | Ausgaben der Worker (`catch_workers_output = yes`), PHP-Fehler (`log_errors = On`); je nach Basis-Image zusätzlich FPM-Zugriffszeilen |
-| Queue-Worker | `queue` | Text | Verarbeitete Jobs (`RUNNING`/`DONE`/`FAIL`), Fehler beim Mailversand |
-| Scheduler | `scheduler` | Text | Ausgeführte Befehle der nächtlichen Jobs |
-| Caddy | `caddy` | **JSON** | Zugriffslog (jeder Request: Methode, URI, Status, Dauer, Client-IP, User-Agent, Header) und Caddy-eigene Meldungen (Zertifikate) |
+| PHP-FPM | `api` | Text | Ausgaben der Worker, PHP-Fehler; Requests werden nach 30 s beendet (`request_terminate_timeout`) |
+| Queue-Worker | `worker` | Text | Verarbeitete Jobs (`RUNNING`/`DONE`/`FAIL`), Fehler beim Mailversand |
+| Scheduler | `scheduler` | Text | Ausgeführte Befehle der nächtlichen Jobs, Ergebnis der Integritätsprüfung |
+| Gateway (Caddy) | `gateway` | **JSON** | Zugriffslog (jeder Request: Methode, URI ohne sensible Query-Parameter, Status, Dauer, Client-IP, User-Agent, Header ohne Geheimnisse) und Caddy-eigene Meldungen |
 | Next.js | `web` | Text | Start, serverseitige Fehler |
 | MySQL | `mysql` | Text | Start, Fehler, Warnungen |
 | Redis | `redis` | Text | Start, AOF-Meldungen, Fehler |
+| Backup | `backup` | Text | „Backup written: …“ bzw. „Backup FAILED“ |
 
-Konfiguration der Laravel-Ausgabe (aus `backend/.env.production.example`):
-
-```dotenv
-LOG_CHANNEL=stderr
-LOG_LEVEL=info
-```
-
-Der Kanal `stderr` schreibt nach `php://stderr`; Docker sammelt die Ausgabe. Für JSON-Ausgabe kann die Laravel-Standardvariable `LOG_STDERR_FORMATTER=Monolog\Formatter\JsonFormatter` gesetzt werden (ist in der Vorlage nicht gesetzt; erleichtert maschinelle Auswertung bei einem Log-Versand).
+Die Laravel-Ausgabe ist im Coolify-Stack fest auf `LOG_CHANNEL=stderr` gesetzt; `LOG_LEVEL` ist `info` (in Coolify änderbar). Für JSON-Ausgabe kann die Laravel-Standardvariable `LOG_STDERR_FORMATTER=Monolog\Formatter\JsonFormatter` gesetzt werden (erleichtert maschinelle Auswertung bei einem Log-Versand).
 
 Lokal (`backend/.env.example`): `LOG_CHANNEL=stack`, `LOG_STACK=daily`, `LOG_LEVEL=debug` → Dateien `backend/storage/logs/laravel-YYYY-MM-DD.log`, 14 Tage (`LOG_DAILY_DAYS`).
 
 ## 3. Rotation der Container-Logs
 
-Alle Dienste in `docker-compose.yml` verwenden:
+Alle Dienste in `docker-compose.coolify.yml` verwenden:
 
 ```yaml
 logging:
   driver: json-file
-  options: { max-size: "20m", max-file: "5" }
+  options: { max-size: "10m", max-file: "5" }
 ```
 
-Pro Container werden höchstens 5 Dateien à 20 MB (= 100 MB) aufbewahrt; ältere Einträge werden überschrieben. Wie viele Tage das abdeckt, hängt vom Verkehr ab – bei `caddy` (ein Eintrag pro Request) am wenigsten. Wird ein Container neu erstellt (z. B. bei jedem Deployment), beginnen seine Logs neu; die alten sind danach nicht mehr über `docker compose logs` abrufbar.
+Pro Container werden höchstens 5 Dateien à 10 MB (= 50 MB) aufbewahrt; ältere Einträge werden überschrieben. Wie viele Tage das abdeckt, hängt vom Verkehr ab – beim `gateway` (ein Eintrag pro Request) am wenigsten. Wird ein Container neu erstellt (z. B. bei jedem Deployment), beginnen seine Logs neu.
 
-**Folge:** Container-Logs sind kein Archiv. Was länger gebraucht wird, steht im Audit-Log, in `nfc_scans` oder muss per Log-Versand gesichert werden (Abschnitt 8).
+**Folge:** Container-Logs sind kein Archiv. Was länger gebraucht wird, steht im Audit-Log oder muss per Log-Versand gesichert werden (Abschnitt 8).
 
 ## 4. Log-Level
 
 | Level | Verwendung in GiftCard Pro |
 |---|---|
-| `debug` | Nur lokal. Der `log`-Mailer schreibt E-Mails (Einladungen, Reset-Links) auf dieser Ebene – **in Produktion nie aktivieren**, sonst stehen gültige Links im Log. |
-| `info` | Produktionsstandard (`LOG_LEVEL=info`) |
-| `notice` | Framework-Hinweise |
-| `warning` | **Sicherheitsereignisse**: `Suspicious gift card scan`, `Account locked after repeated failed logins` |
-| `error` | Ausnahmen, fehlgeschlagene Jobs, nicht erreichbare Dienste |
-| `critical`, `alert`, `emergency` | Schwerwiegende Fehler |
+| `debug` | Nur lokal. Der `log`-Mailer schreibt E-Mails auf dieser Ebene – **in Produktion nie aktivieren**. |
+| `info` | Produktionsstandard (`LOG_LEVEL=info`), z. B. „Platform test e-mail requested“ |
+| `warning` | **Sicherheitsereignis**: `Account locked after repeated failed logins` (mit `user_id`, `ip`, `attempts`) |
+| `error` | Ausnahmen, fehlgeschlagene Jobs, nicht zustellbare Betriebswarnungen |
+| `critical` | `Integrity check failed: financial history or audit log does not verify`, `Queue backlog above threshold` |
+| `alert`, `emergency` | Schwerwiegende Fehler |
 
 Empfehlungen:
 
-- Produktion: `info`. `warning` wäre möglich, spart aber kaum Volumen und verdeckt Kontext.
-- Fehlersuche in Produktion: `LOG_LEVEL` nicht auf `debug` stellen (siehe oben). Stattdessen gezielt mit `X-Request-Id` suchen.
-- Eine Änderung von `LOG_LEVEL` wirkt erst nach Neustart der Container (`config:cache` beim Start).
+- Produktion: `info`.
+- Fehlersuche in Produktion: `LOG_LEVEL` nicht auf `debug` stellen. Stattdessen gezielt mit `X-Request-Id` suchen.
+- Eine Änderung von `LOG_LEVEL` wirkt erst nach *Redeploy* (die Konfiguration wird beim Containerstart gecacht).
 
 ## 5. Was wo protokolliert wird
 
-| Ereignis | Betriebslog | Audit-Log | `nfc_scans` | Ledger |
-|---|---|---|---|---|
-| Kartenabfrage erfolgreich | – | – | ✓ (`ok`) | – |
-| Karte nicht gefunden | – | – | ✓ (`not_found`) | – |
-| Fremde Karte, UID-Abweichung, ungültige Signatur, Replay | ✓ `warning` | ✓ (Sicherheitsereignis) | ✓ | – |
-| Abfrage gedrosselt (`throttled`) | ✓ `warning` | – | ✓ | – |
-| Einlösung, Aufladung, Transfer, Storno, Ablauf, Verkauf | – | ✓ | – | ✓ |
-| Karte sperren, entsperren, ersetzen, aktivieren | – | ✓ | – | ✓ bei Guthabenbewegung |
-| Anmeldung, Abmeldung | – | ✓ | – | – |
-| Einzelne fehlgeschlagene Anmeldung | – | – (Zähler am Benutzerkonto) | – | – |
-| Kontosperre | ✓ `warning` | ✓ | – | – |
-| Team-, Geräte-, Token-, Einstellungsänderungen | – | ✓ | – | – |
-| Plattform-Administrator handelt in einem Restaurant | – | ✓ | – | – |
-| Ausnahme / Serverfehler | ✓ `error` | – | – | – |
-| E-Mail-Versand | Queue-Log | – | – | – (Tabelle `notification_logs`) |
-| HTTP-Request | Caddy ✓ | – | – | – |
+| Ereignis | Betriebslog | Audit-Log | Ledger / Zahlungen |
+|---|---|---|---|
+| Vorlage erfolgreich (`POST /presentments`) | – | – (Zeile in `presentments`) | – |
+| Vorlage fehlgeschlagen (QR unbekannt, widerrufen, fremd) | – | ✓ `presentment.failed` | – |
+| Vorlage abgelehnt (falsche Methode, gedrosselt) | – | ✓ `presentment.rejected` | – |
+| Verkauf, Einlösung, Aufladung, Storno | – | ✓ `voucher.sold`, `voucher.redeemed`, `voucher.reloaded`, `transaction.reversed` | ✓ (Verkauf und Aufladung mit Zahlung) |
+| Gutschein sperren, entsperren, ablaufen, wieder freigeben, bearbeiten | – | ✓ `voucher.blocked`, `voucher.unblocked`, `voucher.expired`, `voucher.reinstated`, `voucher.updated` | – (das Guthaben bleibt) |
+| Anmeldung, Abmeldung | – | ✓ `auth.login`, `auth.logout` | – |
+| Fehlgeschlagene Anmeldung bei bekanntem Konto | – | ✓ `auth.failed`, bei gesperrtem Konto `auth.locked_attempt` | – |
+| Kontosperre | ✓ `warning` | ✓ `auth.locked` | – |
+| Passwortänderung oder -zurücksetzung (widerruft Zugänge) | – | ✓ `user.password_changed`, `auth.access_revoked` | – |
+| Team-, Geräte-, Token-, Einstellungsänderungen | – | ✓ | – |
+| Plattformadministration (Lokal anlegen, sperren, archivieren, löschen) | – | ✓ `restaurant.*` | – |
+| Integritätsprüfung schlägt fehl | ✓ `critical` + E-Mail an `OPS_ALERT_EMAIL` | – | – |
+| Ausnahme / Serverfehler | ✓ `error` | – | – |
+| E-Mail-Versand | Log des `worker` | – | – (Tabelle `notification_logs`) |
+| HTTP-Request | Gateway ✓ | – | – |
 
 ### Inhalte des Audit-Logs
 
-`audit_logs` enthält: `restaurant_id`, `user_id`, `device_id`, `action` (z. B. `gift_card.blocked`), betroffenes Objekt, `old_values`, `new_values`, `metadata`, `ip_address`, `user_agent`, `request_id`, `created_at` (Mikrosekunden). Einsehbar für Restaurants unter **Audit log** (`audit.view`), für die Plattform unter der Plattformadministration.
-
-### Inhalte von `nfc_scans`
-
-`restaurant_id`, `gift_card_id` (leer bei unbekannten oder fremden Karten), `user_id`, `device_id`, `method`, `result` (`ok`, `not_found`, `foreign_restaurant`, `uid_mismatch`, `invalid_signature`, `replay`, `throttled`), `nfc_uid`, `read_counter`, `ip_address`, `user_agent`, `created_at`.
+`audit_logs` enthält: `restaurant_id`, `user_id`, `device_id`, `action` (z. B. `voucher.blocked`, `presentment.failed`), betroffenes Objekt, `old_values`, `new_values`, `metadata`, `ip_address`, `user_agent`, `request_id`, `created_at` (Mikrosekunden) sowie die Hash-Kette (`chain_scope`, `chain_seq`, `prev_hash`, `entry_hash`). Einsehbar für Lokale unter **Audit log** (`audit.view`), für die Plattform unter der Plattformadministration.
 
 ## 6. Personenbezogene Daten in Logs
 
 | Aufzeichnung | Personenbezogene Daten | Schutzmaßnahme |
 |---|---|---|
-| Audit-Log `old_values`/`new_values` | **keine** Kundennamen, E-Mail-Adressen, Telefonnummern, Notizen oder Empfängernamen – nur die Tatsache, dass sie geändert wurden | `AuditLogger` redigiert Passwörter, Tokens und Karten-Tokens; personenbezogene Felder werden nicht kopiert (Test `HardeningTest`) |
+| Audit-Log `old_values`/`new_values`/`metadata` | **keine** Kundennamen, E-Mail-Adressen, Telefonnummern, Notizen oder Empfängernamen – nur die Tatsache, dass sie geändert wurden | `AuditLogger` redigiert Passwörter, Tokens und Geheimnis-Hashes; personenbezogene Felder werden nicht kopiert |
 | Audit-Log `ip_address`, `user_agent`, `user_id` | IP-Adressen und Browserkennung der Mitarbeitenden | Zweck: Sicherheit und Nachvollziehbarkeit; Zugriff nur mit `audit.view` |
-| `nfc_scans` | IP-Adresse, User-Agent, Chip-UID | Zweck: Betrugserkennung |
-| Ledger | Benutzer, Gerät, IP | Aufbewahrungspflicht (BAO § 132) |
-| Laravel-Log (`warning`) | `user_id`, `ip`, `nfc_uid` | kurze Aufbewahrung durch Rotation |
-| Caddy-Zugriffslog | Client-IP, User-Agent, vollständige URI – auch `/c/{token}` und `/api/v1/public/cards/{token}` (Karten-Token) | Caddy schwärzt standardmäßig `Cookie`, `Set-Cookie` und `Authorization`; kurze Aufbewahrung durch Rotation |
+| Ledger, Zahlungen | Person, Gerät, IP; Belegreferenz | Aufbewahrungspflicht (BAO § 132) |
+| Laravel-Log (`warning`) | `user_id`, `ip` | kurze Aufbewahrung durch Rotation |
+| Gateway-Zugriffslog | Client-IP, User-Agent, URI | Die Query-Parameter `token`, `email`, `e`, `m` und die Header `Cookie`, `Authorization`, `X-Device-Id`, `Idempotency-Key` und `Set-Cookie` werden nicht protokolliert; kurze Aufbewahrung durch Rotation |
 | `notification_logs` | E-Mail-Adresse der Empfänger | wird bei DSGVO-Anonymisierung entfernt |
 
 Hinweise:
 
-- **Karten-Tokens im Zugriffslog:** Wer das Caddy-Log liest, sieht Karten-URLs. Ein Token erlaubt nur die öffentliche Guthabenanzeige (sofern aktiviert), keine Einlösung. Trotzdem: Zugriff auf Server-Logs auf das Betriebsteam beschränken und Logs bei einem Versand nicht an Dritte außerhalb der EU übermitteln.
+- **Keine Geheimnisse in Logs:** Tokens für Passwortzurücksetzung und Einladung stehen im URL-Fragment und erreichen nie einen Server. Die QR-Nutzlast eines Gutscheins ist keine URL und wird im Body gesendet; sie erscheint weder im Zugriffslog noch im Audit-Log.
 - **Keine Gästedaten in Betriebslogs:** Namen, E-Mail-Adressen und Telefonnummern von Gästen erscheinen nicht in den Laravel-Logs. Bei eigenen Erweiterungen niemals Request-Bodies oder Modelle mit Kundendaten loggen.
 - **Keine Passwörter:** Werden nirgends protokolliert.
 
@@ -122,20 +110,20 @@ Hinweise:
 
 Jeder API-Request erhält eine Korrelations-ID:
 
-1. Der Client sendet `X-Request-Id` (8–64 Zeichen `[A-Za-z0-9-]`) – sonst erzeugt der Server eine UUID.
-2. Die ID steht in **jeder** Laravel-Logzeile dieses Requests (Kontextfeld `request_id`).
+1. Der Client sendet `X-Request-Id` (8–64 Zeichen) – sonst erzeugt der Server eine.
+2. Die ID steht im Kontext der Laravel-Logzeilen dieses Requests.
 3. Sie wird im Audit-Log gespeichert (`audit_logs.request_id`).
-4. Sie wird in der Antwort als Header `X-Request-Id` zurückgegeben – und erscheint damit auch im Caddy-Zugriffslog unter den Antwort-Headern.
+4. Sie wird in der Antwort als Header `X-Request-Id` zurückgegeben – und erscheint damit auch im Gateway-Zugriffslog unter den Antwort-Headern.
 
-Vorgehen bei einer Support-Anfrage („Einlösung um 20:14 hat nicht funktioniert"):
+Vorgehen bei einer Support-Anfrage („Einlösung um 20:14 hat nicht funktioniert“): Coolify → *Logs* → Dienst **gateway** bzw. **api** im Zeitraum durchsuchen, oder am Server (als root; Container-Namen mit `docker ps` ermitteln):
 
 ```bash
-# 1. find the request in the Caddy log (time range, path, status)
-docker compose --env-file .env.production logs --no-log-prefix --since 2h caddy \
-  | jq -c 'select(.request.uri? | test("/redeem")) | {ts, status, uri: .request.uri, rid: .resp_headers["X-Request-Id"]}'
+# 1. find the request in the gateway log (time range, path, status)
+docker logs --since 2h <gateway-container> 2>&1 \
+  | jq -c 'select(.request.uri? | test("/redemptions")) | {ts, status, uri: .request.uri, rid: .resp_headers["X-Request-Id"]}'
 
 # 2. Laravel entries for this id
-docker compose --env-file .env.production logs --since 2h api | grep "<request-id>"
+docker logs --since 2h <api-container> 2>&1 | grep "<request-id>"
 ```
 
 ```sql
@@ -143,29 +131,28 @@ docker compose --env-file .env.production logs --since 2h api | grep "<request-i
 SELECT created_at, action, user_id, device_id, ip_address FROM audit_logs WHERE request_id = '<request-id>';
 ```
 
-Integrationen (z. B. Kassen) sollten eine eigene `X-Request-Id` senden und protokollieren.
+Ob eine Einlösung trotz verlorener Antwort gebucht wurde, beantwortet `GET /vouchers/{id}/redemptions/{idempotencyKey}` – Kellner-App und Web-Kassa fragen das selbst ab. Integrationen (z. B. Kassen) sollten eine eigene `X-Request-Id` senden und protokollieren.
 
 ## 8. Logs durchsuchen
 
+In Coolify: Ressource → *Logs* → Dienst wählen (Live-Ansicht und Suche). Am Server (als root):
+
 ```bash
-cd /opt/giftcard-pro
-alias dc='docker compose --env-file .env.production'
+docker ps --format '{{.Names}}' | grep -E 'api|worker|gateway'   # container names
+docker logs -f <api-container>                                    # live
+docker logs --since 1h <api-container>                            # last hour
+docker logs --since 24h <api-container> 2>&1 | grep -E "ERROR|CRITICAL"
+docker logs --since 24h <api-container> 2>&1 | grep -E "Account locked|Integrity check failed"
+docker logs --since 24h <worker-container> 2>&1 | grep FAIL
 
-dc logs -f api queue                          # live
-dc logs --since 1h api                        # last hour
-dc logs --since 2026-10-14T18:00:00 --until 2026-10-14T19:00:00 api
-dc logs --since 24h api | grep -E "ERROR|CRITICAL"
-dc logs --since 24h api | grep -E "Suspicious gift card scan|Account locked"
-dc logs --since 24h queue | grep FAIL
+# gateway (JSON): all 5xx of the last hour
+docker logs --since 1h <gateway-container> 2>&1 | jq -c 'select(.status? >= 500) | {ts, status, uri: .request.uri, ip: .request.client_ip}'
 
-# Caddy (JSON): all 5xx of the last hour
-dc logs --no-log-prefix --since 1h caddy | jq -c 'select(.status? >= 500) | {ts, status, uri: .request.uri, ip: .request.client_ip}'
-
-# Caddy: requests per status
-dc logs --no-log-prefix --since 1h caddy | jq -r 'select(.status?) | .status' | sort | uniq -c
+# gateway: requests per status
+docker logs --since 1h <gateway-container> 2>&1 | jq -r 'select(.status?) | .status' | sort | uniq -c
 ```
 
-`jq` auf dem Server installieren: `sudo apt -y install jq`.
+`jq` auf dem Server installieren: `apt -y install jq`. Fehlgeschlagene Vorlagen stehen nicht im Betriebslog, sondern im Audit-Log (**Audit log**, Filter `presentment.`).
 
 ### Log-Versand (Empfehlung)
 
@@ -178,19 +165,18 @@ Für Alarme auf Log-Zeilen und Aufbewahrung über die Rotation hinaus die Contai
 
 | Aufzeichnung | Ist-Stand | Empfehlung | Begründung |
 |---|---|---|---|
-| Container-Logs | Rotation 5 × 20 MB je Container | so belassen | kurzfristige Fehlersuche |
-| Zentral gesammelte Logs (falls eingerichtet) | – | 30 Tage, Sicherheitsereignisse (`warning`) 90 Tage | Fehlersuche, Nachweis von Angriffen |
-| Audit-Log | dauerhaft | dauerhaft behalten; IP-Adressen nach [z. B. 12 Monaten] pseudonymisieren (derzeit keine Funktion – Roadmap Betrieb) | Nachvollziehbarkeit geldrelevanter Aktionen, berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO) |
-| `nfc_scans` | dauerhaft | wie Audit-Log | Betrugserkennung |
-| Ledger | dauerhaft | dauerhaft (mindestens 7 Jahre, BAO § 132) | gesetzliche Aufbewahrungspflicht |
-| Backups | 14 Tage (siehe [Backup-Anleitung](backup-guide.md)) | siehe dort | Wiederherstellung |
+| Container-Logs | Rotation 5 × 10 MB je Container | so belassen | kurzfristige Fehlersuche |
+| Zentral gesammelte Logs (falls eingerichtet) | – | 30 Tage, Sicherheitsereignisse (`warning` und höher) 90 Tage | Fehlersuche, Nachweis von Angriffen |
+| Audit-Log | dauerhaft, unveränderlich | dauerhaft behalten | Nachvollziehbarkeit geldrelevanter Aktionen, berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO) |
+| Ledger und Zahlungen | dauerhaft, unveränderlich | dauerhaft (mindestens 7 Jahre, BAO § 132) | gesetzliche Aufbewahrungspflicht |
+| Backups | `BACKUP_KEEP_DAYS` (siehe [Backup-Anleitung](backup-guide.md)) | siehe dort | Wiederherstellung |
 
 Weitere Punkte:
 
-- Die Aufbewahrungsfristen gehören in das Verzeichnis der Verarbeitungstätigkeiten und in die technischen und organisatorischen Maßnahmen (TOM) zum Auftragsverarbeitungsvertrag mit den Restaurants.
-- Auskunftsersuchen (Art. 15 DSGVO) von Mitarbeitenden der Restaurants betreffen auch IP-Adressen im Audit-Log; die Restaurants sind dafür Verantwortliche, GiftCard Pro unterstützt als Auftragsverarbeiter.
+- Die Aufbewahrungsfristen gehören in das Verzeichnis der Verarbeitungstätigkeiten und in die technischen und organisatorischen Maßnahmen (TOM) zum Auftragsverarbeitungsvertrag mit den Lokalen.
+- Auskunftsersuchen (Art. 15 DSGVO) von Mitarbeitenden der Lokale betreffen auch IP-Adressen im Audit-Log; die Lokale sind dafür Verantwortliche, GiftCard Pro unterstützt als Auftragsverarbeiter.
 - Keine Rechtsberatung – mit Rechtsanwalt prüfen.
 
 ---
 
-Version 1.0 · Stand: September 2026
+Version 2.0 · Stand: September 2026

@@ -2,7 +2,7 @@
 # Collects the outputs of a finished release into releases/<version>/ and points releases/latest at it.
 # Does not build anything and does not touch source code. See RUNNING_THE_PROJECT.md → "Release".
 #
-#   scripts/collect-release.sh            version from waiter-app/pubspec.yaml (e.g. 1.4.1+1 → 1.4.1)
+#   scripts/collect-release.sh            version from waiter-app/pubspec.yaml (e.g. 2.0.0+4 → 2.0.0)
 #   scripts/collect-release.sh --force    overwrite an existing releases/<version>/
 #
 # Picks up the PRODUCTION build made by `waiter-app/tool/release.sh android production` (and ios-ipa):

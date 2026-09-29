@@ -1,20 +1,20 @@
 # Current version
 
 > **Keep this file current.** Update it in the same change that bumps a version, deploys to production or uploads
-> to a store (checklist at the end). Last updated: **27 September 2026**.
+> to a store (checklist at the end). Last updated: **29 September 2026**.
 
 ## Versions
 
 | | Version | Where it is defined |
 |---|---|---|
-| Current platform version | **1.4.1** (latest release) · **1.4.2** in development | `CHANGELOG.md` — backend, dashboard and waiter app share this number |
-| Current app version | **1.4.2 (build 2)**, not released yet | `waiter-app/pubspec.yaml` → `version: 1.4.2+2` |
-| Backend version | **1.4.1** (Laravel 12, PHP 8.4) — unchanged in 1.4.2 | platform version; the backend has no own version number |
-| Database migration version | **`2026_10_02_000001_add_nfc_attempt_timings`** (10 migrations) | newest file in `backend/database/migrations/`; check a database with `php artisan migrate:status` |
-| API version | **v1** (`/api/v1`) | `backend/routes/api.php`; unchanged since 1.0 |
-| Dashboard version | **1.4.1** — unchanged in 1.4.2 | platform version (`dashboard/package.json` says `1.0.0` — that field is not maintained) |
-| Waiter app version | **1.4.2 (build 2)** in development — Android `versionName 1.4.2` / `versionCode 2`, iOS `1.4.2` / `2`. Last release: 1.4.1 (build 1), **defective** (see below) | `waiter-app/pubspec.yaml` |
-| Customer app version | **— (there is no customer app)** | guests use the web page `/c/<token>` in the dashboard |
+| Current platform version | **1.4.1** — the last packaged release (`releases/latest`) | backend, dashboard and waiter app share this number; `waiter-app/pubspec.yaml` |
+| Current development release | **2.0.0** — vouchers, presentments, payments and immutable, hash-chained history (ADR-002 Phase 0) | `CHANGELOG.md` |
+| Waiter app version | **2.0.0 (build 4)** — Android `versionName 2.0.0` / `versionCode 4`, iOS `2.0.0` / `4` for local builds; TestFlight builds from CI use build `1000 + run number` | `waiter-app/pubspec.yaml` → `version: 2.0.0+4` |
+| Backend version | **2.0.0** (Laravel 12, PHP 8.4) | platform version; the backend has no own version number |
+| Dashboard version | **2.0.0** | platform version (`dashboard/package.json` says `1.0.0` — that field is not maintained) |
+| Database schema | **7 migrations**, newest `2026_01_01_000007_make_financial_history_append_only` | `backend/database/migrations/`; check a database with `php artisan migrate:status`. A database created from an earlier schema is rebuilt with `php artisan migrate:fresh --seed` |
+| API version | **v1** (`/api/v1`) | `backend/routes/api.php`; reference: [docs/API.md](docs/API.md) |
+| Customer app | **— (there is no customer app)** | guests keep a printed voucher with a QR code |
 
 ## Environments of the waiter app
 
@@ -28,63 +28,54 @@
 
 | | |
 |---|---|
-| **Current production release** | **None live.** No production server exists (`giftcardpro.at` is not registered; DNS answers NXDOMAIN) and nothing is uploaded to a store. Go-live steps (Coolify): [docs/DEPLOYMENT.md → First deployment](docs/DEPLOYMENT.md#first-deployment--step-by-step). When it goes live, write the version, date and server here. |
+| **Current production release** | **None live.** No production server exists (`giftcardpro.at` is not registered) and nothing is in a store. Go-live steps (Coolify): [docs/DEPLOYMENT.md → First deployment](docs/DEPLOYMENT.md#first-deployment--step-by-step). When it goes live, write the version, date and server here. |
 | Production server | none yet — planned `https://app.giftcardpro.at` (Coolify on Hetzner, `docker-compose.coolify.yml`) |
 | Google Play | not uploaded |
-| App Store / TestFlight | not uploaded (needs a Mac: `waiter-app/tool/release.sh ios production`) |
-| **Current development release** | **1.4.2** (in development, not released) — environments for the waiter app, the fix for the launch-screen hang and the new Coolify deployment (`docker-compose.coolify.yml`). |
-| Latest release | **1.4.1**, 27 September 2026 — `releases/1.4.1/` (= `releases/latest`) |
-
-### Known defect of the 1.4.1 waiter app — do not distribute
-
-The 1.4.1 APK/AAB in `releases/1.4.1/android/` **never leaves the launch screen on any Android phone with a screen
-lock** (PIN, pattern, fingerprint), whatever the network. Cause: its secure-storage setting created a Keystore key
-that requires a fingerprint for every use; the first storage access during start-up threw an exception before the
-first frame was drawn. Reproduced on an Android 9 emulator with a PIN; fixed in 1.4.2 (details in `CHANGELOG.md`).
-Independently, it points at `https://app.giftcardpro.at/api/v1`, which does not exist yet.
+| App Store / TestFlight | not uploaded. `.github/workflows/testflight.yml` uploads every merge to `main` that changes the app once the secrets `APPLE_TEAM_ID`, `APP_STORE_CONNECT_KEY_ID`, `APP_STORE_CONNECT_ISSUER_ID` and `APP_STORE_CONNECT_KEY_P8` are set ([docs/MOBILE_RELEASE.md](docs/MOBILE_RELEASE.md#testflight-from-ci)) |
+| Latest filed release | **1.4.1**, 27 September 2026 — `releases/1.4.1/` (= `releases/latest`). It was built before 2.0.0, uses endpoints the API no longer has and must not be distributed. |
 
 ## Where the builds are
 
 | Build | Location |
 |---|---|
-| Latest Android APK (release) | `releases/latest/android/app-release.apk` (→ 1.4.1, **defective**, see above) |
-| Latest Android AAB (release) | `releases/latest/android/app-release.aab` (→ 1.4.1, **defective**) |
+| 2.0.0 Android APK / AAB | not filed yet: `cd waiter-app && tool/release.sh android production`, then `scripts/collect-release.sh` → `releases/2.0.0/` |
 | Development / test builds | `waiter-app/build/dist/giftcard-waiter-<environment>-<version>.apk` / `.aab` after `tool/release.sh android <environment>` (not kept in `releases/`) |
-| Latest iOS build | **none yet.** iOS builds are made on a Mac and uploaded from Xcode to TestFlight; App Store Connect keeps them. A scripted `.ipa` (`tool/release.sh ios-ipa production`) is filed under `releases/<version>/ios/`. |
-| Crash symbols | `releases/1.4.1/android/dart-symbols-android-1.4.1+1.zip`, `releases/1.4.1/android/r8-mapping-1.4.1+1.txt.gz` |
-| Source snapshot | `releases/1.4.1/source/giftcard-pro-1.4.1-source.zip` |
-| Signing key used | Android upload key `signing/giftcard-waiter-upload.jks` (SHA-256 `26:CE:FB:16:…:E4:94`) |
+| iOS builds | TestFlight, uploaded by CI (App Store Connect keeps them); the Dart symbols of each CI build are a workflow artifact `dart-symbols-<run number>`. A scripted local `.ipa` (`tool/release.sh ios-ipa production`) is filed under `releases/<version>/ios/` |
+| Unsigned iOS build | built by CI (`ci.yml`, job *Waiter app iOS build*) on every push and pull request; not kept |
+| Signing key | Android upload key in `signing/` (never committed); iOS signing through the App Store Connect API key in GitHub secrets |
 
-## Short changelog
+## Short summary of 2.0.0
 
-**1.4.2 — in development**
-- Waiter app environments: development / staging / production from `waiter-app/config/*.json`; no server address
-  in the code; dev/staging builds install next to the store app and can switch server in the app.
-- Startup problem screen instead of an endless splash: the reason (no internet, server not found, not running,
-  no answer, certificate, server error, wrong address, invalid configuration, storage) with *Try again*.
-- Fix: the app hung on the launch screen on every phone with a screen lock (secure-storage setting).
+- **Vouchers** (`/vouchers`): kind `card` or `digital`, statuses `active`, `blocked`, `expired`; the voucher number
+  is internal. Digital vouchers are sold with a printable QR (256-bit secret, shown once).
+- **Presentments**: every redemption consumes a single-use, 60-second proof of presence bound to user, device,
+  restaurant and voucher. Unknown outcomes are resolved with `GET /vouchers/{id}/redemptions/{key}`.
+- **Payments** for every sale and reload; complimentary only for owners, with a reason.
+- **Immutable history**: ledger, payments and audit log append-only (database triggers) and hash-chained;
+  `giftcard:verify-chains` nightly. No default expiry; expiry keeps the balance.
+- **Security findings closed**: remembered sign-in bound to the device, no tokens for platform administrators,
+  password reset revokes every token, uniform sign-in and reset answers, separate invitation tokens, lockouts per
+  user and device, queued mail, gateway log redaction, php-fpm request limit.
+- **Waiter app 2.0.0**: QR scanning only, pending-attempt store for unknown outcomes, *Sell voucher* with printing on
+  Android and iPhone; tokens limited by method and path.
+- **Removed**: NFC tag programming and reading, NTAG21x, `POST /scan`, `/cards/*`, the public card page, card links
+  and app-link files, transfers and replacement, redemption by typed number.
 
-**1.4.1 — 27 September 2026**
-- Store builds of GiftCard Waiter (signed APK + AAB, target SDK 36, backup exclusion, iOS privacy manifest).
-- NFC programming final pass (station statistics, error classes, timeouts, multi-phone protection).
-
-**1.4.0** — NFC programming v2 in the dashboard. **1.3.0** — Native waiter app GiftCard Waiter.
-
-Full history with reasons: [CHANGELOG.md](CHANGELOG.md).
+Full history with reasons: [CHANGELOG.md](CHANGELOG.md). Implementation status per story:
+[docs/implementation/v2-implementation-plan.md → Phase 0](docs/implementation/v2-implementation-plan.md#3-phase-0-security-foundation).
 
 ## Open before the first production release
 
 - Register `giftcardpro.at`, deploy the server on Coolify ([docs/DEPLOYMENT.md → First deployment](docs/DEPLOYMENT.md#first-deployment--step-by-step)).
-- Build and file 1.4.2: `tool/release.sh android production` → `scripts/collect-release.sh`.
-- Real-tag NFC release test on two Android phones ([docs/NFC-RELEASE-TEST.md](docs/NFC-RELEASE-TEST.md)).
-- First iOS build on a Mac; waiter app checks on real phones.
-- Server variables `WAITER_ANDROID_CERT_SHA256` (upload + Play app-signing key) and `WAITER_IOS_APP_IDS`.
+- Set the four App Store Connect secrets so TestFlight builds are uploaded.
+- Build and file 2.0.0 for Android: `tool/release.sh android production` → `scripts/collect-release.sh`.
+- Waiter app checks on real phones ([docs/MOBILE_RELEASE.md → Release checklist](docs/MOBILE_RELEASE.md#release-checklist)).
 
 ## Updating this file
 
-1. **New version:** bump `waiter-app/pubspec.yaml` (`1.4.3+3` — the build number always goes up), add a
-   `CHANGELOG.md` section, then update *Versions* and *Current development release*.
-2. **After the production build:** `scripts/collect-release.sh` → update *Latest release* and *Where the builds are*.
+1. **New version:** bump `waiter-app/pubspec.yaml` (the build number always goes up), add a `CHANGELOG.md`
+   section, then update *Versions*.
+2. **After the production build:** `scripts/collect-release.sh` → update *Latest filed release* and *Where the builds are*.
 3. **After deploying / uploading:** fill in *Current production release*, *Google Play*, *App Store*.
-4. **New migration:** update *Database migration version*.
-5. Run `scripts/verify-structure.sh` — it fails if this file, `pubspec.yaml`, `CHANGELOG.md` and `releases/latest` disagree.
+4. **New migration:** update *Database schema*.
+5. Run `scripts/verify-structure.sh` — it compares this file, `pubspec.yaml`, `CHANGELOG.md` and `releases/latest`.

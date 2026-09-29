@@ -1,222 +1,176 @@
 # Umgebungsvariablen
 
-> **Hinweis (Coolify-Deployment):** Produktion läuft seit 1.4.2 auf **Coolify** mit `docker-compose.coolify.yml` (Build aus dem Quellcode, kein GHCR, keine Deploy-Skripte). Befehle mit `docker compose --env-file .env.production`, `infra/scripts/…`, `deploy.yml` oder Caddy auf dem Host in diesem Dokument sind überholt. Maßgeblich sind [docs/DEPLOYMENT.md](../../DEPLOYMENT.md) (Deployment, Backups, Restore, Betrieb) und [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).
-
-*Alle Konfigurationsvariablen von GiftCard Pro – API, Web-App, Docker Compose, Container und Abnahmetest – mit Standardwert, Beispiel, Beschreibung und Empfehlung für den Produktivbetrieb.*
+*Alle Konfigurationsvariablen von GiftCard Pro – API, Web-App, Kellner-App und Coolify-Stack – mit Standardwert, Beispiel, Beschreibung und Empfehlung für den Produktivbetrieb. Englische Referenz: [docs/ENVIRONMENT.md](../../ENVIRONMENT.md).*
 
 ---
 
-## 1. Konfigurationsdateien
+## 1. Umgebungen – eine Strategie für jede Komponente
 
-| Datei | Verwendung | Vorlage |
-|---|---|---|
-| `backend/.env` | API lokal | `backend/.env.example` |
-| `backend/.env.production` | API in Produktion (Container `api`, `queue`, `scheduler`, `backup`) | `backend/.env.production.example` |
-| `.env.production` (neben `docker-compose.yml`) | Compose-Ebene in Produktion | `.env.production.example` |
-| `dashboard/.env.local` | Web-App lokal | `dashboard/.env.example` |
+Jede Komponente bezieht ihre Adressen aus **einer Quelle je Umgebung**; keine Serveradresse steht im Code. Der Code enthält nur lokale Entwicklungsstandards (`localhost`), und jede Komponente verweigert in Staging oder Produktion den Start mit einem solchen Standard.
 
-**Legende der Spalten:**
+| | Entwicklung (eigener Rechner) | Staging | Produktion |
+|---|---|---|---|
+| **Backend** (`backend/`) | `backend/.env` aus `.env.example` · `APP_ENV=local` | Coolify-Ressource *Environment Variables* (`APP_ENV=staging`, eigene Domain) – Referenz: `.env.production.example` | Coolify-Ressource *Environment Variables* – Referenz: `.env.production.example` |
+| **Server-Stack** | `docker-compose.dev.yml` (MySQL, Redis, Mailpit; keine Variablen) | `docker-compose.coolify.yml` (dieselbe Datei) | `docker-compose.coolify.yml` |
+| **Web-App** (`dashboard/`) | `dashboard/.env.local` aus `.env.example` (`BACKEND_INTERNAL_URL`) | nichts – gleicher Origin, das Gateway leitet `/api` weiter | nichts – gleicher Origin, das Gateway leitet `/api` weiter |
+| **Kellner-App** (`waiter-app/`) | `config/development.json` (+ eigene `development.local.json`) · `APP_ENV=development` | `config/staging.json` · `APP_ENV=staging` | `config/production.json` · `APP_ENV=production` |
 
-- **Lokal** – Wert in `backend/.env.example`
-- **Produktion** – Wert in `backend/.env.production.example` bzw. Empfehlung
-- „—" bedeutet: nicht gesetzt, es gilt der Standard aus `backend/config/*.php`
+Backend und Web-App lesen ihre Einstellungen **zur Laufzeit**; die Kellner-App liest ihre Datei **beim Build** (ein Telefon hat keine serverseitigen Dateien), daher gehört ein App-Build genau zu einer Umgebung.
 
-Änderungen an `backend/.env.production` werden erst nach einem Neustart der Container wirksam, weil der Einstiegspunkt die Konfiguration bei jedem Start cacht (`config:cache`):
+| Risiko | Schutz |
+|---|---|
+| Produktions-App spricht mit einem Entwicklungs- oder Staging-Server | Builds mit `APP_ENV=production` akzeptieren nur https und können ihren Server in der App nicht ändern (eine gespeicherte Abweichung wird ignoriert); `tool/release.sh` verweigert eine Konfigurationsdatei, deren `APP_ENV` nicht zur angeforderten Umgebung passt. |
+| Entwicklungs-App spricht versehentlich mit Produktion | `config/development.json` zeigt auf den eigenen Rechner. Ein Build ohne Konfigurationsdatei hält bei „App not set up correctly“ an (keine Standardadresse). |
+| Eine Anmeldung eines Servers wird an einen anderen gesendet | Die App merkt sich, zu welchem Server eine Anmeldung gehört, und verwirft sie, wenn sich der Server unterscheidet (relevant am iPhone, wo alle Umgebungen dieselbe Bundle-ID teilen). |
+| Staging-/Produktions-API erzeugt `localhost`-Links | Die API startet nicht, wenn `APP_ENV` `staging`/`production` ist und `APP_URL` oder `FRONTEND_URL` fehlt, nicht https ist, ein Platzhalter, `localhost`/`127.0.0.1`/`10.0.2.2` oder `*.test`/`*.local` ist (`App\Support\EnvironmentGuard`). |
+| Produktions-Web-App leitet `/api` an einen Entwicklungsrechner weiter | `BACKEND_INTERNAL_URL` hat keinen Standard; es wird nur in der Entwicklung gesetzt (`next dev` bricht mit einer Meldung ab, wenn es fehlt). |
 
-```bash
-docker compose --env-file .env.production up -d --force-recreate api queue scheduler
-```
+Innerhalb einer Umgebung abgestimmt halten: `API_BASE_URL` der App = `APP_URL` + `/api/v1`.
 
 ## 2. API (`backend/.env`)
+
+**Spalten:** **Lokal** – Wert in `backend/.env.example`; **Produktion** – Wert im Coolify-Stack bzw. Empfehlung; „—“ bedeutet: nicht gesetzt, es gilt der Standard aus `backend/config/*.php`.
+
+Änderungen werden erst nach einem *Redeploy* wirksam, weil die Container die Konfiguration beim Start cachen.
 
 ### 2.1 Anwendung
 
 | Variable | Lokal | Produktion | Beschreibung und Empfehlung |
 |---|---|---|---|
-| `APP_NAME` | `"GiftCard Pro"` | `"GiftCard Pro"` | Name in E-Mails und als Standard für Cookie- und Cache-Präfixe. |
-| `APP_ENV` | `local` | `production` | `local`, `testing`, `staging`, `production`. In `local`/`staging` werden Demodaten automatisch angelegt. |
-| `APP_KEY` | leer → `php artisan key:generate` | `base64:…` | Schlüssel für Cookies, Sessions und verschlüsselte Werte. Erzeugen mit `php artisan key:generate --show`. **Nicht ohne Plan wechseln** – alle Sessions werden ungültig. Im Passwortmanager sichern. |
-| `APP_DEBUG` | `true` | `false` | In Produktion **zwingend** `false` (Stacktraces verraten Secrets). |
-| `APP_URL` | `http://localhost:8000` | `https://app.giftcardpro.at` | Öffentlicher Origin der API; bei der Standardinstallation identisch mit der Web-App. |
-| `APP_TIMEZONE` | `UTC` | — | Dokumentarisch: `config/app.php` setzt die Zeitzone fest auf `UTC`. Alle Zeitstempel werden in UTC gespeichert und je Restaurant umgerechnet. |
-| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | `Europe/Vienna` | Lokale Uhr der nächtlichen Jobs: Kartenablauf 00:15, Erinnerungen 10:00, Bereinigung 03:30. |
-| `APP_LOCALE` | `en` | `en` | Sprache der Anwendung (Oberfläche für Mitarbeitende derzeit Englisch). |
+| `APP_NAME` | `"GiftCard Pro"` | `"GiftCard Pro"` | Name in E-Mails. |
+| `APP_ENV` | `local` | `production` | `local`, `testing`, `staging`, `production`. Demodaten werden in `local`, `testing` und `staging` angelegt. |
+| `APP_KEY` | leer → `php artisan key:generate` | `base64:…` | Schlüssel für Cookies, Sessions und verschlüsselte Werte (`php artisan key:generate --show`). Eine Änderung meldet alle ab und macht verschlüsselte Werte unlesbar. Im Passwortmanager sichern. |
+| `APP_DEBUG` | `true` | `false` | Außerhalb der Entwicklung **zwingend** `false`. |
+| `APP_URL` | `http://localhost:8000` | `https://app.giftcardpro.at` | Öffentlicher Origin der API (derselbe wie die Web-App). |
+| `FRONTEND_URL` | `http://localhost:3000` | `https://app.giftcardpro.at` | Basis der Einladungs- und Passwort-Reset-Links. |
+| `BCRYPT_ROUNDS` | `12` | — (`12`) | Kostenfaktor für Passwort-Hashes. |
+| `APP_TIMEZONE` | `UTC` | — | `UTC` beibehalten: Zeitstempel werden in UTC gespeichert und je Lokal umgerechnet. |
+| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | `Europe/Vienna` | Lokale Uhr der nächtlichen Jobs: Ablauf 00:15, Integritätsprüfung 02:30, Bereinigung 03:30, Ablauferinnerungen 10:00. |
+| `APP_LOCALE` | `en` | `en` | Sprache der Anwendung. |
 | `APP_FALLBACK_LOCALE` | `en` | — (`en`) | Ersatzsprache. |
-| `APP_FAKER_LOCALE` | `de_AT` | `de_AT` | Nur für Demodaten und Tests. |
-| `APP_MAINTENANCE_DRIVER` | `cache` | — (`file`) | Speicherort des Wartungsmodus (`php artisan down`). Mit `file` gilt der Wartungsmodus nur für den Container, in dem der Befehl lief (in der Praxis `api`). |
-| `FRONTEND_URL` | `http://localhost:3000` | `https://app.giftcardpro.at` | Basis für Links in E-Mails (Passwort-Reset, Einladungen). |
-| `CARD_BASE_URL` | `http://localhost:3000` | `https://app.giftcardpro.at` | Basis der URL auf NFC-Tags und QR-Codes: `{CARD_BASE_URL}/c/{token}`. Fällt auf `FRONTEND_URL` zurück. **Eine Änderung nach dem Beschreiben von Karten macht diese unbrauchbar** – eine dauerhafte Domain wählen. |
-| `BCRYPT_ROUNDS` | `12` | — (`12`) | Kostenfaktor für Passwort-Hashes. 12 beibehalten. |
+| `APP_FAKER_LOCALE` | `de_AT` | — | Nur für Demodaten und Tests. |
+| `APP_MAINTENANCE_DRIVER` | `cache` | — (`file`) | Speicherort des Wartungsmodus (`php artisan down`). |
 
 ### 2.2 Logging
 
 | Variable | Lokal | Produktion | Beschreibung und Empfehlung |
 |---|---|---|---|
-| `LOG_CHANNEL` | `stack` | `stderr` | In Containern `stderr` – Docker sammelt die Ausgabe. |
+| `LOG_CHANNEL` | `stack` | `stderr` | In Containern `stderr` (im Compose-Stack fest gesetzt). |
 | `LOG_STACK` | `daily` | — | Kanäle des `stack`-Kanals; `daily` schreibt `storage/logs/laravel-YYYY-MM-DD.log`. |
-| `LOG_LEVEL` | `debug` | `info` | `info` in Produktion. Sicherheitswarnungen (gesperrte Konten, verdächtige Scans) sind `warning`. Lokal `debug`: Der `log`-Mailer schreibt Einladungen und Reset-Links auf Debug-Ebene (nötig für den E2E-Test). |
+| `LOG_LEVEL` | `debug` | `info` | `info` in Produktion (gesperrte Konten werden als `warning` protokolliert, eine fehlgeschlagene Integritätsprüfung als `critical`). Lokal `debug`: Der `log`-Mailer schreibt E-Mails auf Debug-Ebene. |
 
-Laravel-Standardvariablen aus `config/logging.php`, die nicht in den Vorlagen stehen, aber gesetzt werden können: `LOG_DAILY_DAYS` (Aufbewahrung für `daily`, Standard 14) und `LOG_STDERR_FORMATTER` (z. B. `Monolog\Formatter\JsonFormatter` für JSON-Ausgabe auf `stderr`). Siehe [Logging-Leitfaden](logging-guide.md).
+Siehe [Logging-Leitfaden](logging-guide.md).
 
-### 2.3 Datenbank
-
-| Variable | Lokal | Produktion | Beschreibung und Empfehlung |
-|---|---|---|---|
-| `DB_CONNECTION` | `mysql` | `mysql` | `mysql` (Produktion), `mariadb`, `sqlite` (Entwicklung/Tests). |
-| `DB_HOST` | `127.0.0.1` | `mysql` | In Compose der Dienstname `mysql`. |
-| `DB_PORT` | `3306` | `3306` | |
-| `DB_DATABASE` | `giftcard_pro` | `giftcard_pro` | Muss mit `DB_DATABASE` in `.env.production` (Compose) übereinstimmen. |
-| `DB_USERNAME` | `giftcard` | `giftcard` | Wie oben. |
-| `DB_PASSWORD` | leer (Dev-Compose: `secret`) | `change-me-long-random` | Zufällig erzeugen (`openssl rand -base64 36`); identisch mit Compose-Datei. |
-
-### 2.4 Redis, Cache, Queues
+### 2.3 Datenbank, Cache, Queues
 
 | Variable | Lokal | Produktion | Beschreibung und Empfehlung |
 |---|---|---|---|
-| `REDIS_CLIENT` | `phpredis` | `phpredis` | PHP-Erweiterung `redis`. |
-| `REDIS_HOST` | `127.0.0.1` | `redis` | Dienstname in Compose. |
-| `REDIS_PASSWORD` | `null` | `change-me-long-random` | Muss `REDIS_PASSWORD` der Compose-Datei entsprechen (`requirepass`). |
-| `REDIS_PORT` | `6379` | `6379` | |
-| `CACHE_STORE` | `redis` | `redis` | Trägt auch Rate Limiting, Sperren und den Berechtigungs-Cache. |
-| `CACHE_PREFIX` | `giftcardpro` | `giftcardpro` | Präfix der Cache-Schlüssel. |
-| `QUEUE_CONNECTION` | `redis` | `redis` | E-Mails laufen auf der Queue `notifications`. |
-| `QUEUE_FAILED_DRIVER` | `database-uuids` | `database-uuids` | Fehlgeschlagene Jobs mit UUID-Schlüssel in `failed_jobs`. |
-| `BROADCAST_CONNECTION` | `log` | — | Wird nicht genutzt. |
-| `FILESYSTEM_DISK` | `local` | — (`local`) | Die Anwendung speichert keine Uploads. |
+| `DB_CONNECTION` | `mysql` | `mysql` | `mysql` (Produktion), `sqlite` (Entwicklung, Tests). Die Append-only-Trigger gibt es für MySQL/MariaDB und SQLite. |
+| `DB_HOST` / `DB_PORT` | `127.0.0.1` / `3306` | `mysql` / `3306` | Im Stack der Dienstname `mysql`. |
+| `DB_DATABASE` / `DB_USERNAME` | `giftcard_pro` / `giftcard` | `giftcard_pro` / `giftcard` | In Coolify nur vor dem ersten Deploy änderbar. |
+| `DB_PASSWORD` | leer (Dev-Compose: `secret`) | aus `SERVICE_PASSWORD_MYSQL` | Coolify erzeugt das Passwort. |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_CLIENT` | `127.0.0.1` / `6379` / `null` / `phpredis` | `redis` / `6379` / aus `SERVICE_PASSWORD_REDIS` / `phpredis` | Redis für Cache, Sessions, Queues und Rate Limits. |
+| `CACHE_STORE` | `redis` | `redis` | Trägt auch Rate Limiting und die Sperre für fehlgeschlagene Vorlagen. |
+| `CACHE_PREFIX` | `giftcardpro` | — | Präfix der Cache-Schlüssel. |
+| `QUEUE_CONNECTION` | `redis` | `redis` | Jede E-Mail wird aus der Queue versendet (`default`, `notifications`). |
+| `QUEUE_FAILED_DRIVER` | `database-uuids` | `database-uuids` | Fehlgeschlagene Jobs mit UUID-Schlüssel. |
 
-### 2.5 Sessions und Authentifizierung
+### 2.4 Sessions und Authentifizierung
 
 | Variable | Lokal | Produktion | Beschreibung und Empfehlung |
 |---|---|---|---|
 | `SESSION_DRIVER` | `redis` | `redis` | |
-| `SESSION_LIFETIME` | `480` | `480` | Minuten Inaktivität bis zur Abmeldung (eine Serviceschicht). Ohne Angabe gilt Laravels Standard 120. |
+| `SESSION_LIFETIME` | `480` | `480` | Minuten Inaktivität bis zur Abmeldung (eine volle Serviceschicht). |
 | `SESSION_ENCRYPT` | `true` | `true` | Session-Inhalte verschlüsselt speichern. |
-| `SESSION_PATH` | `/` | — (`/`) | |
+| `SESSION_SECURE_COOKIE` | `false` | `true` | Cookie nur über HTTPS. Auf Servern zwingend `true`. |
+| `SESSION_SAME_SITE` | `lax` | `lax` | |
 | `SESSION_DOMAIN` | `null` | `app.giftcardpro.at` | Host der Web-App. |
-| `SESSION_SECURE_COOKIE` | `false` | `true` | Cookie nur über HTTPS. In Produktion zwingend `true`. |
-| `SESSION_SAME_SITE` | `lax` | `lax` | Zusätzlicher CSRF-Schutz. |
-| `SESSION_COOKIE` | `giftcardpro_session` | `giftcardpro_session` | Name des Session-Cookies (in der Datenschutzerklärung genannt – nicht ändern). |
+| `SESSION_COOKIE` | `giftcardpro_session` | — | Name des Session-Cookies. |
 | `SANCTUM_STATEFUL_DOMAINS` | `localhost:3000,127.0.0.1:3000` | `app.giftcardpro.at` | Hosts, deren Browser-Requests Cookie-Sessions nutzen (kommagetrennt, in der Entwicklung mit Port). |
-| `SANCTUM_TOKEN_PREFIX` | `gcp_` | `gcp_` | Präfix der API-Tokens – ermöglicht Secret Scanning. |
+| `SANCTUM_TOKEN_PREFIX` | `gcp_` | `gcp_` | Präfix der Tokens – ermöglicht Secret Scanning. |
 
-### 2.6 E-Mail
-
-| Variable | Lokal | Produktion | Beschreibung und Empfehlung |
-|---|---|---|---|
-| `MAIL_MAILER` | `smtp` | `smtp` | Für den E2E-Test lokal `log`. |
-| `MAIL_HOST` | `127.0.0.1` (Mailpit) | `smtp.postmarkapp.com` | SMTP-Server des Versanddienstleisters. |
-| `MAIL_PORT` | `1025` | `587` | |
-| `MAIL_USERNAME` | `null` | leer | Zugangsdaten des Versanddienstleisters. |
-| `MAIL_PASSWORD` | `null` | leer | Wie oben; als Secret behandeln. |
-| `MAIL_FROM_ADDRESS` | `"no-reply@giftcardpro.app"` | `"no-reply@giftcardpro.at"` | Absender. Für die Absenderdomain SPF, DKIM und DMARC einrichten. |
-| `MAIL_FROM_NAME` | `"${APP_NAME}"` | `"${APP_NAME}"` | |
-
-### 2.7 Sicherheit
+### 2.5 Sicherheit
 
 | Variable | Standard | Beschreibung und Empfehlung |
 |---|---|---|
-| `SCAN_FAILURE_LIMIT` | `10` | Fehlgeschlagene oder verdächtige Kartenabfragen je Benutzer **und** je IP, bevor Abfragen blockiert werden. |
-| `SCAN_FAILURE_DECAY` | `300` | Zeitfenster in Sekunden für den obigen Wert. |
+| `PRESENTMENT_FAILURE_LIMIT` | `10` | Fehlgeschlagene Gutschein-Scans je Lokal, Person und Gerät vor einer kurzen Sperre (`429 PRESENTMENT_THROTTLED`). |
+| `PRESENTMENT_FAILURE_DECAY` | `300` | Zeitfenster in Sekunden für den obigen Wert. |
 | `LOGIN_LOCKOUT_THRESHOLD` | `10` | Aufeinanderfolgende falsche Passwörter bis zur Kontosperre. |
 | `LOGIN_LOCKOUT_MINUTES` | `15` | Dauer der Sperre. |
-| `API_TOKEN_MAX_DAYS` | `365` | Maximale Laufzeit von Integrations-Tokens. Leer = 365. |
-| `DEVICE_TOKEN_DAYS` | `30` | Anmeldedauer der nativen Kellner-App (GiftCard Waiter). Wird verlängert, solange das Telefon genutzt wird; nur ein so lange unbenutztes Telefon muss sich neu anmelden. |
+| `API_TOKEN_MAX_DAYS` | `365` | Maximale Laufzeit von Integrations-Tokens. |
+| `DEVICE_TOKEN_DAYS` | `30` | Anmeldedauer der Kellner-App; wird verlängert, solange das Telefon genutzt wird. |
 
-Diese Werte stehen in `.env.example`, nicht in `.env.production.example`; in Produktion gelten ohne Eintrag dieselben Standardwerte. Empfehlung: Standardwerte beibehalten.
+Fest in `config/giftcard.php`: Gültigkeit einer Vorlage 60 s, Wiederholungsfenster für Verkäufe 15 min, Länge des Idempotency-Keys ≤ 96. Empfehlung: Standardwerte beibehalten.
 
-### 2.8 NFC (nur NTAG 424 DNA)
-
-| Variable | Standard | Beschreibung und Empfehlung |
-|---|---|---|
-| `NTAG424_META_READ_KEY` | leer | AES-128-Schlüssel (32 Hex-Zeichen), entschlüsselt die PICC-Daten (UID + Tap-Zähler). |
-| `NTAG424_FILE_READ_KEY` | leer | AES-128-Master-Schlüssel für den SUN-CMAC. |
-| `NTAG424_DIVERSIFY_KEYS` | `true` | `true`: MAC-Schlüssel je Chip = HMAC-SHA256(Master, UID)[0..16]. Empfohlen. |
-
-Erzeugen mit `php artisan giftcard:nfc-keys`. In Produktion eindeutige, geheime Werte setzen, sobald NTAG-424-DNA-Karten ausgegeben werden, und im Passwortmanager sichern. Nach dem Programmieren von Karten nicht mehr ändern.
-
-### 2.9 Benachrichtigungen
+### 2.6 Gutscheingrenzen (Plattformobergrenzen)
 
 | Variable | Standard | Beschreibung |
 |---|---|---|
-| `CARD_EXPIRING_NOTICE_DAYS` | `30` | Erinnerungs-E-Mail so viele Tage vor Ablauf. |
-| `CARD_LOW_BALANCE_THRESHOLD` | `500` | Cent. E-Mail „Guthaben niedrig", wenn eine Einlösung diese Grenze unterschreitet (€ 5). |
-| `OPS_ALERT_EMAIL` | *(Support-Adresse)* | Empfängt Betriebswarnungen, z. B. eine Queue mit mehr als 500 wartenden Jobs (höchstens eine E-Mail je Queue alle 30 Minuten). Leer: die Support-Adresse aus den Systemeinstellungen. |
+| `LIMIT_MAX_VOUCHER_BALANCE` | `50000` | Höchster `max_voucher_balance`, den ein Lokal einstellen darf (Cent). |
+| `LIMIT_MAX_DEBIT_PER_TRANSACTION` | `25000` | Höchster `max_debit_per_transaction`. |
+| `LIMIT_MAX_DEBIT_PER_VOUCHER_PER_DAY` | `50000` | Höchster `max_debit_per_voucher_per_day`. |
 
-### 2.10 Sonstiges
+Die Gültigkeit eines Lokals beträgt mindestens 36 Monate (`min_validity_months`, fest).
 
-| Variable | Standard | Beschreibung und Empfehlung |
+### 2.7 E-Mail und Benachrichtigungen
+
+| Variable | Standard | Beschreibung |
 |---|---|---|
-| `SEED_DEMO_DATA` | `false` | `true` legt das Demo-Restaurant auch außerhalb von `local`/`staging` an. **In Produktion nie.** |
+| `MAIL_MAILER` | `failover` (Entwicklung), `log` (Coolify-Standard) | `smtp` für echte Zustellung. Mit `log` werden E-Mails nur ins Log geschrieben und die Plattformadministration zeigt ein rotes Banner. |
+| `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | | SMTP-Server (`MAIL_SCHEME`: `smtp` = STARTTLS auf 587, `smtps` = TLS auf 465). Zugangsdaten als Secret behandeln. |
+| `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@<domain>`, `GiftCard Pro` | Absender. Für die Absenderdomain SPF, DKIM und DMARC einrichten. |
+| `MAIL_TIMEOUT` | `10` | Sekunden, bis ein langsamer Mailserver aufgegeben wird (der Job wird wiederholt). |
+| `MAIL_LOCALE` | `de` | Sprache der Einladungs-E-Mails, wenn es für die Sprache des Lokals keine Übersetzung gibt. |
+| `MAIL_VERIFY_DOMAINS` | `true` | *Send test e-mail* lehnt eine Empfängerdomain ohne Mailserver ab. |
+| `VOUCHER_EXPIRING_NOTICE_DAYS` | `30` | Ablauferinnerung so viele Tage vor dem letzten Gültigkeitstag. |
+| `OPS_ALERT_EMAIL` | *(Support-Adresse)* | Betriebswarnungen: eine Queue mit mehr als 500 wartenden Jobs, eine fehlgeschlagene Integritätsprüfung. |
 
-## 3. Container-Variablen (in `docker-compose.yml` gesetzt)
+### 2.8 Nur Entwicklung
 
-| Variable | Werte | Beschreibung |
-|---|---|---|
-| `CONTAINER_ROLE` | `app`, `worker`, `scheduler` | Rolle des API-Images: PHP-FPM, Queue-Worker oder Scheduler. |
-| `RUN_MIGRATIONS` | `true` | Nur Rolle `app`: `migrate --force --isolated` und Referenz-Seeder beim Start. |
+| Variable | Beschreibung |
+|---|---|
+| `NTAG424_META_READ_KEY`, `NTAG424_FILE_READ_KEY`, `NTAG424_DIVERSIFY_KEYS` | Lokale Testschlüssel (je 32 Hex-Zeichen) für die SUN-Prüfbibliothek (`app/Services/Nfc`, gelesen über `config/giftcard.php → nfc.ntag424`). Kein Endpunkt verwendet die Bibliothek, und ihre Unit-Tests bringen eigene Schlüssel mit. Sie gehören nicht zur Produktionskonfiguration; Kartenschlüssel liegen im Krypto-Dienst ([docs/NFC.md](../../NFC.md)). |
+| `SEED_DEMO_DATA` | `true` legt die Demo-Lokale auch außerhalb von `local`/`testing`/`staging` an. Der Coolify-Stack setzt es fest auf `false`. |
 
-Diese Werte werden nicht in `.env`-Dateien gepflegt.
-
-## 4. Web-App (`dashboard/.env.local`)
+## 3. Web-App (`dashboard/.env.local`)
 
 | Variable | Lokal | Beschreibung |
 |---|---|---|
-| `BACKEND_INTERNAL_URL` | `http://localhost:8000` | Nur Entwicklung: Ziel, an das `next dev` die Pfade `/api` und `/sanctum` weiterleitet. In Produktion leitet Caddy diese Pfade an Laravel, bevor sie Next.js erreichen. |
+| `BACKEND_INTERNAL_URL` | `http://localhost:8000` | Nur Entwicklung: Ziel, an das `next dev` die Pfade `/api` und `/sanctum` weiterleitet. Auf Servern leitet das Gateway (Caddy, `infra/docker/gateway`) diese Pfade an Laravel, bevor sie Next.js erreichen. |
 
 Die Web-App hat **keine Secrets** – sie spricht nur mit ihrem eigenen Origin.
 
-## 5. Compose (`.env.production` neben `docker-compose.yml`)
+## 4. Kellner-App (`waiter-app/config/<umgebung>.json`)
 
-| Variable | Beispiel | Beschreibung und Empfehlung |
-|---|---|---|
-| `APP_DOMAIN` | `app.giftcardpro.at` | Öffentlicher Hostname; Caddy holt dafür das TLS-Zertifikat. Pflicht. |
-| `ACME_EMAIL` | `ops@giftcardpro.at` | E-Mail für das Let's-Encrypt-Konto (Ablaufwarnungen). Pflicht. |
-| `REGISTRY` | `ghcr.io/your-org` | Container-Registry. Standard `ghcr.io/your-org`. |
-| `IMAGE_TAG` | `latest` | Zu startender Image-Tag. Die Deploy-Pipeline setzt den Commit-SHA; Umgebungsvariablen der Shell haben Vorrang vor der Datei. |
-| `DB_DATABASE` | `giftcard_pro` | Datenbank, die der MySQL-Container beim ersten Start anlegt. |
-| `DB_USERNAME` | `giftcard` | Anwendungsbenutzer. |
-| `DB_PASSWORD` | `change-me-long-random` | Pflicht. Identisch mit `backend/.env.production`. |
-| `DB_ROOT_PASSWORD` | `change-me-long-random` | Pflicht. Root-Passwort von MySQL; nur für Administration und Restore. |
-| `REDIS_PASSWORD` | `change-me-long-random` | Pflicht. Identisch mit `backend/.env.production`. |
-| `WAITER_IOS_APP_IDS` | `TEAMID.eu.tapredeem.waiter` | App-IDs der nativen Kellner-App für iPhone Universal Links, Format `TEAMID.bundle.id` (kommagetrennt). Wird als `/.well-known/apple-app-site-association` ausgeliefert. Leer = 404. |
-| `WAITER_ANDROID_PACKAGE` | `eu.tapredeem.waiter` | Paketname der Android-Kellner-App für App Links (`/.well-known/assetlinks.json`). |
-| `WAITER_ANDROID_CERT_SHA256` | `AB:CD:…` | SHA-256-Fingerprints der Signaturzertifikate (Play App Signing, für interne Builds zusätzlich der Upload-Schlüssel), kommagetrennt. |
+| Schlüssel | Beschreibung |
+|---|---|
+| `APP_ENV` | `development`, `staging`, `production`. http ist nur in der Entwicklung erlaubt; Entwicklung und Staging haben eine eigene Android-Application-ID und ein Eckabzeichen. |
+| `API_BASE_URL` | API-Wurzel, endet auf `/api/v1`. |
+| `APP_STORE_URL` | App-Store-Eintrag, den „Update required“ öffnet (iOS-Produktion). |
+| `PLAY_STORE_URL` | Optional; Standard ist der Play-Eintrag des Pakets. |
 
-`DB_*`-Werte wirken beim MySQL-Container nur beim **ersten** Start mit leerem Volume `mysql_data`. Spätere Passwortänderungen müssen zusätzlich in MySQL selbst erfolgen (`ALTER USER`).
+## 5. Produktion und Staging (Coolify)
 
-## 6. Abnahmetest (`e2e/`)
+Der Server-Stack ist `docker-compose.coolify.yml`; seine Variablen werden in Coolify gesetzt (Ressource → *Environment Variables*). **Jede Variable hat einen funktionierenden Standard** – die kommentierte Liste ist [`.env.production.example`](../../../.env.production.example). Die oben genannten Laravel-Variablen, die dort nicht stehen, sind in der Compose-Datei fest gesetzt (Redis-Sessions, sichere Cookies, `LOG_CHANNEL=stderr`, `SEED_DEMO_DATA=false`) oder behalten ihren Standard aus `config/giftcard.php`.
 
-| Variable | Standard | Beschreibung |
-|---|---|---|
-| `BASE_URL` | `http://localhost:3000` | Adresse der Web-App |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Demo-Administrator | Zugang des Plattform-Administrators |
-| `LARAVEL_LOG_DIR` | `../backend/storage/logs/` | Einladungslinks werden aus dem Log-Mailer gelesen |
-| `CHROMIUM_PATH` | Chromium von Playwright | Eigener Browserpfad (optional) |
+| Gesetzt von | Variablen |
+|---|---|
+| Coolify, automatisch | `SERVICE_URL_GATEWAY` / `SERVICE_FQDN_GATEWAY` (Domain des Dienstes `gateway` → `APP_URL`, `FRONTEND_URL`, `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`, Standard für `MAIL_FROM_ADDRESS`, abgeleitet in `infra/docker/php/entrypoint.sh`), `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` |
+| Der erste Deploy, automatisch | `APP_KEY` (im Volume `laravel-storage` aufbewahrt, sofern Sie `APP_KEY` nicht selbst setzen) |
+| Sie (für den echten Betrieb nötig) | `MAIL_MAILER=smtp` und die `MAIL_*`-Werte |
+| Sie (optional) | `APP_ENV` (`staging`), `APP_URL`, `APP_LOCALE`, `OPS_ALERT_EMAIL`, `MAIL_LOCALE`, `MAIL_TIMEOUT`, `SCHEDULE_TIMEZONE`, `LOG_LEVEL`, `BACKUP_TIME`, `BACKUP_KEEP_DAYS`, `DB_DATABASE`/`DB_USERNAME` (nur vor dem ersten Deploy) |
 
-## 7. GitHub Actions
+Der Dienst `web` braucht keine Variablen. Kartenschlüssel stehen nie in Umgebungsvariablen.
 
-| Name | Typ | Beschreibung |
-|---|---|---|
-| `DEPLOY_HOST` | Secret | IP oder Hostname des Servers |
-| `DEPLOY_USER` | Secret | `deploy` |
-| `DEPLOY_SSH_KEY` | Secret | Privater Deploy-Schlüssel |
-| `DEPLOY_HOST_FINGERPRINT` | Secret | Host-Fingerprint (ed25519) |
-| `GHCR_READ_TOKEN` | Secret | PAT mit `read:packages` |
-| `APP_DOMAIN` | Variable | Domain für den Healthcheck nach dem Deployment |
+## 6. Checkliste Produktion
 
-## 8. Checkliste Produktion
-
-- [ ] `APP_ENV=production`, `APP_DEBUG=false`
-- [ ] `APP_KEY` gesetzt und im Passwortmanager
-- [ ] `APP_URL`, `FRONTEND_URL`, `CARD_BASE_URL` mit `https://` und dauerhafter Domain
-- [ ] `SESSION_SECURE_COOKIE=true`, `SESSION_DOMAIN` und `SANCTUM_STATEFUL_DOMAINS` = App-Domain
-- [ ] `LOG_CHANNEL=stderr`, `LOG_LEVEL=info`
-- [ ] `DB_PASSWORD`, `DB_ROOT_PASSWORD`, `REDIS_PASSWORD` zufällig und in beiden Dateien konsistent
-- [ ] `MAIL_*` mit echtem Versanddienstleister; SPF/DKIM/DMARC eingerichtet
-- [ ] `SEED_DEMO_DATA=false`
-- [ ] NTAG-424-Schlüssel gesetzt (falls NTAG 424 DNA verwendet wird)
-- [ ] `WAITER_IOS_APP_IDS`, `WAITER_ANDROID_PACKAGE`, `WAITER_ANDROID_CERT_SHA256` vor der ersten Store-Veröffentlichung der nativen Kellner-App gesetzt, damit Kartenlinks die App öffnen
+- [ ] Gateway-Domain mit `https://` gesetzt (daraus folgen `APP_URL`, `FRONTEND_URL`, `SESSION_DOMAIN`, `SANCTUM_STATEFUL_DOMAINS`)
+- [ ] `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` von Coolify erzeugt
+- [ ] `APP_KEY` gesichert (Passwortmanager) und idealerweise als Variable gesetzt
+- [ ] `MAIL_MAILER=smtp` und `MAIL_*` mit echtem Versanddienstleister; SPF/DKIM/DMARC eingerichtet; Test-E-Mail erfolgreich
+- [ ] `OPS_ALERT_EMAIL` erreicht jemanden, der auf Betriebswarnungen reagiert
+- [ ] Kellner-App mit `config/production.json` gebaut; `API_BASE_URL` = `APP_URL` + `/api/v1`
 
 ---
 
-Version 1.0 · Stand: September 2026
+Version 2.0 · Stand: September 2026

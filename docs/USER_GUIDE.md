@@ -2,66 +2,78 @@
 
 One page per role. Print the waiter page and leave it at the till for the first week.
 
+A guest pays with a **voucher**: a printed sheet (or a photo or PDF of it on their phone) with a QR code. The QR
+code is the voucher: whoever holds it can spend it, like cash. The sheet shows the restaurant, not the voucher
+number and not the value.
+
 ---
 
-## Waiter: redeem a gift card
+## Waiter: redeem a voucher
 
-![Waiter terminal](screenshots/waiter-amount.png)
+In the **GiftCard Waiter** app (Android or iPhone), or in a browser under **Redeem** (`/waiter`) on a device with a
+camera:
 
-1. **Open GiftCard Pro** on the restaurant phone. The app opens straight into waiter mode.
-2. **Read the card:**
-   - **Android (Chrome):** press **Scan card** once. After that, simply tap each card to the back of the phone.
-   - **iPhone:** hold the card to the top of the phone and tap the notification. Or press **Scan QR code** and point the camera at the code on the back.
-   - **No chip, no camera:** press **Card number** and type the 16 digits.
-3. **Type the amount** on the keypad (`2 4 9 0` → € 24,90) or press **Full balance**.
-4. Press **Redeem € 24,90**. The green check mark shows the remaining balance for the guest.
-5. **Tap the next card**, or press **Next card**.
+1. Press **Scan voucher** and point the camera at the QR code — printed or on the guest's phone.
+2. The app shows the balance. **Type the amount** on the keypad (`2 4 9 0` → € 24,90) or use the full balance.
+3. Press **Redeem**. The green check mark shows the remaining balance for the guest.
+4. Press **Scan next voucher**.
+
+A scan is valid for 60 seconds. If it takes longer, the app asks you to **Scan again**; the amount you typed is kept.
 
 | You see | What to do |
 |---|---|
-| **More than the balance** | Redeem the full balance and collect the rest in cash or by card. |
-| **This card is blocked** / **was replaced** | Do not accept the card. Call the manager. |
-| **This card has expired** | Do not accept the card. The manager can check the details. |
-| **No card with this number** | Check the digits. The number is printed under the QR code. |
-| **No connection to the server** | Check the Wi-Fi. Nothing was booked. Press the button again. The app never books twice. |
+| **More than the balance** | Redeem the balance and collect the rest in cash or by card. |
+| **Not a voucher of this restaurant** | The code is not valid here. Ask the guest for another voucher or get a manager. |
+| **Voucher blocked** / **Voucher expired** | Do not accept the voucher. Get a manager. |
+| **Limit for this voucher reached** / **At most … more with this voucher today** | The restaurant's limits apply. Get a manager. |
+| **Too many scans** | Wait a moment, then scan again. |
+| **Connection interrupted – checking …** | Keep the guest waiting a moment. The app checks whether the redemption was booked. Nothing is ever booked twice. |
+| **Redemption not confirmed yet** | The app checks it automatically. The same voucher can be redeemed again only after the check. |
+| **Service not available right now** | The problem is not the voucher. Try again in a moment. |
+
+**Recent** (top bar) lists this phone's redemptions of the day. A wrong amount is reversed by a manager in the
+dashboard.
 
 ---
 
-## Manager: everyday card management
+## Manager: everyday voucher work
 
 | Task | Where |
 |---|---|
-| Sell a card in the waiter app | Managers and owners on Android: **New gift card** on the start screen → amount (optionally the guest's e-mail) → **Create card** → hold a blank NFC card to the back of the phone until the check mark appears. The card number and balance are shown; **Program later** keeps the card without a tag (program it in the dashboard). |
-| Sell a card | **Gift cards → New gift card**. Pick an amount, optionally add the customer's e-mail (they get a confirmation), then **Create card**. Next, write the NFC tag (Android: **Write NFC tag** — the tag is checked, written, read back and verified before its chip is saved) or **Print**. |
-| Program many tags | On an Android phone with Chrome: **Gift cards → Program NFC tags → Start programming**. Each card without a tag comes up in turn; hold one blank tag to the phone, label it with the number on screen. Tags of other cards are refused and nothing is written. Progress (`12 / 300 cards programmed`), successes, failed attempts, skipped cards, elapsed time and the average time per card are shown; **CSV** downloads the session log. After any error, **Try again** (same session) or **Skip card**. With several phones, give each its own start number. The card page lists every attempt under **Tag programming**. |
-| Look up a card | **Gift cards**, then search by number, customer, recipient or note. |
-| Redeem or reload at the desk | Open the card, then **Redeem** or **Reload**. |
-| Lost or damaged card | Open the card → **⋯ → Replace lost card** → choose **Lost** / **Damaged** / **Stolen**. The balance moves to a new card and the old card stops working immediately. |
-| Stolen card or suspicious use | **⋯ → Block card**. Unblock it later from the same menu. |
-| Wrong amount booked | **Transactions** or the card's history → ↺ **Reverse**. The correction is booked as a new line; nothing is deleted. |
-
-![Card detail](screenshots/card-detail.png)
+| Sell a voucher at the desk | **Vouchers → Sell voucher**. Value, how the guest paid (**Cash**, **Card terminal** with the receipt number, **Bank transfer** with the reference), optionally the customer, recipient and internal notes → **Sell voucher** → **Print voucher**. Print it (or save it as PDF) right away: the QR code is shown only once. |
+| Sell a voucher in the app | Managers and owners: **Sell voucher** on the ready screen → value → payment → optional guest e-mail → print with the phone's print dialog (AirPrint or the Android print service). |
+| Find a voucher | **Vouchers**, then search by voucher number, customer, recipient or note, or filter by status. |
+| Reload a voucher | Open the voucher → **Reload** → amount and payment. |
+| Lost printout, stolen or suspicious voucher | Open the voucher → **⋯ → Block voucher** with a reason. From then on it cannot be redeemed. **Unblock** is in the same menu. |
+| Wrong amount booked | **Transactions** or the voucher's history → **Reverse**. The correction is a new line; nothing is changed or deleted. |
+| Edit customer, recipient, notes | Open the voucher → **⋯ → Edit details**. |
 
 ---
 
-## Owner: the numbers
+## Owner: the numbers and the rules
 
-![Dashboard](screenshots/owner-dashboard.png)
-
-- **Outstanding balance**: money guests can still spend with you (your open liability). This is the number for your bookkeeping.
-- **Revenue this month**: gift cards sold plus reloads, compared with last month.
-- **Redeemed this month**: what guests paid with gift cards (and today's amount).
-- **Cards sold**: all cards ever sold, and how many are in use.
-- **Recent activity**: the latest bookings. **View all** opens the full ledger.
-- **Exports**: **Gift cards → Export CSV** and **Transactions → Export CSV** open directly in Excel (Austrian number format).
-- **Lost phone**: **Devices → Revoke**. That phone can no longer scan or redeem cards, effective immediately (owners only; managers can see the device list).
-- **Team**: invite managers and waiters. Each person gets their own 72-hour invitation link. Never share logins, because every booking is signed with the person's name.
-- **Settings → Gift cards**: minimum and maximum value, default validity, reloads, partial redemption, customer e-mails, brand color.
+- **Outstanding balance**: money guests can still spend with you (your open liability), and on how many vouchers.
+- **Revenue this month**: vouchers sold plus reloads, compared with last month.
+- **Redeemed this month**: what guests paid with vouchers (and today's amount).
+- **Vouchers**: sold in total and this month; active, empty, blocked and expired.
+- **Recent activity**: the latest bookings. **Transactions** is the full ledger.
+- **Exports**: **Vouchers → Export CSV** and **Transactions → Export CSV** open directly in Excel (Austrian number
+  format); the transaction export includes the payment method.
+- **Complimentary vouchers** (owners only, in the dashboard): payment **Complimentary** with a reason.
+- **Expiry**: vouchers have no expiry unless you set a validity (at least 36 months) under **Settings → Vouchers**.
+  An expired voucher keeps its balance. **⋯ → Expire now** (with a reason) and **⋯ → Reinstate** (with a new last
+  valid day or none) are for owners.
+- **Lost phone**: **Devices → Revoke**. That phone is signed out and can no longer redeem, effective immediately.
+- **Team**: invite managers and waiters. Each person gets their own 72-hour invitation link. Never share logins:
+  every booking carries the person's name and the device.
+- **Settings → Vouchers**: minimum value, maximum balance, maximum per redemption, maximum per voucher and day,
+  redemptions per voucher and hour, validity, reloads, partial redemption, customer e-mails, brand color, e-mail
+  footer.
 
 ---
 
-## Guests: check the balance
+## Guests
 
-Scanning the card (NFC or QR) opens a page in the restaurant's language with the current balance and expiry date. The card itself never stores money.
-
-![Public balance page](screenshots/public-balance.png)
+Guests keep the printed sheet (or a photo of it) and show it when they pay. If they gave an e-mail address at the
+sale, they receive a confirmation and, before a validity ends, a reminder. These e-mails contain no balance, no
+amount, no voucher number and no link. To learn the balance, guests ask the restaurant.

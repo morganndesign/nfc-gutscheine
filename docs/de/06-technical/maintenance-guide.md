@@ -6,42 +6,40 @@
 
 ## 1. Grundsätze
 
-- Wartung findet **außerhalb der Servicezeiten** der Restaurants statt (siehe Abschnitt 6).
-- Vor jedem Eingriff, der Daten oder Schema betrifft: **manuelles Backup** (`docker compose --env-file .env.production --profile backup run --rm backup`).
+- Wartung findet **außerhalb der Servicezeiten** der Lokale statt (siehe Abschnitt 7).
+- Vor jedem Eingriff, der Daten oder Schema betrifft: **manuelles Backup** ([Backup-Anleitung](backup-guide.md), Abschnitt 2.2).
 - Jede Wartung wird kurz protokolliert: Datum, Person, Tätigkeit, Ergebnis. Vorlage: `[Link zum Betriebsprotokoll]`.
 - Was automatisch läuft, wird trotzdem regelmäßig **kontrolliert**.
+- Ledger, Zahlungen und Audit-Log werden nie per SQL geändert; Korrekturen sind neue Einträge in der Anwendung.
 
-Abkürzung für alle Befehle (auf dem Server als `deploy`):
-
-```bash
-cd /opt/giftcard-pro
-alias dc='docker compose --env-file .env.production'
-```
+Befehle laufen im Coolify-*Terminal* der Ressource (Container **api** für `php artisan …`, **backup** für `mysql`/`mysqldump`) oder, wo angegeben, am Server als root.
 
 ## 2. Was automatisch läuft
 
 | Aufgabe | Mechanismus | Zeit |
 |---|---|---|
-| Abgelaufene Karten ausbuchen | Scheduler `giftcards:expire` | täglich 00:15 (Wien) |
-| Erinnerungs-E-Mails vor Ablauf | Scheduler `giftcards:notify-expiring` | täglich 10:00 (Wien) |
+| Abgelaufene Gutscheine auf `expired` setzen (Guthaben bleibt) | Scheduler `vouchers:expire` | täglich 00:15 (Wien) |
+| Integritätsprüfung: Hash-Ketten und Guthaben | Scheduler `giftcard:verify-chains` | täglich 02:30 (Wien) |
 | Fehlgeschlagene Jobs älter als 30 Tage entfernen | Scheduler `queue:prune-failed --hours=720` | täglich 03:30 (Wien) |
+| Erinnerungs-E-Mails vor Ablauf | Scheduler `vouchers:notify-expiring` | täglich 10:00 (Wien) |
 | Abgelaufene Passwort-Reset-Tokens entfernen | Scheduler `auth:clear-resets` | alle 15 Minuten |
 | Queue-Länge prüfen | Scheduler `queue:monitor … --max=500` | alle 5 Minuten |
-| Datenbank-Backup | Cron `deploy` | täglich 02:30 (Serverzeit) |
-| Off-site-Sync | Cron `deploy` | täglich 02:45 (Serverzeit) |
+| Datenbank-Backup | Dienst `backup` | täglich `BACKUP_TIME` (Standard 01:30 UTC) |
+| Off-site-Sync | Root-Cron am Server (`rclone`) | täglich nach dem Backup |
 | Server-Snapshot | Hetzner Backups | täglich |
-| TLS-Zertifikat erneuern | Caddy (Let's Encrypt), automatisch vor Ablauf | laufend |
+| TLS-Zertifikat erneuern | Coolify-Proxy (Let's Encrypt), automatisch vor Ablauf | laufend |
 | Sicherheitsupdates des Betriebssystems | `unattended-upgrades` | täglich |
-| Log-Rotation der Container | Docker `json-file`, 5 × 20 MB | laufend |
+| Log-Rotation der Container | Docker `json-file`, 5 × 10 MB | laufend |
 | Abhängigkeitsprüfung | `composer audit`, `npm audit` in `ci.yml` | bei jedem Push und Pull Request |
 
 ## 3. Täglich (ca. 5 Minuten)
 
-- [ ] Uptime-Monitor ohne Vorfälle; Container gesund: `dc ps`
-- [ ] Backup von heute vorhanden und off-site: `ls -lh backups | tail -3`, `rclone ls storagebox:giftcard-backups | tail -3`
-- [ ] Sicherheitsereignisse der letzten 24 h: `dc logs --since 24h api | grep -E "Suspicious gift card scan|Account locked"`
-- [ ] Fehlgeschlagene Jobs: `dc exec api php artisan queue:failed`
-- [ ] Support-Postfach auf Meldungen der Restaurants geprüft
+- [ ] Uptime-Monitor ohne Vorfälle; in Coolify alle acht Dienste *healthy*
+- [ ] Keine Warn-E-Mail an `OPS_ALERT_EMAIL` (Integritätsprüfung, Queue-Rückstau)
+- [ ] Backup von heute vorhanden und off-site (Log des Dienstes `backup`: „Backup written“; `rclone ls storagebox:giftcard-backups | tail -3`)
+- [ ] Sicherheitsereignisse der letzten 24 h: Log `api` nach „Account locked“; im Audit-Log `presentment.failed` und `auth.locked`
+- [ ] Fehlgeschlagene Jobs: `php artisan queue:failed`
+- [ ] Support-Postfach auf Meldungen der Lokale geprüft
 
 Details: [Monitoring-Leitfaden](monitoring-guide.md#12-bereitschaftsroutine).
 
@@ -49,11 +47,11 @@ Details: [Monitoring-Leitfaden](monitoring-guide.md#12-bereitschaftsroutine).
 
 | Aufgabe | Befehl / Ort |
 |---|---|
-| Festplatte und Docker-Speicher | `df -h`, `docker system df` |
-| Nicht mehr benötigte Images entfernen | `docker image prune -f` (geschieht auch nach jedem Deployment) |
+| Festplatte und Docker-Speicher | am Server: `df -h`, `docker system df` |
+| Nicht mehr benötigte Images entfernen | am Server: `docker image prune -f` |
 | Neustart nach Kernel-Update nötig? | `ls /var/run/reboot-required` – falls vorhanden, Neustart im Wartungsfenster |
-| Nächtliche Jobs gelaufen | `dc exec scheduler php artisan schedule:list`; `expiration`-Buchungen im Ledger (siehe Monitoring-Leitfaden) |
-| Sicherheitsereignisse der Woche auswerten | `nfc_scans` nach Ergebnis und Restaurant (Abfrage im [Monitoring-Leitfaden](monitoring-guide.md#7-sicherheitsereignisse-im-log)); auffällige Restaurants kontaktieren |
+| Nächtliche Jobs gelaufen | `php artisan schedule:list`; Log `scheduler`; Ergebnis von `giftcard:verify-chains` |
+| Sicherheitsereignisse der Woche auswerten | `presentment.failed`/`presentment.rejected` je Lokal und Gerät (Abfrage im [Monitoring-Leitfaden](monitoring-guide.md#7-sicherheitsereignisse-im-log)); auffällige Lokale kontaktieren |
 | Letzte CI-Läufe auf `main` | GitHub Actions: `composer audit` und `npm audit` grün? |
 | Offene Sicherheitshinweise der Abhängigkeiten | GitHub → Security (sofern aktiviert) |
 
@@ -61,22 +59,22 @@ Details: [Monitoring-Leitfaden](monitoring-guide.md#12-bereitschaftsroutine).
 
 ### 5.1 Test-Restore
 
-Einen aktuellen Dump in eine separate Datenbank einspielen und die Prüfabfragen ausführen – Vorgehen: [Restore-Anleitung, Szenario A](restore-guide.md#3-szenario-a--untersuchung-in-einer-restore-datenbank). Ergebnis protokollieren (Datei, Dauer, Ledger-Prüfung leer).
+Einen aktuellen Dump in eine separate Datenbank einspielen und die Prüfabfragen ausführen – Vorgehen: [Restore-Anleitung, Szenario A](restore-guide.md#3-szenario-a--untersuchung-in-einer-restore-datenbank). Ergebnis protokollieren (Datei, Dauer, Prüfabfragen leer).
 
 ### 5.2 API-Tokens mit baldigem Ablauf
 
-API-Tokens laufen nach höchstens 365 Tagen ab. Läuft das Token einer Kassenintegration unbemerkt ab, schlägt die Integration fehl.
+Integrationstokens laufen nach höchstens `API_TOKEN_MAX_DAYS` (365) Tagen ab. Läuft das Token einer Kassenintegration unbemerkt ab, schlägt die Integration fehl.
 
 ```sql
 SELECT r.name AS restaurant, t.name AS token, t.expires_at, t.last_used_at
 FROM personal_access_tokens t
 JOIN restaurants r ON r.id = t.restaurant_id
-WHERE t.revoked_at IS NULL
+WHERE t.revoked_at IS NULL AND t.device_id IS NULL
   AND t.expires_at < NOW() + INTERVAL 30 DAY
 ORDER BY t.expires_at;
 ```
 
-Betroffene Restaurants informieren, damit sie rechtzeitig unter **Settings → API** ein neues Token anlegen und das alte widerrufen. Ungenutzte Tokens (`last_used_at` leer oder älter als 90 Tage) zum Widerruf empfehlen.
+Betroffene Lokale informieren, damit sie rechtzeitig unter **Settings → API** ein neues Token anlegen und das alte widerrufen. Ungenutzte Tokens (`last_used_at` leer oder älter als 90 Tage) zum Widerruf empfehlen. Gerätetokens der Kellner-App (`device_id` gesetzt) verlängern sich selbst, solange das Telefon genutzt wird.
 
 ### 5.3 Benutzer- und Gerätereview
 
@@ -94,45 +92,38 @@ SELECT u.name, u.email, u.last_login_at FROM users u WHERE u.restaurant_id IS NU
 ```
 
 - Plattform-Administratoren, die nicht mehr im Team sind: deaktivieren.
-- Restaurants auf nicht angenommene Einladungen hinweisen (**Resend invitation**).
-- Restaurants empfehlen, unter **Team** ausgeschiedene Mitarbeitende zu deaktivieren und unter **Devices** unbekannte Geräte zu widerrufen.
+- Lokale auf nicht angenommene Einladungen hinweisen (**⋯ → Invite again** in der Plattformadministration).
+- Lokalen empfehlen, unter **Team** ausgeschiedene Mitarbeitende zu deaktivieren und unter **Devices** unbekannte Geräte zu widerrufen.
 
 ### 5.4 Plattform-Audit
 
-In der Plattformadministration das Audit-Log des Monats sichten: „Open restaurant"-Sitzungen der Plattform-Administratoren (Grund bekannt?), Sperren und Reaktivierungen von Restaurants, Änderungen an Systemeinstellungen.
+In der Plattformadministration das Audit-Log des Monats sichten: Anlegen, Sperren, Archivieren und Löschen von Lokalen, erneute Einladungen, Änderungen an Systemeinstellungen, widerrufene Tokens.
 
 ### 5.5 Zertifikat, Speicher, Datenbank
 
-- Zertifikatslaufzeit prüfen (erneuert Caddy automatisch; bei < 14 Tagen stimmt etwas nicht): `echo | openssl s_client -connect app.giftcardpro.at:443 -servername app.giftcardpro.at 2>/dev/null | openssl x509 -noout -enddate`
-- MySQL-Binärlogs belegen Platz im Volume `mysql_data`: `SHOW BINARY LOGS;` – bei Platzmangel Aufbewahrung (`binlog_expire_logs_seconds`) prüfen.
-- Größe der großen Tabellen beobachten:
+- Zertifikatslaufzeit prüfen (erneuert der Coolify-Proxy automatisch; bei < 14 Tagen stimmt etwas nicht): `echo | openssl s_client -connect app.giftcardpro.at:443 -servername app.giftcardpro.at 2>/dev/null | openssl x509 -noout -enddate`
+- MySQL-Binärlogs belegen Platz im Volume `mysql-data`: `SHOW BINARY LOGS;` – bei Platzmangel Aufbewahrung (`binlog_expire_logs_seconds`) prüfen.
+- Größe der großen Tabellen beobachten (Ledger, Zahlungen, Audit-Log und Vorlagen wachsen stetig):
 
 ```sql
 SELECT table_name, ROUND((data_length + index_length) / 1024 / 1024) AS mb, table_rows
-FROM information_schema.tables WHERE table_schema = 'giftcard_pro'
+FROM information_schema.tables WHERE table_schema = DATABASE()
 ORDER BY (data_length + index_length) DESC LIMIT 10;
 ```
 
 ### 5.6 Basis-Images aktualisieren
 
-Ein neues Release (auch ohne Codeänderung, z. B. Patch-Version) baut die Images neu und übernimmt dabei Patch-Updates von PHP 8.4, Node 22 und Alpine. Empfehlung: mindestens monatlich ein Release, sonst bleiben bekannte Lücken der Basis-Images offen. Die Images von `mysql:8.4`, `redis:7.4-alpine` und `caddy:2.8-alpine` aktualisieren sich mit:
-
-```bash
-dc pull mysql redis caddy
-dc up -d mysql redis caddy
-```
-
-Im Wartungsfenster ausführen – der Neustart von MySQL und Redis unterbricht den Dienst für einige Sekunden.
+Jedes Deployment baut die Images neu und übernimmt dabei Patch-Updates von PHP 8.4, Node 22, Caddy und Alpine. Empfehlung: mindestens monatlich neu ausrollen (*Redeploy* genügt), sonst bleiben bekannte Lücken der Basis-Images offen. Auch `mysql:8.4` und `redis:7.4-alpine` werden dabei neu gezogen. Im Wartungsfenster ausführen – der Neustart von MySQL und Redis unterbricht den Dienst für einige Sekunden.
 
 ## 6. Quartalsweise (ca. ½ Tag)
 
 | Aufgabe | Details |
 |---|---|
 | Abhängigkeiten aktualisieren | Abschnitt 8 |
-| Wiederherstellungsübung Totalverlust | [Restore-Anleitung, Szenario C](restore-guide.md#5-szenario-c--totalverlust-des-servers) in einem separaten Hetzner-Projekt durchspielen, Zeit messen (RTO), Server danach löschen |
-| Zugänge prüfen | SSH-Schlüssel in `~deploy/.ssh/authorized_keys`, Mitglieder der GitHub-Organisation, Reviewer der Environment `production`, Zugang zu Hetzner Console und Storage Box |
-| Secrets | `GHCR_READ_TOKEN` erneuern (Ablaufdatum des PAT), Passwortmanager auf Vollständigkeit prüfen (`APP_KEY`, NTAG-424-Schlüssel, `.env`-Inhalte, `rclone`-Konfiguration) |
-| Firewall | Hetzner Cloud Firewall: nur 22 (eigene IPs), 80, 443 |
+| Wiederherstellungsübung Totalverlust | [Restore-Anleitung, Szenario C](restore-guide.md#5-szenario-c--totalverlust-des-servers) auf einem separaten Server durchspielen, Zeit messen (RTO), Server danach löschen |
+| Zugänge prüfen | SSH-Schlüssel am Server, Coolify-Konten, Mitglieder der GitHub-Organisation und die GitHub-App von Coolify, Zugang zu Hetzner Console und Storage Box |
+| Secrets | Passwortmanager auf Vollständigkeit prüfen (`APP_KEY`, SMTP-Zugangsdaten, `rclone`-Konfiguration); App-Store-Connect-Schlüssel und Android-Signaturschlüssel vorhanden |
+| Firewall | nur 22 (eigene IPs), 80, 443 |
 | Kapazität | RAM-, CPU- und Festplattentrend der letzten 3 Monate; Serverwechsel planen, bevor 70 % erreicht werden |
 | Dokumentation | Diese Anleitungen mit dem tatsächlichen Stand abgleichen |
 | Aufbewahrung | Backups, Log-Versand, Audit-Log gegen die Vorgaben der [Backup-Anleitung](backup-guide.md#7-aufbewahrung) und des [Logging-Leitfadens](logging-guide.md#9-aufbewahrung-und-dsgvo) |
@@ -143,16 +134,16 @@ Im Wartungsfenster ausführen – der Neustart von MySQL und Redis unterbricht d
 
 | Art | Zeitfenster (Wiener Zeit) | Vorankündigung |
 |---|---|---|
-| Deployment ohne Ausfall | Mo–Do vor 11:00 oder 14:30–17:00 | keine (Changelog) |
+| Deployment (wenige Sekunden Unterbrechung) | Mo–Do vor 11:00 oder 14:30–17:00 | keine (Changelog) |
 | Wartung mit kurzer Unterbrechung (< 5 min) | Di oder Mi 06:00–07:00 | 3 Werktage vorher per Wartungshinweis |
 | Wartung mit längerer Unterbrechung | Di oder Mi 06:00–08:00 | 7 Tage vorher per Wartungshinweis und E-Mail an alle Inhaberinnen und Inhaber |
 | Notfallwartung | sofort | so früh wie möglich |
 
-Nicht warten: Freitag bis Sonntag, an Feiertagen, zwischen 00:00 und 00:30 (Kartenablauf) und in der Adventzeit nur im Notfall.
+Nicht warten: Freitag bis Sonntag, an Feiertagen, um 00:15 (Gutscheinablauf), 02:30 (Integritätsprüfung) und in der Adventzeit nur im Notfall.
 
 ### 7.2 Wartungshinweis in der App
 
-Die Plattform hat die Systemeinstellung `platform.maintenance_notice`: ein Banner, das **jeder angemeldeten Person** angezeigt wird. Leer = kein Banner.
+Die Plattform hat die Systemeinstellung `platform.maintenance_notice`: ein Banner, das **jeder angemeldeten Person** angezeigt wird, und der Wert `maintenance_notice` in `/app/config` für die Kellner-App. Leer = kein Banner.
 
 **Über die Oberfläche:** Plattformadministration → **System settings** → Maintenance notice → Text eintragen → speichern.
 
@@ -164,21 +155,21 @@ curl -X PUT https://app.giftcardpro.at/api/v1/admin/system-settings \
   -d '{"settings":[{"key":"platform.maintenance_notice","value":"Geplante Wartung am Dienstag, 14. Oktober 2026, 06:00–06:30 Uhr. In dieser Zeit ist GiftCard Pro kurz nicht erreichbar."}]}'
 ```
 
-(Browser-Session eines Plattform-Administrators; Anmeldung wie in der [API-Dokumentation](api-documentation.md#96-browser-login-zu-testzwecken).)
+(Browser-Session eines Plattform-Administrators; Anmeldung wie in der [API-Dokumentation](api-documentation.md#106-browser-login-zu-testzwecken).)
 
-Formulierung: Datum, Uhrzeit, erwartete Auswirkung, ein Satz. Das Personal der Restaurants liest den Hinweis in der Kellner-App – kurz halten. Nach der Wartung den Text wieder leeren.
+Formulierung: Datum, Uhrzeit, erwartete Auswirkung, ein Satz. Das Personal der Lokale liest den Hinweis in der Kellner-App – kurz halten. Nach der Wartung den Text wieder leeren.
 
 ### 7.3 Laravel-Wartungsmodus
 
-`php artisan down` versetzt die API in den Wartungsmodus (HTTP 503 für alle API-Aufrufe **einschließlich `/up`** – Uptime-Monitor vorher pausieren):
+`php artisan down` versetzt die API in den Wartungsmodus (HTTP 503 für alle API-Aufrufe **einschließlich `/up`** – Uptime-Monitor vorher pausieren). Im Container **api**:
 
 ```bash
-dc exec api php artisan down --retry=60
+php artisan down --retry=60
 # … maintenance …
-dc exec api php artisan up
+php artisan up
 ```
 
-Da `APP_MAINTENANCE_DRIVER` in Produktion nicht gesetzt ist (Standard `file`), gilt der Modus nur für den `api`-Container und endet, wenn dieser neu erstellt wird. In den meisten Fällen genügen Wartungshinweis und ein kurzer Neustart; der Wartungsmodus ist für längere Eingriffe an der Datenbank gedacht.
+Da `APP_MAINTENANCE_DRIVER` in Produktion nicht gesetzt ist (Standard `file`), gilt der Modus nur für den `api`-Container und endet, wenn dieser neu erstellt wird (z. B. durch *Redeploy*). In den meisten Fällen genügen Wartungshinweis und ein kurzer Neustart; der Wartungsmodus ist für längere Eingriffe an der Datenbank gedacht.
 
 ## 8. Abhängigkeiten aktualisieren
 
@@ -189,7 +180,7 @@ Da `APP_MAINTENANCE_DRIVER` in Produktion nicht gesetzt ist (Standard `file`), g
 Da CI nur bei Änderungen läuft, werden neu bekannt gewordene Lücken in unveränderten Abhängigkeiten nicht automatisch gemeldet. Empfehlungen:
 
 - Wöchentlich den CI-Workflow manuell anstoßen oder lokal `composer audit` und `npm audit` ausführen.
-- GitHub Dependabot (Security Updates) für `backend/` (Composer), `dashboard/` und `e2e/` (npm) sowie die Dockerfiles aktivieren (derzeit nicht eingerichtet).
+- GitHub Dependabot (Security Updates) für `backend/` (Composer), `dashboard/` und `e2e/` (npm), `waiter-app/` (pub) sowie die Dockerfiles aktivieren.
 
 ### 8.2 Quartalsweise Aktualisierung
 
@@ -204,13 +195,13 @@ php artisan test && vendor/bin/phpstan analyse && vendor/bin/pint --test
 cd ../dashboard
 npm outdated
 npm update
-npm run lint && npm run typecheck && npm run build && npm audit --omit=dev --audit-level=high
+npm run lint && npm run typecheck && npm test && npm run build && npm audit --omit=dev --audit-level=high
 
 cd ../e2e && npm update
 ```
 
 - Innerhalb der Major-Versionen aktualisieren (Laravel 12, Next.js 15). Major-Wechsel sind eigene Vorhaben – siehe [Upgrade-Anleitung](upgrade-guide.md).
-- Pull Request erstellen; CI muss auf SQLite **und** MySQL grün sein.
+- Pull Request erstellen; CI muss auf SQLite **und** MySQL grün sein, einschließlich der Integritätsprüfung.
 - Vor dem Release den Abnahmetest ausführen.
 - Als Patch- oder Minor-Release ausrollen und im Changelog vermerken.
 
@@ -218,20 +209,19 @@ cd ../e2e && npm update
 
 | Verursacher | Prüfen | Maßnahme |
 |---|---|---|
-| Alte Docker-Images | `docker system df` | `docker image prune -f` (bzw. `docker image prune -a` für alle nicht verwendeten Images – danach sind Rollback-Images nur noch in GHCR) |
-| Lokale Dumps | `du -sh backups` | werden nach 14 Tagen automatisch gelöscht |
+| Alte Docker-Images und Build-Cache | `docker system df` | `docker image prune -f`, `docker builder prune -f` (Coolify baut jedes Deployment neu) |
+| Lokale Dumps | Volume `mysql-backups` | werden nach `BACKUP_KEEP_DAYS` automatisch gelöscht |
 | MySQL-Binärlogs | `SHOW BINARY LOGS;` | `PURGE BINARY LOGS BEFORE NOW() - INTERVAL 7 DAY;` (nur wenn nicht für Point-in-Time-Recovery benötigt) |
-| Container-Logs | `du -sh /var/lib/docker/containers` | begrenzt auf 100 MB je Container |
-| Journal des Systems | `journalctl --disk-usage` | `sudo journalctl --vacuum-time=30d` |
-| Backup-Log | `ls -lh /var/log/giftcard-backup.log` | logrotate-Regel ergänzen |
+| Container-Logs | `du -sh /var/lib/docker/containers` | begrenzt auf 50 MB je Container |
+| Journal des Systems | `journalctl --disk-usage` | `journalctl --vacuum-time=30d` |
 
 ## 10. Jährlich
 
-- Deploy-SSH-Schlüssel und Storage-Box-Schlüssel erneuern.
+- SSH-Schlüssel und Storage-Box-Schlüssel erneuern.
 - Auftragsverarbeitungsverträge und Sub-Auftragsverarbeiter-Liste mit der tatsächlichen Infrastruktur abgleichen.
 - Notfallkontakte und Bereitschaftsplan aktualisieren.
-- Wiederherstellungsübung mit vollständigem Protokoll (RPO, RTO) als Nachweis für die TOM.
+- Wiederherstellungsübung mit vollständigem Protokoll (RPO, RTO, Ergebnis von `giftcard:verify-chains`) als Nachweis für die TOM.
 
 ---
 
-Version 1.0 · Stand: September 2026
+Version 2.0 · Stand: September 2026

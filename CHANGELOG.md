@@ -1,6 +1,43 @@
 # Changelog
 
-## 1.4.2 (in development): environments for the waiter app, no more endless launch screen
+## 2.0.0 (in development): the final core — vouchers, presentments, payments, immutable history (ADR-002 Phase 0)
+
+Built as the platform is meant to exist; there is no compatibility layer. A database from an earlier schema is
+rebuilt once with `php artisan migrate:fresh --seed`.
+
+- **Vouchers** replace cards (`/vouchers`, internal `voucher_number`, kinds `card` and `digital`, states active,
+  blocked, expired; "used up" is an active voucher with balance 0). No default expiry; expiry keeps the balance,
+  reinstatement and manual expiry are owner-only.
+- **Spending needs proof:** `POST /presentments` (printable QR now; card live authentication arrives with the crypto
+  service and the NFC relay) gives a single-use, 60-second presentment bound to user, phone, restaurant and voucher;
+  `POST /vouchers/{id}/redemptions` spends it with an `Idempotency-Key`. `GET /vouchers/{id}/redemptions/{key}`
+  answers whether one of the caller's own attempts was booked.
+- **Payments** are recorded with every sale and reload (cash, card terminal, bank transfer; complimentary for owners,
+  with a reason).
+- **Immutable history:** ledger, payments and audit log are append-only (database triggers) and hash-chained per
+  restaurant; `giftcard:verify-chains` checks them nightly and in CI. Corrections are new events.
+- **Removed:** NTAG213/215/216 and every writer or programming flow, `POST /scan`, `/cards/*`, the public card page,
+  public tokens, transfers and replacement, manual card-number redemption, card links and app links.
+- **Security findings closed:** S1–S7, F3, L1, D1 (remembered sign-ins bound to the device, no platform-admin tokens,
+  password changes revoke access, one answer for wrong and locked sign-ins, invitation and reset tokens separated and
+  kept out of logs, queued mail with timeouts, gateway log redaction, dependency update). App tokens are limited by
+  method and path.
+- **Dashboard:** vouchers, sale with payment and a printable QR sheet in the restaurant language (no number, no
+  value), reload, block, expire, reinstate, payments and history; the web till redeems digital vouchers.
+- **Waiter app 2.0.0 (Android and iPhone alike):** QR scanning → presentment → redemption; unknown outcomes are
+  stored before the first request and resolved by asking the server, never by sending the debit again; managers
+  and owners sell printable vouchers and print them with the system print dialog.
+- **Unknown outcomes everywhere (app and dashboard):** once a request with a key went unanswered, only an answer
+  of the operation itself (e.g. `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`) closes it; 401, 403, 429 or any other
+  code keeps the key. The server checks a sale's or reload's key before its limits, so a retry is answered with
+  the booking even after the settings changed. The dashboard keeps such keys in the browser tab and warns before
+  leaving; the app asks before closing an unconfirmed sale and explains a retried sale whose QR can no longer be
+  shown. The 60-second "not booked" rule uses a clock that the phone's time settings cannot move. The chain
+  verifier reads one consistent snapshot.
+- **CI:** MySQL schema build with chain verification, unsigned iOS build, TestFlight upload on merges to `main`
+  once the App Store Connect key is set as repository secrets.
+
+## 1.4.2 (not released, part of 2.0.0): environments for the waiter app, no more endless launch screen
 
 **Why the 1.4.1 app stayed on the splash screen.** Reproduced with the 1.4.1 release APK on an Android 9 emulator:
 without a screen lock it reached *Sign in*; with a PIN set (like every real phone) it never drew a frame. The
@@ -24,7 +61,7 @@ was already non-blocking (2 s) and would have led to *Sign in*.
 | **Environment safety audit:** the iOS app-link host is no longer fixed in the Xcode project (`tool/release.sh` writes `ios/Flutter/Environment.xcconfig` from the environment's config); the dashboard has no default backend URL (`BACKEND_INTERNAL_URL` required in development, unset in production); the API refuses to start in staging/production with missing, http, placeholder or local `APP_URL` / `FRONTEND_URL` / `CARD_BASE_URL` (`EnvironmentGuard`); a stored sign-in is dropped when the app talks to another server; staging templates `backend/.env.staging.example` and `.env.staging.example`; one environment table in `docs/ENVIRONMENT.md`; `scripts/verify-structure.sh` checks for legacy configuration. | Production and development can no longer be mixed up by a default value or a leftover setting. |
 | Tests: 626 Flutter tests, 167 PHPUnit tests (EnvironmentGuard 10), (23 new: environments, failure classification, problem screen for every reason, watchdog, server change, badge). Verified on an Android 9 emulator with a PIN: the production APK shows the problem screen instead of hanging; the development APK reached the local backend and *Sign in* after changing the server in the app. | |
 
-## 1.4.3 (in development): sell and program gift cards in GiftCard Waiter (managers and owners)
+## 1.4.3 (not released, replaced by 2.0.0): sell and program gift cards in GiftCard Waiter (managers and owners)
 
 | Change | Why |
 |---|---|
@@ -204,7 +241,7 @@ Verification:
 - **Backend:** 158 PHPUnit tests (1,044 assertions), Larastan level 8 and Pint clean.
 - **Dashboard:** 32 unit tests (`node --test`); TypeScript, ESLint, Prettier and `next build` clean.
 - **End to end:** `e2e/nfc-programming.mjs` extended to 8 steps: recovery from every failure class in one station session, statistics, same tag twice, redeem after a chip read, clone rejection, complete attempt log, printed timings. `pilot-journey.mjs` and `waiter-api.mjs` pass.
-- **Not done:** the test with real tags on a Pixel and a Samsung phone — no devices are available to the build environment. Protocol, measurements and report template: [docs/NFC-RELEASE-TEST.md](docs/NFC-RELEASE-TEST.md).
+- **Not done:** the test with real tags on a Pixel and a Samsung phone — no devices are available to the build environment. Protocol, measurements and report template: `docs/NFC-RELEASE-TEST.md` (removed in 2.0.0).
 
 | Change | Why |
 |---|---|

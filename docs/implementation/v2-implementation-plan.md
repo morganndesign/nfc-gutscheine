@@ -94,6 +94,24 @@ The existing SUN verification (`Ntag424SunVerifier`, `AesCmac`) stays: it is par
 
 The backend is done first, then dashboard and app, so the clients are written once against the final API.
 
+### 3.4 Status
+
+| ID | Status | Commits |
+|---|---|---|
+| P0-01 | Done. `RemovedPathsTest` fails when a removed concept reappears in the code | `25ebfda` (backend, schema), `a56b202` (dashboard), `2234694` (app) |
+| P0-02 | Done | `25ebfda`, `a56b202`, `2234694` |
+| P0-03 | Done: `kind`, `media` (`printable_qr`), printable sheet without number or value in the dashboard and the app | `25ebfda`, `a56b202`, `2234694` |
+| P0-04 | Done: `printable_qr` verifier; `live_auth` is an enum case without a verifier; `expires_in` in the response | `25ebfda`, `33506ca` |
+| P0-05 | Done, plus `GET /vouchers/{voucher}/redemptions/{idempotencyKey}` for unknown outcomes | `25ebfda`, `33506ca` |
+| P0-06 | Done for sale and reload with `cash`, `card_terminal`, `bank_transfer`, `complimentary` (owner, reason) | `25ebfda` |
+| P0-07 | Done: ledger, payments and audit log append-only and hash-chained; `giftcard:verify-chains` nightly and in CI | `25ebfda`, `a56b202` (CI) |
+| P0-08 | Done | `25ebfda` |
+| P0-09 | Done (S1–S6) | `edeb559`, `33506ca` (dashboard) |
+| P0-10 | Done: S7, F3/F3b, L1, D1 | `25ebfda` (S7), `edeb559` (F3, L1), `a56b202` (D1) |
+| P0-11 | Done: waiter app 2.0.0; app tokens limited by method and path | `2234694`, `33506ca` |
+| P0-12 | Pipeline written: unsigned iOS build in `ci.yml` and `testflight.yml`; the upload runs once the App Store Connect secrets are set | not committed yet |
+| P0-13 | Done: `backend/tests/Feature/Abuse`, run by CI on SQLite and MySQL | `25ebfda`, `edeb559`, `33506ca` |
+
 ---
 
 ## 4. Phases 1–10
