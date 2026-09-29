@@ -117,6 +117,23 @@ jobs:
       - name: Android release build
         run: flutter build apk --release --dart-define-from-file=config/production.json
 
+  waiter-app-ios:
+    name: Waiter app iOS build (unsigned)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: waiter-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: iOS release build (no signing; TestFlight uploads run in testflight.yml)
+        run: flutter build ios --release --no-codesign --dart-define-from-file=config/production.json
+
   docker:
     name: Coolify stack builds from source
     runs-on: ubuntu-latest

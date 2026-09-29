@@ -1,0 +1,105 @@
+# Every merge to main builds, signs and uploads the waiter app to TestFlight (P0-12).
+#
+# Signing material never enters the repository. It lives in the repository's GitHub secrets:
+#   APPLE_TEAM_ID                  Apple Developer Team ID (10 characters)
+#   APP_STORE_CONNECT_KEY_ID       App Store Connect API key id (Users and Access → Integrations, role App Manager)
+#   APP_STORE_CONNECT_ISSUER_ID    its issuer id
+#   APP_STORE_CONNECT_KEY_P8       the .p8 key file, base64-encoded (base64 -i AuthKey_XXXX.p8)
+# With the API key Xcode manages certificates and profiles itself (cloud signing): no .p12 or profile is stored.
+# Without the secrets the job is skipped, so forks and pull requests stay green.
+name: TestFlight
+
+on:
+  push:
+    branches: [main]
+    paths: ["waiter-app/**", ".github/workflows/testflight.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: testflight
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    name: Build, sign and upload to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      HAS_SIGNING: ${{ secrets.APP_STORE_CONNECT_KEY_P8 != '' }}
+    defaults:
+      run:
+        working-directory: waiter-app
+    steps:
+      - name: Signing configured?
+        if: env.HAS_SIGNING != 'true'
+        working-directory: .
+        run: echo "::notice::App Store Connect secrets are not set; skipping the TestFlight upload."
+      - uses: actions/checkout@v4
+        if: env.HAS_SIGNING == 'true'
+      - uses: subosito/flutter-action@v2
+        if: env.HAS_SIGNING == 'true'
+        with:
+          flutter-version: "3.47.5"
+          channel: stable
+          cache: true
+      - name: API key
+        if: env.HAS_SIGNING == 'true'
+        env:
+          KEY_P8: ${{ secrets.APP_STORE_CONNECT_KEY_P8 }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$KEY_P8" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8
+      - name: Configure (version from pubspec, build number from the run)
+        if: env.HAS_SIGNING == 'true'
+        run: |
+          flutter pub get
+          # Build numbers must only grow; the run number of this workflow does.
+          flutter build ios --release --config-only \
+            --build-number=$((1000 + ${{ github.run_number }})) \
+            --dart-define-from-file=config/production.json \
+            --obfuscate --split-debug-info=build/symbols
+      - name: Archive (automatic signing with the API key)
+        if: env.HAS_SIGNING == 'true'
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace -scheme Runner -configuration Release \
+            -archivePath build/ios/Runner.xcarchive -destination 'generic/platform=iOS' \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8 \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic
+      - name: Export IPA
+        if: env.HAS_SIGNING == 'true'
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/Runner.xcarchive -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8 \
+            -authenticationKeyID "$KEY_ID" -authenticationKeyIssuerID "$ISSUER_ID"
+      - name: Upload to TestFlight
+        if: env.HAS_SIGNING == 'true'
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: xcrun altool --upload-app -t ios -f build/ios/ipa/*.ipa --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+      - name: Keep the Dart symbols of this build
+        if: env.HAS_SIGNING == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dart-symbols-${{ github.run_number }}
+          path: waiter-app/build/symbols
+          retention-days: 400
+      - name: Remove the API key
+        if: always() && env.HAS_SIGNING == 'true'
+        working-directory: .
+        run: rm -rf ~/.appstoreconnect
