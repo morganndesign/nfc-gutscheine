@@ -1,0 +1,175 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Cards;
+
+use App\Enums\CardBatchStatus;
+use App\Enums\CardState;
+use App\Enums\SecurityEventType;
+use App\Exceptions\Domain\CardStateException;
+use App\Models\Card;
+use App\Models\CardBatch;
+use App\Models\CardEvent;
+use App\Services\Security\SecurityEventRecorder;
+use App\Support\Actor;
+use Closure;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * The only writer of card state (architecture §7): it checks the transition, writes the new state and appends a
+ * hash-chained `card_events` row and a security event, all in one transaction. The Card model refuses a state
+ * write from anywhere else.
+ */
+final class CardLifecycle
+{
+    private static int $writing = 0;
+
+    public function __construct(private readonly SecurityEventRecorder $events) {}
+
+    public static function isWriting(): bool
+    {
+        return self::$writing > 0;
+    }
+
+    /**
+     * Registers a card for its batch: a blank chip at an in-house station (`manufactured`) or a card from a
+     * manufacturer's manifest (`personalized`). The inventory number is `<batch code>-<sequence>`.
+     */
+    public function register(CardBatch $batch, string $uid, CardState $initial, Actor $actor, ?string $originalitySignature = null): Card
+    {
+        if (! in_array($initial, [CardState::Manufactured, CardState::Personalized], true)) {
+            throw new CardStateException('A card is registered as manufactured or personalized.');
+        }
+        if (strlen($uid) !== 7) {
+            throw new CardStateException('An NTAG 424 DNA UID is 7 bytes.');
+        }
+
+        return DB::transaction(function () use ($batch, $uid, $initial, $actor, $originalitySignature): Card {
+            /** @var CardBatch $locked */
+            $locked = CardBatch::query()->withoutGlobalScopes()->whereKey($batch->getKey())->lockForUpdate()->firstOrFail();
+            if (! in_array($locked->status, [CardBatchStatus::Ordered, CardBatchStatus::InProduction, CardBatchStatus::Personalized], true)) {
+                throw new CardStateException('Cards are registered only while their batch is in production.');
+            }
+            $registered = Card::query()->withoutGlobalScopes()->where('batch_id', $locked->getKey())->count();
+            if ($registered >= $locked->quantity_ordered) {
+                throw new CardStateException('The batch already has every card it ordered.');
+            }
+            if (Card::query()->withoutGlobalScopes()->where('uid', $uid)->exists()) {
+                throw new CardStateException('This chip is already registered.');
+            }
+
+            $card = new Card;
+            $card->forceFill([
+                'card_number' => sprintf('%s-%04d', $locked->batch_code, $registered + 1),
+                'uid' => $uid,
+                'chip_type' => $locked->chip_type,
+                'batch_id' => $locked->getKey(),
+                'key_set_id' => $locked->key_set_id,
+                'restaurant_id' => $locked->restaurant_id,
+                'originality_signature' => $originalitySignature,
+            ]);
+
+            return $this->writing(function () use ($card, $initial, $actor, $locked): Card {
+                $card->forceFill(['state' => $initial, 'state_changed_at' => Carbon::now()])->save();
+                $this->record($card, null, $initial, 'registered', $actor, null, $locked->batch_code);
+
+                return $card;
+            });
+        });
+    }
+
+    /** One card, one step along the lifecycle. The card row is locked; a concurrent change waits and is re-checked. */
+    public function transition(Card $card, CardState $to, string $reason, Actor $actor, ?Model $ref = null): Card
+    {
+        return DB::transaction(function () use ($card, $to, $reason, $actor, $ref): Card {
+            /** @var Card $locked */
+            $locked = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
+            $from = $locked->state;
+            if (! $from->canBecome($to)) {
+                throw new CardStateException("A card cannot go from {$from->value} to {$to->value}.", ['from' => $from->value, 'to' => $to->value]);
+            }
+
+            return $this->writing(function () use ($locked, $from, $to, $reason, $actor, $ref): Card {
+                $locked->forceFill(['state' => $to, 'state_changed_at' => Carbon::now()])->save();
+                $this->record($locked, $from, $to, $reason, $actor, $ref);
+
+                return $locked;
+            });
+        });
+    }
+
+    /**
+     * Moves every card of a batch that is in one of `$from` to `$to` (a batch status change, §8.2). Runs inside
+     * the caller's transaction; returns the number of cards moved.
+     *
+     * @param  list<CardState>  $from
+     */
+    public function moveBatch(CardBatch $batch, CardState $to, array $from, string $reason, Actor $actor): int
+    {
+        $cards = Card::query()->withoutGlobalScopes()
+            ->where('batch_id', $batch->getKey())
+            ->whereIn('state', array_map(static fn (CardState $s): string => $s->value, $from))
+            ->orderBy('card_number')
+            ->lockForUpdate()
+            ->get();
+
+        return $this->writing(function () use ($cards, $to, $reason, $actor, $batch): int {
+            foreach ($cards as $card) {
+                /** @var Card $card */
+                $previous = $card->state;
+                if (! $previous->canBecome($to)) {
+                    throw new CardStateException("Card {$card->card_number} cannot go from {$previous->value} to {$to->value}.");
+                }
+                $card->forceFill(['state' => $to, 'state_changed_at' => Carbon::now()])->save();
+                $this->record($card, $previous, $to, $reason, $actor, $batch, $batch->batch_code);
+            }
+
+            return $cards->count();
+        });
+    }
+
+    /**
+     * @template T
+     *
+     * @param  Closure(): T  $write
+     * @return T
+     */
+    private function writing(Closure $write): mixed
+    {
+        self::$writing++;
+        try {
+            return $write();
+        } finally {
+            self::$writing--;
+        }
+    }
+
+    private function record(Card $card, ?CardState $from, CardState $to, string $reason, Actor $actor, ?Model $ref, ?string $batchCode = null): void
+    {
+        $event = new CardEvent;
+        $event->forceFill([
+            'card_id' => $card->getKey(),
+            'batch_id' => $card->batch_id,
+            'restaurant_id' => $card->restaurant_id,
+            'from_state' => $from,
+            'to_state' => $to,
+            'reason' => mb_substr($reason, 0, 120),
+            'actor_id' => $actor->userId(),
+            'device_id' => $actor->deviceId(),
+            'request_id' => $actor->requestId,
+            'ref_type' => $ref !== null ? class_basename($ref) : null,
+            'ref_id' => $ref !== null ? (string) $ref->getKey() : null,
+        ])->save();
+
+        $this->events->record(SecurityEventType::CardTransition, $actor, data: array_filter([
+            'card_number' => $card->card_number,
+            'from_state' => $from,
+            'to_state' => $to,
+            'cause' => $reason,
+            'batch_code' => $batchCode,
+        ], static fn (mixed $v): bool => $v !== null), restaurantId: $card->restaurant_id);
+    }
+}

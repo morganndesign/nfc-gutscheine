@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Integrity;
 
 use App\Models\AuditLog;
+use App\Models\Card;
+use App\Models\CardEvent;
 use App\Models\Contracts\HashChainedRecord;
 use App\Models\Payment;
 use App\Models\Voucher;
@@ -24,7 +26,7 @@ final class ChainVerifier
     public function __construct(private readonly SecurityEventSealer $securityEvents) {}
 
     /** @var list<class-string<Model&HashChainedRecord>> */
-    public const CHAINED = [Payment::class, VoucherTransaction::class, AuditLog::class];
+    public const CHAINED = [Payment::class, VoucherTransaction::class, AuditLog::class, CardEvent::class];
 
     /**
      * @return list<string> Problems found; empty when everything is intact.
@@ -61,6 +63,7 @@ final class ChainVerifier
         }
 
         array_push($problems, ...$this->verifyBalances());
+        array_push($problems, ...$this->verifyCardStates());
         array_push($problems, ...$this->securityEvents->verify());
 
         return $problems;
@@ -161,6 +164,32 @@ final class ChainVerifier
                 $ledger = $last[$voucher->id] ?? 0;
                 if ($voucher->balance !== $ledger) {
                     $problems[] = "vouchers/{$voucher->id}: balance {$voucher->balance} differs from its ledger ({$ledger}).";
+                }
+            }
+        });
+
+        return $problems;
+    }
+
+    /**
+     * Every card's stored state is the target of its last event (the lifecycle is the only writer).
+     *
+     * @return list<string>
+     */
+    private function verifyCardStates(): array
+    {
+        $problems = [];
+        Card::query()->withoutGlobalScopes()->select(['id', 'card_number', 'state'])->chunkById(1000, static function ($cards) use (&$problems): void {
+            $last = CardEvent::query()->withoutGlobalScopes()
+                ->whereIn('card_id', $cards->modelKeys())
+                ->orderBy('created_at')->orderBy('chain_seq')
+                ->get(['card_id', 'to_state'])
+                ->keyBy('card_id');
+            foreach ($cards as $card) {
+                /** @var Card $card */
+                $event = $last->get($card->getKey());
+                if (! $event instanceof CardEvent || $event->to_state !== $card->state) {
+                    $problems[] = "cards/{$card->card_number}: state {$card->state->value} is not the result of its last card event";
                 }
             }
         });

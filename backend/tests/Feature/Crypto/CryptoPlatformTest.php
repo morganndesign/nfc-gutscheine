@@ -78,41 +78,49 @@ final class CryptoPlatformTest extends TestCase
         $this->assertArrayHasKey('ks-1/a', (new LocalKeystore($this->keystorePath, (string) base64_decode($new)))->read());
     }
 
-    public function test_a_card_tap_is_verified_with_per_card_keys_from_the_key_set(): void
+    private const BATCH = '0f1e2d3c-4b5a-4968-8776-655443322110';
+
+    private function keySet(): CardKeys
     {
         $this->artisan('crypto:keystore:init')->assertSuccessful();
-        foreach (['sdm-meta-read', 'sdm-file-read', 'app-key-0'] as $role) {
+        foreach (['k1', 'root-k0', 'root-k2', 'root-k3'] as $role) {
             $this->artisan('crypto:key:generate', ['reference' => 'ks-1/'.$role])->assertSuccessful();
         }
+
+        return new CardKeys($this->app->make(CryptoProvider::class), 'ks-1', self::BATCH);
+    }
+
+    public function test_a_card_tap_is_verified_with_per_card_keys_derived_root_batch_card(): void
+    {
+        $keys = $this->keySet();
         $provider = $this->app->make(CryptoProvider::class);
-        $keys = new CardKeys($provider, 'ks-1');
         $uid = (string) hex2bin('04A39493CC8680');
 
         // What a personalised card would put into its tap URL.
         $picc = "\xC7".$uid."\x05\x00\x00".random_bytes(5);
         $e = strtoupper(bin2hex($provider->encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, $picc)));
-        $m = SunVerifier::mac(($keys->fileReadKey())($uid), $uid, "\x05\x00\x00");
+        $m = SunVerifier::mac($keys->sdmMacKey($uid), $uid, "\x05\x00\x00");
 
-        $message = (new SunVerifier($provider))->verify($keys->metaReadKey(), $keys->fileReadKey(), $e, $m);
+        $message = (new SunVerifier($provider))->verify($keys->metaReadKey(), $keys->sdmMacKey(...), $e, $m);
         $this->assertSame('04A39493CC8680', $message->uid);
         $this->assertSame(5, $message->readCounter);
 
-        // Per-card keys differ per UID and are AN10922 derivations of the key set's masters.
-        $other = (string) hex2bin('04A39493CC8681');
-        $this->assertNotSame($keys->applicationKey($uid, 0), $keys->applicationKey($other, 0));
-        $this->assertSame($keys->applicationKey($uid, 0), An10922::fromProvider($provider, new KeyReference('ks-1/app-key-0'), $uid."\x00GiftCardPro"));
+        // Two AN10922 levels: root (provider) → batch → card; every card and every slot has its own key.
+        $batchKey = An10922::fromProvider($provider, new KeyReference('ks-1/root-k3'), 'B'.hex2bin(str_replace('-', '', self::BATCH))."\x03");
+        $this->assertSame(An10922::fromKey($batchKey, $uid."\x03GiftCardPro"), $keys->challengeKey($uid));
+        $this->assertNotSame($keys->challengeKey($uid), $keys->challengeKey((string) hex2bin('04A39493CC8681')));
+        $this->assertNotSame($keys->challengeKey($uid), $keys->sdmMacKey($uid));
+        $this->assertNotSame($keys->challengeKey($uid), (new CardKeys($provider, 'ks-1', '1f1e2d3c-4b5a-4968-8776-655443322110'))->challengeKey($uid));
     }
 
     public function test_live_authentication_is_single_use_and_expires_after_30_seconds(): void
     {
-        $this->artisan('crypto:keystore:init')->assertSuccessful();
-        $this->artisan('crypto:key:generate', ['reference' => 'ks-1/app-key-0'])->assertSuccessful();
-        $keys = new CardKeys($this->app->make(CryptoProvider::class), 'ks-1');
+        $keys = $this->keySet();
         $authenticator = $this->app->make(CardAuthenticator::class);
         $uid = (string) hex2bin('04DE5F1EACC040');
-        $cardKey = $keys->applicationKey($uid, 0);
+        $cardKey = $keys->challengeKey($uid);
 
-        // A simulated card holding its derived key.
+        // A simulated card holding its derived K3.
         $rndB = random_bytes(16);
         $cardAnswer = static function (string $response) use ($cardKey, $rndB): string {
             $plain = Aes::decryptCbc($cardKey, Aes::ZERO_IV, $response);
@@ -123,7 +131,7 @@ final class CryptoPlatformTest extends TestCase
             return Aes::encryptCbc($cardKey, Aes::ZERO_IV, "\x01\x02\x03\x04".Ev2FirstAuthentication::rotate(substr($plain, 0, 16)).str_repeat("\0", 12));
         };
 
-        $begun = $authenticator->begin($keys, $uid, 0, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
+        $begun = $authenticator->begin($keys, $uid, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
         $answer = $cardAnswer($begun['response']);
         $session = $authenticator->finish($keys, $begun['challenge'], $answer);
         $this->assertSame('01020304', bin2hex($session->transactionId));
@@ -135,7 +143,7 @@ final class CryptoPlatformTest extends TestCase
             $this->addToAssertionCount(1);
         }
 
-        $late = $authenticator->begin($keys, $uid, 0, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
+        $late = $authenticator->begin($keys, $uid, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
         Carbon::setTestNow(Carbon::now()->addSeconds(CardAuthenticator::LIFETIME_SECONDS + 1));
         $this->expectException(CardAuthenticationFailedException::class);
         $authenticator->finish($keys, $late['challenge'], $cardAnswer($late['response']));

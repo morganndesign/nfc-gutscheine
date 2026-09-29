@@ -65,6 +65,12 @@ enum SecurityEventType: string
     case MediumIssue = 'voucher.medium_issue';
     case MediumRevoke = 'voucher.medium_revoke';
 
+    // Physical cards -------------------------------------------------------------------------------------------
+    /** A card entered the system or changed its lifecycle state (register, activate, bind, replace, revoke, …). */
+    case CardTransition = 'card.transition';
+    /** A card batch changed its status (and moved its cards). */
+    case CardBatchStatus = 'card.batch_status';
+
     // Platform -------------------------------------------------------------------------------------------------
     case RestaurantSuspend = 'platform.restaurant_suspend';
     case RestaurantReactivate = 'platform.restaurant_reactivate';
@@ -102,6 +108,8 @@ enum SecurityEventType: string
             self::VoucherUnblock => [],
             self::MediumIssue => ['medium_type', 'cause'],
             self::MediumRevoke => ['medium_type', 'cause'],
+            self::CardTransition => ['card_number', 'from_state', 'to_state', 'cause', 'batch_code'],
+            self::CardBatchStatus => ['batch_code', 'from_status', 'to_status', 'cards_moved'],
             self::RestaurantSuspend, self::RestaurantReactivate => [],
         };
     }

@@ -6,53 +6,86 @@ namespace App\Crypto\Ntag424;
 
 use App\Crypto\CryptoProvider;
 use App\Crypto\KeyReference;
-use Closure;
 use InvalidArgumentException;
 
 /**
- * The keys of one card, derived from its key set (architecture: per-card keys, AN10922). The key set holds one
- * master per role; each card's key is the master diversified with the card's UID, the key number and the
- * platform's system identifier. The SDM meta-read key is shared by the key set: it has to open PICCData before
- * the UID is known.
+ * The keys of the cards of one batch (architecture §9.2). Card keys are never stored: they are derived on
+ * demand in two AN10922 levels, root (in the provider) → batch → card.
+ *
+ * | Slot | Purpose                          | Key                                  |
+ * |------|----------------------------------|--------------------------------------|
+ * | K0   | change keys and settings         | per card: AN10922(batch(root-k0))    |
+ * | K1   | encrypt UID + counter (SUN `e`)  | per key set: `{version}/k1`          |
+ * | K2   | SUN MAC (`m`)                    | per card: AN10922(batch(root-k2))    |
+ * | K3   | live challenge at till / binding | per card: AN10922(batch(root-k3))    |
  */
 final class CardKeys
 {
     private const SYSTEM_IDENTIFIER = 'GiftCardPro';
 
+    /** @var array<int, string> slot => batch key (ephemeral, for this object's lifetime) */
+    private array $batchKeys = [];
+
+    /**
+     * @param  string  $keySetVersion  e.g. `ks-2026-01`
+     * @param  string  $batchId  the batch UUID
+     */
     public function __construct(
         private readonly CryptoProvider $provider,
-        private readonly string $keySet,
+        private readonly string $keySetVersion,
+        private readonly string $batchId,
     ) {
-        new KeyReference($keySet);
+        new KeyReference($keySetVersion);
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/', $batchId) !== 1) {
+            throw new InvalidArgumentException('The batch id is a UUID.');
+        }
     }
 
+    /** K1: shared by the key set, it opens PICCData before the UID is known. */
     public function metaReadKey(): KeyReference
     {
-        return KeyReference::of($this->keySet, 'sdm-meta-read');
+        return KeyReference::of($this->keySetVersion, 'k1');
     }
 
-    /** @return Closure(string): string UID (7 bytes) → the card's SDM file-read key */
-    public function fileReadKey(): Closure
+    /** K2 of the card with this UID. */
+    public function sdmMacKey(string $uid): string
     {
-        return fn (string $uid): string => $this->derive('sdm-file-read', $uid, 0x03);
+        return $this->cardKey(2, $uid);
     }
 
-    /** The card's application key number `$keyNumber` (0–4), for EV2 authentication. */
-    public function applicationKey(string $uid, int $keyNumber): string
+    /** K3 of the card with this UID: the live challenge. */
+    public function challengeKey(string $uid): string
     {
-        if ($keyNumber < 0 || $keyNumber > 4) {
-            throw new InvalidArgumentException('NTAG 424 DNA application keys are numbered 0–4.');
-        }
-
-        return $this->derive('app-key-'.$keyNumber, $uid, $keyNumber);
+        return $this->cardKey(3, $uid);
     }
 
-    private function derive(string $role, string $uid, int $keyNumber): string
+    /** K0 of the card with this UID: personalisation only. */
+    public function masterKey(string $uid): string
+    {
+        return $this->cardKey(0, $uid);
+    }
+
+    private function cardKey(int $slot, string $uid): string
     {
         if (strlen($uid) !== 7) {
             throw new InvalidArgumentException('An NTAG 424 DNA UID is 7 bytes.');
         }
 
-        return An10922::fromProvider($this->provider, KeyReference::of($this->keySet, $role), $uid.chr($keyNumber).self::SYSTEM_IDENTIFIER);
+        return An10922::fromKey($this->batchKey($slot), $uid.chr($slot).self::SYSTEM_IDENTIFIER);
+    }
+
+    private function batchKey(int $slot): string
+    {
+        return $this->batchKeys[$slot] ??= An10922::fromProvider(
+            $this->provider,
+            KeyReference::of($this->keySetVersion, 'root-k'.$slot),
+            'B'.hex2bin(str_replace('-', '', $this->batchId)).chr($slot),
+        );
+    }
+
+    /** @return array<string, string> */
+    public function __debugInfo(): array
+    {
+        return ['keySet' => $this->keySetVersion, 'batch' => $this->batchId];
     }
 }

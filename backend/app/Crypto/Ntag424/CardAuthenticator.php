@@ -26,17 +26,18 @@ final class CardAuthenticator
     ) {}
 
     /**
+     * Uses the card's K3 (live challenge key; no write rights on the card).
+     *
      * @param  string  $uid  7-byte UID (known from the card's verified SUN message)
      * @return array{challenge: string, response: string} response = bytes to relay to the card
      */
-    public function begin(CardKeys $keys, string $uid, int $keyNumber, string $encryptedRndB): array
+    public function begin(CardKeys $keys, string $uid, string $encryptedRndB): array
     {
-        $step = Ev2FirstAuthentication::respond($keys->applicationKey($uid, $keyNumber), $encryptedRndB);
+        $step = Ev2FirstAuthentication::respond($keys->challengeKey($uid), $encryptedRndB);
         $challenge = (string) Str::ulid();
 
         $this->cache->put(self::PREFIX.$challenge, $this->encrypter->encryptString(json_encode([
             'uid' => bin2hex($uid),
-            'key' => $keyNumber,
             'a' => base64_encode($step['rndA']),
             'b' => base64_encode($step['rndB']),
         ], JSON_THROW_ON_ERROR)), self::LIFETIME_SECONDS);
@@ -52,12 +53,12 @@ final class CardAuthenticator
             throw new CardAuthenticationFailedException;
         }
 
-        /** @var array{uid: string, key: int, a: string, b: string} $state */
+        /** @var array{uid: string, a: string, b: string} $state */
         $state = json_decode($this->encrypter->decryptString($sealed), true, 4, JSON_THROW_ON_ERROR);
         $uid = (string) hex2bin($state['uid']);
 
         return Ev2FirstAuthentication::complete(
-            $keys->applicationKey($uid, $state['key']),
+            $keys->challengeKey($uid),
             (string) base64_decode($state['a'], true),
             (string) base64_decode($state['b'], true),
             $encryptedCardResponse,
