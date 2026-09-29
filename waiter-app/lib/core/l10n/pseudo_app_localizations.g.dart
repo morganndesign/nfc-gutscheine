@@ -869,6 +869,42 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleQrA11y => pseudoLocalize(base.saleQrA11y);
 
   @override
+  String get saleFormTitle => pseudoLocalize(base.saleFormTitle);
+
+  @override
+  String get saleFormPrintable => pseudoLocalize(base.saleFormPrintable);
+
+  @override
+  String get saleFormPrintableCaption =>
+      pseudoLocalize(base.saleFormPrintableCaption);
+
+  @override
+  String get saleFormCard => pseudoLocalize(base.saleFormCard);
+
+  @override
+  String get saleFormCardCaption => pseudoLocalize(base.saleFormCardCaption);
+
+  @override
+  String saleCardSubmit(String amount) =>
+      pseudoLocalize(base.saleCardSubmit(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get saleCardTap => pseudoLocalize(base.saleCardTap);
+
+  @override
+  String get saleCardDoneTitle => pseudoLocalize(base.saleCardDoneTitle);
+
+  @override
+  String saleCardDoneBody(String number) =>
+      pseudoLocalize(base.saleCardDoneBody(pseudoMarker(0)), <String>[number]);
+
+  @override
+  String get saleCardFailedTitle => pseudoLocalize(base.saleCardFailedTitle);
+
+  @override
+  String get saleCardNotUsable => pseudoLocalize(base.saleCardNotUsable);
+
+  @override
   String get qrTitle => pseudoLocalize(base.qrTitle);
 
   @override
@@ -1028,6 +1064,116 @@ class PseudoAppLocalizations extends AppLocalizations {
   @override
   String get menuSignOutConfirmAction =>
       pseudoLocalize(base.menuSignOutConfirmAction);
+
+  @override
+  String get menuCards => pseudoLocalize(base.menuCards);
+
+  @override
+  String get menuCardsReceive => pseudoLocalize(base.menuCardsReceive);
+
+  @override
+  String get menuCardsFind => pseudoLocalize(base.menuCardsFind);
+
+  @override
+  String get cardsReceiveNone => pseudoLocalize(base.cardsReceiveNone);
+
+  @override
+  String cardsReceiveBatch(int count) =>
+      pseudoLocalize(base.cardsReceiveBatch(count), <String>[]);
+
+  @override
+  String get cardsReceiveOnHold => pseudoLocalize(base.cardsReceiveOnHold);
+
+  @override
+  String get cardsReceiveCount => pseudoLocalize(base.cardsReceiveCount);
+
+  @override
+  String cardsReceiveContinue(int count) =>
+      pseudoLocalize(base.cardsReceiveContinue(count), <String>[]);
+
+  @override
+  String get cardsReceiveTap => pseudoLocalize(base.cardsReceiveTap);
+
+  @override
+  String get cardsReceiveDone => pseudoLocalize(base.cardsReceiveDone);
+
+  @override
+  String get cardsReceiveHold => pseudoLocalize(base.cardsReceiveHold);
+
+  @override
+  String get cardsReceiveWrongCard =>
+      pseudoLocalize(base.cardsReceiveWrongCard);
+
+  @override
+  String get cardsFindLabel => pseudoLocalize(base.cardsFindLabel);
+
+  @override
+  String get cardsFindHelper => pseudoLocalize(base.cardsFindHelper);
+
+  @override
+  String get cardsFindAction => pseudoLocalize(base.cardsFindAction);
+
+  @override
+  String get cardsFindNotFound => pseudoLocalize(base.cardsFindNotFound);
+
+  @override
+  String get cardsStateActive => pseudoLocalize(base.cardsStateActive);
+
+  @override
+  String get cardsStateSuspended => pseudoLocalize(base.cardsStateSuspended);
+
+  @override
+  String get cardsStateReplaced => pseudoLocalize(base.cardsStateReplaced);
+
+  @override
+  String get cardsStateAvailable => pseudoLocalize(base.cardsStateAvailable);
+
+  @override
+  String get cardsStateOther => pseudoLocalize(base.cardsStateOther);
+
+  @override
+  String cardsBalance(String amount) =>
+      pseudoLocalize(base.cardsBalance(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get cardsSuspend => pseudoLocalize(base.cardsSuspend);
+
+  @override
+  String get cardsResume => pseudoLocalize(base.cardsResume);
+
+  @override
+  String get cardsReplace => pseudoLocalize(base.cardsReplace);
+
+  @override
+  String get cardsReasonTitle => pseudoLocalize(base.cardsReasonTitle);
+
+  @override
+  String get cardsReasonLost => pseudoLocalize(base.cardsReasonLost);
+
+  @override
+  String get cardsReasonStolen => pseudoLocalize(base.cardsReasonStolen);
+
+  @override
+  String get cardsReasonDamaged => pseudoLocalize(base.cardsReasonDamaged);
+
+  @override
+  String get cardsReasonFound => pseudoLocalize(base.cardsReasonFound);
+
+  @override
+  String get cardsReplaceTap => pseudoLocalize(base.cardsReplaceTap);
+
+  @override
+  String cardsReplaceDone(String number) =>
+      pseudoLocalize(base.cardsReplaceDone(pseudoMarker(0)), <String>[number]);
+
+  @override
+  String get cardsSuspendDone => pseudoLocalize(base.cardsSuspendDone);
+
+  @override
+  String get cardsResumeDone => pseudoLocalize(base.cardsResumeDone);
+
+  @override
+  String get cardsFailed => pseudoLocalize(base.cardsFailed);
 
   @override
   String get sessionExpired => pseudoLocalize(base.sessionExpired);

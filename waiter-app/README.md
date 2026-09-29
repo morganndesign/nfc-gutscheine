@@ -36,6 +36,16 @@ the card's answer and returns the same single-use, 60-second presentment a scan 
 (`WaiterNfc.kt`: reader mode + IsoDep; `WaiterNfc.swift`: NFCTagReaderSession + NFCISO7816Tag) only transceive
 bytes; no key and no secret is ever on the phone. The iPhone App ID needs the NFC Tag Reading capability.
 
+## Card desk (managers and owners)
+
+- *Sell voucher* asks first, when the phone reads cards and the role may bind them: printed voucher or gift card.
+  A gift card is tapped last, after payment (`bind` presentment); the server books the sale and activates the card
+  in one transaction. A lost answer is retried with the same key and the same tap, never a second card.
+- Menu → *Confirm a delivery* (S22): the delivered batch, the counted quantity, one card of the parcel tapped
+  (`receive`). A wrong count puts the batch on hold for the platform.
+- Menu → *Find a card* (S23): the inventory number from the dashboard; suspend (lost, stolen, damaged), resume, or
+  replace with a tapped stock card (the balance stays with the voucher).
+
 ## Personalisation station (S21, internal)
 
 Platform staff sign in with their platform account and get a station token (personalisation only, bound to the

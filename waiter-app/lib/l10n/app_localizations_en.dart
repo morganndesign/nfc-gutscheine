@@ -874,6 +874,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleQrA11y => 'QR code of the voucher';
 
   @override
+  String get saleFormTitle => 'What are you selling?';
+
+  @override
+  String get saleFormPrintable => 'Printed voucher';
+
+  @override
+  String get saleFormPrintableCaption => 'With a QR code to print';
+
+  @override
+  String get saleFormCard => 'Gift card';
+
+  @override
+  String get saleFormCardCaption => 'A card from stock, activated at the sale';
+
+  @override
+  String saleCardSubmit(String amount) {
+    return 'Tap card · $amount';
+  }
+
+  @override
+  String get saleCardTap => 'Hold the card to the phone to activate it.';
+
+  @override
+  String get saleCardDoneTitle => 'Card activated';
+
+  @override
+  String saleCardDoneBody(String number) {
+    return 'Card $number is active.';
+  }
+
+  @override
+  String get saleCardFailedTitle => 'Card not activated';
+
+  @override
+  String get saleCardNotUsable =>
+      'This card cannot be sold. Take another card from stock.';
+
+  @override
   String get qrTitle => 'Scan voucher';
 
   @override
@@ -1026,6 +1064,129 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuSignOutConfirmAction => 'Sign out';
+
+  @override
+  String get menuCards => 'Cards';
+
+  @override
+  String get menuCardsReceive => 'Confirm a delivery';
+
+  @override
+  String get menuCardsFind => 'Find a card';
+
+  @override
+  String get cardsReceiveNone => 'No delivery waiting.';
+
+  @override
+  String cardsReceiveBatch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cards',
+      one: '$count card',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardsReceiveOnHold => 'Being checked – the count did not match.';
+
+  @override
+  String get cardsReceiveCount => 'How many cards are in the parcel?';
+
+  @override
+  String cardsReceiveContinue(int count) {
+    return 'Continue with $count';
+  }
+
+  @override
+  String get cardsReceiveTap => 'Hold one card from the parcel to the phone.';
+
+  @override
+  String get cardsReceiveDone =>
+      'Delivery confirmed – the cards are ready to sell.';
+
+  @override
+  String get cardsReceiveHold =>
+      'The count does not match. GiftCard Pro checks the delivery.';
+
+  @override
+  String get cardsReceiveWrongCard => 'This card is not from this delivery.';
+
+  @override
+  String get cardsFindLabel => 'Card number';
+
+  @override
+  String get cardsFindHelper =>
+      'Shown with the voucher in the dashboard, e.g. B-2026-0001-0042';
+
+  @override
+  String get cardsFindAction => 'Look up';
+
+  @override
+  String get cardsFindNotFound => 'No card with this number.';
+
+  @override
+  String get cardsStateActive => 'Active';
+
+  @override
+  String get cardsStateSuspended => 'Suspended';
+
+  @override
+  String get cardsStateReplaced => 'Replaced';
+
+  @override
+  String get cardsStateAvailable => 'In stock';
+
+  @override
+  String get cardsStateOther => 'Not in use';
+
+  @override
+  String cardsBalance(String amount) {
+    return 'Balance $amount';
+  }
+
+  @override
+  String get cardsSuspend => 'Suspend card';
+
+  @override
+  String get cardsResume => 'Resume card';
+
+  @override
+  String get cardsReplace => 'Replace card';
+
+  @override
+  String get cardsReasonTitle => 'Reason';
+
+  @override
+  String get cardsReasonLost => 'Lost';
+
+  @override
+  String get cardsReasonStolen => 'Stolen';
+
+  @override
+  String get cardsReasonDamaged => 'Damaged';
+
+  @override
+  String get cardsReasonFound => 'Found again';
+
+  @override
+  String get cardsReplaceTap =>
+      'Hold a new card from stock to the phone. The balance moves to it.';
+
+  @override
+  String cardsReplaceDone(String number) {
+    return 'Replaced by $number. The old card no longer works.';
+  }
+
+  @override
+  String get cardsSuspendDone => 'Suspended – the card no longer pays.';
+
+  @override
+  String get cardsResumeDone => 'Resumed – the card pays again.';
+
+  @override
+  String get cardsFailed => 'That did not work. Try again.';
 
   @override
   String get sessionExpired => 'Session expired';

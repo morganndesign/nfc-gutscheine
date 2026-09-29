@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../api/api_failure.dart';
 import '../api/models.dart';
 import '../api/waiter_api.dart';
+import '../cards/card_presenter.dart';
 import '../format/amount_entry.dart';
 import '../platform/voucher_printer.dart';
 import '../state/session_controller.dart';
@@ -12,7 +13,10 @@ import '../state/session_state.dart';
 /// S20 · Sell voucher (managers and owners, Android and iPhone alike):
 /// value → how the guest paid (+ optional e-mail) → `POST /vouchers` →
 /// print the QR. The QR text is returned once and lives only in this
-/// controller until the screen closes.
+/// controller until the screen closes. A card sale ([SaleForm.card]) taps the
+/// stock card last, when the guest has paid: the server binds and activates it
+/// in the same transaction as the sale.
+enum SaleForm { printable, card }
 @immutable
 sealed class SaleState {
   const SaleState();
@@ -66,9 +70,20 @@ final class SaleDetails extends SaleState {
   );
 }
 
+/// Card sale: the stock card is to be held to the phone ([checking] once it is there).
+final class SaleTapCard extends SaleState {
+  const SaleTapCard({required this.details, this.checking = false});
+
+  final SaleDetails details;
+  final bool checking;
+}
+
 enum SaleProblemKind {
   /// Definitive answer: nothing was sold.
   failed,
+
+  /// Card sale: the tap did not give a usable stock card ([SaleProblem.card]); nothing was sold.
+  card,
 
   /// No (readable) answer: it may have been sold — "Try again" replays with
   /// the same key.
@@ -80,9 +95,12 @@ enum SaleProblemKind {
 }
 
 final class SaleProblem extends SaleState {
-  const SaleProblem(this.kind, {required this.details, this.requestId});
+  const SaleProblem(this.kind, {required this.details, this.requestId, this.card});
 
   final SaleProblemKind kind;
+
+  /// For [SaleProblemKind.card]: why the tapped card could not be sold.
+  final CardPresentException? card;
 
   /// The entry to return to (and to send again after an uncertain answer).
   final SaleDetails details;
@@ -117,12 +135,25 @@ class SaleController extends ChangeNotifier {
     required WaiterApi api,
     required SessionController session,
     required VoucherPrinter printer,
+    this.form = SaleForm.printable,
+    CardPresenter? cards,
+    ({String prompt, String checking, String done, String failed})? cardTexts,
     Uuid uuid = const Uuid(),
   }) : _api = api,
        _session = session,
        _printer = printer,
+       _cards = cards,
+       _cardTexts = cardTexts ?? (prompt: '', checking: '', done: '', failed: ''),
        _uuid = uuid,
        _idempotencyKey = uuid.v4();
+
+  final SaleForm form;
+  final CardPresenter? _cards;
+  final ({String prompt, String checking, String done, String failed}) _cardTexts;
+
+  /// The `bind` presentment of the card tapped for this sale, kept with the key: a retry after a lost answer
+  /// sends the same one (the server answers a booked key before it looks at the presentment).
+  String? _cardPresentmentId;
 
   final WaiterApi _api;
   final SessionController _session;
@@ -240,6 +271,8 @@ class SaleController extends ChangeNotifier {
     'BALANCE_LIMIT_EXCEEDED',
     'VALIDATION_FAILED',
     'COMPLIMENTARY_NOT_ALLOWED',
+    // A card sale: the presentment is checked after the key, so this proves nothing was booked.
+    'PRESENTMENT_INVALID',
   };
 
   /// A request with the current key went out and its answer never arrived:
@@ -255,7 +288,7 @@ class SaleController extends ChangeNotifier {
     final SaleState s = _state;
     final SaleDetails? details = switch (s) {
       SaleDetails(:final bool submitting) when !submitting => s,
-      SaleProblem(kind: SaleProblemKind.uncertain || SaleProblemKind.failed, :final SaleDetails details) => details,
+      SaleProblem(kind: SaleProblemKind.uncertain || SaleProblemKind.failed || SaleProblemKind.card, :final SaleDetails details) => details,
       _ => null,
     };
     if (details == null) return;
@@ -275,6 +308,28 @@ class SaleController extends ChangeNotifier {
       return;
     }
 
+    if (form == SaleForm.card && _cardPresentmentId == null) {
+      // The guest has paid: now the stock card that becomes theirs.
+      _set(SaleTapCard(details: details.copyWith(submitting: false)));
+      try {
+        final CardPresented card = await _cards!.present(
+          'bind',
+          texts: _cardTexts,
+          onDetected: () => _set(SaleTapCard(details: details.copyWith(submitting: false), checking: true)),
+        );
+        _cardPresentmentId = card.id;
+      } on CardPresentException catch (e) {
+        if (e.api != null) _session.handleFailure(e.api!, SessionContext.lookup);
+        if (_disposed) return;
+        _set(
+          e.failure == CardPresentFailure.cancelled
+              ? details.copyWith(submitting: false)
+              : SaleProblem(SaleProblemKind.card, details: details.copyWith(submitting: false), requestId: e.requestId, card: e),
+        );
+        return;
+      }
+    }
+
     _set(details.copyWith(submitting: true));
     final String trimmedEmail = email.trim();
     try {
@@ -283,6 +338,7 @@ class SaleController extends ChangeNotifier {
         payment: PaymentInput(method: method, reference: reference.trim(), reason: reason.trim()),
         customerEmail: trimmedEmail.isEmpty ? null : trimmedEmail,
         idempotencyKey: _idempotencyKey,
+        cardPresentmentId: _cardPresentmentId,
       );
       _definitive();
       _set(SaleDone(sold));
@@ -354,10 +410,16 @@ class SaleController extends ChangeNotifier {
     }
   }
 
-  /// The server answered for the current key: the next sale gets a new one.
+  /// The server answered for the current key: the next sale gets a new one (and a card sale a new tap).
   void _definitive() {
     _unanswered = false;
     _idempotencyKey = _uuid.v4();
+    _cardPresentmentId = null;
+  }
+
+  /// Leaving while the card reader waits stops it.
+  Future<void> cancelTap() async {
+    if (_state is SaleTapCard) await _cards?.cancel();
   }
 
   /// Back from a definitive problem to the details (entry kept).
@@ -392,6 +454,7 @@ class SaleController extends ChangeNotifier {
     reason = '';
     email = '';
     _idempotencyKey = _uuid.v4();
+    _cardPresentmentId = null;
     _set(const SaleAmount());
   }
 

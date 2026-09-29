@@ -719,6 +719,17 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.noQr.title` | Gutschein bereits verkauft | Voucher already sold | Vaučer je već prodan | 28 | ADR-002 · retry answered with the earlier sale, QR no longer available |
 | `sale.noQr.body` | Der QR-Code kann nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein, im Dashboard sperren und neu verkaufen. | Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one. | QR kôd se više ne može prikazati. Ako gost nema ispisan vaučer, blokirajte ga u dashboardu i prodajte novi. | 140 | ADR-002 · same advice as the dashboard |
 | `sale.qr.a11y` | QR-Code des Gutscheins | QR code of the voucher | QR kôd vaučera | — | ADR-002 · (a11y) |
+| `sale.form.title` | Was wird verkauft? | What are you selling? | Šta prodajete? | 28 | Cards · first step when the phone reads cards |
+| `sale.form.printable` | Gedruckter Gutschein | Printed voucher | Ispisani vaučer | 28 | Cards |
+| `sale.form.printable.caption` | Mit QR-Code zum Ausdrucken | With a QR code to print | Sa QR kodom za ispis | 48 | Cards |
+| `sale.form.card` | Geschenkkarte | Gift card | Poklon kartica | 28 | Cards |
+| `sale.form.card.caption` | Eine Karte aus dem Lager, beim Verkauf aktiviert | A card from stock, activated at the sale | Kartica sa zalihe, aktivira se pri prodaji | 60 | Cards |
+| `sale.card.submit` | Karte antippen · {amount} | Tap card · {amount} | Prislonite karticu · {amount} | 32 | Cards · PrimaryButton of a card sale |
+| `sale.card.tap` | Die Karte ans Handy halten, um sie zu aktivieren. | Hold the card to the phone to activate it. | Prislonite karticu uz telefon da je aktivirate. | 64 | Cards · also the iPhone sheet |
+| `sale.card.done.title` | Karte aktiviert | Card activated | Kartica aktivirana | 28 | Cards |
+| `sale.card.done.body` | Karte {number} ist aktiv. | Card {number} is active. | Kartica {number} je aktivna. | 48 | Cards · inventory number |
+| `sale.card.failed.title` | Karte nicht aktiviert | Card not activated | Kartica nije aktivirana | 32 | Cards · nothing was sold |
+| `sale.card.notUsable` | Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen. | This card cannot be sold. Take another card from stock. | Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe. | 90 | Cards · not in stock, other restaurant |
 
 ### 5.14 S12 QR scan
 
@@ -778,6 +789,46 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `menu.signOut.confirm.title` | Abmelden? | Sign out? | Odjaviti se? | 28 | 03a · Dialog |
 | `menu.signOut.confirm.body` | Der Schichtverlauf wird von diesem Gerät gelöscht. | The shift history on this device will be deleted. | Historija smjene na ovom uređaju bit će izbrisana. | 90 | 03a |
 | `menu.signOut.confirm.action` | Abmelden | Sign out | Odjavi se | 24 | 12 · DangerButton (cancel = `common.cancel`) |
+| `menu.cards` | Karten | Cards | Kartice | 24 | Cards · section header |
+| `menu.cards.receive` | Lieferung bestätigen | Confirm a delivery | Potvrdite isporuku | 28 | Cards |
+| `menu.cards.find` | Karte suchen | Find a card | Pronađite karticu | 28 | Cards |
+
+Card desk (managers and owners): confirming a delivery, looking up, suspending and replacing a card.
+
+| Key | DE | EN | BHS | Max | Notes |
+|---|---|---|---|---|---|
+| `cards.receive.none` | Keine Lieferung offen. | No delivery waiting. | Nema isporuke na čekanju. | 48 | Cards |
+| `cards.receive.batch` | {count, plural, one {# Karte} other {# Karten}} | {count, plural, one {# card} other {# cards}} | {count, plural, one {# kartica} few {# kartice} other {# kartica}} | 24 | Cards · list row value |
+| `cards.receive.onHold` | Wird geprüft – die Anzahl stimmte nicht. | Being checked – the count did not match. | Provjerava se – broj se nije slagao. | 60 | Cards · batch on hold |
+| `cards.receive.count` | Wie viele Karten sind im Paket? | How many cards are in the parcel? | Koliko kartica je u paketu? | 48 | Cards · count step |
+| `cards.receive.continue` | Weiter mit {count} | Continue with {count} | Nastavi sa {count} | 28 | Cards · `{count}` digits |
+| `cards.receive.tap` | Eine Karte aus dem Paket ans Handy halten. | Hold one card from the parcel to the phone. | Prislonite jednu karticu iz paketa uz telefon. | 64 | Cards · also the iPhone sheet |
+| `cards.receive.done` | Lieferung bestätigt – die Karten sind verkaufsbereit. | Delivery confirmed – the cards are ready to sell. | Isporuka potvrđena – kartice su spremne za prodaju. | 80 | Cards |
+| `cards.receive.hold` | Die Anzahl stimmt nicht. GiftCard Pro prüft die Lieferung. | The count does not match. GiftCard Pro checks the delivery. | Broj se ne slaže. GiftCard Pro provjerava isporuku. | 80 | Cards |
+| `cards.receive.wrongCard` | Diese Karte gehört nicht zu dieser Lieferung. | This card is not from this delivery. | Ova kartica nije iz ove isporuke. | 64 | Cards |
+| `cards.find.label` | Kartennummer | Card number | Broj kartice | 24 | Cards · TextField |
+| `cards.find.helper` | Steht beim Gutschein im Dashboard, z. B. B-2026-0001-0042 | Shown with the voucher in the dashboard, e.g. B-2026-0001-0042 | Prikazan uz vaučer na dashboardu, npr. B-2026-0001-0042 | 80 | Cards |
+| `cards.find.action` | Suchen | Look up | Traži | 16 | Cards |
+| `cards.find.notFound` | Keine Karte mit dieser Nummer. | No card with this number. | Nema kartice s tim brojem. | 48 | Cards |
+| `cards.state.active` | Aktiv | Active | Aktivna | 16 | Cards · StatusBadge |
+| `cards.state.suspended` | Gesperrt | Suspended | Blokirana | 16 | Cards |
+| `cards.state.replaced` | Ersetzt | Replaced | Zamijenjena | 16 | Cards |
+| `cards.state.available` | Im Lager | In stock | Na zalihi | 16 | Cards |
+| `cards.state.other` | Nicht in Verwendung | Not in use | Nije u upotrebi | 24 | Cards |
+| `cards.balance` | Guthaben {amount} | Balance {amount} | Stanje {amount} | 32 | Cards |
+| `cards.suspend` | Karte sperren | Suspend card | Blokirajte karticu | 24 | Cards |
+| `cards.resume` | Karte entsperren | Resume card | Deblokirajte karticu | 24 | Cards |
+| `cards.replace` | Karte ersetzen | Replace card | Zamijenite karticu | 24 | Cards |
+| `cards.reason.title` | Grund | Reason | Razlog | 16 | Cards · section label |
+| `cards.reason.lost` | Verloren | Lost | Izgubljena | 16 | Cards |
+| `cards.reason.stolen` | Gestohlen | Stolen | Ukradena | 16 | Cards |
+| `cards.reason.damaged` | Beschädigt | Damaged | Oštećena | 16 | Cards |
+| `cards.reason.found` | Wiedergefunden | Found again | Pronađena | 16 | Cards · resume |
+| `cards.replace.tap` | Neue Karte aus dem Lager ans Handy halten. Das Guthaben geht auf sie über. | Hold a new card from stock to the phone. The balance moves to it. | Prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na nju. | 90 | Cards · also the iPhone sheet |
+| `cards.replace.done` | Ersetzt durch {number}. Die alte Karte gilt nicht mehr. | Replaced by {number}. The old card no longer works. | Zamijenjena karticom {number}. Stara kartica više ne vrijedi. | 80 | Cards |
+| `cards.suspend.done` | Gesperrt – die Karte zahlt nicht mehr. | Suspended – the card no longer pays. | Blokirana – kartica više ne plaća. | 60 | Cards |
+| `cards.resume.done` | Entsperrt – die Karte zahlt wieder. | Resumed – the card pays again. | Deblokirana – kartica ponovo plaća. | 60 | Cards |
+| `cards.failed` | Das hat nicht geklappt. Erneut versuchen. | That did not work. Try again. | To nije uspjelo. Pokušajte ponovo. | 60 | Cards |
 
 ### 5.17 S15 Session and account states
 
@@ -866,7 +917,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **337 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **383 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

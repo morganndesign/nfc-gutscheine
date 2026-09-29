@@ -877,6 +877,45 @@ class AppLocalizationsDe extends AppLocalizations {
   String get saleQrA11y => 'QR-Code des Gutscheins';
 
   @override
+  String get saleFormTitle => 'Was wird verkauft?';
+
+  @override
+  String get saleFormPrintable => 'Gedruckter Gutschein';
+
+  @override
+  String get saleFormPrintableCaption => 'Mit QR-Code zum Ausdrucken';
+
+  @override
+  String get saleFormCard => 'Geschenkkarte';
+
+  @override
+  String get saleFormCardCaption =>
+      'Eine Karte aus dem Lager, beim Verkauf aktiviert';
+
+  @override
+  String saleCardSubmit(String amount) {
+    return 'Karte antippen · $amount';
+  }
+
+  @override
+  String get saleCardTap => 'Die Karte ans Handy halten, um sie zu aktivieren.';
+
+  @override
+  String get saleCardDoneTitle => 'Karte aktiviert';
+
+  @override
+  String saleCardDoneBody(String number) {
+    return 'Karte $number ist aktiv.';
+  }
+
+  @override
+  String get saleCardFailedTitle => 'Karte nicht aktiviert';
+
+  @override
+  String get saleCardNotUsable =>
+      'Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen.';
+
+  @override
   String get qrTitle => 'Gutschein scannen';
 
   @override
@@ -1029,6 +1068,130 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get menuSignOutConfirmAction => 'Abmelden';
+
+  @override
+  String get menuCards => 'Karten';
+
+  @override
+  String get menuCardsReceive => 'Lieferung bestätigen';
+
+  @override
+  String get menuCardsFind => 'Karte suchen';
+
+  @override
+  String get cardsReceiveNone => 'Keine Lieferung offen.';
+
+  @override
+  String cardsReceiveBatch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Karten',
+      one: '$count Karte',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardsReceiveOnHold => 'Wird geprüft – die Anzahl stimmte nicht.';
+
+  @override
+  String get cardsReceiveCount => 'Wie viele Karten sind im Paket?';
+
+  @override
+  String cardsReceiveContinue(int count) {
+    return 'Weiter mit $count';
+  }
+
+  @override
+  String get cardsReceiveTap => 'Eine Karte aus dem Paket ans Handy halten.';
+
+  @override
+  String get cardsReceiveDone =>
+      'Lieferung bestätigt – die Karten sind verkaufsbereit.';
+
+  @override
+  String get cardsReceiveHold =>
+      'Die Anzahl stimmt nicht. GiftCard Pro prüft die Lieferung.';
+
+  @override
+  String get cardsReceiveWrongCard =>
+      'Diese Karte gehört nicht zu dieser Lieferung.';
+
+  @override
+  String get cardsFindLabel => 'Kartennummer';
+
+  @override
+  String get cardsFindHelper =>
+      'Steht beim Gutschein im Dashboard, z. B. B-2026-0001-0042';
+
+  @override
+  String get cardsFindAction => 'Suchen';
+
+  @override
+  String get cardsFindNotFound => 'Keine Karte mit dieser Nummer.';
+
+  @override
+  String get cardsStateActive => 'Aktiv';
+
+  @override
+  String get cardsStateSuspended => 'Gesperrt';
+
+  @override
+  String get cardsStateReplaced => 'Ersetzt';
+
+  @override
+  String get cardsStateAvailable => 'Im Lager';
+
+  @override
+  String get cardsStateOther => 'Nicht in Verwendung';
+
+  @override
+  String cardsBalance(String amount) {
+    return 'Guthaben $amount';
+  }
+
+  @override
+  String get cardsSuspend => 'Karte sperren';
+
+  @override
+  String get cardsResume => 'Karte entsperren';
+
+  @override
+  String get cardsReplace => 'Karte ersetzen';
+
+  @override
+  String get cardsReasonTitle => 'Grund';
+
+  @override
+  String get cardsReasonLost => 'Verloren';
+
+  @override
+  String get cardsReasonStolen => 'Gestohlen';
+
+  @override
+  String get cardsReasonDamaged => 'Beschädigt';
+
+  @override
+  String get cardsReasonFound => 'Wiedergefunden';
+
+  @override
+  String get cardsReplaceTap =>
+      'Neue Karte aus dem Lager ans Handy halten. Das Guthaben geht auf sie über.';
+
+  @override
+  String cardsReplaceDone(String number) {
+    return 'Ersetzt durch $number. Die alte Karte gilt nicht mehr.';
+  }
+
+  @override
+  String get cardsSuspendDone => 'Gesperrt – die Karte zahlt nicht mehr.';
+
+  @override
+  String get cardsResumeDone => 'Entsperrt – die Karte zahlt wieder.';
+
+  @override
+  String get cardsFailed => 'Das hat nicht geklappt. Erneut versuchen.';
 
   @override
   String get sessionExpired => 'Sitzung abgelaufen';

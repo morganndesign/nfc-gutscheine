@@ -340,6 +340,54 @@ abstract final class Payloads {
 
   static const String cardAuthentication = '01JQ7Z8X9Y0A1B2C3D4E5F6G7H';
 
+  /// A manager who may sell, receive and manage physical cards.
+  static Map<String, Object?> cardManager() => <String, Object?>{
+    ...manager(),
+    'permissions': <String>['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'],
+  };
+
+  static const String bindPresentmentId = '01a0f000-0000-7000-8000-00000000b1d0';
+
+  /// The answer to step 2 of a `bind` or `receive` tap: the card, no voucher.
+  static Map<String, Object?> cardOnly({String id = bindPresentmentId, String number = 'B-2026-0001-0007', String state = 'available'}) =>
+      <String, Object?>{
+        'data': <String, Object?>{
+          'id': id,
+          'purpose': 'bind',
+          'method': 'live_auth',
+          'level': 'A3',
+          'expires_in': 60,
+          'voucher': null,
+          'card': <String, Object?>{'card_number': number, 'state': state},
+        },
+      };
+
+  static Map<String, Object?> soldCard({int value = 5000, bool replayed = false, String number = 'B-2026-0001-0007'}) => <String, Object?>{
+    'data': <String, Object?>{'id': soldId, 'kind': 'card', 'balance': value, 'currency': 'EUR', 'expires_at': null},
+    'card': <String, Object?>{'card_number': number, 'state': 'active'},
+    'printable': null,
+    'replayed': replayed,
+  };
+
+  static Map<String, Object?> cardInfo({String number = 'B-2026-0001-0007', String state = 'active', int? balance = 3200, String? successor}) =>
+      <String, Object?>{
+        'data': <String, Object?>{
+          'card_number': number,
+          'state': state,
+          'state_changed_at': '2026-09-29T10:00:00+00:00',
+          'batch_code': 'B-2026-0001',
+          'voucher': balance == null ? null : <String, Object?>{'id': 'v-1', 'voucher_number': '1268834313520042', 'status': 'active', 'balance': balance, 'currency': 'EUR'},
+          'successor': successor,
+        },
+      };
+
+  static Map<String, Object?> cardBatches() => <String, Object?>{
+    'data': <Object?>[
+      <String, Object?>{'id': 'b-1', 'batch_code': 'B-2026-0001', 'status': 'delivered', 'quantity_ordered': 50, 'counts': <String, Object?>{'in_transit': 50, 'available': 0}, 'delivered_at': '2026-09-28T10:00:00+00:00'},
+      <String, Object?>{'id': 'b-0', 'batch_code': 'B-2026-0000', 'status': 'in_service', 'quantity_ordered': 20, 'counts': <String, Object?>{'in_transit': 0, 'available': 12}},
+    ],
+  };
+
   static Map<String, Object?> cardPresentment({int balance = 5000, String status = 'active'}) {
     final Map<String, Object?> p = presentment(balance: balance, status: status);
     final Map<String, Object?> data = Map<String, Object?>.of(p['data']! as Map<String, Object?>)

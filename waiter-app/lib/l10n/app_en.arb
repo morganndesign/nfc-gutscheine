@@ -1239,6 +1239,60 @@
   "@saleQrA11y": {
     "description": "Spec key: sale.qr.a11y (12 §5.13) · Max: — · Notes: ADR-002 · (a11y)"
   },
+  "saleFormTitle": "What are you selling?",
+  "@saleFormTitle": {
+    "description": "Spec key: sale.form.title (12 §5.13) · Max: 28 · Notes: Cards · first step when the phone reads cards"
+  },
+  "saleFormPrintable": "Printed voucher",
+  "@saleFormPrintable": {
+    "description": "Spec key: sale.form.printable (12 §5.13) · Max: 28 · Notes: Cards"
+  },
+  "saleFormPrintableCaption": "With a QR code to print",
+  "@saleFormPrintableCaption": {
+    "description": "Spec key: sale.form.printable.caption (12 §5.13) · Max: 48 · Notes: Cards"
+  },
+  "saleFormCard": "Gift card",
+  "@saleFormCard": {
+    "description": "Spec key: sale.form.card (12 §5.13) · Max: 28 · Notes: Cards"
+  },
+  "saleFormCardCaption": "A card from stock, activated at the sale",
+  "@saleFormCardCaption": {
+    "description": "Spec key: sale.form.card.caption (12 §5.13) · Max: 60 · Notes: Cards"
+  },
+  "saleCardSubmit": "Tap card · {amount}",
+  "@saleCardSubmit": {
+    "description": "Spec key: sale.card.submit (12 §5.13) · Max: 32 · Notes: Cards · PrimaryButton of a card sale",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "saleCardTap": "Hold the card to the phone to activate it.",
+  "@saleCardTap": {
+    "description": "Spec key: sale.card.tap (12 §5.13) · Max: 64 · Notes: Cards · also the iPhone sheet"
+  },
+  "saleCardDoneTitle": "Card activated",
+  "@saleCardDoneTitle": {
+    "description": "Spec key: sale.card.done.title (12 §5.13) · Max: 28 · Notes: Cards"
+  },
+  "saleCardDoneBody": "Card {number} is active.",
+  "@saleCardDoneBody": {
+    "description": "Spec key: sale.card.done.body (12 §5.13) · Max: 48 · Notes: Cards · inventory number",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "saleCardFailedTitle": "Card not activated",
+  "@saleCardFailedTitle": {
+    "description": "Spec key: sale.card.failed.title (12 §5.13) · Max: 32 · Notes: Cards · nothing was sold"
+  },
+  "saleCardNotUsable": "This card cannot be sold. Take another card from stock.",
+  "@saleCardNotUsable": {
+    "description": "Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · not in stock, other restaurant"
+  },
   "qrTitle": "Scan voucher",
   "@qrTitle": {
     "description": "Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a"
@@ -1446,6 +1500,166 @@
   "menuSignOutConfirmAction": "Sign out",
   "@menuSignOutConfirmAction": {
     "description": "Spec key: menu.signOut.confirm.action (12 §5.16) · Max: 24 · Notes: 12 · DangerButton (cancel = common.cancel)"
+  },
+  "menuCards": "Cards",
+  "@menuCards": {
+    "description": "Spec key: menu.cards (12 §5.16) · Max: 24 · Notes: Cards · section header"
+  },
+  "menuCardsReceive": "Confirm a delivery",
+  "@menuCardsReceive": {
+    "description": "Spec key: menu.cards.receive (12 §5.16) · Max: 28 · Notes: Cards"
+  },
+  "menuCardsFind": "Find a card",
+  "@menuCardsFind": {
+    "description": "Spec key: menu.cards.find (12 §5.16) · Max: 28 · Notes: Cards"
+  },
+  "cardsReceiveNone": "No delivery waiting.",
+  "@cardsReceiveNone": {
+    "description": "Spec key: cards.receive.none (12 §5.16) · Max: 48 · Notes: Cards"
+  },
+  "cardsReceiveBatch": "{count, plural, one {{count} card} other {{count} cards}}",
+  "@cardsReceiveBatch": {
+    "description": "Spec key: cards.receive.batch (12 §5.16) · Max: 24 · Notes: Cards · list row value",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardsReceiveOnHold": "Being checked – the count did not match.",
+  "@cardsReceiveOnHold": {
+    "description": "Spec key: cards.receive.onHold (12 §5.16) · Max: 60 · Notes: Cards · batch on hold"
+  },
+  "cardsReceiveCount": "How many cards are in the parcel?",
+  "@cardsReceiveCount": {
+    "description": "Spec key: cards.receive.count (12 §5.16) · Max: 48 · Notes: Cards · count step"
+  },
+  "cardsReceiveContinue": "Continue with {count}",
+  "@cardsReceiveContinue": {
+    "description": "Spec key: cards.receive.continue (12 §5.16) · Max: 28 · Notes: Cards · {count} digits",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardsReceiveTap": "Hold one card from the parcel to the phone.",
+  "@cardsReceiveTap": {
+    "description": "Spec key: cards.receive.tap (12 §5.16) · Max: 64 · Notes: Cards · also the iPhone sheet"
+  },
+  "cardsReceiveDone": "Delivery confirmed – the cards are ready to sell.",
+  "@cardsReceiveDone": {
+    "description": "Spec key: cards.receive.done (12 §5.16) · Max: 80 · Notes: Cards"
+  },
+  "cardsReceiveHold": "The count does not match. GiftCard Pro checks the delivery.",
+  "@cardsReceiveHold": {
+    "description": "Spec key: cards.receive.hold (12 §5.16) · Max: 80 · Notes: Cards"
+  },
+  "cardsReceiveWrongCard": "This card is not from this delivery.",
+  "@cardsReceiveWrongCard": {
+    "description": "Spec key: cards.receive.wrongCard (12 §5.16) · Max: 64 · Notes: Cards"
+  },
+  "cardsFindLabel": "Card number",
+  "@cardsFindLabel": {
+    "description": "Spec key: cards.find.label (12 §5.16) · Max: 24 · Notes: Cards · TextField"
+  },
+  "cardsFindHelper": "Shown with the voucher in the dashboard, e.g. B-2026-0001-0042",
+  "@cardsFindHelper": {
+    "description": "Spec key: cards.find.helper (12 §5.16) · Max: 80 · Notes: Cards"
+  },
+  "cardsFindAction": "Look up",
+  "@cardsFindAction": {
+    "description": "Spec key: cards.find.action (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsFindNotFound": "No card with this number.",
+  "@cardsFindNotFound": {
+    "description": "Spec key: cards.find.notFound (12 §5.16) · Max: 48 · Notes: Cards"
+  },
+  "cardsStateActive": "Active",
+  "@cardsStateActive": {
+    "description": "Spec key: cards.state.active (12 §5.16) · Max: 16 · Notes: Cards · StatusBadge"
+  },
+  "cardsStateSuspended": "Suspended",
+  "@cardsStateSuspended": {
+    "description": "Spec key: cards.state.suspended (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsStateReplaced": "Replaced",
+  "@cardsStateReplaced": {
+    "description": "Spec key: cards.state.replaced (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsStateAvailable": "In stock",
+  "@cardsStateAvailable": {
+    "description": "Spec key: cards.state.available (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsStateOther": "Not in use",
+  "@cardsStateOther": {
+    "description": "Spec key: cards.state.other (12 §5.16) · Max: 24 · Notes: Cards"
+  },
+  "cardsBalance": "Balance {amount}",
+  "@cardsBalance": {
+    "description": "Spec key: cards.balance (12 §5.16) · Max: 32 · Notes: Cards",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "cardsSuspend": "Suspend card",
+  "@cardsSuspend": {
+    "description": "Spec key: cards.suspend (12 §5.16) · Max: 24 · Notes: Cards"
+  },
+  "cardsResume": "Resume card",
+  "@cardsResume": {
+    "description": "Spec key: cards.resume (12 §5.16) · Max: 24 · Notes: Cards"
+  },
+  "cardsReplace": "Replace card",
+  "@cardsReplace": {
+    "description": "Spec key: cards.replace (12 §5.16) · Max: 24 · Notes: Cards"
+  },
+  "cardsReasonTitle": "Reason",
+  "@cardsReasonTitle": {
+    "description": "Spec key: cards.reason.title (12 §5.16) · Max: 16 · Notes: Cards · section label"
+  },
+  "cardsReasonLost": "Lost",
+  "@cardsReasonLost": {
+    "description": "Spec key: cards.reason.lost (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsReasonStolen": "Stolen",
+  "@cardsReasonStolen": {
+    "description": "Spec key: cards.reason.stolen (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsReasonDamaged": "Damaged",
+  "@cardsReasonDamaged": {
+    "description": "Spec key: cards.reason.damaged (12 §5.16) · Max: 16 · Notes: Cards"
+  },
+  "cardsReasonFound": "Found again",
+  "@cardsReasonFound": {
+    "description": "Spec key: cards.reason.found (12 §5.16) · Max: 16 · Notes: Cards · resume"
+  },
+  "cardsReplaceTap": "Hold a new card from stock to the phone. The balance moves to it.",
+  "@cardsReplaceTap": {
+    "description": "Spec key: cards.replace.tap (12 §5.16) · Max: 90 · Notes: Cards · also the iPhone sheet"
+  },
+  "cardsReplaceDone": "Replaced by {number}. The old card no longer works.",
+  "@cardsReplaceDone": {
+    "description": "Spec key: cards.replace.done (12 §5.16) · Max: 80 · Notes: Cards",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "cardsSuspendDone": "Suspended – the card no longer pays.",
+  "@cardsSuspendDone": {
+    "description": "Spec key: cards.suspend.done (12 §5.16) · Max: 60 · Notes: Cards"
+  },
+  "cardsResumeDone": "Resumed – the card pays again.",
+  "@cardsResumeDone": {
+    "description": "Spec key: cards.resume.done (12 §5.16) · Max: 60 · Notes: Cards"
+  },
+  "cardsFailed": "That did not work. Try again.",
+  "@cardsFailed": {
+    "description": "Spec key: cards.failed (12 §5.16) · Max: 60 · Notes: Cards"
   },
   "sessionExpired": "Session expired",
   "@sessionExpired": {

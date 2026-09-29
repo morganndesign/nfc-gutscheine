@@ -875,6 +875,45 @@ class AppLocalizationsSr extends AppLocalizations {
   String get saleQrA11y => 'QR kôd vaučera';
 
   @override
+  String get saleFormTitle => 'Šta prodajete?';
+
+  @override
+  String get saleFormPrintable => 'Ispisani vaučer';
+
+  @override
+  String get saleFormPrintableCaption => 'Sa QR kodom za ispis';
+
+  @override
+  String get saleFormCard => 'Poklon kartica';
+
+  @override
+  String get saleFormCardCaption =>
+      'Kartica sa zalihe, aktivira se pri prodaji';
+
+  @override
+  String saleCardSubmit(String amount) {
+    return 'Prislonite karticu · $amount';
+  }
+
+  @override
+  String get saleCardTap => 'Prislonite karticu uz telefon da je aktivirate.';
+
+  @override
+  String get saleCardDoneTitle => 'Kartica aktivirana';
+
+  @override
+  String saleCardDoneBody(String number) {
+    return 'Kartica $number je aktivna.';
+  }
+
+  @override
+  String get saleCardFailedTitle => 'Kartica nije aktivirana';
+
+  @override
+  String get saleCardNotUsable =>
+      'Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe.';
+
+  @override
   String get qrTitle => 'Skeniraj vaučer';
 
   @override
@@ -1028,6 +1067,131 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get menuSignOutConfirmAction => 'Odjavi se';
+
+  @override
+  String get menuCards => 'Kartice';
+
+  @override
+  String get menuCardsReceive => 'Potvrdite isporuku';
+
+  @override
+  String get menuCardsFind => 'Pronađite karticu';
+
+  @override
+  String get cardsReceiveNone => 'Nema isporuke na čekanju.';
+
+  @override
+  String cardsReceiveBatch(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count kartica',
+      few: '$count kartice',
+      one: '$count kartica',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardsReceiveOnHold => 'Provjerava se – broj se nije slagao.';
+
+  @override
+  String get cardsReceiveCount => 'Koliko kartica je u paketu?';
+
+  @override
+  String cardsReceiveContinue(int count) {
+    return 'Nastavi sa $count';
+  }
+
+  @override
+  String get cardsReceiveTap =>
+      'Prislonite jednu karticu iz paketa uz telefon.';
+
+  @override
+  String get cardsReceiveDone =>
+      'Isporuka potvrđena – kartice su spremne za prodaju.';
+
+  @override
+  String get cardsReceiveHold =>
+      'Broj se ne slaže. GiftCard Pro provjerava isporuku.';
+
+  @override
+  String get cardsReceiveWrongCard => 'Ova kartica nije iz ove isporuke.';
+
+  @override
+  String get cardsFindLabel => 'Broj kartice';
+
+  @override
+  String get cardsFindHelper =>
+      'Prikazan uz vaučer na dashboardu, npr. B-2026-0001-0042';
+
+  @override
+  String get cardsFindAction => 'Traži';
+
+  @override
+  String get cardsFindNotFound => 'Nema kartice s tim brojem.';
+
+  @override
+  String get cardsStateActive => 'Aktivna';
+
+  @override
+  String get cardsStateSuspended => 'Blokirana';
+
+  @override
+  String get cardsStateReplaced => 'Zamijenjena';
+
+  @override
+  String get cardsStateAvailable => 'Na zalihi';
+
+  @override
+  String get cardsStateOther => 'Nije u upotrebi';
+
+  @override
+  String cardsBalance(String amount) {
+    return 'Stanje $amount';
+  }
+
+  @override
+  String get cardsSuspend => 'Blokirajte karticu';
+
+  @override
+  String get cardsResume => 'Deblokirajte karticu';
+
+  @override
+  String get cardsReplace => 'Zamijenite karticu';
+
+  @override
+  String get cardsReasonTitle => 'Razlog';
+
+  @override
+  String get cardsReasonLost => 'Izgubljena';
+
+  @override
+  String get cardsReasonStolen => 'Ukradena';
+
+  @override
+  String get cardsReasonDamaged => 'Oštećena';
+
+  @override
+  String get cardsReasonFound => 'Pronađena';
+
+  @override
+  String get cardsReplaceTap =>
+      'Prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na nju.';
+
+  @override
+  String cardsReplaceDone(String number) {
+    return 'Zamijenjena karticom $number. Stara kartica više ne vrijedi.';
+  }
+
+  @override
+  String get cardsSuspendDone => 'Blokirana – kartica više ne plaća.';
+
+  @override
+  String get cardsResumeDone => 'Deblokirana – kartica ponovo plaća.';
+
+  @override
+  String get cardsFailed => 'To nije uspjelo. Pokušajte ponovo.';
 
   @override
   String get sessionExpired => 'Sesija je istekla';

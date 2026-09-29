@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/material.dart' show MaterialPageRoute;
 import 'package:flutter/widgets.dart';
 
 import '../app/app_scope.dart';
@@ -9,6 +10,8 @@ import '../core/api/models.dart';
 import '../core/storage/settings_store.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
+import 'cards/s22_receive_delivery.dart';
+import 'cards/s23_card_lookup.dart';
 import 'scan/sheet_rows.dart';
 
 /// Gap between the account header and the text column (Avatar → name).
@@ -17,9 +20,9 @@ const double _headerGap = Space.s4;
 /// Minimum height of the account header (03a §9).
 const double _headerHeight = 72;
 
-/// S14 · Menu (03a §9): account, restaurant, device, appearance, sounds,
-/// haptics, keep screen on, sign out and version. Deliberately short —
-/// nothing here affects vouchers or money (09 §5).
+/// S14 · Menu (03a §9): account, restaurant, device, cards (managers and
+/// owners: confirm a delivery, find a card), appearance, sounds, haptics,
+/// keep screen on, sign out and version.
 Future<void> showMenuSheet(BuildContext context) => showWaiterSheet<void>(
   context: context,
   title: AppLocalizations.of(context).menuAccount,
@@ -73,6 +76,13 @@ class _MenuBodyState extends State<_MenuBody> {
     builder: (BuildContext sheetContext) => const _ThemeChoice(),
   );
 
+  /// Closes the menu and opens a card desk screen above S05.
+  void _open(Widget screen) {
+    final NavigatorState navigator = Navigator.of(context);
+    navigator.pop();
+    unawaited(navigator.push<void>(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => screen)));
+  }
+
   /// Sign out always asks (03a §9); confirm clears token, Recent and pending
   /// links, online or offline, and lands on S02.
   Future<void> _signOut() async {
@@ -123,6 +133,31 @@ class _MenuBodyState extends State<_MenuBody> {
               );
             },
           ),
+          if ((user?.canReceiveCards ?? false) || (user?.canManageCards ?? false)) ...<Widget>[
+            const SizedBox(height: Space.s6),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: margin),
+              child: Semantics(
+                header: true,
+                child: ScaledText(l10n.menuCards, type: TypeTokens.overline, color: c.fgTertiary),
+              ),
+            ),
+            const SizedBox(height: Space.s2),
+            if (user?.canReceiveCards ?? false)
+              SheetRow(
+                label: l10n.menuCardsReceive,
+                trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
+                onPressed: () => _open(const ReceiveDeliveryScreen()),
+                showDivider: user?.canManageCards ?? false,
+              ),
+            if (user?.canManageCards ?? false)
+              SheetRow(
+                label: l10n.menuCardsFind,
+                trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
+                onPressed: () => _open(const CardLookupScreen()),
+                showDivider: false,
+              ),
+          ],
           const SizedBox(height: Space.s6),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: margin),

@@ -76,12 +76,12 @@ class WaiterApi {
   }
 
   /// A card, step 1: what the phone read from it and the card's challenge.
-  Future<CardChallenge> beginCardPresentment(CardTap tap, {CancelToken? cancelToken}) async {
+  Future<CardChallenge> beginCardPresentment(CardTap tap, {String purpose = 'spend', CancelToken? cancelToken}) async {
     final ApiResponse r = await _client.send(
       'POST',
       '/presentments/cards',
       body: <String, Object?>{
-        'purpose': 'spend',
+        'purpose': purpose,
         'tap_url': tap.tapUrl,
         'rf_uid': tap.rfUidHex,
         'challenge': tap.challengeHex,
@@ -107,6 +107,54 @@ class WaiterApi {
     );
     return _parse(r, Presentment.fromJson);
   }
+
+  /// A card, step 2, for binding or receiving: the card is proven, no voucher yet.
+  Future<CardPresented> completeCardPresentmentForCard(String authentication, String responseHex) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/presentments/cards/$authentication',
+      body: <String, Object?>{'response': responseHex},
+      timeout: ApiTimeouts.lookup,
+    );
+    return _parse(r, CardPresented.fromJson);
+  }
+
+  Future<List<CardBatchSummary>> cardBatches() async =>
+      _parse(await _client.send('GET', '/card-batches'), CardBatchSummary.listFromJson);
+
+  /// Delivery receipt: the counted quantity and one tapped card of the batch. Answers the batch's new status.
+  Future<String> receiveCardBatch(String batchId, int count, String presentmentId) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/card-batches/$batchId/receipt',
+      body: <String, Object?>{'count': count, 'presentment_id': presentmentId},
+    );
+    return _parse(r, (Map<String, Object?> json) {
+      final Object? data = json['data'];
+      final Object? status = data is Map ? data['status'] : null;
+      if (status is! String) throw const FormatException('status');
+      return status;
+    });
+  }
+
+  Future<CardInfo> card(String number) async =>
+      _parse(await _client.send('GET', '/cards/${Uri.encodeComponent(number)}'), CardInfo.fromJson);
+
+  /// `suspend` or `resume`.
+  Future<CardInfo> changeCard(String number, String action, String reason) async => _parse(
+    await _client.send('POST', '/cards/${Uri.encodeComponent(number)}/$action', body: <String, Object?>{'reason': reason}),
+    CardInfo.fromJson,
+  );
+
+  /// Moves the voucher of card [number] to the tapped stock card; answers the new card.
+  Future<CardInfo> replaceCard(String number, String presentmentId, String reason) async => _parse(
+    await _client.send(
+      'POST',
+      '/cards/${Uri.encodeComponent(number)}/replacement',
+      body: <String, Object?>{'presentment_id': presentmentId, 'reason': reason},
+    ),
+    CardInfo.fromJson,
+  );
 
   /// Station: the batches waiting for personalisation.
   Future<List<StationBatch>> stationBatches() async {
@@ -170,13 +218,15 @@ class WaiterApi {
     required PaymentInput payment,
     String? customerEmail,
     required String idempotencyKey,
+    String? cardPresentmentId,
   }) async {
     final ApiResponse r = await _client.send(
       'POST',
       '/vouchers',
       body: <String, Object?>{
         'value': value,
-        'form': 'printable',
+        'form': cardPresentmentId == null ? 'printable' : 'card',
+        'presentment_id': ?cardPresentmentId,
         'payment': payment.toJson(),
         if (customerEmail != null) 'customer': <String, Object?>{'email': customerEmail},
       },

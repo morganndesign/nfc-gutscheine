@@ -232,7 +232,7 @@ class _ReadyScreenState extends State<ReadyScreen> {
           SecondaryButton(
             label: l10n.readySell,
             icon: WaiterIcon.ticket,
-            onPressed: _offline ? null : () => unawaited(openSellVoucher(context)),
+            onPressed: _offline ? null : () => unawaited(openSellVoucher(context, cards: _cardReader && (user?.canSellCards ?? false))),
             disabledReason: offlineReason,
           ),
       ],

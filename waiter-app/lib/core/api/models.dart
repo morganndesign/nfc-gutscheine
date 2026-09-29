@@ -164,6 +164,12 @@ abstract final class Permissions {
 
   /// Platform staff: the personalisation station (station token).
   static const String personalize = 'platform.cards.personalize';
+
+  /// Physical cards: see the restaurant's cards, confirm a delivery, link a card to a sale, suspend/replace.
+  static const String cardsView = 'cards.view';
+  static const String cardsReceive = 'cards.receive';
+  static const String cardsBind = 'cards.bind';
+  static const String cardsManage = 'cards.manage';
 }
 
 /// `/auth/me` and the `user` part of `POST /auth/token`.
@@ -233,6 +239,14 @@ class SessionUser {
 
   /// The complimentary payment method (owners).
   bool get canSellComplimentary => permissions.contains(Permissions.sellComplimentary);
+
+  /// Selling a physical card (a card voucher) needs selling and binding a card.
+  bool get canSellCards => canSell && permissions.contains(Permissions.cardsBind);
+
+  bool get canReceiveCards => permissions.contains(Permissions.cardsReceive);
+
+  /// Look up a card, suspend, resume and replace it.
+  bool get canManageCards => permissions.contains(Permissions.cardsManage) && permissions.contains(Permissions.cardsView);
 }
 
 /// Result of `POST /auth/token`.
@@ -588,6 +602,7 @@ class SoldVoucher {
     required this.printablePayload,
     required this.replayed,
     this.expiresAt,
+    this.cardNumber,
   });
 
   factory SoldVoucher.fromJson(Map<String, Object?> json) {
@@ -596,7 +611,9 @@ class SoldVoucher {
     // the sale without a new QR: `printable` is null then.
     final Object? printable = json['printable'];
     final bool replayed = json['replayed'] == true;
-    if (printable == null && !replayed) throw const FormatException('printable missing');
+    final Object? card = json['card'];
+    final String? cardNumber = card is Map ? _stringOrNull(card.cast<String, Object?>(), 'card_number') : null;
+    if (printable == null && !replayed && cardNumber == null) throw const FormatException('printable missing');
     return SoldVoucher(
       id: _string(data, 'id'),
       value: _int(data, 'balance'),
@@ -604,6 +621,7 @@ class SoldVoucher {
       expiresAt: _dateOrNull(data, 'expires_at'),
       printablePayload: printable == null ? null : _string(_map(printable, 'printable'), 'payload'),
       replayed: replayed,
+      cardNumber: cardNumber,
     );
   }
 
@@ -619,6 +637,95 @@ class SoldVoucher {
   /// sale whose QR can no longer be issued.
   final String? printablePayload;
   final bool replayed;
+
+  /// A card sale: the inventory number of the card now active for this voucher.
+  final String? cardNumber;
+}
+
+/// A card presented for binding or receiving (a live-authenticated tap without a voucher yet).
+@immutable
+class CardPresented {
+  const CardPresented({required this.id, required this.cardNumber, required this.cardState, required this.expiresIn});
+
+  factory CardPresented.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Map<String, Object?> card = _map(data['card'], 'card');
+    return CardPresented(
+      id: _string(data, 'id'),
+      cardNumber: _string(card, 'card_number'),
+      cardState: _string(card, 'state'),
+      expiresIn: Duration(seconds: _int(data, 'expires_in')),
+    );
+  }
+
+  final String id;
+  final String cardNumber;
+  final String cardState;
+  final Duration expiresIn;
+}
+
+/// A delivery of cards for this restaurant (`GET /card-batches`).
+@immutable
+class CardBatchSummary {
+  const CardBatchSummary({required this.id, required this.batchCode, required this.status, required this.inTransit, this.deliveredAt});
+
+  factory CardBatchSummary.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> counts = _map(json['counts'], 'counts');
+    return CardBatchSummary(
+      id: _string(json, 'id'),
+      batchCode: _string(json, 'batch_code'),
+      status: _string(json, 'status'),
+      inTransit: _int(counts, 'in_transit'),
+      deliveredAt: _dateOrNull(json, 'delivered_at'),
+    );
+  }
+
+  static List<CardBatchSummary> listFromJson(Map<String, Object?> json) {
+    final Object? data = json['data'];
+    if (data is! List) throw const FormatException('data');
+    return <CardBatchSummary>[for (final Object? row in data) CardBatchSummary.fromJson(_map(row, 'batch'))];
+  }
+
+  final String id;
+  final String batchCode;
+
+  /// `delivered` waits for the receipt; `on_hold` after a count that did not match.
+  final String status;
+
+  /// Cards shipped and not yet received.
+  final int inTransit;
+  final DateTime? deliveredAt;
+}
+
+/// A card as staff see it (`GET /cards/{number}`): no id, no UID.
+@immutable
+class CardInfo {
+  const CardInfo({required this.cardNumber, required this.state, this.voucherBalance, this.currency, this.successor});
+
+  factory CardInfo.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Object? voucher = data['voucher'];
+    final Map<String, Object?>? v = voucher is Map ? voucher.cast<String, Object?>() : null;
+    return CardInfo(
+      cardNumber: _string(data, 'card_number'),
+      state: _string(data, 'state'),
+      voucherBalance: v == null ? null : _int(v, 'balance'),
+      currency: v == null ? null : _stringOrNull(v, 'currency'),
+      successor: _stringOrNull(data, 'successor'),
+    );
+  }
+
+  final String cardNumber;
+
+  /// `available`, `active`, `suspended`, `replaced`, …
+  final String state;
+
+  /// Cents; null when the card pays for no voucher.
+  final int? voucherBalance;
+  final String? currency;
+
+  /// The card that replaced this one.
+  final String? successor;
 }
 
 /// `GET /devices/current` (S14 device name).

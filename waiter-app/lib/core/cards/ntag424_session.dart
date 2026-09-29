@@ -86,7 +86,9 @@ abstract final class Ntag424Session {
     final String rest = utf8.decode(Uint8List.sublistView(message, offset + 1, offset + payloadLength));
     return switch (prefix) {
       0x04 => 'https://$rest',
+      0x03 => 'http://$rest',
       0x02 => 'https://www.$rest',
+      0x01 => 'http://www.$rest',
       0x00 => rest,
       _ => throw const CardProtocolException('NDEF'),
     };

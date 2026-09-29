@@ -10,25 +10,32 @@ import '../app/app_scope.dart';
 import '../app/money.dart';
 import '../components/components.dart';
 import '../core/api/models.dart';
+import '../core/cards/card_presenter.dart';
 import '../core/format/format.dart';
 import '../core/platform/voucher_printer.dart';
 import '../core/sale/sale_controller.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
+import 'cards/card_tap_view.dart';
 import 'charge/voucher_data.dart';
 import 'scan/sheet_rows.dart';
 
 /// S20 · Sell voucher — managers and owners (`vouchers.sell`), on Android and
-/// iPhone alike; the server checks role and sign-in on every request.
-Future<void> openSellVoucher(BuildContext context) => Navigator.of(
+/// iPhone alike; the server checks role and sign-in on every request. With
+/// [cards] (the phone reads cards and the role may bind them) the first step
+/// asks: printed voucher or gift card.
+Future<void> openSellVoucher(BuildContext context, {bool cards = false}) => Navigator.of(
   context,
-).push<void>(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => const SellVoucherScreen()));
+).push<void>(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => SellVoucherScreen(cards: cards)));
 
 /// Side of the QR on the done step.
 const double _qrSide = 200;
 
 class SellVoucherScreen extends StatefulWidget {
-  const SellVoucherScreen({super.key});
+  const SellVoucherScreen({super.key, this.cards = false});
+
+  /// Offer the gift card form.
+  final bool cards;
 
   @override
   State<SellVoucherScreen> createState() => _SellVoucherScreenState();
@@ -43,10 +50,23 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_controller == null) {
-      final AppServices s = context.services;
-      _controller = SaleController(api: s.api, session: s.session, printer: s.voucherPrinter);
-    }
+    if (_controller == null && !widget.cards) _start(SaleForm.printable);
+  }
+
+  /// The form is chosen (or there is only one): the sale starts.
+  void _start(SaleForm form) {
+    final AppServices s = context.services;
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    setState(() {
+      _controller = SaleController(
+        api: s.api,
+        session: s.session,
+        printer: s.voucherPrinter,
+        form: form,
+        cards: CardPresenter(api: s.api, nfc: s.nfc),
+        cardTexts: (prompt: l10n.saleCardTap, checking: l10n.cardChecking, done: l10n.saleCardDoneTitle, failed: l10n.saleCardFailedTitle),
+      );
+    });
   }
 
   @override
@@ -82,6 +102,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
       );
       if (choice != DialogChoice.confirm || !mounted) return;
     }
+    await _controller?.cancelTap();
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -112,6 +133,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    if (_controller == null) return _formChoice(context, l10n);
     return ListenableBuilder(
       listenable: _c,
       builder: (BuildContext context, _) {
@@ -119,10 +141,11 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
         final Widget body = switch (state) {
           SaleAmount() => _amount(context, l10n, state),
           SaleDetails() => _details(context, l10n, state),
+          SaleTapCard(:final bool checking) => CardTapView(instruction: l10n.saleCardTap, checking: checking),
           SaleProblem() => _problem(l10n, state),
           SaleDone() => _done(context, l10n, state),
         };
-        final bool busy = state is SaleDetails && state.submitting;
+        final bool busy = (state is SaleDetails && state.submitting) || (state is SaleTapCard && state.checking);
         return PopScope<Object?>(
           canPop: false,
           onPopInvokedWithResult: (bool didPop, Object? result) {
@@ -296,7 +319,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
               ),
               const SizedBox(height: Space.s4),
               PrimaryButton(
-                label: l10n.saleSubmit(amount),
+                label: _c.form == SaleForm.card ? l10n.saleCardSubmit(amount) : l10n.saleSubmit(amount),
+                icon: _c.form == SaleForm.card ? WaiterIcon.nfcArcs : null,
                 loadingLabel: l10n.saleSubmitting,
                 status: s.submitting ? ButtonStatus.loading : ButtonStatus.idle,
                 onPressed: s.submitting ? null : () => unawaited(_c.sell()),
@@ -343,6 +367,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
         supportCode: hasCode ? code : null,
         requestId: hasCode ? s.requestId : null,
       ),
+      SaleProblemKind.card => _cardProblem(l10n, s),
       SaleProblemKind.notAllowed => ProblemScreen(
         family: ProblemFamily.account,
         title: l10n.saleNotAllowedTitle,
@@ -356,11 +381,80 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
     };
   }
 
+  /// The tapped card could not be sold: nothing was booked; hold the card again or take another one.
+  Widget _cardProblem(AppLocalizations l10n, SaleProblem s) {
+    final ({ProblemFamily family, String title, String body}) t = cardFailureTexts(
+      l10n,
+      s.card!,
+      notUsableTitle: l10n.saleCardFailedTitle,
+      notUsableBody: l10n.saleCardNotUsable,
+    );
+    return ProblemScreen(
+      family: t.family,
+      title: t.title,
+      body: t.body,
+      primary: ProblemAction(l10n.commonTapAgain, () => unawaited(_c.sell())),
+      secondary: ProblemAction(l10n.commonBack, _c.backToDetails),
+      onClose: () => unawaited(_close()),
+    );
+  }
+
+  // ------------------------------------------------------------------ form
+
+  /// First step when the phone reads cards: a printed QR voucher or a gift card from stock.
+  Widget _formChoice(BuildContext context, AppLocalizations l10n) {
+    final WaiterColors c = context.colors;
+    return ColoredBox(
+      color: c.bgCanvas,
+      child: Column(
+        children: <Widget>[
+          TopBar.task(onClose: () => Navigator.of(context).pop(), title: l10n.saleTitle),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: LayoutTokens.maxForm),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: context.layout.margin),
+                      child: Semantics(
+                        header: true,
+                        child: ScaledText(l10n.saleFormTitle, type: TypeTokens.titleM),
+                      ),
+                    ),
+                    const SizedBox(height: Space.s4),
+                    SheetRow(
+                      label: l10n.saleFormPrintable,
+                      caption: l10n.saleFormPrintableCaption,
+                      trailing: WaiterIconView(WaiterIcon.ticket, size: IconSize.s20, color: c.fgSecondary),
+                      onPressed: () => _start(SaleForm.printable),
+                    ),
+                    SheetRow(
+                      label: l10n.saleFormCard,
+                      caption: l10n.saleFormCardCaption,
+                      trailing: WaiterIconView(WaiterIcon.nfcArcs, size: IconSize.s20, color: c.fgSecondary),
+                      onPressed: () => _start(SaleForm.card),
+                      showDivider: false,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ------------------------------------------------------------------ done
 
   Widget _done(BuildContext context, AppLocalizations l10n, SaleDone s) {
     final WaiterColors c = context.colors;
     final String value = context.moneyFor(s.voucher.currency).format(s.voucher.value);
+    final String? card = s.voucher.cardNumber;
+    if (card != null) return _doneCard(context, l10n, value, card);
     if (!s.hasQr) return _doneWithoutQr(context, l10n, value);
     return Padding(
       padding: _pagePadding(context.layout),
@@ -430,6 +524,49 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                 large: true,
                 onPressed: s.printing || !s.printed ? null : _startOver,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A card sale: the card is active; nothing to print.
+  Widget _doneCard(BuildContext context, AppLocalizations l10n, String value, String number) {
+    final WaiterColors c = context.colors;
+    return Padding(
+      padding: _pagePadding(context.layout),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: LayoutTokens.maxForm),
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const SuccessMark(),
+                        const SizedBox(height: Space.s6),
+                        Semantics(
+                          liveRegion: true,
+                          header: true,
+                          child: ScaledText(l10n.saleCardDoneTitle, type: TypeTokens.titleL, textAlign: TextAlign.center),
+                        ),
+                        const SizedBox(height: Space.s2),
+                        ScaledText(l10n.saleDoneValue(value), type: TypeTokens.bodyL, color: c.fgSecondary, textAlign: TextAlign.center),
+                        const SizedBox(height: Space.s2),
+                        ScaledText(l10n.saleCardDoneBody(number), type: TypeTokens.bodyM, color: c.fgSecondary, textAlign: TextAlign.center),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Space.s4),
+              PrimaryButton(label: l10n.commonDone, onPressed: () => unawaited(_close())),
+              const SizedBox(height: Space.s2),
+              TertiaryButton(label: l10n.saleAnother, large: true, onPressed: _startOver),
             ],
           ),
         ),

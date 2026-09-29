@@ -1556,6 +1556,72 @@ abstract class AppLocalizations {
   /// **'QR code of the voucher'**
   String get saleQrA11y;
 
+  /// Spec key: sale.form.title (12 §5.13) · Max: 28 · Notes: Cards · first step when the phone reads cards
+  ///
+  /// In en, this message translates to:
+  /// **'What are you selling?'**
+  String get saleFormTitle;
+
+  /// Spec key: sale.form.printable (12 §5.13) · Max: 28 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Printed voucher'**
+  String get saleFormPrintable;
+
+  /// Spec key: sale.form.printable.caption (12 §5.13) · Max: 48 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'With a QR code to print'**
+  String get saleFormPrintableCaption;
+
+  /// Spec key: sale.form.card (12 §5.13) · Max: 28 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Gift card'**
+  String get saleFormCard;
+
+  /// Spec key: sale.form.card.caption (12 §5.13) · Max: 60 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'A card from stock, activated at the sale'**
+  String get saleFormCardCaption;
+
+  /// Spec key: sale.card.submit (12 §5.13) · Max: 32 · Notes: Cards · PrimaryButton of a card sale
+  ///
+  /// In en, this message translates to:
+  /// **'Tap card · {amount}'**
+  String saleCardSubmit(String amount);
+
+  /// Spec key: sale.card.tap (12 §5.13) · Max: 64 · Notes: Cards · also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the card to the phone to activate it.'**
+  String get saleCardTap;
+
+  /// Spec key: sale.card.done.title (12 §5.13) · Max: 28 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Card activated'**
+  String get saleCardDoneTitle;
+
+  /// Spec key: sale.card.done.body (12 §5.13) · Max: 48 · Notes: Cards · inventory number
+  ///
+  /// In en, this message translates to:
+  /// **'Card {number} is active.'**
+  String saleCardDoneBody(String number);
+
+  /// Spec key: sale.card.failed.title (12 §5.13) · Max: 32 · Notes: Cards · nothing was sold
+  ///
+  /// In en, this message translates to:
+  /// **'Card not activated'**
+  String get saleCardFailedTitle;
+
+  /// Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · not in stock, other restaurant
+  ///
+  /// In en, this message translates to:
+  /// **'This card cannot be sold. Take another card from stock.'**
+  String get saleCardNotUsable;
+
   /// Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a
   ///
   /// In en, this message translates to:
@@ -1824,6 +1890,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out'**
   String get menuSignOutConfirmAction;
+
+  /// Spec key: menu.cards (12 §5.16) · Max: 24 · Notes: Cards · section header
+  ///
+  /// In en, this message translates to:
+  /// **'Cards'**
+  String get menuCards;
+
+  /// Spec key: menu.cards.receive (12 §5.16) · Max: 28 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm a delivery'**
+  String get menuCardsReceive;
+
+  /// Spec key: menu.cards.find (12 §5.16) · Max: 28 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Find a card'**
+  String get menuCardsFind;
+
+  /// Spec key: cards.receive.none (12 §5.16) · Max: 48 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'No delivery waiting.'**
+  String get cardsReceiveNone;
+
+  /// Spec key: cards.receive.batch (12 §5.16) · Max: 24 · Notes: Cards · list row value
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {{count} card} other {{count} cards}}'**
+  String cardsReceiveBatch(int count);
+
+  /// Spec key: cards.receive.onHold (12 §5.16) · Max: 60 · Notes: Cards · batch on hold
+  ///
+  /// In en, this message translates to:
+  /// **'Being checked – the count did not match.'**
+  String get cardsReceiveOnHold;
+
+  /// Spec key: cards.receive.count (12 §5.16) · Max: 48 · Notes: Cards · count step
+  ///
+  /// In en, this message translates to:
+  /// **'How many cards are in the parcel?'**
+  String get cardsReceiveCount;
+
+  /// Spec key: cards.receive.continue (12 §5.16) · Max: 28 · Notes: Cards · {count} digits
+  ///
+  /// In en, this message translates to:
+  /// **'Continue with {count}'**
+  String cardsReceiveContinue(int count);
+
+  /// Spec key: cards.receive.tap (12 §5.16) · Max: 64 · Notes: Cards · also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold one card from the parcel to the phone.'**
+  String get cardsReceiveTap;
+
+  /// Spec key: cards.receive.done (12 §5.16) · Max: 80 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Delivery confirmed – the cards are ready to sell.'**
+  String get cardsReceiveDone;
+
+  /// Spec key: cards.receive.hold (12 §5.16) · Max: 80 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'The count does not match. GiftCard Pro checks the delivery.'**
+  String get cardsReceiveHold;
+
+  /// Spec key: cards.receive.wrongCard (12 §5.16) · Max: 64 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'This card is not from this delivery.'**
+  String get cardsReceiveWrongCard;
+
+  /// Spec key: cards.find.label (12 §5.16) · Max: 24 · Notes: Cards · TextField
+  ///
+  /// In en, this message translates to:
+  /// **'Card number'**
+  String get cardsFindLabel;
+
+  /// Spec key: cards.find.helper (12 §5.16) · Max: 80 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Shown with the voucher in the dashboard, e.g. B-2026-0001-0042'**
+  String get cardsFindHelper;
+
+  /// Spec key: cards.find.action (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Look up'**
+  String get cardsFindAction;
+
+  /// Spec key: cards.find.notFound (12 §5.16) · Max: 48 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'No card with this number.'**
+  String get cardsFindNotFound;
+
+  /// Spec key: cards.state.active (12 §5.16) · Max: 16 · Notes: Cards · StatusBadge
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get cardsStateActive;
+
+  /// Spec key: cards.state.suspended (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended'**
+  String get cardsStateSuspended;
+
+  /// Spec key: cards.state.replaced (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Replaced'**
+  String get cardsStateReplaced;
+
+  /// Spec key: cards.state.available (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'In stock'**
+  String get cardsStateAvailable;
+
+  /// Spec key: cards.state.other (12 §5.16) · Max: 24 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Not in use'**
+  String get cardsStateOther;
+
+  /// Spec key: cards.balance (12 §5.16) · Max: 32 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Balance {amount}'**
+  String cardsBalance(String amount);
+
+  /// Spec key: cards.suspend (12 §5.16) · Max: 24 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Suspend card'**
+  String get cardsSuspend;
+
+  /// Spec key: cards.resume (12 §5.16) · Max: 24 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Resume card'**
+  String get cardsResume;
+
+  /// Spec key: cards.replace (12 §5.16) · Max: 24 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Replace card'**
+  String get cardsReplace;
+
+  /// Spec key: cards.reason.title (12 §5.16) · Max: 16 · Notes: Cards · section label
+  ///
+  /// In en, this message translates to:
+  /// **'Reason'**
+  String get cardsReasonTitle;
+
+  /// Spec key: cards.reason.lost (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Lost'**
+  String get cardsReasonLost;
+
+  /// Spec key: cards.reason.stolen (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Stolen'**
+  String get cardsReasonStolen;
+
+  /// Spec key: cards.reason.damaged (12 §5.16) · Max: 16 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Damaged'**
+  String get cardsReasonDamaged;
+
+  /// Spec key: cards.reason.found (12 §5.16) · Max: 16 · Notes: Cards · resume
+  ///
+  /// In en, this message translates to:
+  /// **'Found again'**
+  String get cardsReasonFound;
+
+  /// Spec key: cards.replace.tap (12 §5.16) · Max: 90 · Notes: Cards · also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a new card from stock to the phone. The balance moves to it.'**
+  String get cardsReplaceTap;
+
+  /// Spec key: cards.replace.done (12 §5.16) · Max: 80 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Replaced by {number}. The old card no longer works.'**
+  String cardsReplaceDone(String number);
+
+  /// Spec key: cards.suspend.done (12 §5.16) · Max: 60 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Suspended – the card no longer pays.'**
+  String get cardsSuspendDone;
+
+  /// Spec key: cards.resume.done (12 §5.16) · Max: 60 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Resumed – the card pays again.'**
+  String get cardsResumeDone;
+
+  /// Spec key: cards.failed (12 §5.16) · Max: 60 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'That did not work. Try again.'**
+  String get cardsFailed;
 
   /// Spec key: session.expired (12 §5.17) · Max: 28 · Notes: B · A01
   ///
