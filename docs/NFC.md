@@ -10,13 +10,13 @@ sold. This page is the operational reference and the **validation procedure for 
 |---|---|
 | A copied tap URL (photographed, logged, shared) | The URL carries SUN data: UID and read counter encrypted with K1, MAC with the card's own K2 (AN12196). The server accepts each counter once (compare-and-set); an older or repeated URL is refused (`SUN_REPLAYED`) and counted by the fraud rules. |
 | A cloned NDEF on another chip | Paying, selling and receiving need **live authentication**: AuthenticateEV2First with the card's K3, answered by the chip, relayed by the phone. The radio UID must equal the UID inside the SUN (`rf_uid_mismatch` → critical alert). |
-| A chip that is not a genuine NXP NTAG 424 DNA | The station reads NXP's **originality signature** (Read_Sig, ECDSA secp224r1 over the UID) and verifies it against NXP's public key before any key is written; a fake becomes `qa_failed` (critical alert). |
+| A chip that is not a genuine NXP NTAG 424 DNA | The station reads **GetVersion** (NXP vendor, NTAG 424 DNA product, production data carrying the radio UID) and NXP's **originality signature** (Read_Sig, ECDSA secp224r1 over the UID, verified against NXP's public key) before any key is written; anything else becomes `qa_failed` (critical alert `card.counterfeit`, one per batch). |
 | Extracting keys from one card | Every card has its own K0, K2, K3 (two-level AN10922 diversification root → batch → card, all derived inside the key provider); K1 is per key set. One card's keys unlock nothing else. |
 | Changing a card's content or keys | NDEF file: read free, write and change only with K0; the SDM counter cannot be read out; all configuration runs under EV2 secure messaging (CommMode.Full, MACed responses verified). K0 exists only in the key provider. |
 | Replaying a tap into a payment | A presentment is single use, 60 seconds, bound to user, device, restaurant, purpose and (for spending) voucher. |
 | A card lost or stolen | Suspend it (dashboard or app) — it stops paying at once, also for a tap made a moment earlier; replace it with a stock card, the balance stays with the voucher. |
 | A staff member moving a guest's balance onto a stock card they keep | A manager replaces only a card that is at hand (the old card is tapped: `surrender`); a lost or stolen card is replaced by the owner. The guest gets an e-mail for every replacement; three replacements by one person in a day raise `card.replacements`. |
-| A compromised batch or key set | `compromised` revokes every card of the batch not yet with a guest; `cards:key-set:create` rotates to a new key set (old one `verify_only`). |
+| A compromised batch or key set | `compromised` revokes the batch's stock cards and suspends its guests' cards (they no longer pay; the owner replaces them, the balance stays). `cards:key-set:compromised <set> --confirm=<set>` does this for every batch of a leaked key set and retires it (no tap verifies again). Routine rotation: `cards:key-set:create` (old set `verify_only`). |
 | A changed or swapped keystore | Daily `cards:key-set:verify` compares every root key with the key check value of its ceremony. |
 
 ### NTAG 424 DNA features — used and deliberately not used
@@ -25,6 +25,7 @@ sold. This page is the operational reference and the **validation procedure for 
 |---|---|
 | AES-128 keys K0–K4, AuthenticateEV2First, secure messaging | Used (K0 change key, K1 SUN meta read, K2 SUN MAC, K3 live challenge; K4 unused and referenced by no access right). |
 | SDM with encrypted PICCData + SDMMAC, SDMReadCtr | Used (`SDMOptions C1`, `SDMAccessRights FF 12`: counter retrieval never, meta read K1, file read K2). |
+| GetVersion (product, UID in production data) | Used at the station. |
 | Originality signature (Read_Sig) | Used at the station. |
 | Key versions | Used (01 for every key written; makes re-personalisation after an interruption safe). |
 | LRP mode | Not used: AES mode with per-card diversified keys is sufficient; LRP would change every key operation for no gain in this threat model. |
