@@ -11,8 +11,10 @@ use App\Exceptions\Domain\CardStateException;
 use App\Exceptions\Domain\DomainException;
 use App\Exceptions\Domain\PresentmentInvalidException;
 use App\Exceptions\Domain\TenantMismatchException;
+use App\Jobs\SendVoucherNotification;
 use App\Models\Card;
 use App\Models\CardBatch;
+use App\Models\NotificationTemplate;
 use App\Models\Voucher;
 use App\Services\Audit\AuditLogger;
 use App\Services\Media\CardMediumService;
@@ -83,35 +85,47 @@ final class CardService
     {
         $this->assertTenant($old->restaurant_id);
 
-        return $this->guarded($actor, 'replacement', $old->card_number, null, fn (): Card => DB::transaction(function () use ($actor, $old, $presentmentId, $reason): Card {
-            $presentment = $this->presentments->lockForUse($presentmentId);
-            $new = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Bind);
+        $voucherId = null;
+        $card = $this->guarded($actor, 'replacement', $old->card_number, null, function () use ($actor, $old, $presentmentId, $reason, &$voucherId): Card {
+            return DB::transaction(function () use ($actor, $old, $presentmentId, $reason, &$voucherId): Card {
+                $presentment = $this->presentments->lockForUse($presentmentId);
+                $new = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Bind);
 
-            /** @var Card $locked */
-            $locked = Card::query()->withoutGlobalScopes()->whereKey($old->getKey())->lockForUpdate()->firstOrFail();
-            if ($locked->getKey() === $new->getKey()) {
-                throw new CardStateException('A card cannot replace itself.');
-            }
-            if (! in_array($locked->state, [CardState::Active, CardState::Suspended], true)) {
-                throw new CardStateException('Only an active or suspended card can be replaced.', ['state' => $locked->state->value]);
-            }
-            $medium = $this->media->activeOf($locked) ?? throw new CardStateException('This card is not linked to a voucher.');
-            /** @var Voucher $voucher */
-            $voucher = Voucher::query()->whereKey($medium->voucher_id)->lockForUpdate()->firstOrFail();
+                /** @var Card $locked */
+                $locked = Card::query()->withoutGlobalScopes()->whereKey($old->getKey())->lockForUpdate()->firstOrFail();
+                if ($locked->getKey() === $new->getKey()) {
+                    throw new CardStateException('A card cannot replace itself.');
+                }
+                if (! in_array($locked->state, [CardState::Active, CardState::Suspended], true)) {
+                    throw new CardStateException('Only an active or suspended card can be replaced.', ['state' => $locked->state->value]);
+                }
+                $medium = $this->media->activeOf($locked) ?? throw new CardStateException('This card is not linked to a voucher.');
+                /** @var Voucher $voucher */
+                $voucher = Voucher::query()->whereKey($medium->voucher_id)->lockForUpdate()->firstOrFail();
+                $voucherId = $voucher->getKey();
 
-            $this->media->revoke($actor, $medium, $voucher, 'card replaced');
-            $this->lifecycle->transition($locked, CardState::Replaced, mb_substr('replaced: '.$reason, 0, 120), $actor, $voucher, successor: $new);
-            $this->lifecycle->transition($new, CardState::Bound, 'replacement for '.$locked->card_number, $actor, $voucher);
-            $this->media->attach($actor, $voucher, $new, 'replacement');
-            $active = $this->lifecycle->transition($new, CardState::Active, 'voucher activated', $actor, $voucher);
+                $this->media->revoke($actor, $medium, $voucher, 'card replaced');
+                $this->lifecycle->transition($locked, CardState::Replaced, mb_substr('replaced: '.$reason, 0, 120), $actor, $voucher, successor: $new);
+                $this->lifecycle->transition($new, CardState::Bound, 'replacement for '.$locked->card_number, $actor, $voucher);
+                $this->media->attach($actor, $voucher, $new, 'replacement');
+                $active = $this->lifecycle->transition($new, CardState::Active, 'voucher activated', $actor, $voucher);
 
-            $this->audit->log('card.replaced', $actor, $voucher, null, [
-                'old_card' => $locked->card_number,
-                'new_card' => $new->card_number,
-            ], ['reason' => $reason]);
+                $this->audit->log('card.replaced', $actor, $voucher, null, [
+                    'old_card' => $locked->card_number,
+                    'new_card' => $new->card_number,
+                ], ['reason' => $reason]);
 
-            return $active;
-        }, self::DB_ATTEMPTS));
+                return $active;
+            }, self::DB_ATTEMPTS);
+        });
+
+        // The guest hears of it: a replacement moves the balance to another physical card, so a replacement the guest
+        // did not ask for (a staff member keeping the new card) does not go unnoticed.
+        if (is_string($voucherId)) {
+            SendVoucherNotification::dispatch($voucherId, NotificationTemplate::KEY_CARD_REPLACED);
+        }
+
+        return $card;
     }
 
     /** @param list<CardState> $from */

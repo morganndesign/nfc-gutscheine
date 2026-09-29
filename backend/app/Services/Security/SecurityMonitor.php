@@ -102,6 +102,11 @@ final class SecurityMonitor
             // Debits running into the per-transaction, daily or velocity limits.
             ['name' => 'money.limit_hits', 'severity' => 'warning', 'subject' => $restaurant, 'threshold' => 3, 'window' => 60,
                 'match' => static fn (SecurityEvent $e): bool => ($refused($e, T::VoucherRedeem, 'VELOCITY_LIMIT_EXCEEDED') || $refused($e, T::VoucherRedeem, 'DEBIT_LIMIT_EXCEEDED')) && $restaurant($e) !== null],
+            // One person replacing many guests' cards in a day: a replacement moves a balance onto a card in the
+            // staff member's hand (insider theft with stock cards).
+            ['name' => 'card.replacements', 'severity' => 'warning', 'subject' => $user, 'threshold' => 3, 'window' => 1440,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::CardTransition && $e->outcome === SecurityEventOutcome::Succeeded
+                    && ($e->data['to_state'] ?? null) === 'replaced' && $user($e) !== null],
             // One person correcting many bookings in a day.
             ['name' => 'money.reversals', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherReverse && $e->outcome === SecurityEventOutcome::Succeeded && $user($e) !== null],

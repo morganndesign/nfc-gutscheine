@@ -77,6 +77,7 @@ final class VoucherNotificationService
 
         $variables = [
             'restaurant_name' => $restaurant->name,
+            'date' => Carbon::now()->timezone($restaurant->timezone)->format('d.m.Y'),
             'customer_name' => $voucher->customer->full_name ?? '',
             'expires_at' => $expiresAt ?? '—',
             'validity' => match (true) {

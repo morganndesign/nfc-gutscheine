@@ -10,18 +10,25 @@ use App\Enums\MediumStatus;
 use App\Enums\RoleSlug;
 use App\Enums\SecurityEventOutcome;
 use App\Enums\SecurityEventType;
+use App\Jobs\SendVoucherNotification;
 use App\Models\Card;
 use App\Models\CardBatch;
 use App\Models\Medium;
+use App\Models\NotificationLog;
+use App\Models\NotificationTemplate;
 use App\Models\Restaurant;
+use App\Models\SecurityAlert;
 use App\Models\SecurityEvent;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Cards\CardBatchLifecycle;
 use App\Services\Cards\CardLifecycle;
+use App\Services\Notifications\VoucherNotificationService;
 use App\Support\Actor;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\Mime\Email;
 use Tests\Support\Ntag424Chip;
 use Tests\Support\WithCards;
 use Tests\TestCase;
@@ -259,6 +266,46 @@ final class CardWorkflowTest extends TestCase
 
         // Found again: a replaced card never comes back.
         $this->postJson("/api/v1/cards/{$number}/resume", ['reason' => 'found'])->assertStatus(409);
+    }
+
+    public function test_the_guest_is_told_of_a_replacement_and_many_replacements_raise_an_alert(): void
+    {
+        Queue::fake();
+        [, $cards] = $this->stock(6);
+        $voucherIds = [];
+        foreach ([0, 1, 2] as $i) {
+            $voucherIds[] = (string) $this->postJson('/api/v1/vouchers', [
+                'value' => 3000,
+                'form' => 'card',
+                'presentment_id' => $this->tapped($this->chip($cards[$i]), 'bind'),
+                'payment' => ['method' => 'cash'],
+                'customer' => ['email' => "guest{$i}@example.com"],
+            ], $this->idempotency())->assertCreated()->json('data.id');
+        }
+        $manager = $this->asManager();
+
+        foreach ([0, 1, 2] as $i) {
+            $this->postJson("/api/v1/cards/{$cards[$i]->card_number}/replacement", ['presentment_id' => $this->tapped($this->chip($cards[$i + 3]), 'bind'), 'reason' => 'damaged'])->assertOk();
+        }
+
+        foreach ($voucherIds as $voucherId) {
+            Queue::assertPushed(SendVoucherNotification::class, static fn (SendVoucherNotification $job): bool => $job->voucherId === $voucherId && $job->templateKey === NotificationTemplate::KEY_CARD_REPLACED);
+        }
+        $this->artisan('giftcard:monitor-security-events')->assertSuccessful();
+        $alert = SecurityAlert::query()->where('rule', 'card.replacements')->sole();
+        $this->assertSame('user:'.$manager->id, $alert->subject);
+
+        // The e-mail itself: when and where, never the card number or the balance.
+        config(['mail.default' => 'array']);
+        app(VoucherNotificationService::class)->send(Voucher::query()->findOrFail($voucherIds[0]), NotificationTemplate::KEY_CARD_REPLACED);
+        $log = NotificationLog::query()->where('template_key', 'card_replaced')->sole();
+        $this->assertSame('sent', $log->status);
+        $mail = app('mailer')->getSymfonyTransport()->messages()->last()->getOriginalMessage();
+        $this->assertInstanceOf(Email::class, $mail);
+        $text = (string) $mail->getTextBody();
+        $this->assertMatchesRegularExpression('/ersetzt|replaced/', $text);
+        $this->assertStringNotContainsString($cards[3]->card_number, $text);
+        $this->assertDoesNotMatchRegularExpression('/30,00|30\.00|€/', $text);
     }
 
     public function test_a_suspended_card_can_be_resumed(): void

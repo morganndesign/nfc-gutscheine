@@ -26,6 +26,10 @@ final class NotificationTemplateSeeder extends Seeder
                     'Your voucher expires soon',
                     "Hello {{ customer_name }},\n\nyour voucher from {{ restaurant_name }} is valid until {{ expires_at }}. We would love to welcome you before then!\n\n{{ restaurant_name }}",
                 ],
+                NotificationTemplate::KEY_CARD_REPLACED => [
+                    'Your gift card from {{ restaurant_name }} was replaced',
+                    "Hello {{ customer_name }},\n\nyour gift card from {{ restaurant_name }} was replaced by a new card on {{ date }}. The balance is now on the new card; the old card no longer works.\n\nIf you did not ask for this, please contact us right away.\n\n{{ restaurant_name }}",
+                ],
             ],
             'de' => [
                 NotificationTemplate::KEY_VOUCHER_ISSUED => [
@@ -40,6 +44,10 @@ final class NotificationTemplateSeeder extends Seeder
                     'Ihr Gutschein läuft bald ab',
                     "Hallo {{ customer_name }},\n\nIhr Gutschein von {{ restaurant_name }} ist gültig bis {{ expires_at }}. Wir freuen uns auf Ihren Besuch!\n\n{{ restaurant_name }}",
                 ],
+                NotificationTemplate::KEY_CARD_REPLACED => [
+                    'Ihre Geschenkkarte von {{ restaurant_name }} wurde ersetzt',
+                    "Hallo {{ customer_name }},\n\nIhre Geschenkkarte von {{ restaurant_name }} wurde am {{ date }} durch eine neue Karte ersetzt. Das Guthaben ist jetzt auf der neuen Karte; die alte Karte funktioniert nicht mehr.\n\nFalls Sie das nicht veranlasst haben, melden Sie sich bitte umgehend bei uns.\n\n{{ restaurant_name }}",
+                ],
             ],
             'bs' => [
                 NotificationTemplate::KEY_VOUCHER_ISSUED => [
@@ -53,6 +61,10 @@ final class NotificationTemplateSeeder extends Seeder
                 NotificationTemplate::KEY_VOUCHER_EXPIRING => [
                     'Vaš vaučer uskoro ističe',
                     "Zdravo {{ customer_name }},\n\nVaš vaučer od {{ restaurant_name }} vrijedi do {{ expires_at }}. Radujemo se Vašoj posjeti!\n\n{{ restaurant_name }}",
+                ],
+                NotificationTemplate::KEY_CARD_REPLACED => [
+                    'Vaša poklon kartica od {{ restaurant_name }} je zamijenjena',
+                    "Zdravo {{ customer_name }},\n\nVaša poklon kartica od {{ restaurant_name }} je {{ date }} zamijenjena novom karticom. Stanje je sada na novoj kartici; stara kartica više ne radi.\n\nAko to niste tražili, molimo odmah nam se javite.\n\n{{ restaurant_name }}",
                 ],
             ],
         ];

@@ -32,6 +32,8 @@ class NotificationTemplate extends Model
 
     public const KEY_VOUCHER_EXPIRING = 'voucher_expiring';
 
+    public const KEY_CARD_REPLACED = 'card_replaced';
+
     /**
      * Guest e-mails are receipts (ADR-003): the purchase or reload amount, the restaurant, the date and how it
      * was paid. They never contain anything that proves or spends the voucher: no QR payload, no voucher number,
@@ -43,6 +45,7 @@ class NotificationTemplate extends Model
         self::KEY_VOUCHER_ISSUED => ['restaurant_name', 'customer_name', 'amount', 'date', 'payment_method', 'validity'],
         self::KEY_VOUCHER_RELOADED => ['restaurant_name', 'customer_name', 'amount', 'date', 'payment_method'],
         self::KEY_VOUCHER_EXPIRING => ['restaurant_name', 'customer_name', 'expires_at'],
+        self::KEY_CARD_REPLACED => ['restaurant_name', 'customer_name', 'date'],
     ];
 
     protected $fillable = ['restaurant_id', 'key', 'channel', 'locale', 'subject', 'body', 'is_active'];

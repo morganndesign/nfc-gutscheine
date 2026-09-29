@@ -18,10 +18,10 @@ import { errorMessage } from "@/lib/api/client"
 import type { NotificationTemplate } from "@/lib/api/types"
 
 const TEMPLATE_LABELS: Record<string, string> = {
-  card_issued: "Card purchased",
-  card_reloaded: "Card reloaded",
-  card_expiring: "Card expires soon",
-  balance_low: "Low balance",
+  voucher_issued: "Voucher purchased",
+  voucher_reloaded: "Voucher topped up",
+  voucher_expiring: "Voucher expires soon",
+  card_replaced: "Gift card replaced",
 }
 
 function templateLabel(key: string): string {
