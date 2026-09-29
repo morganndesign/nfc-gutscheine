@@ -130,7 +130,7 @@ Ove poruke su pogodne za uzbune:
 
 Pretraga: Coolify → *Logs* → servis **api** odnosno **scheduler**, ili na serveru `docker logs --since 24h <api-container> 2>&1 | grep -E "Account locked|Integrity check failed"`.
 
-Neuspjela predočenja (skenirani tekst koji nije važeći vaučer ovog restorana) nalaze se u zapisniku aktivnosti:
+Neuspjela skeniranja (skenirani tekst koji nije važeći vaučer ovog restorana) nalaze se u zapisniku aktivnosti:
 
 ```sql
 SELECT restaurant_id, device_id, action, COUNT(*) AS n
@@ -152,7 +152,7 @@ Nakon `PRESENTMENT_FAILURE_LIMIT` (10) neuspjelih pokušaja u 5 minuta po restor
 | Dužina reda čekanja | `queue:monitor` | 0–nekoliko | > 500 |
 | Neuspjeli poslovi | `queue:failed` | 0 | > 0 novih dnevno |
 | Provjera integriteta | log `scheduler`, e-mail | bez nalaza | svaki nalaz |
-| Neuspjela predočenja | zapisnik aktivnosti | pojedinačna (zaprljani ili pogrešni QR kodovi) | ≥ 10 po satu i uređaju |
+| Neuspjela skeniranja | zapisnik aktivnosti | pojedinačna (zaprljani ili pogrešni QR kodovi) | ≥ 10 po satu i uređaju |
 | Zaključavanja naloga | log / zapisnik aktivnosti | rijetko | ≥ 3 po satu |
 | Disk | `df -h` | < 70 % | > 80 % |
 | RAM | `free -m`, `docker stats` | < 75 % | > 90 % |
@@ -190,7 +190,7 @@ Za izuzetke sa stack traceom može se dodati Sentry (`sentry/sentry-laravel` u b
 |---|---|
 | **Rad** | dostupnost, vrijeme odgovora `/up`, stopa 5xx, zahtjevi po minuti (gateway), status kontejnera, CPU/RAM/disk |
 | **Pozadina** | dužina reda čekanja, neuspjeli poslovi, posljednje izvršavanje noćnih poslova i provjere integriteta, starost sigurnosne kopije |
-| **Sigurnost** | neuspjela predočenja po restoranu i uređaju, zaključavanja naloga, odgovori 429, IP adrese s najviše 4xx |
+| **Sigurnost** | neuspjela skeniranja po restoranu i uređaju, zaključavanja naloga, odgovori 429, IP adrese s najviše 4xx |
 | **Poslovanje** (platforma) | aktivni restorani, prodati vaučeri, iskorištavanja po danu – iz `GET /admin/stats` odnosno SQL-a |
 
 Provedba npr. s Grafana + Loki (slanje logova preko Promtail ili Vector) ili direktno u dashboardu servisa za logove s lokacijom u EU.
@@ -225,7 +225,7 @@ Glavno opterećenje restorana: podne (11:00–14:30) i večer (17:30–23:00), p
 | Greška certifikata | provjeriti DNS i domenu servisa `gateway` u Coolifyju |
 | Provjera integriteta javlja nalaz | ništa ne mijenjati; sačuvati bazu i sigurnosne kopije; [Vodič za odgovor na incidente](../07-security/incident-response-guide.md) |
 
-5. Ako ispad traje duže od 15 minuta: postavite obavještenje o održavanju (ako je API dostupan) i obavijestite restorane e-mailom. Tokom ispada nijedan vaučer se ne može iskoristiti: svako iskorištavanje zahtijeva svježe predočenje vaučera, a broj vaučera nije zamjena za to. Gosti u tom periodu plaćaju na drugi način ili vaučer iskoriste pri sljedećoj posjeti.
+5. Ako ispad traje duže od 15 minuta: postavite obavještenje o održavanju (ako je API dostupan) i obavijestite restorane e-mailom. Tokom ispada nijedan vaučer se ne može iskoristiti: svako iskorištavanje zahtijeva svježe skeniranje vaučera, a broj vaučera nije zamjena za to. Gosti u tom periodu plaćaju na drugi način ili vaučer iskoriste pri sljedećoj posjeti.
 6. Nakon incidenta: kratak izvještaj (uzrok, trajanje, uticaj, mjere).
 
 ---

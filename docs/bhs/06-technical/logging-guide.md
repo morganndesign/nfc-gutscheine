@@ -11,7 +11,7 @@ GiftCard Pro poznaje tri vrste zapisa s različitom svrhom:
 | Vrsta | Mjesto pohrane | Svrha | Čuvanje |
 |---|---|---|---|
 | **Operativni logovi** | Docker logovi kontejnera (stdout/stderr), u Coolifyju pod resurs → *Logs* | traženje grešaka, nadzor, sigurnosne uzbune | kratko (rotacija, vidi odjeljak 3) |
-| **Zapisnik aktivnosti (audit log)** | tabela `audit_logs` (samo dodavanje, hash lanac po restoranu) | sljedivost sigurnosno i novčano relevantnih radnji za restorane i platformu, uključujući svako neuspjelo predočenje | trajno (ništa se ne mijenja niti briše) |
+| **Zapisnik aktivnosti (audit log)** | tabela `audit_logs` (samo dodavanje, hash lanac po restoranu) | sljedivost sigurnosno i novčano relevantnih radnji za restorane i platformu, uključujući svako neuspjelo skeniranje | trajno (ništa se ne mijenja niti briše) |
 | **Ledger i plaćanja** | tabele `voucher_transactions`, `payments` (samo dodavanje, hash lanac po restoranu) | knjigovodstvena istina: svaka promjena stanja s osobom, uređajem, IP adresom i vremenskom oznakom; svako plaćanje prodaje ili dopune | trajno |
 
 Okidači u bazi odbijaju `UPDATE` i `DELETE` nad ledgerom, plaćanjima i zapisnikom aktivnosti; `php artisan giftcard:verify-chains` svake noći provjerava da nijedan red nije izmijenjen, obrisan, umetnut ili premješten.
@@ -69,9 +69,9 @@ Preporuke:
 
 | Događaj | Operativni log | Zapisnik aktivnosti | Ledger / plaćanja |
 |---|---|---|---|
-| Uspješno predočenje (`POST /presentments`) | – | – (red u `presentments`) | – |
-| Neuspjelo predočenje (QR nepoznat, opozvan, strani) | – | ✓ `presentment.failed` | – |
-| Odbijeno predočenje (pogrešna metoda, ograničeno) | – | ✓ `presentment.rejected` | – |
+| Uspješno skeniranje (`POST /presentments`) | – | – (red u `presentments`) | – |
+| Neuspjelo skeniranje (QR nepoznat, opozvan, strani) | – | ✓ `presentment.failed` | – |
+| Odbijeno skeniranje (pogrešna metoda, ograničeno) | – | ✓ `presentment.rejected` | – |
 | Prodaja, iskorištavanje, dopuna, storno | – | ✓ `voucher.sold`, `voucher.redeemed`, `voucher.reloaded`, `transaction.reversed` | ✓ (prodaja i dopuna s plaćanjem) |
 | Blokiranje, deblokiranje, istek, ponovna aktivacija, uređivanje vaučera | – | ✓ `voucher.blocked`, `voucher.unblocked`, `voucher.expired`, `voucher.reinstated`, `voucher.updated` | – (stanje ostaje) |
 | Prijava, odjava | – | ✓ `auth.login`, `auth.logout` | – |
@@ -152,7 +152,7 @@ docker logs --since 1h <gateway-container> 2>&1 | jq -c 'select(.status? >= 500)
 docker logs --since 1h <gateway-container> 2>&1 | jq -r 'select(.status?) | .status' | sort | uniq -c
 ```
 
-Instalacija `jq` na serveru: `apt -y install jq`. Neuspjela predočenja nisu u operativnom logu, nego u zapisniku aktivnosti (**Audit log**, filter `presentment.`).
+Instalacija `jq` na serveru: `apt -y install jq`. Neuspjela skeniranja nisu u operativnom logu, nego u zapisniku aktivnosti (**Audit log**, filter `presentment.`).
 
 ### Slanje logova (preporuka)
 

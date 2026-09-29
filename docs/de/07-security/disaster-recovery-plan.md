@@ -88,7 +88,7 @@ Da GiftCard Pro ein kleines Team ist, können mehrere Rollen bei einer Person li
 1. Schreibzugriffe stoppen: Wartungsmodus (`php artisan down`) bzw. Dienste `api`, `worker` und `scheduler` in Coolify anhalten, damit keine weiteren Buchungen auf beschädigten Daten entstehen. Wartungshinweis (Vorlage A).
 2. Zustand sichern: frischen Dump und Snapshot des Volumes `mysql-data` anlegen (für die Analyse, nicht überschreiben). Meldet die Integritätsprüfung einen Befund, zusätzlich den [Leitfaden Incident Response](incident-response-guide.md) (Playbook 7.7) starten.
 3. Versuch der Reparatur nur, wenn Ursache und Umfang klar sind. Ledger, Zahlungen und Audit-Log werden nie per SQL korrigiert. Andernfalls:
-4. Letzten Dump zuerst in eine separate Datenbank einspielen und mit den Prüfabfragen der [Restore-Anleitung](../06-technical/restore-guide.md#8-prüfabfragen-nach-einem-restore) prüfen (Guthaben = Summe der Buchungen, jede Buchung mit Zahlung bzw. Vorlage, Mengen plausibel).
+4. Letzten Dump zuerst in eine separate Datenbank einspielen und mit den Prüfabfragen der [Restore-Anleitung](../06-technical/restore-guide.md#8-prüfabfragen-nach-einem-restore) prüfen (Guthaben = Summe der Buchungen, jede Buchung mit Zahlung bzw. Scan, Mengen plausibel).
 5. Produktivdatenbank aus diesem Dump wiederherstellen (Restore-Anleitung, Szenario B), *Redeploy*, `php artisan giftcard:verify-chains`, prüfen wie in 5.1 Schritt 6.
 6. Buchungen zwischen Dump und Ausfall ermitteln (siehe 6.2) und Lokale informieren.
 
@@ -176,7 +176,7 @@ Details und Prüfabfragen: [Restore-Anleitung](../06-technical/restore-guide.md)
 3. Jedem betroffenen Lokal eine Liste der Gutscheine mit Stand zum Dump-Zeitpunkt senden und um Abgleich mit den Belegen der Registrierkasse bitten.
 4. **Verkäufe** im verlorenen Zeitraum existieren nach der Wiederherstellung nicht; ihr QR-Code wird nicht mehr erkannt. Das Lokal verkauft den Gutschein neu, erfasst die ursprüngliche Zahlung (z. B. Kartenterminal mit der ursprünglichen Belegnummer) und übergibt dem Gast das neue Druckblatt.
 5. **Aufladungen** erfasst das Lokal neu mit der ursprünglichen Zahlung und dem Vermerk „Nacherfassung nach Wiederherstellung“.
-6. **Einlösungen** verlangen immer eine Vorlage des Gutscheins. Betroffene Gutscheine sperrt das Lokal mit diesem Vermerk; legt der Gast den Gutschein wieder vor, wird er entsperrt und die fehlende Einlösung mit Vermerk erfasst. Die Plattform-Administration bucht nie im Auftrag eines Lokals.
+6. **Einlösungen** verlangen immer einen Scan des Gutscheins. Betroffene Gutscheine sperrt das Lokal mit diesem Vermerk; legt der Gast den Gutschein wieder vor, wird er entsperrt und die fehlende Einlösung mit Vermerk erfasst. Die Plattform-Administration bucht nie im Auftrag eines Lokals.
 
 ### 6.3 Rückkehr zum vorherigen Deployment
 

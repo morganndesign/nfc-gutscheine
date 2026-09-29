@@ -100,7 +100,7 @@ The backend is done first, then dashboard and app, so the clients are written on
 |---|---|---|
 | P0-01 | Done. `RemovedPathsTest` fails when a removed concept reappears in the code | `25ebfda` (backend, schema), `a56b202` (dashboard), `2234694` (app) |
 | P0-02 | Done | `25ebfda`, `a56b202`, `2234694` |
-| P0-03 | Done: `kind`, `media` (`printable_qr`), printable sheet without number or value in the dashboard and the app | `25ebfda`, `a56b202`, `2234694` |
+| P0-03 | Done: `kind`, `media` (`printable_qr`), printable sheet with the value and without the voucher number in the dashboard and the app (value added by ADR-003) | `25ebfda`, `a56b202`, `2234694` |
 | P0-04 | Done: `printable_qr` verifier; `live_auth` is an enum case without a verifier; `expires_in` in the response | `25ebfda`, `33506ca` |
 | P0-05 | Done, plus `GET /vouchers/{voucher}/redemptions/{idempotencyKey}` for unknown outcomes | `25ebfda`, `33506ca` |
 | P0-06 | Done for sale and reload with `cash`, `card_terminal`, `bank_transfer`, `complimentary` (owner, reason) | `25ebfda` |
@@ -189,7 +189,7 @@ Effort is for one engineer **[Assessment]**. Dependencies are listed; phases wit
 | P7-01 | E-mail voucher page, device confirmation code, rotating QR (spending, digital vouchers only) |
 | P7-02 | Recovery-contact page for card vouchers: balance, receipts, suspend, recovery code (`select` only) |
 | P7-03 | Printable QR re-issue with a guest `select` |
-| P7-04 | E-mail templates without balances, voucher numbers or bearer links |
+| P7-04 | E-mail receipts (amount, restaurant, date, payment method) for the e-mail voucher flows; never a balance, voucher number, token or bearer link |
 
 ### Phase 8: fraud and risk engine (20–28 days) · depends on P3-04
 

@@ -9,12 +9,14 @@ import '../theme/brand_color.dart' show parseBrandColor;
 
 /// Texts the guest reads on the printed voucher. They follow the restaurant's
 /// language, not the waiter's UI language, and match the dashboard's printout.
-/// No voucher number and no value are printed: the QR is the voucher, the
-/// balance lives on the server.
+/// The value that was bought is part of the design (ADR-003); it is not a
+/// balance — the balance lives on the server. No voucher number is printed:
+/// the QR is the voucher.
 @immutable
 class GuestCopy {
   const GuestCopy._({
     required this.voucher,
+    required this.value,
     required this.howTo,
     required this.keepSafe,
     required this.noExpiry,
@@ -33,6 +35,7 @@ class GuestCopy {
 
   static const GuestCopy _de = GuestCopy._(
     voucher: 'Gutschein',
+    value: 'Wert',
     howTo: 'Bitte zeigen Sie diesen Code beim Bezahlen vor.',
     keepSafe: 'Wie Bargeld aufbewahren: Wer den Code besitzt, kann den Gutschein einlösen.',
     noExpiry: 'Unbefristet gültig',
@@ -42,6 +45,7 @@ class GuestCopy {
 
   static const GuestCopy _en = GuestCopy._(
     voucher: 'Voucher',
+    value: 'Value',
     howTo: 'Please show this code when you pay.',
     keepSafe: 'Keep it safe like cash: whoever holds the code can redeem the voucher.',
     noExpiry: 'No expiry date',
@@ -51,6 +55,7 @@ class GuestCopy {
 
   static const GuestCopy _bhs = GuestCopy._(
     voucher: 'Vaučer',
+    value: 'Vrijednost',
     howTo: 'Molimo pokažite ovaj kôd prilikom plaćanja.',
     keepSafe: 'Čuvajte ga kao gotovinu: ko ima kôd, može iskoristiti vaučer.',
     noExpiry: 'Bez roka važenja',
@@ -59,11 +64,22 @@ class GuestCopy {
   );
 
   final String voucher;
+
+  /// Label above the printed value.
+  final String value;
   final String howTo;
   final String keepSafe;
   final String noExpiry;
   final String validUntil;
   final UiLanguage dateLanguage;
+
+  /// [cents] in the restaurant's money format, in the guest language.
+  String money(int cents, String currency, String restaurantLocale) => MoneyFormat.format(
+    cents,
+    currency: currency,
+    language: dateLanguage,
+    restaurantLocale: RestaurantLocale.parse(restaurantLocale),
+  );
 
   String validity(CalendarDate? expiresOn) =>
       expiresOn == null ? noExpiry : '$validUntil ${DateTimeFormat.date(expiresOn, dateLanguage)}';
@@ -76,6 +92,8 @@ class PrintableVoucher {
     required this.payload,
     required this.restaurantName,
     required this.restaurantLocale,
+    required this.value,
+    required this.currency,
     this.brandColor,
     this.expiresOn,
   });
@@ -86,6 +104,10 @@ class PrintableVoucher {
 
   /// e.g. `de_AT`: decides the language of the printout.
   final String restaurantLocale;
+
+  /// The value sold, in cents (printed as part of the design, not a balance).
+  final int value;
+  final String currency;
 
   /// `#RRGGBB` of the header band, null = ink.
   final String? brandColor;
@@ -111,8 +133,8 @@ class SystemVoucherPrinter implements VoucherPrinter {
   }
 }
 
-/// The A6 voucher sheet: header band with the restaurant, the QR, how to use
-/// it, validity and the keep-safe line. Built in memory, never written to disk.
+/// The A6 voucher sheet: header band with the restaurant and the value, the
+/// QR, how to use it, validity and the keep-safe line. Built in memory, never written to disk.
 Future<Uint8List> voucherSheetPdf(PrintableVoucher voucher, {pw.Font? regular, pw.Font? bold}) async {
   final pw.Font body = regular ?? pw.Font.ttf(await rootBundle.load('assets/fonts/Geist-Regular.ttf'));
   final pw.Font heading = bold ?? pw.Font.ttf(await rootBundle.load('assets/fonts/Geist-SemiBold.ttf'));
@@ -144,6 +166,15 @@ Future<Uint8List> voucherSheetPdf(PrintableVoucher voucher, {pw.Font? regular, p
                 pw.Text(
                   voucher.restaurantName,
                   style: pw.TextStyle(color: PdfColors.white, fontSize: 16, font: heading),
+                ),
+                pw.SizedBox(height: 10),
+                pw.Text(
+                  copy.value.toUpperCase(),
+                  style: const pw.TextStyle(color: PdfColors.white, fontSize: 7, letterSpacing: 1.5),
+                ),
+                pw.Text(
+                  copy.money(voucher.value, voucher.currency, voucher.restaurantLocale),
+                  style: pw.TextStyle(color: PdfColors.white, fontSize: 22, font: heading),
                 ),
               ],
             ),

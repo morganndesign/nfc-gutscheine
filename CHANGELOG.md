@@ -22,9 +22,9 @@ rebuilt once with `php artisan migrate:fresh --seed`.
   password changes revoke access, one answer for wrong and locked sign-ins, invitation and reset tokens separated and
   kept out of logs, queued mail with timeouts, gateway log redaction, dependency update). App tokens are limited by
   method and path.
-- **Dashboard:** vouchers, sale with payment and a printable QR sheet in the restaurant language (no number, no
-  value), reload, block, expire, reinstate, payments and history; the web till redeems digital vouchers.
-- **Waiter app 2.0.0 (Android and iPhone alike):** QR scanning → presentment → redemption; unknown outcomes are
+- **Dashboard:** vouchers, sale with payment and a printable QR sheet in the restaurant language (with the value,
+  never the voucher number), reload, block, expire, reinstate, payments and history; the web till redeems digital vouchers.
+- **Waiter app 2.0.0 (Android and iPhone alike):** scan → redeem (one single-use scan per redemption); unknown outcomes are
   stored before the first request and resolved by asking the server, never by sending the debit again; managers
   and owners sell printable vouchers and print them with the system print dialog.
 - **Unknown outcomes everywhere (app and dashboard):** once a request with a key went unanswered, only an answer

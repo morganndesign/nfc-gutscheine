@@ -75,6 +75,8 @@ void main() {
     expect(job.payload, Payloads.qr);
     expect(job.restaurantName, 'Trattoria Bella Vista');
     expect(job.restaurantLocale, 'de_AT');
+    expect(job.value, 5000);
+    expect(job.currency, 'EUR');
     expect(text(en.salePrinted), findsOneWidget);
 
     await tester.tap(primary(en.commonDone));

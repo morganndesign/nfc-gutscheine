@@ -66,7 +66,7 @@ including every removed path (`RemovedPathsTest`).
 - **Right to erasure:** *Anonymize* removes a customer's personal data, the recipient names on their vouchers and
   their address in the notification log, while keeping the financial ledger required for bookkeeping. The audit log
   never contained it.
-- Guest e-mails carry no balance, amount, voucher number or link.
+- Guest e-mails are receipts (amount, restaurant, date, payment method); they never carry a QR payload, voucher number, link, token or balance, so a forwarded or leaked e-mail cannot be used to pay.
 - **Data residency:** the deployment guide places the server in a German data centre (Hetzner).
 - A data-processing agreement (AVV/DPA) with each restaurant is recommended; the platform is the processor.
 

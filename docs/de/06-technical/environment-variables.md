@@ -70,7 +70,7 @@ Siehe [Logging-Leitfaden](logging-guide.md).
 | `DB_DATABASE` / `DB_USERNAME` | `giftcard_pro` / `giftcard` | `giftcard_pro` / `giftcard` | In Coolify nur vor dem ersten Deploy änderbar. |
 | `DB_PASSWORD` | leer (Dev-Compose: `secret`) | aus `SERVICE_PASSWORD_MYSQL` | Coolify erzeugt das Passwort. |
 | `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_CLIENT` | `127.0.0.1` / `6379` / `null` / `phpredis` | `redis` / `6379` / aus `SERVICE_PASSWORD_REDIS` / `phpredis` | Redis für Cache, Sessions, Queues und Rate Limits. |
-| `CACHE_STORE` | `redis` | `redis` | Trägt auch Rate Limiting und die Sperre für fehlgeschlagene Vorlagen. |
+| `CACHE_STORE` | `redis` | `redis` | Trägt auch Rate Limiting und die Sperre für fehlgeschlagene Scans. |
 | `CACHE_PREFIX` | `giftcardpro` | — | Präfix der Cache-Schlüssel. |
 | `QUEUE_CONNECTION` | `redis` | `redis` | Jede E-Mail wird aus der Queue versendet (`default`, `notifications`). |
 | `QUEUE_FAILED_DRIVER` | `database-uuids` | `database-uuids` | Fehlgeschlagene Jobs mit UUID-Schlüssel. |
@@ -100,7 +100,7 @@ Siehe [Logging-Leitfaden](logging-guide.md).
 | `API_TOKEN_MAX_DAYS` | `365` | Maximale Laufzeit von Integrations-Tokens. |
 | `DEVICE_TOKEN_DAYS` | `30` | Anmeldedauer der Kellner-App; wird verlängert, solange das Telefon genutzt wird. |
 
-Fest in `config/giftcard.php`: Gültigkeit einer Vorlage 60 s, Wiederholungsfenster für Verkäufe 15 min, Länge des Idempotency-Keys ≤ 96. Empfehlung: Standardwerte beibehalten.
+Fest in `config/giftcard.php`: Gültigkeit eines Scans 60 s, Wiederholungsfenster für Verkäufe 15 min, Länge des Idempotency-Keys ≤ 96. Empfehlung: Standardwerte beibehalten.
 
 ### 2.6 Gutscheingrenzen (Plattformobergrenzen)
 

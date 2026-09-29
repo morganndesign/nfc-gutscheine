@@ -26,8 +26,8 @@ Blokirate vaučer (**„Block“**). Od tog trenutka ne može se nigdje iskorist
 
 ### 5. Kako funkcioniše iskorištavanje – i zašto je sigurno?
 
-1. Konobar skenira QR kod. Server ga provjerava i kreira **predočenje**: važi 60 sekundi, samo za jedno terećenje, vezano za Vaš restoran, taj vaučer, osobu i uređaj.
-2. Konobar unosi iznos. Iskorištavanje troši predočenje; drugo iskorištavanje zahtijeva novo skeniranje.
+1. Konobar skenira QR kod. Server ga provjerava i potvrđuje **skeniranje**: važi 60 sekundi, samo za jedno terećenje, vezano za Vaš restoran, taj vaučer, osobu i uređaj.
+2. Konobar unosi iznos. Iskorištavanje troši skeniranje; drugo iskorištavanje zahtijeva novo skeniranje.
 
 Bez samog vaučera dakle niko ne može teretiti – ni brojem vaučera, ni snimkom ekrana starog skeniranja, ni prijavom druge osobe.
 
@@ -53,7 +53,7 @@ Samo ako postavite važenje (najmanje 36 mjeseci). Istekli vaučer zadržava sta
 
 ### 10. Šta se dešava kod prekida interneta u restoranu?
 
-Iskorištavanje zahtijeva vezu sa serverom – to je namjerno, jer samo server može sigurno spriječiti dvostruka knjiženja i provjeriti predočenje. Kod prekida WLAN-a aplikacija za konobare radi i preko mobilnih podataka telefona. Ako oboje otkaže, iskorištavanje nije moguće; ne može se ni naknadno proknjižiti bez vaučera. Gost u tom slučaju plaća na drugi način ili vaučer iskoristi pri sljedećoj posjeti.
+Iskorištavanje zahtijeva vezu sa serverom – to je namjerno, jer samo server može sigurno spriječiti dvostruka knjiženja i provjeriti skeniranje. Kod prekida WLAN-a aplikacija za konobare radi i preko mobilnih podataka telefona. Ako oboje otkaže, iskorištavanje nije moguće; ne može se ni naknadno proknjižiti bez vaučera. Gost u tom slučaju plaća na drugi način ili vaučer iskoristi pri sljedećoj posjeti.
 
 ### 11. Šta se dešava ako GiftCard Pro prestane raditi?
 
@@ -77,7 +77,7 @@ Kod Hetzner Online GmbH u data centrima u Njemačkoj, dakle u EU. Transakcijske 
 
 ### 15. Koje podatke o gostima sprema GiftCard Pro?
 
-Samo ono što unesete – i to je neobavezno. Vaučer se može prodati potpuno anonimno. Ako unosite podatke o kupcima: ime, e-mail, telefon, bilješke, marketinška saglasnost i ime primaoca na vaučeru. E-mailovi gostima nikada ne sadrže stanje, iznos, broj vaučera niti link na vaučer.
+Samo ono što unesete – i to je neobavezno. Vaučer se može prodati potpuno anonimno. Ako unosite podatke o kupcima: ime, e-mail, telefon, bilješke, marketinška saglasnost i ime primaoca na vaučeru. E-mailovi gostima su računi s iznosom, restoranom, datumom i načinom plaćanja; nikada ne sadrže QR kôd, broj vaučera, link ni stanje.
 
 ### 16. Ko u GiftCard Pro može vidjeti moje podatke?
 
@@ -141,7 +141,7 @@ Ne. GiftCard Pro nema certifikat prema ISO 27001 ili SOC 2. PCI DSS nije relevan
 
 ### 29. Je li GiftCard Pro testirao vanjski pružalac usluga u pogledu sigurnosti?
 
-Do sada nije. Kod je interno temeljito provjeren, a nalazi tih provjera su otklonjeni. Za svako pravilo koje nešto zabranjuje postoji automatizovani test zloupotrebe koji pokušava zabranjeni put (iskorištavanje bez predočenja, tuđe predočenje, isteklo predočenje, pristupi stranim restoranima, proširenje prava, manipulacija finansijske historije, besplatna prodaja bez dozvole); ti testovi se pokreću pri svakoj promjeni.
+Do sada nije. Kod je interno temeljito provjeren, a nalazi tih provjera su otklonjeni. Za svako pravilo koje nešto zabranjuje postoji automatizovani test zloupotrebe koji pokušava zabranjeni put (iskorištavanje bez skeniranja, tuđe skeniranje, isteklo skeniranje, pristupi stranim restoranima, proširenje prava, manipulacija finansijske historije, besplatna prodaja bez dozvole); ti testovi se pokreću pri svakoj promjeni.
 
 ### 30. Je li GiftCard Pro fiskalna kasa?
 

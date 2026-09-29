@@ -25,7 +25,10 @@ entirely. The native app uses device-bound bearer tokens against the same API.
 
 ## Spending a voucher
 
-A voucher is spent only with proof that its medium is present: a **presentment**.
+A voucher is spent only with proof that its medium is present. Staff and guests call it a **scan** (QR) or a
+**card tap** (NFC card, Phase 4); the API resource and the code call it a **presentment**. User-facing text never
+says "presentment" (ADR-003): the app, the dashboard and the guides use *Scan* / *Tap card*, in German *Scannen* /
+*Karte ans Handy halten*, in BHS *Skeniraj* / *Prislonite karticu uz telefon*.
 
 ```
 Waiter app / web till                         API

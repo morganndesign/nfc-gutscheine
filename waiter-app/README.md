@@ -33,7 +33,7 @@ where they differ.
 Managers and owners (`vouchers.sell`): value (within the restaurant's limits) → how the guest paid (cash, card
 terminal with receipt number, bank transfer with reference, complimentary with a reason — owners only) → optional
 guest e-mail → `POST /vouchers` (`form: printable`). The QR is returned once and printed with the system print dialog
-(AirPrint / Android print service) as an A6 sheet in the restaurant's language, without voucher number or value.
+(AirPrint / Android print service) as an A6 sheet in the restaurant's language, with the value and without the voucher number.
 Leaving before printing asks first. A retry after a lost answer reuses the key: the server returns the same sale with
 a fresh QR (while the guest can still be at the counter, 15 minutes, same waiter and phone; otherwise the screen
 says to block the voucher in the dashboard and sell a new one). While a sale is unconfirmed, only an answer of the

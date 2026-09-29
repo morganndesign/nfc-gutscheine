@@ -26,8 +26,8 @@ Sie sperren den Gutschein (**„Block“**). Ab sofort kann er nirgends eingelö
 
 ### 5. Wie funktioniert eine Einlösung – und warum ist das sicher?
 
-1. Die Servicekraft scannt den QR-Code. Der Server prüft ihn und erstellt eine **Vorlage**: gültig 60 Sekunden, nur für eine Abbuchung, gebunden an Ihr Lokal, diesen Gutschein, die Person und das Gerät.
-2. Die Servicekraft tippt den Betrag. Die Einlösung verbraucht die Vorlage; eine zweite Einlösung braucht einen neuen Scan.
+1. Die Servicekraft scannt den QR-Code. Der Server prüft ihn und bestätigt den **Scan**: gültig 60 Sekunden, nur für eine Abbuchung, gebunden an Ihr Lokal, diesen Gutschein, die Person und das Gerät.
+2. Die Servicekraft tippt den Betrag. Die Einlösung verbraucht den Scan; eine zweite Einlösung braucht einen neuen Scan.
 
 Ohne den Gutschein selbst kann also niemand abbuchen – auch nicht mit Gutscheinnummer, Screenshot eines alten Scans oder der Anmeldung einer anderen Person.
 
@@ -53,7 +53,7 @@ Nur, wenn Sie eine Gültigkeit einstellen (mindestens 36 Monate). Ein abgelaufen
 
 ### 10. Was passiert bei Internetausfall im Lokal?
 
-Einlösen erfordert eine Verbindung zum Server – das ist Absicht, denn nur der Server kann Doppelbuchungen sicher verhindern und die Vorlage prüfen. Bei WLAN-Ausfall funktioniert die Kellner-App auch über mobile Daten des Handys. Fällt beides aus, kann nicht eingelöst werden; die Einlösung lässt sich auch nicht später ohne den Gutschein nachbuchen. Der Gast bezahlt in diesem Fall anders oder löst beim nächsten Besuch ein.
+Einlösen erfordert eine Verbindung zum Server – das ist Absicht, denn nur der Server kann Doppelbuchungen sicher verhindern und den Scan prüfen. Bei WLAN-Ausfall funktioniert die Kellner-App auch über mobile Daten des Handys. Fällt beides aus, kann nicht eingelöst werden; die Einlösung lässt sich auch nicht später ohne den Gutschein nachbuchen. Der Gast bezahlt in diesem Fall anders oder löst beim nächsten Besuch ein.
 
 ### 11. Was passiert, wenn GiftCard Pro ausfällt?
 
@@ -77,7 +77,7 @@ Bei Hetzner Online GmbH in Rechenzentren in Deutschland, also in der EU. Transak
 
 ### 15. Welche Daten über Gäste speichert GiftCard Pro?
 
-Nur was Sie eingeben – und das ist optional. Ein Gutschein kann vollständig anonym verkauft werden. Wenn Sie Kundendaten erfassen: Name, E-Mail, Telefon, Notizen, Marketing-Einwilligung und den Empfängernamen am Gutschein. Gäste-E-Mails enthalten nie Guthaben, Betrag, Gutscheinnummer oder einen Link zum Gutschein.
+Nur was Sie eingeben – und das ist optional. Ein Gutschein kann vollständig anonym verkauft werden. Wenn Sie Kundendaten erfassen: Name, E-Mail, Telefon, Notizen, Marketing-Einwilligung und den Empfängernamen am Gutschein. Gäste-E-Mails sind Quittungen mit Betrag, Lokal, Datum und Zahlungsart; sie enthalten nie QR-Code, Gutscheinnummer, Link oder Guthaben.
 
 ### 16. Wer bei GiftCard Pro kann meine Daten sehen?
 
@@ -141,7 +141,7 @@ Nein. GiftCard Pro hat keine Zertifizierung nach ISO 27001 oder SOC 2. PCI DSS i
 
 ### 29. Wurde GiftCard Pro von einem externen Dienstleister auf Sicherheit getestet?
 
-Bisher nicht. Der Code wurde intern umfassend geprüft, und die Befunde dieser Prüfungen sind behoben. Für jede Regel, die etwas verbietet, gibt es einen automatisierten Missbrauchstest, der den verbotenen Weg versucht (Einlösen ohne Vorlage, fremde Vorlage, abgelaufene Vorlage, Zugriffe auf fremde Lokale, Rechteausweitung, Manipulation der Finanzhistorie, Gratis-Verkauf ohne Berechtigung); diese Tests laufen bei jeder Änderung.
+Bisher nicht. Der Code wurde intern umfassend geprüft, und die Befunde dieser Prüfungen sind behoben. Für jede Regel, die etwas verbietet, gibt es einen automatisierten Missbrauchstest, der den verbotenen Weg versucht (Einlösen ohne Scan, fremder Scan, abgelaufener Scan, Zugriffe auf fremde Lokale, Rechteausweitung, Manipulation der Finanzhistorie, Gratis-Verkauf ohne Berechtigung); diese Tests laufen bei jeder Änderung.
 
 ### 30. Ist GiftCard Pro eine Registrierkasse?
 

@@ -10,9 +10,9 @@ GiftCard Pro se sastoji od tri aplikacije i pozadinskih servisa:
 
 | Komponenta | Tehnologija | Zadatak |
 |---|---|---|
-| API | Laravel 12 / PHP 8.4 | Poslovna logika, predočenja, ledger, autentifikacija, pozadinski poslovi |
+| API | Laravel 12 / PHP 8.4 | Poslovna logika, skeniranja, ledger, autentifikacija, pozadinski poslovi |
 | Web aplikacija | Next.js 15 / TypeScript | Dashboard, web kasa (`/waiter`), list za štampu vaučera |
-| Aplikacija za konobare (GiftCard Waiter) | Flutter, Android i iPhone | QR skeniranje → predočenje → iskorištavanje; prodaja za menadžere i vlasnike |
+| Aplikacija za konobare (GiftCard Waiter) | Flutter, Android i iPhone | QR skeniranje → iskorištavanje; prodaja za menadžere i vlasnike |
 | Baza podataka | MySQL 8.4 | Mandanti, vaučeri, plaćanja, ledger, zapisnik aktivnosti |
 | Redis | 7.x | Sesije, keš, redovi čekanja, ograničenja broja zahtjeva, zaključavanja |
 | Mailpit | samo razvoj | Hvata sve e-mailove (web interfejs na portu 8025) |

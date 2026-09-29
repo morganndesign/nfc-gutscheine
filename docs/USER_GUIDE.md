@@ -75,5 +75,6 @@ dashboard.
 ## Guests
 
 Guests keep the printed sheet (or a photo of it) and show it when they pay. If they gave an e-mail address at the
-sale, they receive a confirmation and, before a validity ends, a reminder. These e-mails contain no balance, no
-amount, no voucher number and no link. To learn the balance, guests ask the restaurant.
+sale, they receive a receipt (value, restaurant, date, how it was paid) and, before a validity ends, a reminder.
+The e-mails never contain the QR code, the voucher number, a link or the current balance, so an e-mail can never be
+used to pay. To learn the balance, guests ask the restaurant.

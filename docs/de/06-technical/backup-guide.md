@@ -90,8 +90,8 @@ Redis enthält nur flüchtige Daten. Geht Redis verloren (z. B. Restore auf eine
 | Sessions | Alle Personen im Browser werden abgemeldet und melden sich neu an. Geräte und Tokens der Kellner-App bleiben gültig (Tabellen `devices`, `personal_access_tokens`). | harmlos, einmaliger Aufwand für das Personal |
 | Queue (`default`, `notifications`) | Noch nicht versendete E-Mails (Kauf, Aufladung, Ablauferinnerung, Einladungen, Passwort-Links) gehen verloren. Buchungen sind davon nicht betroffen – E-Mails werden erst nach dem Commit der Buchung eingereiht. | gering; Einladungen mit **Invite again** neu senden |
 | Cache | Wird automatisch neu aufgebaut (Berechtigungen, Systemeinstellungen). | keine |
-| Rate-Limit-Zähler, Zähler fehlgeschlagener Vorlagen | Zähler beginnen bei 0. Die Kontosperre selbst (`locked_until`) liegt in der Datenbank. | keine |
-| Vorlagen (Presentments) | liegen in der Datenbank, nicht in Redis; sie laufen ohnehin nach 60 s ab | keine |
+| Rate-Limit-Zähler, Zähler fehlgeschlagener Scans | Zähler beginnen bei 0. Die Kontosperre selbst (`locked_until`) liegt in der Datenbank. | keine |
+| Scans (API: `presentments`) | liegen in der Datenbank, nicht in Redis; sie laufen ohnehin nach 60 s ab | keine |
 | Sperren (Migrationssperre, `withoutOverlapping`) | werden neu gesetzt | keine |
 
 Die Konfiguration `--appendonly yes` und `--maxmemory-policy noeviction` schützt Queues und Sessions bei normalen Neustarts.

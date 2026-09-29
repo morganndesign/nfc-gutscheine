@@ -102,6 +102,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
       payload: sold.printablePayload!,
       restaurantName: restaurant?.name ?? '',
       restaurantLocale: restaurant?.locale ?? 'de_AT',
+      value: sold.value,
+      currency: sold.currency,
       brandColor: restaurant?.settings.brandColor,
       expiresOn: restaurantDateOf(context, sold.expiresAt),
     );

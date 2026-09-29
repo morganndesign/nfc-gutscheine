@@ -6,12 +6,12 @@
 
 ## 1. Leistungsziel
 
-Das wichtigste Ziel ist fachlich: **Eine Einlösung am Tisch dauert inklusive Mensch unter 5 Sekunden** – QR-Code scannen, Betrag tippen, fertig. Die Vorlage gilt 60 Sekunden; das System selbst soll davon nur einen Bruchteil verbrauchen.
+Das wichtigste Ziel ist fachlich: **Eine Einlösung am Tisch dauert inklusive Mensch unter 5 Sekunden** – QR-Code scannen, Betrag tippen, fertig. Der Scan gilt 60 Sekunden; das System selbst soll davon nur einen Bruchteil verbrauchen.
 
 Eine Einlösung besteht aus zwei Requests:
 
-1. `POST /presentments` – Hash des gescannten Geheimnisses nachschlagen, Vorlage speichern (eine Zeile).
-2. `POST /vouchers/{id}/redemptions` – in einer Transaktion Vorlage und Gutschein sperren, prüfen, Ledger- und Audit-Eintrag anhängen, Guthaben aktualisieren.
+1. `POST /presentments` – Hash des gescannten Geheimnisses nachschlagen, Scan speichern (eine Zeile).
+2. `POST /vouchers/{id}/redemptions` – in einer Transaktion Scan und Gutschein sperren, prüfen, Ledger- und Audit-Eintrag anhängen, Guthaben aktualisieren.
 
 ## 2. Messen statt schätzen
 
@@ -39,7 +39,7 @@ Die folgende Rechnung ist eine **Schätzung** und vor dem Wachstum über den Pil
 | Serverzeit eines typischen API-Requests | 20–100 ms |
 | Gleichzeitige PHP-Prozesse | 24 |
 | Theoretischer Durchsatz der API | ca. 240–1.000 Requests/s |
-| Requests pro Einlösung (Vorlage + Einlösung + Aktualisierung der Ansicht) | ca. 3–5 |
+| Requests pro Einlösung (Scan + Einlösung + Aktualisierung der Ansicht) | ca. 3–5 |
 | Einlösungen in der Spitze pro Lokal | 1–2 pro Minute (Annahme für einen gut gehenden Abend im Advent) |
 
 Selbst 500 Lokale mit 2 Einlösungen pro Minute ergeben rund 17 Einlösungen pro Sekunde, also etwa 50–85 Requests/s – deutlich unter dem geschätzten Durchsatz. Engpässe sind eher:
@@ -56,7 +56,7 @@ Rate Limits schützen vor Missbrauch und begrenzen zugleich die Last einzelner C
 | Limiter | Grenze | Wirkung auf Performance |
 |---|---|---|
 | `api` | 240/min je Person | begrenzt fehlerhafte Integrationen (Endlosschleifen) |
-| `presentment` | 90/min je Person und Endgerät; fehlgeschlagene Vorlagen zusätzlich 10 je 5 min je Lokal, Person und Gerät | eine Servicekraft mit zwei Geräten wird nicht gebremst; Gäste hinter derselben IP zählen nie mit |
+| `presentment` | 90/min je Person und Endgerät; fehlgeschlagene Scans zusätzlich 10 je 5 min je Lokal, Person und Gerät | eine Servicekraft mit zwei Geräten wird nicht gebremst; Gäste hinter derselben IP zählen nie mit |
 | `voucher-operation` | 90/min je Person und Endgerät | Verkauf, Einlösung, Aufladung, Einlösungsergebnis |
 | `login` | 5/min je E-Mail + IP, 30/min je IP | Schutz vor Passwortangriffen |
 | `password-reset` | 5/min je IP | |
@@ -71,7 +71,7 @@ Die Zähler liegen in Redis. Eine Kassenintegration, die regelmäßig 240/min er
 | Tabelle | Indizes | Nutzen |
 |---|---|---|
 | `vouchers` | `(restaurant_id, voucher_number)` unique, `(restaurant_id, status, created_at)`, `status`, `expires_at` | Gutscheinliste, Suche nach interner Nummer, nächtlicher Ablauf |
-| `media` | `secret_hash` unique, `(voucher_id, type, status)` | Vorlage: ein Index-Lookup je Scan |
+| `media` | `secret_hash` unique, `(voucher_id, type, status)` | Scan-Prüfung: ein Index-Lookup je Scan |
 | `presentments` | `(restaurant_id, created_at)` | Auswertung, Aufräumen |
 | `voucher_transactions` | `(restaurant_id, idempotency_key)` unique, `presentment_id`, `payment_id`, `related_transaction_id` unique, `(restaurant_id, created_at)`, `(restaurant_id, type, created_at)`, `(voucher_id, created_at)` | Idempotenz, Einlösungsergebnis, Verlauf, Buchungsliste |
 | `payments` | `(restaurant_id, method, created_at)` | Auswertung nach Zahlungsart |
@@ -85,7 +85,7 @@ Alle Primärschlüssel sind zeitlich geordnete UUIDv7 – neue Zeilen landen am 
 
 Jede Guthabenänderung läuft in einer Transaktion mit `SELECT … FOR UPDATE`:
 
-- Bei einer Einlösung werden **die Vorlage und der eine Gutschein** gesperrt (Reihenfolge Vorlage → Gutschein), nicht die Tabelle. Einlösungen verschiedener Gutscheine laufen parallel.
+- Bei einer Einlösung werden **der Scan und der eine Gutschein** gesperrt (Reihenfolge Scan → Gutschein), nicht die Tabelle. Einlösungen verschiedener Gutscheine laufen parallel.
 - Gleichzeitige Einlösungen **desselben** Gutscheins werden serialisiert – das ist gewollt und verhindert Doppelausgaben. Nach der Sperre wird der Idempotency-Key erneut geprüft; eine wartende Wiederholung erhält das erste Ergebnis.
 - Beim Anhängen an eine Hash-Kette wird deren Kopf in `chain_heads` gesperrt (Reihenfolge Zahlungen → Ledger → Audit-Log). Buchungen **eines Lokals** werden dadurch für die Dauer des Anhängens kurz hintereinander geschrieben; Lokale untereinander blockieren sich nicht.
 - `READ-COMMITTED` hält Sperren kurz; bei einem Deadlock wird die Transaktion bis zu 3-mal wiederholt.
@@ -118,7 +118,7 @@ Guthaben werden nie gecacht – jede Einlösung liest den gesperrten Datensatz a
 ## 7. Frontend
 
 - Diagramme des Dashboards werden erst nach den Kennzahlen geladen (`next/dynamic`) – Kennzahlen erscheinen zuerst.
-- Web-Kassa und Kellner-App zählen die Gültigkeit der Vorlage ab Empfang herunter (`expires_in`), unabhängig von der Uhr des Geräts.
+- Web-Kassa und Kellner-App zählen die Gültigkeit des Scans ab Empfang herunter (`expires_in`), unabhängig von der Uhr des Geräts.
 - Nach einer Einlösung ist der Scanner sofort für den nächsten QR-Code bereit.
 - Die Oberfläche passt ohne Scrollen auf kleine Handys (iPhone SE), was Bedienzeit spart.
 
@@ -160,7 +160,7 @@ docker logs --since 1h <gateway-container> 2>&1 \
 
 ### 9.3 Lasttest (Empfehlung)
 
-Lasttests nur gegen eine **Staging-Umgebung** mit gleicher Servergröße, nie gegen Produktion (Rate Limits, unveränderliche Ledger-Einträge). Werkzeug z. B. k6; Szenario: viele Endgeräte mit eigener `X-Device-Id` und eigenem Token, je Gerät Vorlage eines Test-QR-Codes und Einlösung mit neuem `Idempotency-Key`. Nach dem Test `php artisan giftcard:verify-chains` und die Prüfabfragen aus der [Restore-Anleitung](restore-guide.md#8-prüfabfragen-nach-einem-restore) ausführen.
+Lasttests nur gegen eine **Staging-Umgebung** mit gleicher Servergröße, nie gegen Produktion (Rate Limits, unveränderliche Ledger-Einträge). Werkzeug z. B. k6; Szenario: viele Endgeräte mit eigener `X-Device-Id` und eigenem Token, je Gerät Scan eines Test-QR-Codes und Einlösung mit neuem `Idempotency-Key`. Nach dem Test `php artisan giftcard:verify-chains` und die Prüfabfragen aus der [Restore-Anleitung](restore-guide.md#8-prüfabfragen-nach-einem-restore) ausführen.
 
 ## 10. Checkliste
 

@@ -6,12 +6,12 @@
 
 ## 1. Cilj performansi
 
-Najvažniji cilj je poslovni: **iskorištavanje vaučera za stolom, uključujući čovjeka, traje manje od 5 sekundi** – skeniranje QR koda, unos iznosa, gotovo. Predočenje važi 60 sekundi; sam sistem treba potrošiti samo mali dio tog vremena.
+Najvažniji cilj je poslovni: **iskorištavanje vaučera za stolom, uključujući čovjeka, traje manje od 5 sekundi** – skeniranje QR koda, unos iznosa, gotovo. Skeniranje važi 60 sekundi; sam sistem treba potrošiti samo mali dio tog vremena.
 
 Iskorištavanje se sastoji od dva zahtjeva:
 
-1. `POST /presentments` – pronalaženje hasha skenirane tajne, pohrana predočenja (jedan red).
-2. `POST /vouchers/{id}/redemptions` – u jednoj transakciji zaključavanje predočenja i vaučera, provjere, dodavanje stavke u ledger i zapisnik aktivnosti, ažuriranje stanja.
+1. `POST /presentments` – pronalaženje hasha skenirane tajne, pohrana skeniranja (jedan red).
+2. `POST /vouchers/{id}/redemptions` – u jednoj transakciji zaključavanje skeniranja i vaučera, provjere, dodavanje stavke u ledger i zapisnik aktivnosti, ažuriranje stanja.
 
 ## 2. Mjerenje umjesto procjene
 
@@ -39,7 +39,7 @@ Sljedeći proračun je **procjena** i prije rasta izvan pilot rada treba ga potv
 | Vrijeme servera za tipičan API zahtjev | 20–100 ms |
 | Istovremeni PHP procesi | 24 |
 | Teorijski protok API-ja | oko 240–1.000 zahtjeva/s |
-| Zahtjevi po iskorištavanju (predočenje + iskorištavanje + osvježavanje prikaza) | oko 3–5 |
+| Zahtjevi po iskorištavanju (skeniranje + iskorištavanje + osvježavanje prikaza) | oko 3–5 |
 | Iskorištavanja u vršnom periodu po restoranu | 1–2 u minuti (pretpostavka za dobru večer u vrijeme adventa) |
 
 Čak i 500 restorana s 2 iskorištavanja u minuti daje oko 17 iskorištavanja u sekundi, dakle oko 50–85 zahtjeva/s – znatno ispod procijenjenog protoka. Uska grla su prije:
@@ -56,7 +56,7 @@ Ograničenja štite od zloupotrebe i istovremeno ograničavaju opterećenje poje
 | Limiter | Granica | Uticaj na performanse |
 |---|---|---|
 | `api` | 240/min po osobi | ograničava neispravne integracije (beskonačne petlje) |
-| `presentment` | 90/min po osobi i uređaju; neuspjela predočenja dodatno 10 u 5 min po restoranu, osobi i uređaju | konobar s dva uređaja nije usporen; gosti iza iste IP adrese se nikada ne računaju |
+| `presentment` | 90/min po osobi i uređaju; neuspjela skeniranja dodatno 10 u 5 min po restoranu, osobi i uređaju | konobar s dva uređaja nije usporen; gosti iza iste IP adrese se nikada ne računaju |
 | `voucher-operation` | 90/min po osobi i uređaju | prodaja, iskorištavanje, dopuna, ishod iskorištavanja |
 | `login` | 5/min po e-mailu + IP, 30/min po IP | zaštita od napada na lozinke |
 | `password-reset` | 5/min po IP | |
@@ -71,7 +71,7 @@ Brojači se nalaze u Redisu. Integracija s kasom koja redovno dostiže 240/min t
 | Tabela | Indeksi | Korist |
 |---|---|---|
 | `vouchers` | `(restaurant_id, voucher_number)` unique, `(restaurant_id, status, created_at)`, `status`, `expires_at` | lista vaučera, pretraga po internom broju, noćni istek |
-| `media` | `secret_hash` unique, `(voucher_id, type, status)` | predočenje: jedno traženje u indeksu po skeniranju |
+| `media` | `secret_hash` unique, `(voucher_id, type, status)` | provjera skeniranja: jedno traženje u indeksu po skeniranju |
 | `presentments` | `(restaurant_id, created_at)` | analiza, čišćenje |
 | `voucher_transactions` | `(restaurant_id, idempotency_key)` unique, `presentment_id`, `payment_id`, `related_transaction_id` unique, `(restaurant_id, created_at)`, `(restaurant_id, type, created_at)`, `(voucher_id, created_at)` | idempotentnost, ishod iskorištavanja, istorija, lista knjiženja |
 | `payments` | `(restaurant_id, method, created_at)` | analiza po načinu plaćanja |
@@ -85,7 +85,7 @@ Svi primarni ključevi su vremenski uređeni UUIDv7 – novi redovi završavaju 
 
 Svaka promjena stanja izvršava se u transakciji sa `SELECT … FOR UPDATE`:
 
-- Kod iskorištavanja se zaključavaju **predočenje i jedan vaučer** (redoslijed predočenje → vaučer), ne tabela. Iskorištavanja različitih vaučera rade paralelno.
+- Kod iskorištavanja se zaključavaju **skeniranje i jedan vaučer** (redoslijed skeniranje → vaučer), ne tabela. Iskorištavanja različitih vaučera rade paralelno.
 - Istovremena iskorištavanja **istog** vaučera se serijalizuju – to je namjerno i sprečava dvostruku potrošnju. Nakon zaključavanja idempotency ključ se ponovo provjerava; ponavljanje koje je čekalo dobija prvi rezultat.
 - Pri dodavanju u hash lanac zaključava se njegova glava u `chain_heads` (redoslijed plaćanja → ledger → zapisnik aktivnosti). Knjiženja **jednog restorana** se time za vrijeme dodavanja kratko upisuju jedno za drugim; restorani međusobno ne blokiraju jedni druge.
 - `READ-COMMITTED` drži zaključavanja kratkim; kod deadlocka transakcija se ponavlja do 3 puta.
@@ -118,7 +118,7 @@ Stanja se nikada ne keširaju – svako iskorištavanje čita zaključani zapis 
 ## 7. Frontend
 
 - Grafikoni dashboarda učitavaju se tek nakon pokazatelja (`next/dynamic`) – pokazatelji se prikazuju prvi.
-- Web kasa i aplikacija za konobare odbrojavaju važenje predočenja od prijema (`expires_in`), nezavisno od sata uređaja.
+- Web kasa i aplikacija za konobare odbrojavaju važenje skeniranja od prijema (`expires_in`), nezavisno od sata uređaja.
 - Nakon iskorištavanja skener je odmah spreman za sljedeći QR kod.
 - Interfejs staje bez skrolovanja na male telefone (iPhone SE), što štedi vrijeme rukovanja.
 
@@ -160,7 +160,7 @@ docker logs --since 1h <gateway-container> 2>&1 \
 
 ### 9.3 Test opterećenja (preporuka)
 
-Testove opterećenja izvodite samo nad **staging okruženjem** iste veličine servera, nikada nad produkcijom (ograničenja broja zahtjeva, nepromjenjive stavke ledgera). Alat npr. k6; scenarij: mnogo uređaja s vlastitim `X-Device-Id` i vlastitim tokenom, po uređaju predočenje testnog QR koda i iskorištavanje s novim `Idempotency-Key`. Nakon testa izvršite `php artisan giftcard:verify-chains` i kontrolne upite iz [Uputstva za vraćanje podataka](restore-guide.md#8-kontrolni-upiti-nakon-vraćanja).
+Testove opterećenja izvodite samo nad **staging okruženjem** iste veličine servera, nikada nad produkcijom (ograničenja broja zahtjeva, nepromjenjive stavke ledgera). Alat npr. k6; scenarij: mnogo uređaja s vlastitim `X-Device-Id` i vlastitim tokenom, po uređaju skeniranje testnog QR koda i iskorištavanje s novim `Idempotency-Key`. Nakon testa izvršite `php artisan giftcard:verify-chains` i kontrolne upite iz [Uputstva za vraćanje podataka](restore-guide.md#8-kontrolni-upiti-nakon-vraćanja).
 
 ## 10. Kontrolna lista
 

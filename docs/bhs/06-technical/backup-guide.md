@@ -90,8 +90,8 @@ Redis sadrži samo prolazne podatke. Ako se Redis izgubi (npr. vraćanje na novi
 | Sesije | Sve osobe u pretraživaču se odjavljuju i ponovo prijavljuju. Uređaji i tokeni aplikacije za konobare ostaju važeći (tabele `devices`, `personal_access_tokens`). | bezopasno, jednokratan napor za osoblje |
 | Red čekanja (`default`, `notifications`) | E-mailovi koji još nisu poslani (kupovina, dopuna, podsjetnik o isteku, pozivnice, linkovi za lozinku) se gube. Knjiženja nisu pogođena – e-mailovi se stavljaju u red tek nakon commita knjiženja. | malo; pozivnice ponovo poslati s **Invite again** |
 | Keš | Automatski se ponovo gradi (dozvole, sistemske postavke). | nema |
-| Brojači rate limita, brojači neuspjelih predočenja | Brojači počinju od 0. Samo zaključavanje naloga (`locked_until`) nalazi se u bazi. | nema |
-| Predočenja (presentments) | nalaze se u bazi, ne u Redisu; ionako ističu nakon 60 s | nema |
+| Brojači rate limita, brojači neuspjelih skeniranja | Brojači počinju od 0. Samo zaključavanje naloga (`locked_until`) nalazi se u bazi. | nema |
+| Skeniranja (API: `presentments`) | nalaze se u bazi, ne u Redisu; ionako ističu nakon 60 s | nema |
 | Zaključavanja (zaključavanje migracija, `withoutOverlapping`) | ponovo se postavljaju | nema |
 
 Konfiguracija `--appendonly yes` i `--maxmemory-policy noeviction` štiti redove čekanja i sesije pri normalnim ponovnim pokretanjima.

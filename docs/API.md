@@ -268,8 +268,8 @@ Idempotency-Key: 7b1c…
 ```
 
 Without `vouchers.view` (e.g. a manager's app token) `data` is only `{id, kind, balance, currency}`.
-`printable.payload` is returned only here and cannot be fetched again; the print sheet shows the QR and the
-restaurant, never the voucher number or the value. A retry with the same key returns the same sale
+`printable.payload` is returned only here and cannot be fetched again; the print sheet shows the QR, the
+restaurant and the value sold (ADR-003), never the voucher number. A retry with the same key returns the same sale
 (`"replayed": true`, 200). When the retry comes from the same user and device within 15 minutes and the voucher is
 still active and unused, it carries a fresh QR and the unseen one is revoked; otherwise `printable` is `null`.
 
@@ -371,7 +371,7 @@ ever changed. `Payment`: `id, method, method_label, amount, currency, reference,
 | GET | `/settings/notification-templates` | Effective guest e-mail templates (`voucher_issued`, `voucher_reloaded`, `voucher_expiring`) |
 | PUT | `/settings/notification-templates/{key}` | `{subject, body, is_active?, locale? (en \| de)}` — creates a restaurant override |
 
-Guest e-mails never contain a balance, an amount, the voucher number or a link to the voucher.
+Guest e-mails confirm a sale or reload like a receipt: amount, restaurant, date and payment method (placeholders `amount`, `date`, `payment_method`). They never contain anything that proves or spends the voucher: no QR payload, voucher number, link, token or code, and no balance.
 
 | Method | Path | Permission | |
 |---|---|---|---|

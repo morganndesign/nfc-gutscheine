@@ -17,12 +17,12 @@ Scan QR  →  proof of presence (60 s)  →  enter amount  →  Redeem  →  Don
 
 ## Highlights
 
-- **No spending without proof of presence.** Every redemption consumes a *presentment*: a single-use proof, valid
-  60 seconds, that the voucher's QR was scanned by this waiter on this device. A voucher number is never a
-  credential.
+- **No spending without proof of presence.** Every redemption consumes a *scan* (a **card tap** once NFC cards
+  arrive): a single-use proof, valid 60 seconds, that the voucher's QR was scanned by this waiter on this device
+  (API resource: `presentments`). A voucher number is never a credential.
 - **Vouchers carry a secret, not a number.** A printable voucher's QR holds a 256-bit random secret; the server
-  stores only its hash and shows the payload once, at the sale. The printed sheet shows no voucher number and no
-  value.
+  stores only its hash and shows the payload once, at the sale. The printed sheet shows the value as part of the design,
+  never the voucher number.
 - **Immutable, verifiable money history.** Ledger, payments and audit log are append-only (database triggers) and
   hash-chained per restaurant; a nightly job recomputes every chain and every balance.
 - **Double-spend proof.** Every balance change runs in one DB transaction under `SELECT … FOR UPDATE`, with mandatory

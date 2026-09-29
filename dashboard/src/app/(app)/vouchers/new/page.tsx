@@ -57,6 +57,8 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
             locale={restaurant?.locale}
             recipientName={sale.data.recipient_name}
             expiresAt={sale.data.expires_at}
+            value={sale.data.initial_value}
+            currency={sale.data.currency}
           />
           <div className="space-y-4">
             <div className="flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
@@ -282,7 +284,7 @@ function SellVoucherContent() {
         <Card>
           <CardHeader>
             <CardTitle>Customer</CardTitle>
-            <CardDescription>Optional. With an e-mail address the customer receives a confirmation (without amount or code).</CardDescription>
+            <CardDescription>Optional. With an e-mail address the customer receives a receipt with the amount (never the QR code or a link).</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Segmented

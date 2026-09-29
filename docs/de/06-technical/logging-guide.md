@@ -11,7 +11,7 @@ GiftCard Pro kennt drei Arten von Aufzeichnungen mit unterschiedlichem Zweck:
 | Art | Speicherort | Zweck | Aufbewahrung |
 |---|---|---|---|
 | **Betriebslogs** | Docker-Logs der Container (stdout/stderr), in Coolify unter Ressource → *Logs* | Fehlersuche, Monitoring, Sicherheitsalarme | kurz (Rotation, siehe Abschnitt 3) |
-| **Audit-Log** | Tabelle `audit_logs` (append-only, Hash-Kette je Lokal) | Nachvollziehbarkeit sicherheits- und geldrelevanter Aktionen für Lokale und Plattform, auch jede fehlgeschlagene Vorlage | dauerhaft (nichts wird geändert oder gelöscht) |
+| **Audit-Log** | Tabelle `audit_logs` (append-only, Hash-Kette je Lokal) | Nachvollziehbarkeit sicherheits- und geldrelevanter Aktionen für Lokale und Plattform, auch jeden fehlgeschlagenen Scan | dauerhaft (nichts wird geändert oder gelöscht) |
 | **Ledger und Zahlungen** | Tabellen `voucher_transactions`, `payments` (append-only, Hash-Kette je Lokal) | Buchhalterische Wahrheit: jede Guthabenänderung mit Person, Gerät, IP und Zeitstempel; jede Zahlung eines Verkaufs oder einer Aufladung | dauerhaft |
 
 Datenbank-Trigger lehnen `UPDATE` und `DELETE` auf Ledger, Zahlungen und Audit-Log ab; `php artisan giftcard:verify-chains` prüft jede Nacht, dass keine Zeile geändert, gelöscht, eingefügt oder umsortiert wurde.
@@ -69,9 +69,9 @@ Empfehlungen:
 
 | Ereignis | Betriebslog | Audit-Log | Ledger / Zahlungen |
 |---|---|---|---|
-| Vorlage erfolgreich (`POST /presentments`) | – | – (Zeile in `presentments`) | – |
-| Vorlage fehlgeschlagen (QR unbekannt, widerrufen, fremd) | – | ✓ `presentment.failed` | – |
-| Vorlage abgelehnt (falsche Methode, gedrosselt) | – | ✓ `presentment.rejected` | – |
+| Scan erfolgreich (`POST /presentments`) | – | – (Zeile in `presentments`) | – |
+| Scan fehlgeschlagen (QR unbekannt, widerrufen, fremd) | – | ✓ `presentment.failed` | – |
+| Scan abgelehnt (falsche Methode, gedrosselt) | – | ✓ `presentment.rejected` | – |
 | Verkauf, Einlösung, Aufladung, Storno | – | ✓ `voucher.sold`, `voucher.redeemed`, `voucher.reloaded`, `transaction.reversed` | ✓ (Verkauf und Aufladung mit Zahlung) |
 | Gutschein sperren, entsperren, ablaufen, wieder freigeben, bearbeiten | – | ✓ `voucher.blocked`, `voucher.unblocked`, `voucher.expired`, `voucher.reinstated`, `voucher.updated` | – (das Guthaben bleibt) |
 | Anmeldung, Abmeldung | – | ✓ `auth.login`, `auth.logout` | – |
@@ -152,7 +152,7 @@ docker logs --since 1h <gateway-container> 2>&1 | jq -c 'select(.status? >= 500)
 docker logs --since 1h <gateway-container> 2>&1 | jq -r 'select(.status?) | .status' | sort | uniq -c
 ```
 
-`jq` auf dem Server installieren: `apt -y install jq`. Fehlgeschlagene Vorlagen stehen nicht im Betriebslog, sondern im Audit-Log (**Audit log**, Filter `presentment.`).
+`jq` auf dem Server installieren: `apt -y install jq`. Fehlgeschlagene Scans stehen nicht im Betriebslog, sondern im Audit-Log (**Audit log**, Filter `presentment.`).
 
 ### Log-Versand (Empfehlung)
 

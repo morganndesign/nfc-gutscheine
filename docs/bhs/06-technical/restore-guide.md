@@ -184,7 +184,7 @@ Nakon toga: ponovo postavite off-site sinhronizaciju ([Uputstvo za sigurnosne ko
 - Ponovo generišite `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` (novi server, nove vrijednosti), `MAIL_PASSWORD` i SSH ključeve; ponovo autorizujte vezu Coolifyja s GitHub aplikacijom.
 - Ponovo generišite `APP_KEY`: sve sesije postaju nevažeće (namjerno).
 - Sve API tokene restorana i sve tokene uređaja aplikacije za konobare smatrajte kompromitovanim: opozovite ih pod `/admin/api-tokens`, obavijestite restorane, neka ponovo kreiraju tokene za integracije; konobari se ponovo prijavljuju u aplikaciju.
-- QR kodovi vaučera: server pohranjuje samo hashove; napadač s pristupom bazi iz njih ne može napraviti QR kod. Iskorištavanje ionako zahtijeva predočenje od strane prijavljene osobe na registrovanom uređaju.
+- QR kodovi vaučera: server pohranjuje samo hashove; napadač s pristupom bazi iz njih ne može napraviti QR kod. Iskorištavanje ionako zahtijeva skeniranje od strane prijavljene osobe na registrovanom uređaju.
 - Pokrenite `php artisan giftcard:verify-chains` nad vraćenim stanjem: izmijenjeno knjiženje vidi se kao prekinut lanac.
 - Provjerite obaveze prijave prema GDPR-u (odjeljak 9.3).
 
@@ -260,7 +260,7 @@ JOIN voucher_transactions t ON t.id = (
 WHERE t.balance_after <> v.balance;
 ```
 
-**3. Svaka prodaja i dopuna ima plaćanje, svako iskorištavanje predočenje (rezultat mora biti prazan):**
+**3. Svaka prodaja i dopuna ima plaćanje, svako iskorištavanje skeniranje (rezultat mora biti prazan):**
 
 ```sql
 SELECT id, type FROM voucher_transactions

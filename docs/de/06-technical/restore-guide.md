@@ -184,7 +184,7 @@ Danach: Off-site-Sync wieder einrichten ([Backup-Anleitung](backup-guide.md)), H
 - `SERVICE_PASSWORD_MYSQL`, `SERVICE_PASSWORD_MYSQLROOT`, `SERVICE_PASSWORD_REDIS` (neuer Server, neue Werte), `MAIL_PASSWORD` und SSH-Schlüssel neu erzeugen; die GitHub-App-Verbindung von Coolify neu autorisieren.
 - `APP_KEY` neu erzeugen: Alle Sessions werden ungültig (gewollt).
 - Alle API-Tokens der Lokale und alle Gerätetokens der Kellner-App als kompromittiert betrachten: unter `/admin/api-tokens` widerrufen, Lokale informieren, Integrationstokens neu anlegen lassen; Servicekräfte melden sich in der App neu an.
-- QR-Codes der Gutscheine: Der Server speichert nur Hashes; ein Angreifer mit Datenbankzugriff kann daraus keinen QR-Code erzeugen. Einlösen verlangt ohnehin eine Vorlage durch eine angemeldete Person auf einem registrierten Gerät.
+- QR-Codes der Gutscheine: Der Server speichert nur Hashes; ein Angreifer mit Datenbankzugriff kann daraus keinen QR-Code erzeugen. Einlösen verlangt ohnehin einen Scan durch eine angemeldete Person auf einem registrierten Gerät.
 - `php artisan giftcard:verify-chains` auf dem wiederhergestellten Stand ausführen: Eine veränderte Buchung fällt als gebrochene Kette auf.
 - Meldepflichten nach DSGVO prüfen (Abschnitt 9.3).
 
@@ -260,7 +260,7 @@ JOIN voucher_transactions t ON t.id = (
 WHERE t.balance_after <> v.balance;
 ```
 
-**3. Jeder Verkauf und jede Aufladung hat eine Zahlung, jede Einlösung eine Vorlage (Ergebnis muss leer sein):**
+**3. Jeder Verkauf und jede Aufladung hat eine Zahlung, jede Einlösung einen Scan (Ergebnis muss leer sein):**
 
 ```sql
 SELECT id, type FROM voucher_transactions

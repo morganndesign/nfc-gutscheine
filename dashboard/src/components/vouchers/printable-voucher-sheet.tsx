@@ -1,13 +1,14 @@
 "use client"
 
-import { guestCopy } from "@/lib/guest-copy"
+import { guestCopy, guestLocale } from "@/lib/guest-copy"
+import { formatMoney } from "@/lib/money"
 import { formatDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 
 /**
- * The printable voucher (P0-03): the QR, the restaurant and its branding. No voucher number and no value are
- * printed (architecture §5.2, §6.4): the QR is the voucher, the balance lives on the server. The QR is shown only
- * in the sale response, so this sheet exists only right after the sale.
+ * The printable voucher (P0-03): the QR, the restaurant, its branding and the value that was bought (ADR-003: the
+ * value is part of the design, not a balance; the balance lives on the server). No voucher number is printed: the
+ * QR is the voucher. The QR is shown only in the sale response, so this sheet exists only right after the sale.
  */
 export function PrintableVoucherSheet({
   qrSvg,
@@ -16,6 +17,8 @@ export function PrintableVoucherSheet({
   locale,
   recipientName,
   expiresAt,
+  value,
+  currency,
   className,
 }: {
   qrSvg: string
@@ -24,6 +27,9 @@ export function PrintableVoucherSheet({
   locale?: string
   recipientName?: string | null
   expiresAt: string | null
+  /** The value sold, in cents. */
+  value: number
+  currency: string
   className?: string
 }) {
   const copy = guestCopy(locale)
@@ -34,6 +40,8 @@ export function PrintableVoucherSheet({
       <div className="px-8 py-6 text-white" style={{ background: brandColor ?? "#18181b" }}>
         <p className="text-xs tracking-widest uppercase opacity-80">{copy.voucher}</p>
         <p className="mt-1 text-2xl font-semibold">{restaurantName}</p>
+        <p className="mt-4 text-xs tracking-widest uppercase opacity-80">{copy.value}</p>
+        <p className="tabular text-4xl font-semibold tracking-tight">{formatMoney(value, currency, guestLocale(locale))}</p>
         {recipientName ? (
           <p className="mt-1 text-sm opacity-90">
             {copy.for} {recipientName}

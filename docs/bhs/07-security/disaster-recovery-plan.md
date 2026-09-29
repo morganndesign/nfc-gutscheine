@@ -88,7 +88,7 @@ Budući da je GiftCard Pro mali tim, više uloga može biti kod jedne osobe. Odl
 1. Zaustaviti upise: režim održavanja (`php artisan down`) odnosno zaustaviti servise `api`, `worker` i `scheduler` u Coolifyju, kako ne bi nastajala nova knjiženja na oštećenim podacima. Obavještenje o održavanju (predložak A).
 2. Osigurati stanje: napraviti svjež dump i snapshot volumena `mysql-data` (za analizu, ne prepisivati). Ako provjera integriteta javlja nalaz, dodatno pokrenuti [Vodič za odgovor na incidente](incident-response-guide.md) (playbook 7.7).
 3. Pokušaj popravke samo ako su uzrok i obim jasni. Ledger, plaćanja i zapisnik aktivnosti nikada se ne ispravljaju SQL-om. U suprotnom:
-4. Posljednji dump prvo uvesti u zasebnu bazu i provjeriti kontrolnim upitima iz [Uputstva za vraćanje podataka](../06-technical/restore-guide.md#8-kontrolni-upiti-nakon-vraćanja) (stanje = zbir knjiženja, svako knjiženje s plaćanjem odnosno predočenjem, uvjerljive količine).
+4. Posljednji dump prvo uvesti u zasebnu bazu i provjeriti kontrolnim upitima iz [Uputstva za vraćanje podataka](../06-technical/restore-guide.md#8-kontrolni-upiti-nakon-vraćanja) (stanje = zbir knjiženja, svako knjiženje s plaćanjem odnosno skeniranjem, uvjerljive količine).
 5. Produkcijsku bazu vratiti iz tog dumpa (Uputstvo za vraćanje podataka, scenarij B), *Redeploy*, `php artisan giftcard:verify-chains`, provjeriti kao u 5.1 korak 6.
 6. Utvrditi knjiženja između dumpa i ispada (vidi 6.2) i obavijestiti restorane.
 
@@ -176,7 +176,7 @@ Detalji i kontrolni upiti: [Uputstvo za vraćanje podataka](../06-technical/rest
 3. Svakom pogođenom restoranu poslati listu vaučera sa stanjem u trenutku dumpa i zamoliti za poređenje s računima iz fiskalne kase.
 4. **Prodaje** u izgubljenom periodu ne postoje nakon oporavka; njihov QR kod se više ne prepoznaje. Restoran ponovo prodaje vaučer, evidentira prvobitno plaćanje (npr. kartični terminal s prvobitnim brojem potvrde) i gostu predaje novi list za štampu.
 5. **Dopune** restoran ponovo evidentira s prvobitnim plaćanjem i napomenom „Naknadni unos nakon oporavka“.
-6. **Iskorištavanja** uvijek zahtijevaju predočenje vaučera. Pogođene vaučere restoran blokira s tom napomenom; kada gost ponovo predoči vaučer, deblokira ga i evidentira nedostajuće iskorištavanje s napomenom. Administracija platforme nikada ne knjiži u ime restorana.
+6. **Iskorištavanja** uvijek zahtijevaju skeniranje vaučera. Pogođene vaučere restoran blokira s tom napomenom; kada gost ponovo predoči vaučer, deblokira ga i evidentira nedostajuće iskorištavanje s napomenom. Administracija platforme nikada ne knjiži u ime restorana.
 
 ### 6.3 Povratak na prethodni deployment
 

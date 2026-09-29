@@ -28,14 +28,15 @@ final class SendVoucherNotification implements ShouldBeUnique, ShouldQueue
     public function __construct(
         public readonly string $voucherId,
         public readonly string $templateKey,
-        public readonly ?string $uniqueSuffix = null,
+        /** The sale or reload the e-mail confirms; null for reminders. */
+        public readonly ?string $transactionId = null,
     ) {
         $this->onQueue('notifications');
     }
 
     public function uniqueId(): string
     {
-        return $this->voucherId.':'.$this->templateKey.':'.($this->uniqueSuffix ?? '');
+        return $this->voucherId.':'.$this->templateKey.':'.($this->transactionId ?? '');
     }
 
     public function handle(VoucherNotificationService $notifications): void
@@ -44,7 +45,7 @@ final class SendVoucherNotification implements ShouldBeUnique, ShouldQueue
         $voucher = Voucher::query()->withoutGlobalScopes()->find($this->voucherId);
 
         if ($voucher !== null) {
-            $notifications->send($voucher, $this->templateKey);
+            $notifications->send($voucher, $this->templateKey, $this->transactionId);
         }
     }
 }

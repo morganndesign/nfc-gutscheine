@@ -23,7 +23,7 @@ API je razdvojen po mandantima: svaki pristup vidi isključivo podatke vlastitog
 
 - **Vaučer (voucher)** – račun koji drži stanje. `kind` je `card` ili `digital`; `status` je `active`, `blocked` ili `expired`. *Prazan* vaučer je `active` vaučer s `balance` 0 (ne postoji poseban status). `voucher_number` je interni 16-cifreni broj za osoblje i podršku. Nikada se ne štampa na vaučer i nikada se ne prihvata kao dokaz ovlaštenja.
 - **Medij** – način na koji se vaučer predočava. Trenutno je jedini medij **QR kod za štampu** digitalnog vaučera (`GCPV1.` + 43 base64url znaka = nasumična 256-bitna tajna). Server pohranjuje samo njen SHA-256 hash; sadržaj se vraća jednom, u odgovoru na prodaju.
-- **Predočenje (presentment)** – dokaz da je medij vaučera ovdje, sada. Svako terećenje troši jedno predočenje. Jednokratno, važi 60 sekundi, vezano za restoran, vaučer, svrhu, osobu i uređaj.
+- **Skeniranje** (API: `presentment`) – dokaz da je medij vaučera ovdje, sada. Svako terećenje troši jedno skeniranje. Jednokratno, važi 60 sekundi, vezano za restoran, vaučer, svrhu, osobu i uređaj.
 - **Plaćanje (payment)** – kako je prodaja ili dopuna plaćena: `cash`, `card_terminal`, `bank_transfer`, `complimentary`.
 - **Ledger** – `voucher_transactions` (`issue`, `redemption`, `reload`, `reversal`). Ledger, plaćanja i zapisnik aktivnosti se samo dopunjuju (append-only) i povezani su hash lancem.
 
@@ -160,13 +160,13 @@ Svaka greška ima istu strukturu:
 | 422 | `MEDIUM_NOT_RECOGNIZED` | Skenirani tekst nije važeći vaučer ovog restorana (nepoznat, opozvan i strani izgledaju isto) |
 | 422 | `PRESENTMENT_METHOD_UNAVAILABLE` | Za metodu ne postoji provjera (`live_auth`) |
 | 422 | `PRESENTMENT_METHOD_NOT_ALLOWED` | Vrsta vaučera ne može se iskoristiti ovom metodom |
-| 422 | `PRESENTMENT_INVALID` | Predočenje ne može pokriti ovo iskorištavanje; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked` |
+| 422 | `PRESENTMENT_INVALID` | Skeniranje ne može pokriti ovo iskorištavanje; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked` |
 | 422 | `VOUCHER_BLOCKED`, `VOUCHER_EXPIRED`, `VOUCHER_NOT_REDEEMABLE` | Status vaučera |
 | 422 | `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`, `BALANCE_LIMIT_EXCEEDED`, `RELOAD_NOT_ALLOWED` | Poslovna pravila |
 | 422 | `DEBIT_LIMIT_EXCEEDED` | `context.limit`: `per_transaction` ili `per_voucher_per_day`, `context.max`, kod dnevnog limita i `context.remaining` |
 | 422 | `INVITATION_NOT_DELIVERED`, `MAIL_NOT_DELIVERED`, `MAIL_RECIPIENT_REJECTED` | Administracija platforme (vidi tamo) |
 | 429 | `TOO_MANY_REQUESTS` | Ograničivač broja zahtjeva (`retry_after`) |
-| 429 | `PRESENTMENT_THROTTLED` | Previše neuspjelih predočenja za ovaj restoran, osobu i uređaj (`context.retry_after`) |
+| 429 | `PRESENTMENT_THROTTLED` | Previše neuspjelih skeniranja za ovaj restoran, osobu i uređaj (`context.retry_after`) |
 | 429 | `VELOCITY_LIMIT_EXCEEDED` | Dostignut broj iskorištavanja po vaučeru po satu (`context.retry_after`: sekunde dok se ne oslobodi mjesto) |
 
 ## 6. Ograničenja broja zahtjeva (rate limits)
@@ -180,7 +180,7 @@ Svaka greška ima istu strukturu:
 | `voucher-operation` | 90/min po osobi i `X-Device-Id` | prodaja, iskorištavanje, dopuna, ishod iskorištavanja |
 | `api` | 240/min po osobi | svaki autentifikovani zahtjev |
 
-Neuspjela predočenja (skenirani tekst ništa ne dokazuje) broje se posebno: nakon `PRESENTMENT_FAILURE_LIMIT` (10) unutar `PRESENTMENT_FAILURE_DECAY` (300 s) po restoranu, osobi i uređaju `POST /presentments` odgovara s `429 PRESENTMENT_THROTTLED`. Skeniranja drugih gostiju iza iste javne IP adrese nikada se ne računaju.
+Neuspjela skeniranja (skenirani tekst ništa ne dokazuje) broje se posebno: nakon `PRESENTMENT_FAILURE_LIMIT` (10) unutar `PRESENTMENT_FAILURE_DECAY` (300 s) po restoranu, osobi i uređaju `POST /presentments` odgovara s `429 PRESENTMENT_THROTTLED`. Skeniranja drugih gostiju iza iste javne IP adrese nikada se ne računaju.
 
 Dodatna poslovna ograničenja po restoranu (**Settings → Vouchers**): maksimalno pojedinačno terećenje, maksimalno terećenje po vaučeru po danu, broj iskorištavanja po vaučeru po satu (standard 10), maksimalno stanje.
 
@@ -213,7 +213,7 @@ Dozvole su navedene u uglastim zagradama. Sve putanje su relativne u odnosu na `
 
 Linkovi za resetovanje lozinke i pozivnice nose token u fragmentu URL-a (`/reset-password#token=…&email=…`), koji pretraživač nikada ne šalje serveru.
 
-### 8.2 Predočenja `[vouchers.redeem]`
+### 8.2 Skeniranja `[vouchers.redeem]`
 
 ```http
 POST /presentments
@@ -239,7 +239,7 @@ POST /presentments
 
 `expires_in` je broj preostalih sekundi iz perspektive servera; klijenti odbrojavaju od prijema, nezavisno od vlastitog sata. Dio o vaučeru (`PresentedVoucher`) nikada ne sadrži podatke o kupcima. Zaglavlje odgovora `Cache-Control: no-store, private`.
 
-Pravila: predočenje važi 60 sekundi i za jedno terećenje. Vezano je za ovaj restoran, ovaj vaučer, svrhu, osobu i uređaj (predočenje napravljeno bez uređaja može se koristiti samo bez uređaja). Pravila iskorištavanja po vrsti: `digital` vaučer iskorištava se samo QR metodom, `card` vaučer samo s `live_auth`. Neuspjelo predočenje bilježi se u zapisniku aktivnosti (`presentment.failed`) i računa se za zaključavanje.
+Pravila: skeniranje važi 60 sekundi i za jedno terećenje. Vezano je za ovaj restoran, ovaj vaučer, svrhu, osobu i uređaj (skeniranje napravljeno bez uređaja može se koristiti samo bez uređaja). Pravila iskorištavanja po vrsti: `digital` vaučer iskorištava se samo QR metodom, `card` vaučer samo s `live_auth`. Neuspjelo skeniranje bilježi se u zapisniku aktivnosti (`presentment.failed`) i računa se za zaključavanje.
 
 ### 8.3 Vaučeri
 
@@ -301,7 +301,7 @@ Idempotency-Key: 3f0e…
 → 201 { "data": { "voucher": Voucher | PresentedVoucher, "transaction": Transaction }, "replayed": false }
 ```
 
-Dio o vaučeru je puni `Voucher` za osobe s `vouchers.view`, inače `PresentedVoucher`. U jednoj transakciji baze server zaključava predočenje i red vaučera, ponovo traži idempotency ključ (ponavljanje koje je čekalo na zaključavanje dobija prvi rezultat), troši predočenje, provjerava status, stanje, djelimično iskorištavanje, granice po iskorištavanju i po danu te satni limit, i dodaje stavku u ledger. Odbijeno iskorištavanje ostavlja predočenje nepotrošenim; ono važi do svog isteka.
+Dio o vaučeru je puni `Voucher` za osobe s `vouchers.view`, inače `PresentedVoucher`. U jednoj transakciji baze server zaključava skeniranje i red vaučera, ponovo traži idempotency ključ (ponavljanje koje je čekalo na zaključavanje dobija prvi rezultat), troši skeniranje, provjerava status, stanje, djelimično iskorištavanje, granice po iskorištavanju i po danu te satni limit, i dodaje stavku u ledger. Odbijeno iskorištavanje ostavlja skeniranje nepotrošenim; ono važi do svog isteka.
 
 #### 8.3.3 Ishod iskorištavanja
 
@@ -370,7 +370,7 @@ Kasa čiji je zahtjev ostao bez odgovora pita ovdje umjesto da ponovo pošalje t
 | GET | `/settings/notification-templates` | Važeći predlošci e-mailova za goste (`voucher_issued`, `voucher_reloaded`, `voucher_expiring`) |
 | PUT | `/settings/notification-templates/{key}` | `{subject, body, is_active?, locale? (en \| de)}` – kreira override restorana |
 
-E-mailovi za goste nikada ne sadrže stanje, iznos, broj vaučera niti link na vaučer.
+E-mailovi za goste potvrđuju prodaju ili dopunu kao račun: iznos, restoran, datum i način plaćanja (placeholderi `amount`, `date`, `payment_method`). Nikada ne sadrže ništa čime se vaučer dokazuje ili iskorištava: nema QR sadržaja, broja vaučera, linka, tokena ni stanja.
 
 | Metoda | Putanja | Dozvola | Sadržaj |
 |---|---|---|---|
@@ -432,7 +432,7 @@ export TOKEN=gcp_…                      # API token from Settings → API
 export DEVICE=pos-01-4f9c2a7e1b3d5a     # fixed ID per till (16–64 chars)
 ```
 
-### 10.1 Predočenje i iskorištavanje vaučera
+### 10.1 Skeniranje i iskorištavanje vaučera
 
 ```bash
 P=$(curl -s -X POST $BASE/presentments \
@@ -496,7 +496,7 @@ curl -c jar.txt -b jar.txt -X POST https://app.giftcardpro.at/api/v1/auth/login 
 ## 11. Napomene za integracije
 
 - **Nije zamjena za fiskalnu kasu.** GiftCard Pro ne izdaje račune. Prodaja i iskorištavanje dodatno se knjiže u fiskalnoj kasi restorana (nije pravni savjet – provjeriti s poreznim savjetnikom).
-- Iskorištavanje uvijek zahtijeva svježe predočenje vaučera (`POST /presentments`); broj vaučera nije dokaz ovlaštenja.
+- Iskorištavanje uvijek zahtijeva svježe skeniranje vaučera (`POST /presentments`); broj vaučera nije dokaz ovlaštenja.
 - Iznose uvijek šaljite u centima; bez brojeva s pomičnim zarezom.
 - Za broj računa s kase koristite `reference` – to olakšava usklađivanje.
 - Reagujte na `code`; kod `429` poštujte `Retry-After`; kod nepoznatog ishoda iskorištavanja pitajte `GET /vouchers/{id}/redemptions/{key}` umjesto ponovnog terećenja.

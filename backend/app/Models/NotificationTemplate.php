@@ -33,14 +33,15 @@ class NotificationTemplate extends Model
     public const KEY_VOUCHER_EXPIRING = 'voucher_expiring';
 
     /**
-     * Guest e-mails never contain a balance, an amount, the voucher number or a link that shows the voucher
-     * (architecture §6.4, decision 24): whoever reads a forwarded e-mail learns nothing they could use.
+     * Guest e-mails are receipts (ADR-003): the purchase or reload amount, the restaurant, the date and how it
+     * was paid. They never contain anything that proves or spends the voucher: no QR payload, no voucher number,
+     * no link to the voucher, no token or code. The balance lives on the server and is not repeated in e-mails.
      *
      * @var array<string, list<string>>
      */
     public const PLACEHOLDERS = [
-        self::KEY_VOUCHER_ISSUED => ['restaurant_name', 'customer_name', 'validity'],
-        self::KEY_VOUCHER_RELOADED => ['restaurant_name', 'customer_name'],
+        self::KEY_VOUCHER_ISSUED => ['restaurant_name', 'customer_name', 'amount', 'date', 'payment_method', 'validity'],
+        self::KEY_VOUCHER_RELOADED => ['restaurant_name', 'customer_name', 'amount', 'date', 'payment_method'],
         self::KEY_VOUCHER_EXPIRING => ['restaurant_name', 'customer_name', 'expires_at'],
     ];
 
@@ -59,7 +60,11 @@ class NotificationTemplate extends Model
 
     public static function resolve(?string $restaurantId, string $key, string $locale, string $channel = 'mail'): ?self
     {
-        $language = substr($locale, 0, 2);
+        $language = strtolower(substr($locale, 0, 2));
+        // Bosnian, Croatian and Serbian share the BHS templates.
+        if (in_array($language, ['hr', 'sr'], true)) {
+            $language = 'bs';
+        }
 
         /** @var self|null */
         return static::query()

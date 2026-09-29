@@ -103,7 +103,7 @@ U administraciji platforme pregledajte zapisnik aktivnosti za mjesec: kreiranje,
 
 - Provjera trajanja certifikata (Coolify proxy ga obnavlja automatski; ispod 14 dana nešto nije u redu): `echo | openssl s_client -connect app.giftcardpro.at:443 -servername app.giftcardpro.at 2>/dev/null | openssl x509 -noout -enddate`
 - MySQL binarni logovi zauzimaju prostor u volumenu `mysql-data`: `SHOW BINARY LOGS;` – kod nedostatka prostora provjerite čuvanje (`binlog_expire_logs_seconds`).
-- Pratite veličinu velikih tabela (ledger, plaćanja, zapisnik aktivnosti i predočenja stalno rastu):
+- Pratite veličinu velikih tabela (ledger, plaćanja, zapisnik aktivnosti i skeniranja stalno rastu):
 
 ```sql
 SELECT table_name, ROUND((data_length + index_length) / 1024 / 1024) AS mb, table_rows

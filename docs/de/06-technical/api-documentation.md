@@ -23,7 +23,7 @@ Die API ist mandantengetrennt: Jeder Zugriff sieht ausschließlich die Daten des
 
 - **Gutschein (Voucher)** – das Konto, das ein Guthaben hält. `kind` ist `card` oder `digital`; `status` ist `active`, `blocked` oder `expired`. Ein *leerer* Gutschein ist ein `active`-Gutschein mit `balance` 0 (es gibt keinen eigenen Status). `voucher_number` ist eine interne 16-stellige Nummer für Personal und Support. Sie wird nie auf einen Gutschein gedruckt und nie als Berechtigungsnachweis akzeptiert.
 - **Medium** – wie ein Gutschein vorgezeigt wird. Das einzige Medium ist derzeit der **druckbare QR-Code** eines digitalen Gutscheins (`GCPV1.` + 43 base64url-Zeichen = ein zufälliges 256-Bit-Geheimnis). Der Server speichert nur dessen SHA-256-Hash; die Nutzlast wird einmal zurückgegeben, in der Antwort des Verkaufs.
-- **Vorlage (Presentment)** – der Nachweis, dass das Medium eines Gutscheins jetzt hier ist. Jede Abbuchung verbraucht eine Vorlage. Einmalig verwendbar, 60 Sekunden gültig, gebunden an Lokal, Gutschein, Zweck, Person und Gerät.
+- **Scan** (API: `presentment`) – der Nachweis, dass das Medium eines Gutscheins jetzt hier ist. Jede Abbuchung verbraucht einen Scan. Einmalig verwendbar, 60 Sekunden gültig, gebunden an Lokal, Gutschein, Zweck, Person und Gerät.
 - **Zahlung (Payment)** – wie ein Verkauf oder eine Aufladung bezahlt wurde: `cash`, `card_terminal`, `bank_transfer`, `complimentary`.
 - **Ledger** – `voucher_transactions` (`issue`, `redemption`, `reload`, `reversal`). Ledger, Zahlungen und Audit-Log sind nur erweiterbar (append-only) und über eine Hash-Kette verknüpft.
 
@@ -160,13 +160,13 @@ Jeder Fehler hat dieselbe Struktur:
 | 422 | `MEDIUM_NOT_RECOGNIZED` | Der gescannte Text ist kein gültiger Gutschein dieses Lokals (unbekannt, widerrufen und fremd sehen gleich aus) |
 | 422 | `PRESENTMENT_METHOD_UNAVAILABLE` | Für die Methode gibt es keinen Prüfer (`live_auth`) |
 | 422 | `PRESENTMENT_METHOD_NOT_ALLOWED` | Die Art des Gutscheins kann mit dieser Methode nicht eingelöst werden |
-| 422 | `PRESENTMENT_INVALID` | Die Vorlage kann diese Einlösung nicht decken; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked` |
+| 422 | `PRESENTMENT_INVALID` | Der Scan kann diese Einlösung nicht decken; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked` |
 | 422 | `VOUCHER_BLOCKED`, `VOUCHER_EXPIRED`, `VOUCHER_NOT_REDEEMABLE` | Status des Gutscheins |
 | 422 | `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`, `BALANCE_LIMIT_EXCEEDED`, `RELOAD_NOT_ALLOWED` | Geschäftsregeln |
 | 422 | `DEBIT_LIMIT_EXCEEDED` | `context.limit`: `per_transaction` oder `per_voucher_per_day`, `context.max`, beim Tageslimit zusätzlich `context.remaining` |
 | 422 | `INVITATION_NOT_DELIVERED`, `MAIL_NOT_DELIVERED`, `MAIL_RECIPIENT_REJECTED` | Plattformadministration (siehe dort) |
 | 429 | `TOO_MANY_REQUESTS` | Rate Limiter (`retry_after`) |
-| 429 | `PRESENTMENT_THROTTLED` | Zu viele fehlgeschlagene Vorlagen für dieses Lokal, diese Person und dieses Gerät (`context.retry_after`) |
+| 429 | `PRESENTMENT_THROTTLED` | Zu viele fehlgeschlagene Scans für dieses Lokal, diese Person und dieses Gerät (`context.retry_after`) |
 | 429 | `VELOCITY_LIMIT_EXCEEDED` | Einlösungen je Gutschein und Stunde erreicht (`context.retry_after`: Sekunden, bis wieder eine Einlösung möglich ist) |
 
 ## 6. Rate Limits
@@ -180,7 +180,7 @@ Jeder Fehler hat dieselbe Struktur:
 | `voucher-operation` | 90/min je Person und `X-Device-Id` | Verkauf, Einlösung, Aufladung, Einlösungsergebnis |
 | `api` | 240/min je Person | jeder authentifizierte Request |
 
-Fehlgeschlagene Vorlagen (der gescannte Text beweist nichts) werden gesondert gezählt: Nach `PRESENTMENT_FAILURE_LIMIT` (10) innerhalb von `PRESENTMENT_FAILURE_DECAY` (300 s) je Lokal, Person und Gerät antwortet `POST /presentments` mit `429 PRESENTMENT_THROTTLED`. Scans anderer Gäste hinter derselben öffentlichen IP-Adresse zählen nie mit.
+Fehlgeschlagene Scans (der gescannte Text beweist nichts) werden gesondert gezählt: Nach `PRESENTMENT_FAILURE_LIMIT` (10) innerhalb von `PRESENTMENT_FAILURE_DECAY` (300 s) je Lokal, Person und Gerät antwortet `POST /presentments` mit `429 PRESENTMENT_THROTTLED`. Scans anderer Gäste hinter derselben öffentlichen IP-Adresse zählen nie mit.
 
 Zusätzliche fachliche Grenzen je Lokal (**Settings → Vouchers**): maximale Einzelabbuchung, maximale Abbuchung je Gutschein und Tag, Einlösungen je Gutschein und Stunde (Standard 10), maximales Guthaben.
 
@@ -213,7 +213,7 @@ Berechtigungen stehen in eckigen Klammern. Alle Pfade sind relativ zu `/api/v1`.
 
 Links für Passwortzurücksetzung und Einladung tragen das Token im URL-Fragment (`/reset-password#token=…&email=…`), das der Browser nie an einen Server sendet.
 
-### 8.2 Vorlagen `[vouchers.redeem]`
+### 8.2 Scans `[vouchers.redeem]`
 
 ```http
 POST /presentments
@@ -239,7 +239,7 @@ POST /presentments
 
 `expires_in` ist die aus Sicht des Servers verbleibende Zeit in Sekunden; Clients zählen ab Empfang herunter, unabhängig von ihrer eigenen Uhr. Der Gutscheinteil (`PresentedVoucher`) enthält nie Kundendaten. Response-Header `Cache-Control: no-store, private`.
 
-Regeln: Die Vorlage gilt 60 Sekunden und für eine Abbuchung. Sie ist an dieses Lokal, diesen Gutschein, den Zweck, die Person und das Gerät gebunden (eine ohne Gerät erstellte Vorlage kann nur ohne Gerät verwendet werden). Einlöseregeln je Art: Ein `digital`-Gutschein wird nur mit einer QR-Methode eingelöst, ein `card`-Gutschein nur mit `live_auth`. Eine fehlgeschlagene Vorlage wird im Audit-Log festgehalten (`presentment.failed`) und zählt zur Sperre.
+Regeln: Der Scan gilt 60 Sekunden und für eine Abbuchung. Er ist an dieses Lokal, diesen Gutschein, den Zweck, die Person und das Gerät gebunden (ein ohne Gerät erstellter Scan kann nur ohne Gerät verwendet werden). Einlöseregeln je Art: Ein `digital`-Gutschein wird nur mit einer QR-Methode eingelöst, ein `card`-Gutschein nur mit `live_auth`. Ein fehlgeschlagener Scan wird im Audit-Log festgehalten (`presentment.failed`) und zählt zur Sperre.
 
 ### 8.3 Gutscheine
 
@@ -301,7 +301,7 @@ Idempotency-Key: 3f0e…
 → 201 { "data": { "voucher": Voucher | PresentedVoucher, "transaction": Transaction }, "replayed": false }
 ```
 
-Der Gutscheinteil ist der vollständige `Voucher` für Personen mit `vouchers.view`, sonst `PresentedVoucher`. In einer Datenbanktransaktion sperrt der Server die Vorlage und die Gutscheinzeile, sucht den Idempotency-Key erneut (eine Wiederholung, die auf die Sperre gewartet hat, erhält das erste Ergebnis), verbraucht die Vorlage, prüft Status, Guthaben, Teileinlösung, die Grenzen je Einlösung und je Tag sowie das Stundenlimit und schreibt den Ledger-Eintrag. Eine abgelehnte Einlösung lässt die Vorlage unverbraucht; sie bleibt bis zu ihrem Ablauf gültig.
+Der Gutscheinteil ist der vollständige `Voucher` für Personen mit `vouchers.view`, sonst `PresentedVoucher`. In einer Datenbanktransaktion sperrt der Server den Scan und die Gutscheinzeile, sucht den Idempotency-Key erneut (eine Wiederholung, die auf die Sperre gewartet hat, erhält das erste Ergebnis), verbraucht den Scan, prüft Status, Guthaben, Teileinlösung, die Grenzen je Einlösung und je Tag sowie das Stundenlimit und schreibt den Ledger-Eintrag. Eine abgelehnte Einlösung lässt den Scan unverbraucht; er bleibt bis zu seinem Ablauf gültig.
 
 #### 8.3.3 Ergebnis einer Einlösung
 
@@ -370,7 +370,7 @@ Eine Kassa, deren Request unbeantwortet blieb, fragt hier nach, statt die Abbuch
 | GET | `/settings/notification-templates` | Wirksame Gäste-E-Mail-Vorlagen (`voucher_issued`, `voucher_reloaded`, `voucher_expiring`) |
 | PUT | `/settings/notification-templates/{key}` | `{subject, body, is_active?, locale? (en \| de)}` – legt einen Override des Lokals an |
 
-Gäste-E-Mails enthalten nie ein Guthaben, einen Betrag, die Gutscheinnummer oder einen Link zum Gutschein.
+Gäste-E-Mails bestätigen Verkauf oder Aufladung wie eine Quittung: Betrag, Lokal, Datum und Zahlungsart (Platzhalter `amount`, `date`, `payment_method`). Sie enthalten nie etwas, mit dem der Gutschein nachgewiesen oder eingelöst werden kann: keinen QR-Inhalt, keine Gutscheinnummer, keinen Link, kein Token und kein Guthaben.
 
 | Methode | Pfad | Berechtigung | Inhalt |
 |---|---|---|---|
@@ -496,7 +496,7 @@ curl -c jar.txt -b jar.txt -X POST https://app.giftcardpro.at/api/v1/auth/login 
 ## 11. Hinweise für Integrationen
 
 - **Kein Ersatz für die Registrierkasse.** GiftCard Pro stellt keine Belege aus. Verkauf und Einlösung werden zusätzlich in der Registrierkasse des Lokals gebucht (keine Rechtsberatung – mit Steuerberatung prüfen).
-- Eine Einlösung braucht immer eine frische Vorlage des Gutscheins (`POST /presentments`); die Gutscheinnummer ist kein Berechtigungsnachweis.
+- Eine Einlösung braucht immer einen frischen Scan des Gutscheins (`POST /presentments`); die Gutscheinnummer ist kein Berechtigungsnachweis.
 - Beträge immer in Cent übertragen; keine Gleitkommazahlen.
 - `reference` für die Belegnummer der Kassa nutzen – das erleichtert den Abgleich.
 - Auf `code` reagieren; bei `429` `Retry-After` beachten; bei unbekanntem Ergebnis einer Einlösung `GET /vouchers/{id}/redemptions/{key}` abfragen statt erneut abzubuchen.

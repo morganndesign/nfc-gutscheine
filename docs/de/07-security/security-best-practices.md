@@ -75,7 +75,7 @@ Geräte sperren kann standardmäßig nur die Rolle Owner. Stellen Sie sicher, da
 
 ## 6. Einlösen nur per Scan
 
-- Ein Gutschein wird **nur** eingelöst, indem sein QR-Code gescannt wird – in der Kellner-App oder unter **Redeem** im Browser. Der Scan erzeugt eine Vorlage, die 60 Sekunden gilt und genau eine Einlösung erlaubt.
+- Ein Gutschein wird **nur** eingelöst, indem sein QR-Code gescannt wird – in der Kellner-App oder unter **Redeem** im Browser. Der Scan gilt 60 Sekunden und erlaubt genau eine Einlösung.
 - Die interne Gutscheinnummer ist **kein** Zahlungsmittel. Sie steht nicht auf dem Druckblatt und kann nicht zum Einlösen eingegeben werden. Wer eine Nummer am Telefon oder per Foto „einlösen“ möchte, wird abgewiesen.
 - Zeigt die App „nicht erkannt“, ist der QR-Code kein gültiger Gutschein Ihres Lokals (unbekannt, widerrufen oder von einem anderen Lokal). Nicht mehrfach probieren – nach 10 Fehlversuchen in 5 Minuten sperrt GiftCard Pro das Gerät kurz.
 - Bleibt nach einer Einlösung die Antwort aus, zeigt die App „Ergebnis unklar“ und fragt beim Server nach. **Nicht** erneut abbuchen, bis das Ergebnis feststeht.
@@ -114,7 +114,7 @@ Die Plattform setzt Obergrenzen, die kein Lokal überschreiten kann.
 ## 10. Audit-Log wöchentlich prüfen
 
 - Öffnen Sie einmal pro Woche **Audit log** und achten Sie auf:
-  - **fehlgeschlagene Vorlagen** (`presentment.failed`) – ein gescannter Code war kein gültiger Gutschein Ihres Lokals; gehäuft auf einem Gerät ist das ein Warnsignal,
+  - **fehlgeschlagene Scans** (`presentment.failed`) – ein gescannter Code war kein gültiger Gutschein Ihres Lokals; gehäuft auf einem Gerät ist das ein Warnsignal,
   - **Kontosperren** (`auth.locked`) – ein Konto wurde nach 10 Fehlversuchen gesperrt,
   - **Gratis-Gutscheine, Storni, Ablauf und Wiederfreigaben** – nachvollziehbar und begründet?
 - Prüfen Sie auffällige Muster: Storni außerhalb der Öffnungszeiten, viele Einlösungen auf einem Gutschein in kurzer Zeit, Buchungen von unbekannten Geräten.
@@ -158,7 +158,7 @@ API-Tokens verbinden GiftCard Pro mit anderen Systemen (z. B. einer Kassa).
 
 - Gutscheinnummern sind intern (für Personal und Support). Sie sind kein Zahlungsmittel, gehören aber trotzdem nicht in soziale Medien oder an Dritte.
 - CSV-Exporte enthalten Kundendaten: auf geschützten Geräten speichern und nach Gebrauch löschen.
-- Gäste-E-Mails enthalten nie Guthaben, Betrag, Gutscheinnummer oder einen Link zum Gutschein. Eine E-Mail, die angeblich von GiftCard Pro kommt und ein Guthaben zeigt oder zum „Abrufen“ eines Gutscheins auffordert, ist gefälscht.
+- Gäste-E-Mails sind Quittungen (Betrag, Lokal, Datum, Zahlungsart) und enthalten nie einen QR-Code, eine Gutscheinnummer, einen Link oder ein Guthaben. Eine E-Mail, die angeblich von GiftCard Pro kommt und einen Link oder Code zum „Abrufen“ oder Einlösen eines Gutscheins enthält, ist gefälscht.
 
 ## 16. Phishing erkennen
 
@@ -172,7 +172,7 @@ API-Tokens verbinden GiftCard Pro mit anderen Systemen (z. B. einer Kassa).
 
 ## Wöchentliche Mini-Routine (5 Minuten)
 
-- [ ] Audit-Log: fehlgeschlagene Vorlagen, Kontosperren, Gratis-Gutscheine der letzten 7 Tage angesehen
+- [ ] Audit-Log: fehlgeschlagene Scans, Kontosperren, Gratis-Gutscheine der letzten 7 Tage angesehen
 - [ ] Devices: keine unbekannten Geräte, verlorene Geräte gesperrt
 - [ ] Team: niemand aktiv, der nicht mehr im Lokal arbeitet
 - [ ] Transaktionen: Storni der Woche nachvollziehbar, Zahlungen passen zur Registrierkasse

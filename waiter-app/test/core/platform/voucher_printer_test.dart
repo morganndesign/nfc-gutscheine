@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/core/format/format.dart';
 import 'package:giftcard_waiter/core/platform/voucher_printer.dart';
 
-/// The printed voucher: the guest's language, no number, no value.
+/// The printed voucher: the guest's language, the value sold, no voucher number.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -17,12 +17,27 @@ void main() {
     expect(GuestCopy.of('it_IT').voucher, 'Voucher');
   });
 
-  test('no guest text carries a number or an amount', () {
+  test('fixed guest texts carry no figures', () {
     for (final String locale in <String>['de_AT', 'en_GB', 'bs_BA']) {
       final GuestCopy copy = GuestCopy.of(locale);
-      final String all = <String>[copy.voucher, copy.howTo, copy.keepSafe, copy.noExpiry, copy.validUntil].join(' ');
+      final String all = <String>[
+        copy.voucher,
+        copy.value,
+        copy.howTo,
+        copy.keepSafe,
+        copy.noExpiry,
+        copy.validUntil,
+      ].join(' ');
       expect(all, isNot(matches(RegExp(r'[0-9€]'))), reason: locale);
     }
+  });
+
+  test('the value is printed in the restaurant format and the guest language', () {
+    expect(GuestCopy.of('de_AT').value, 'Wert');
+    expect(GuestCopy.of('de_AT').money(5000, 'EUR', 'de_AT'), '€\u00A050,00');
+    expect(GuestCopy.of('bs_BA').value, 'Vrijednost');
+    expect(GuestCopy.of('bs_BA').money(5000, 'EUR', 'bs_BA'), '50,00\u00A0€');
+    expect(GuestCopy.of('en_GB').money(123450, 'EUR', 'en_GB'), '€1,234.50');
   });
 
   test('validity line uses the restaurant language date format', () {
@@ -37,6 +52,8 @@ void main() {
         payload: 'GCPV1.AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE',
         restaurantName: 'Ćevabdžinica Željo',
         restaurantLocale: 'bs_BA',
+        value: 5000,
+        currency: 'EUR',
         brandColor: '#7A1F2B',
       ),
     );

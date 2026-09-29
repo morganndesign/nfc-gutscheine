@@ -11,7 +11,7 @@
 3. **Najmanja prava.** Dodijelite najnižu ulogu s kojom osoba može obavljati svoj posao.
 4. **Odvajanje klijenata.** Sve dozvole važe samo u vlastitom restoranu. Ni vlasnica nikada ne vidi podatke drugog restorana.
 5. **Lični računi.** Jedan račun po osobi, bez zajedničkih računa – samo tako je zapisnik aktivnosti smislen.
-6. **Iskorištavanje zahtijeva vaučer.** Nijedna dozvola ne omogućava terećenje bez svježeg predočenja vaučera (QR skeniranje); broj vaučera nikada nije dokaz ovlaštenja.
+6. **Iskorištavanje zahtijeva vaučer.** Nijedna dozvola ne omogućava terećenje bez svježeg skeniranja vaučera; broj vaučera nikada nije dokaz ovlaštenja.
 
 ---
 
@@ -39,7 +39,7 @@ Administracija platforme ima isključivo dozvole platforme: upravlja restoranima
 | | `vouchers.sell` | prodaja vaučera (s plaćanjem) | – | ✔ | ✔ | – |
 | | `vouchers.sell_complimentary` | izdavanje vaučera bez plaćanja (način plaćanja `complimentary`, s obrazloženjem) | – | ✔ | – | – |
 | | `vouchers.update` | uređivanje detalja (kupac, primalac, napomene) | – | ✔ | ✔ | – |
-| | `vouchers.redeem` | iskorištavanje stanja (samo uz predočenje vaučera) | – | ✔ | ✔ | ✔ |
+| | `vouchers.redeem` | iskorištavanje stanja (samo uz skeniranje vaučera) | – | ✔ | ✔ | ✔ |
 | | `vouchers.reload` | dopuna vaučera (s plaćanjem) | – | ✔ | ✔ | – |
 | | `vouchers.block` | blokiranje vaučera | – | ✔ | ✔ | – |
 | | `vouchers.unblock` | ukidanje blokade | – | ✔ | ✔ | – |
@@ -100,7 +100,7 @@ Status korisnika: **Invited** (pozivnica otvorena) → **Active** · **Locked** 
 - **Automatska registracija:** Svaki uređaj (telefon, tablet, računar, kasa) koji se prijavi bilježi se pod **Devices**. Preimenovanje simbolom olovke, npr. „Šank iPhone“.
 - **Vezivanje za uređaj u pregledniku:** Sesija je vezana za slučajni identifikator uređaja s kojim je započeta. Kopirani kolačić sesije ne radi na drugom uređaju.
 - **„Keep me signed in on this device“:** standardno je isključeno. Tako obnovljena sesija prihvata se samo na aktivnom uređaju koji je osoba već koristila.
-- **Aplikacija za konobare (GiftCard Waiter):** prijava kreira token koji radi samo s identifikatorom tog telefona i dopire samo do zahtjeva aplikacije (predočenje, iskorištavanje, provjera nejasnog ishoda iskorištavanja; menadžeri i Owneri dodatno prodaja). Ističe nakon 30 dana bez korištenja.
+- **Aplikacija za konobare (GiftCard Waiter):** prijava kreira token koji radi samo s identifikatorom tog telefona i dopire samo do zahtjeva aplikacije (skeniranje, iskorištavanje, provjera nejasnog ishoda iskorištavanja; menadžeri i Owneri dodatno prodaja). Ističe nakon 30 dana bez korištenja.
 - **Blokiranje:** **„Revoke“** (s potvrdom) odbija uređaj od sljedećeg zahtjeva – nezavisno od otvorenih sesija ili tokena – i završava „Keep me signed in“ njegovih korisnika. **„Restore“** ukida blokadu.
 - **Trajanje sesije:** 8 sati neaktivnosti.
 - **Promjena ili resetovanje lozinke** opoziva sve tokene osobe (aplikacija za konobare i integracije) i završava „Keep me signed in“ i sve druge sesije u pregledniku.
@@ -134,7 +134,7 @@ Administracija platforme upravlja platformom, ne restoranima:
 | Opoziv | u svakom trenutku ručno; automatski pri deaktivaciji osobe koja ga je kreirala i pri promjeni ili resetovanju njene lozinke; kod incidenta i od strane administracije platforme |
 | Kolačići | tokeni ne koriste kolačiće i stoga ih CSRF ne pogađa |
 
-**Preporuka za povezivanje s kasom:** samo `vouchers.view` i `vouchers.redeem` (iskorištavanje uz predočenje skeniranog QR koda) i – ako kasa prodaje ili dopunjuje vaučere – `vouchers.sell` odnosno `vouchers.reload`. Trajanje 90–180 dana, obnovu upisati u kalendar. Token neka kreira osoba koja će vjerovatno dugo ostati u restoranu – pri deaktivaciji te osobe i pri promjeni njene lozinke token se opoziva.
+**Preporuka za povezivanje s kasom:** samo `vouchers.view` i `vouchers.redeem` (iskorištavanje uz skeniranje QR koda) i – ako kasa prodaje ili dopunjuje vaučere – `vouchers.sell` odnosno `vouchers.reload`. Trajanje 90–180 dana, obnovu upisati u kalendar. Token neka kreira osoba koja će vjerovatno dugo ostati u restoranu – pri deaktivaciji te osobe i pri promjeni njene lozinke token se opoziva.
 
 ---
 
@@ -173,7 +173,7 @@ Jednom u tromjesečju (npr. u januaru, aprilu, julu, oktobru) od strane Ownera, 
 - [ ] **Uloge:** Svaka osoba ima najnižu odgovarajuću ulogu. Broj Ownera je što manji, ali najmanje dvije dostupne osobe mogu u hitnom slučaju blokirati uređaje (kod samo jednog Ownera: odrediti pravilo zamjene).
 - [ ] **Uređaji:** Nema aktivnih nepoznatih ili rashodovanih uređaja; svi uređaji jasno imenovani.
 - [ ] **API tokeni:** Svaki token je još potreban, ima minimalne dozvole, ne ističe neprimjetno; posljednja upotreba i IP adresa su uvjerljive.
-- [ ] **Zapisnik aktivnosti:** neuspjela predočenja (`presentment.failed`) i zaključavanja računa u tromjesečju razjašnjena; besplatni vaučeri, storna, istek i ponovne aktivacije uvjerljivi.
+- [ ] **Zapisnik aktivnosti:** neuspjela skeniranja (`presentment.failed`) i zaključavanja računa u tromjesečju razjašnjena; besplatni vaučeri, storna, istek i ponovne aktivacije uvjerljivi.
 - [ ] **Postavke:** granice po iskorištavanju, po vaučeru i danu i po satu odgovarajuće; važenje odgovara uslovima poslovanja.
 - [ ] **Rezultat dokumentovan:** datum, osoba koja provjerava, promjene (npr. u kratkoj bilješci ili u operativnom priručniku restorana).
 

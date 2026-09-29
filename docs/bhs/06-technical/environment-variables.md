@@ -70,7 +70,7 @@ Vidi [Vodič za logovanje](logging-guide.md).
 | `DB_DATABASE` / `DB_USERNAME` | `giftcard_pro` / `giftcard` | `giftcard_pro` / `giftcard` | U Coolifyju promjenjivo samo prije prvog deploya. |
 | `DB_PASSWORD` | prazno (dev Compose: `secret`) | iz `SERVICE_PASSWORD_MYSQL` | Coolify generiše lozinku. |
 | `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` / `REDIS_CLIENT` | `127.0.0.1` / `6379` / `null` / `phpredis` | `redis` / `6379` / iz `SERVICE_PASSWORD_REDIS` / `phpredis` | Redis za keš, sesije, redove čekanja i ograničenja broja zahtjeva. |
-| `CACHE_STORE` | `redis` | `redis` | Nosi i ograničenje broja zahtjeva i zaključavanje nakon neuspjelih predočenja. |
+| `CACHE_STORE` | `redis` | `redis` | Nosi i ograničenje broja zahtjeva i zaključavanje nakon neuspjelih skeniranja. |
 | `CACHE_PREFIX` | `giftcardpro` | — | Prefiks ključeva keša. |
 | `QUEUE_CONNECTION` | `redis` | `redis` | Svaki e-mail šalje se iz reda čekanja (`default`, `notifications`). |
 | `QUEUE_FAILED_DRIVER` | `database-uuids` | `database-uuids` | Neuspjeli poslovi s UUID ključem. |
@@ -100,7 +100,7 @@ Vidi [Vodič za logovanje](logging-guide.md).
 | `API_TOKEN_MAX_DAYS` | `365` | Maksimalno trajanje tokena za integracije. |
 | `DEVICE_TOKEN_DAYS` | `30` | Trajanje prijave u aplikaciji za konobare; produžava se dok se telefon koristi. |
 
-Fiksno u `config/giftcard.php`: važenje predočenja 60 s, prozor ponavljanja prodaje 15 min, dužina idempotency ključa ≤ 96. Preporuka: zadržati standardne vrijednosti.
+Fiksno u `config/giftcard.php`: važenje skeniranja 60 s, prozor ponavljanja prodaje 15 min, dužina idempotency ključa ≤ 96. Preporuka: zadržati standardne vrijednosti.
 
 ### 2.6 Granice vaučera (gornje granice platforme)
 

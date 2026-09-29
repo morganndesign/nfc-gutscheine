@@ -75,7 +75,7 @@ Uređaje standardno može blokirati samo uloga Owner. Osigurajte da je u slučaj
 
 ## 6. Iskorištavati samo skeniranjem
 
-- Vaučer se iskorištava **samo** skeniranjem njegovog QR koda – u aplikaciji za konobare ili pod **Redeem** u pregledniku. Skeniranje stvara predočenje koje važi 60 sekundi i dozvoljava tačno jedno iskorištavanje.
+- Vaučer se iskorištava **samo** skeniranjem njegovog QR koda – u aplikaciji za konobare ili pod **Redeem** u pregledniku. Skeniranje važi 60 sekundi i dozvoljava tačno jedno iskorištavanje.
 - Interni broj vaučera **nije** sredstvo plaćanja. Ne nalazi se na listu za štampu i ne može se unijeti za iskorištavanje. Ko želi „iskoristiti“ broj telefonom ili fotografijom, biva odbijen.
 - Ako aplikacija prikaže „nije prepoznato“, QR kod nije važeći vaučer Vašeg restorana (nepoznat, opozvan ili iz drugog restorana). Ne pokušavajte više puta – nakon 10 neuspjelih pokušaja u 5 minuta GiftCard Pro kratko blokira uređaj.
 - Ako nakon iskorištavanja odgovor izostane, aplikacija prikazuje „ishod nejasan“ i pita server. **Ne** teretite ponovo dok ishod nije poznat.
@@ -114,7 +114,7 @@ Platforma postavlja gornje granice koje nijedan restoran ne može prekoračiti.
 ## 10. Sedmično provjeravati zapisnik aktivnosti
 
 - Jednom sedmično otvorite **Audit log** i obratite pažnju na:
-  - **neuspjela predočenja** (`presentment.failed`) – skenirani kod nije bio važeći vaučer Vašeg restorana; nagomilano na jednom uređaju to je znak upozorenja,
+  - **neuspjela skeniranja** (`presentment.failed`) – skenirani kod nije bio važeći vaučer Vašeg restorana; nagomilano na jednom uređaju to je znak upozorenja,
   - **zaključavanja računa** (`auth.locked`) – račun je zaključan nakon 10 neuspjelih pokušaja,
   - **besplatne vaučere, storna, istek i ponovne aktivacije** – razumljivi i obrazloženi?
 - Provjerite upadljive obrasce: storna izvan radnog vremena, mnogo iskorištavanja jednog vaučera u kratkom vremenu, knjiženja s nepoznatih uređaja.
@@ -158,7 +158,7 @@ API tokeni povezuju GiftCard Pro s drugim sistemima (npr. s kasom).
 
 - Brojevi vaučera su interni (za osoblje i podršku). Nisu sredstvo plaćanja, ali ipak ne spadaju na društvene mreže niti trećim osobama.
 - CSV izvozi sadrže podatke o kupcima: spremajte ih na zaštićenim uređajima i obrišite nakon upotrebe.
-- E-mailovi za goste nikada ne sadrže stanje, iznos, broj vaučera niti link na vaučer. E-mail koji navodno dolazi od GiftCard Pro i prikazuje stanje ili poziva na „preuzimanje“ vaučera je lažan.
+- E-mailovi za goste su računi (iznos, restoran, datum, način plaćanja) i nikada ne sadrže QR kôd, broj vaučera, link ni stanje. E-mail koji navodno dolazi od GiftCard Pro i sadrži link ili kôd za „preuzimanje“ ili iskorištavanje vaučera je lažan.
 
 ## 16. Prepoznati phishing
 
@@ -172,7 +172,7 @@ API tokeni povezuju GiftCard Pro s drugim sistemima (npr. s kasom).
 
 ## Sedmična mini rutina (5 minuta)
 
-- [ ] Zapisnik aktivnosti: pregledana neuspjela predočenja, zaključavanja računa i besplatni vaučeri posljednjih 7 dana
+- [ ] Zapisnik aktivnosti: pregledana neuspjela skeniranja, zaključavanja računa i besplatni vaučeri posljednjih 7 dana
 - [ ] Devices: nema nepoznatih uređaja, izgubljeni uređaji su blokirani
 - [ ] Team: niko nije aktivan ko više ne radi u restoranu
 - [ ] Transakcije: storna u sedmici su razumljiva, plaćanja odgovaraju fiskalnoj kasi

@@ -11,7 +11,7 @@
 Ein Sicherheitsvorfall ist jedes Ereignis, das die **Vertraulichkeit, Integrität oder Verfügbarkeit** von GiftCard Pro, von Gutscheinguthaben oder von personenbezogenen Daten beeinträchtigt oder beeinträchtigen könnte. Beispiele:
 
 - unbefugter Zugriff auf ein Konto eines Lokals oder der Plattform-Administration,
-- missbrauchte Gutscheine (fotografierte oder weitergegebene QR-Codes), gehäufte fehlgeschlagene Vorlagen, ungewöhnliche Einlösungen,
+- missbrauchte Gutscheine (fotografierte oder weitergegebene QR-Codes), gehäufte fehlgeschlagene Scans, ungewöhnliche Einlösungen,
 - eine fehlgeschlagene Integritätsprüfung (`giftcard:verify-chains`): Hash-Kette oder Guthaben stimmen nicht,
 - Verlust eines Geräts mit offener Sitzung,
 - veröffentlichtes oder weitergegebenes API-Token,
@@ -40,7 +40,7 @@ Ein Sicherheitsvorfall ist jedes Ereignis, das die **Vertraulichkeit, Integritä
 |---|---|---|---|---|
 | **SEV-1 kritisch** | Plattformweiter Schaden, Verdacht auf Datenabfluss oder Manipulation der Finanzhistorie | Server kompromittiert, Plattform-Admin-Konto übernommen, Datenbankauszug im Umlauf, Mandantentrennung durchbrochen, Integritätsprüfung meldet einen Befund | sofort, rund um die Uhr | alle bzw. alle betroffenen, unverzüglich |
 | **SEV-2 hoch** | Schaden in einem oder wenigen Lokalen, Geld oder Personendaten betroffen | Owner-Konto übernommen, Welle missbrauchter Gutscheine mit Geldschaden, API-Token mit Schreibrechten veröffentlicht | innerhalb 1 Stunde | betroffene Lokale unverzüglich |
-| **SEV-3 mittel** | begrenztes Risiko, eingedämmt oder ohne Schaden | gehäufte fehlgeschlagene Vorlagen auf einem Gerät (gedrosselt), Handy verloren und gesperrt, Brute-Force-Versuch mit Kontosperre | am selben Werktag | betroffenes Lokal |
+| **SEV-3 mittel** | begrenztes Risiko, eingedämmt oder ohne Schaden | gehäufte fehlgeschlagene Scans auf einem Gerät (gedrosselt), Handy verloren und gesperrt, Brute-Force-Versuch mit Kontosperre | am selben Werktag | betroffenes Lokal |
 | **SEV-4 niedrig** | Auffälligkeit ohne erkennbares Risiko | einzelne Fehlversuche, Scan eines Gutscheins eines anderen Lokals | im Regelbetrieb | nicht nötig |
 
 Im Zweifel die **höhere** Stufe wählen und später herabstufen.
@@ -90,9 +90,9 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 
 | Quelle | Inhalt | Sicherung |
 |---|---|---|
-| **Audit-Log** (Datenbank, append-only, Hash-Kette) | Aktion, Person, Gerät, IP-Adresse, Zeit (Mikrosekunden), Request-ID, alte/neue Werte (Personendaten geschwärzt), auch jede fehlgeschlagene Vorlage und Anmeldung | Export der relevanten Einträge (Dashboard bzw. Plattform-Audit) |
-| **Ledger und Zahlungen** (append-only, Hash-Kette) | jede Buchung mit Saldo vorher/nachher, Idempotenzschlüssel, verbrauchter Vorlage, Zahlung, Gerät, Person | CSV-Export Transactions; Datenbankauszug |
-| **Vorlagen** (`presentments`) | jede erfolgreiche Vorlage mit Methode, Person, Gerät, Ablauf und Verbrauch | Datenbankauszug |
+| **Audit-Log** (Datenbank, append-only, Hash-Kette) | Aktion, Person, Gerät, IP-Adresse, Zeit (Mikrosekunden), Request-ID, alte/neue Werte (Personendaten geschwärzt), auch jeden fehlgeschlagenen Scan und jede Anmeldung | Export der relevanten Einträge (Dashboard bzw. Plattform-Audit) |
+| **Ledger und Zahlungen** (append-only, Hash-Kette) | jede Buchung mit Saldo vorher/nachher, Idempotenzschlüssel, verbrauchtem Scan, Zahlung, Gerät, Person | CSV-Export Transactions; Datenbankauszug |
+| **Scans** (`presentments`) | jeder erfolgreiche Scan mit Methode, Person, Gerät, Ablauf und Verbrauch | Datenbankauszug |
 | **Integritätsprüfung** | Ergebnis von `php artisan giftcard:verify-chains` (welche Kette, ab welcher Zeile) | Ausgabe in Datei sichern, **bevor** etwas geändert wird |
 | **Anwendungsprotokoll** (Laravel) | Warnungen *Account locked…*, *Integrity check failed…*, Fehler | Coolify → *Logs* → `api`/`scheduler` bzw. am Server `docker logs <container>` in Datei sichern |
 | **Gateway-Protokoll** (Caddy, JSON) | jede HTTP-Anfrage mit Zeit, IP, Pfad, Status (ohne Tokens und Geheimnisse) | `docker logs <gateway-container>` in Datei sichern |
@@ -114,7 +114,7 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 
 1. **Lokal (Owner):** Team → ⋯ → **„Deactivate"**. Beendet alle Sitzungen und widerruft alle Tokens der Person (auch die Anmeldung der Kellner-App).
 2. Unter **Devices** unbekannte Geräte sperren.
-3. Audit-Log und Transaktionen der Person ab dem vermuteten Zeitpunkt prüfen; unberechtigte Einlösungen stornieren, betroffene Gutscheine ggf. sperren. Jede Einlösung verlangte eine Vorlage des Gutscheins – prüfen, auf welchen Geräten die Vorlagen entstanden.
+3. Audit-Log und Transaktionen der Person ab dem vermuteten Zeitpunkt prüfen; unberechtigte Einlösungen stornieren, betroffene Gutscheine ggf. sperren. Jede Einlösung verlangte einen Scan des Gutscheins – prüfen, auf welchen Geräten die Scans entstanden.
 4. Mit der Person klären, wie das Passwort bekannt wurde (Wiederverwendung, Phishing, notiert).
 5. Reaktivieren erst nach Passwort-Reset über **„Send password reset"**; die Person setzt ein neues Passwort (das widerruft erneut alle Tokens und „Keep me signed in“).
 6. Bei Owner-Konto: Schweregrad SEV-2; GiftCard Pro unterstützt über security@. Wurden Kundendaten eingesehen oder exportiert, Datenschutzprüfung (Abschnitt 8).
@@ -133,7 +133,7 @@ In einem kleinen Team übernimmt eine Person mehrere Rollen. Die Incident-Leitun
 Ein QR-Code trägt ein 256-Bit-Geheimnis; er lässt sich nicht erraten, wohl aber fotografieren oder weitergeben. Die interne Gutscheinnummer ist nie ein Berechtigungsnachweis.
 
 1. Betroffene Gutscheine sofort **sperren** (Grund angeben).
-2. Verlauf und Audit-Log auswerten: welche Gutscheine, welche Geräte, welche Personen, welche Uhrzeiten. Jede Einlösung ist mit Vorlage, Person und Gerät verknüpft.
+2. Verlauf und Audit-Log auswerten: welche Gutscheine, welche Geräte, welche Personen, welche Uhrzeiten. Jede Einlösung ist mit Scan, Person und Gerät verknüpft.
 3. Gehäufte Fehlversuche auf einem Gerät: Gerät prüfen und bei Verdacht unter **Devices** widerrufen; die Person befragen.
 4. Einlösungen, die nachweislich missbräuchlich erfolgt sind, dokumentieren; mit dem rechtmäßigen Gast klären, wie mit dem Guthaben verfahren wird (Storno einer Einlösung nur, wenn sie nachweislich falsch gebucht wurde).
 5. Missbrauchsgrenzen senken (Einlösungen pro Stunde, Betrag je Einlösung und je Tag).
@@ -159,7 +159,7 @@ Ein QR-Code trägt ein 256-Bit-Geheimnis; er lässt sich nicht erraten, wohl abe
 
 1. **Settings → API → Revoke** – sofort, ohne Rückfrage; bei Bedarf widerruft die Plattform-Administration das Token unter `/admin/api-tokens`. Tokens beginnen mit `gcp_`; das erleichtert die Suche in Repositories.
 2. Audit-Log und Transaktionen der vom Token ausgelösten Aktionen prüfen (Token handelt als die erstellende Person, mit deren Kennung protokolliert).
-3. Unberechtigte Buchungen stornieren, betroffene Gutscheine sperren. Ein Token allein kann nicht einlösen – jede Einlösung verlangt eine Vorlage des gescannten Gutscheins; Verkäufe und Aufladungen sind dagegen möglich, wenn das Token die Berechtigung hatte.
+3. Unberechtigte Buchungen stornieren, betroffene Gutscheine sperren. Ein Token allein kann nicht einlösen – jede Einlösung verlangt einen Scan des Gutscheins; Verkäufe und Aufladungen sind dagegen möglich, wenn das Token die Berechtigung hatte.
 4. Neues Token mit minimalen Berechtigungen und kurzer Laufzeit erstellen, sicher in der Zielanwendung hinterlegen.
 5. Ursache beseitigen (z. B. Token aus Repository-Verlauf entfernen, Integrationspartner informieren).
 

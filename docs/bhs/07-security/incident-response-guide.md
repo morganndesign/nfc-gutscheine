@@ -11,7 +11,7 @@
 Sigurnosni incident je svaki događaj koji narušava ili bi mogao narušiti **povjerljivost, integritet ili dostupnost** GiftCard Pro, stanja na vaučerima ili ličnih podataka. Primjeri:
 
 - neovlašten pristup računu restorana ili administracije platforme,
-- zloupotrijebljeni vaučeri (fotografisani ili proslijeđeni QR kodovi), nagomilana neuspjela predočenja, neuobičajena iskorištavanja,
+- zloupotrijebljeni vaučeri (fotografisani ili proslijeđeni QR kodovi), nagomilana neuspjela skeniranja, neuobičajena iskorištavanja,
 - neuspjela provjera integriteta (`giftcard:verify-chains`): hash lanac ili stanje se ne slažu,
 - gubitak uređaja s otvorenom sesijom,
 - objavljen ili proslijeđen API token,
@@ -40,7 +40,7 @@ Sigurnosni incident je svaki događaj koji narušava ili bi mogao narušiti **po
 |---|---|---|---|---|
 | **SEV-1 kritično** | šteta na nivou cijele platforme, sumnja na odliv podataka ili manipulaciju finansijske historije | server kompromitovan, preuzet račun administratora platforme, izvod iz baze podataka u opticaju, probijeno odvajanje klijenata, provjera integriteta javlja nalaz | odmah, 24/7 | svi odnosno svi pogođeni, bez odgađanja |
 | **SEV-2 visoko** | šteta u jednom ili nekoliko restorana, pogođeni novac ili lični podaci | preuzet Owner račun, talas zloupotrijebljenih vaučera sa štetom, objavljen API token s pravima pisanja | u roku od 1 sata | pogođeni restorani bez odgađanja |
-| **SEV-3 srednje** | ograničen rizik, obuzdan ili bez štete | nagomilana neuspjela predočenja na jednom uređaju (ograničeno), izgubljen i blokiran telefon, brute-force pokušaj sa zaključavanjem računa | istog radnog dana | pogođeni restoran |
+| **SEV-3 srednje** | ograničen rizik, obuzdan ili bez štete | nagomilana neuspjela skeniranja na jednom uređaju (ograničeno), izgubljen i blokiran telefon, brute-force pokušaj sa zaključavanjem računa | istog radnog dana | pogođeni restoran |
 | **SEV-4 nisko** | upadljivost bez prepoznatljivog rizika | pojedinačni neuspjeli pokušaji, skeniranje vaučera drugog restorana | u redovnom radu | nije potrebno |
 
 U slučaju sumnje odabrati **viši** nivo i kasnije ga smanjiti.
@@ -90,9 +90,9 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 
 | Izvor | Sadržaj | Osiguranje |
 |---|---|---|
-| **Zapisnik aktivnosti** (baza podataka, append-only, hash lanac) | radnja, osoba, uređaj, IP adresa, vrijeme (mikrosekunde), Request-ID, stare/nove vrijednosti (lični podaci zatamnjeni), i svako neuspjelo predočenje i prijava | izvoz relevantnih zapisa (kontrolna tabla odnosno audit platforme) |
-| **Ledger i plaćanja** (append-only, hash lanac) | svako knjiženje sa stanjem prije/poslije, ključ idempotentnosti, potrošeno predočenje, plaćanje, uređaj, osoba | CSV izvoz Transactions; izvod iz baze podataka |
-| **Predočenja** (`presentments`) | svako uspješno predočenje s metodom, osobom, uređajem, istekom i potrošnjom | izvod iz baze podataka |
+| **Zapisnik aktivnosti** (baza podataka, append-only, hash lanac) | radnja, osoba, uređaj, IP adresa, vrijeme (mikrosekunde), Request-ID, stare/nove vrijednosti (lični podaci zatamnjeni), i svako neuspjelo skeniranje i prijava | izvoz relevantnih zapisa (kontrolna tabla odnosno audit platforme) |
+| **Ledger i plaćanja** (append-only, hash lanac) | svako knjiženje sa stanjem prije/poslije, ključ idempotentnosti, potrošeno skeniranje, plaćanje, uređaj, osoba | CSV izvoz Transactions; izvod iz baze podataka |
+| **Skeniranja** (`presentments`) | svako uspješno skeniranje s metodom, osobom, uređajem, istekom i potrošnjom | izvod iz baze podataka |
 | **Provjera integriteta** | rezultat `php artisan giftcard:verify-chains` (koji lanac, od kojeg reda) | izlaz sačuvati u datoteku **prije** bilo kakve izmjene |
 | **Zapisnik aplikacije** (Laravel) | upozorenja *Account locked…*, *Integrity check failed…*, greške | Coolify → *Logs* → `api`/`scheduler` odnosno na serveru `docker logs <container>` sačuvati u datoteku |
 | **Zapisnik gatewaya** (Caddy, JSON) | svaki HTTP zahtjev s vremenom, IP adresom, putanjom, statusom (bez tokena i tajni) | `docker logs <gateway-container>` sačuvati u datoteku |
@@ -114,7 +114,7 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 
 1. **Restoran (Owner):** Team → ⋯ → **„Deactivate"**. Završava sve sesije i opoziva sve tokene osobe (i prijavu u aplikaciji za konobare).
 2. Pod **Devices** blokirati nepoznate uređaje.
-3. Provjeriti zapisnik aktivnosti i transakcije osobe od pretpostavljenog trenutka; neovlaštena iskorištavanja stornirati, pogođene vaučere po potrebi blokirati. Svako iskorištavanje zahtijevalo je predočenje vaučera – provjeriti na kojim uređajima su predočenja nastala.
+3. Provjeriti zapisnik aktivnosti i transakcije osobe od pretpostavljenog trenutka; neovlaštena iskorištavanja stornirati, pogođene vaučere po potrebi blokirati. Svako iskorištavanje zahtijevalo je skeniranje vaučera – provjeriti na kojim uređajima su skeniranja nastala.
 4. S osobom razjasniti kako je lozinka postala poznata (ponovna upotreba, phishing, zapisana).
 5. Ponovo aktivirati tek nakon reseta lozinke preko **„Send password reset"**; osoba postavlja novu lozinku (to ponovo opoziva sve tokene i „Keep me signed in“).
 6. Kod Owner računa: nivo SEV-2; GiftCard Pro pomaže preko security@. Ako su podaci o kupcima pregledani ili izvezeni, provjera zaštite podataka (odjeljak 8).
@@ -133,7 +133,7 @@ U malom timu jedna osoba preuzima više uloga. Rukovodstvo incidenta je kod [Ime
 QR kod nosi 256-bitnu tajnu; ne može se pogoditi, ali se može fotografisati ili proslijediti. Interni broj vaučera nikada nije dokaz ovlaštenja.
 
 1. Pogođene vaučere odmah **blokirati** (navesti razlog).
-2. Analizirati historiju i zapisnik aktivnosti: koji vaučeri, koji uređaji, koje osobe, koja vremena. Svako iskorištavanje povezano je s predočenjem, osobom i uređajem.
+2. Analizirati historiju i zapisnik aktivnosti: koji vaučeri, koji uređaji, koje osobe, koja vremena. Svako iskorištavanje povezano je sa skeniranjem, osobom i uređajem.
 3. Nagomilani neuspjeli pokušaji na jednom uređaju: provjeriti uređaj i kod sumnje ga opozvati pod **Devices**; razgovarati s osobom.
 4. Dokumentovati iskorištavanja koja su dokazano zloupotrijebljena; sa zakonitim gostom razjasniti postupanje sa stanjem (storno iskorištavanja samo ako je dokazano pogrešno proknjiženo).
 5. Smanjiti ograničenja protiv zloupotrebe (iskorištavanja na sat, iznos po iskorištavanju i po danu).
@@ -159,7 +159,7 @@ QR kod nosi 256-bitnu tajnu; ne može se pogoditi, ali se može fotografisati il
 
 1. **Settings → API → Revoke** – odmah, bez dodatnih pitanja; po potrebi token opoziva administracija platforme pod `/admin/api-tokens`. Tokeni počinju s `gcp_`; to olakšava pretragu u repozitorijima.
 2. Provjeriti zapisnik aktivnosti i transakcije radnji koje je pokrenuo token (token djeluje kao osoba koja ga je kreirala i bilježi se s njenim identifikatorom).
-3. Neovlaštena knjiženja stornirati, pogođene vaučere blokirati. Sam token ne može iskoristiti vaučer – svako iskorištavanje zahtijeva predočenje skeniranog vaučera; prodaje i dopune su, međutim, moguće ako je token imao dozvolu.
+3. Neovlaštena knjiženja stornirati, pogođene vaučere blokirati. Sam token ne može iskoristiti vaučer – svako iskorištavanje zahtijeva skeniranje vaučera; prodaje i dopune su, međutim, moguće ako je token imao dozvolu.
 4. Kreirati novi token s minimalnim dozvolama i kratkim trajanjem, sigurno ga pohraniti u ciljnoj aplikaciji.
 5. Otkloniti uzrok (npr. ukloniti token iz historije repozitorija, obavijestiti partnera za integraciju).
 

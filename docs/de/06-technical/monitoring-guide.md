@@ -130,7 +130,7 @@ Diese Meldungen eignen sich für Alarme:
 
 Suche: Coolify → *Logs* → Dienst **api** bzw. **scheduler**, oder am Server `docker logs --since 24h <api-container> 2>&1 | grep -E "Account locked|Integrity check failed"`.
 
-Fehlgeschlagene Vorlagen (ein gescannter Text, der kein gültiger Gutschein dieses Lokals ist) stehen im Audit-Log:
+Fehlgeschlagene Scans (ein gescannter Text, der kein gültiger Gutschein dieses Lokals ist) stehen im Audit-Log:
 
 ```sql
 SELECT restaurant_id, device_id, action, COUNT(*) AS n
@@ -152,7 +152,7 @@ Nach `PRESENTMENT_FAILURE_LIMIT` (10) Fehlversuchen in 5 Minuten je Lokal, Perso
 | Queue-Länge | `queue:monitor` | 0–wenige | > 500 |
 | Fehlgeschlagene Jobs | `queue:failed` | 0 | > 0 neu pro Tag |
 | Integritätsprüfung | Log `scheduler`, E-Mail | ohne Befund | jeder Befund |
-| Fehlgeschlagene Vorlagen | Audit-Log | vereinzelt (verschmutzte oder falsche QR-Codes) | ≥ 10 pro Stunde und Gerät |
+| Fehlgeschlagene Scans | Audit-Log | vereinzelt (verschmutzte oder falsche QR-Codes) | ≥ 10 pro Stunde und Gerät |
 | Kontosperren | Log / Audit-Log | selten | ≥ 3 pro Stunde |
 | Festplatte | `df -h` | < 70 % | > 80 % |
 | RAM | `free -m`, `docker stats` | < 75 % | > 90 % |
@@ -190,7 +190,7 @@ Für Ausnahmen mit Stacktrace kann Sentry ergänzt werden (`sentry/sentry-larave
 |---|---|
 | **Betrieb** | Verfügbarkeit, Antwortzeit `/up`, 5xx-Rate, Requests pro Minute (Gateway), Container-Status, CPU/RAM/Festplatte |
 | **Hintergrund** | Queue-Länge, fehlgeschlagene Jobs, letzte Ausführung der nächtlichen Jobs und der Integritätsprüfung, Backup-Alter |
-| **Sicherheit** | fehlgeschlagene Vorlagen nach Lokal und Gerät, Kontosperren, 429-Antworten, Top-IPs mit 4xx |
+| **Sicherheit** | fehlgeschlagene Scans nach Lokal und Gerät, Kontosperren, 429-Antworten, Top-IPs mit 4xx |
 | **Geschäft** (Plattform) | aktive Lokale, verkaufte Gutscheine, Einlösungen pro Tag – aus `GET /admin/stats` bzw. SQL |
 
 Umsetzung z. B. mit Grafana + Loki (Log-Versand über Promtail oder Vector) oder direkt im Dashboard eines Log-Dienstes mit EU-Standort.
@@ -225,7 +225,7 @@ Hauptlast der Lokale: mittags (11:00–14:30) und abends (17:30–23:00), besond
 | Zertifikatsfehler | DNS prüfen, Domain des Dienstes `gateway` in Coolify prüfen |
 | Integritätsprüfung meldet Befund | Nichts ändern; Datenbank und Backups sichern; [Incident-Response-Leitfaden](../07-security/incident-response-guide.md) |
 
-5. Dauert der Ausfall länger als 15 Minuten: Wartungshinweis setzen (sofern API erreichbar) und Lokale per E-Mail informieren. Während des Ausfalls kann kein Gutschein eingelöst werden: Jede Einlösung braucht eine frische Vorlage des Gutscheins, und die Gutscheinnummer ist kein Ersatz dafür. Gäste bezahlen in dieser Zeit anders oder lösen den Gutschein beim nächsten Besuch ein.
+5. Dauert der Ausfall länger als 15 Minuten: Wartungshinweis setzen (sofern API erreichbar) und Lokale per E-Mail informieren. Während des Ausfalls kann kein Gutschein eingelöst werden: Jede Einlösung braucht einen frischen Scan des Gutscheins, und die Gutscheinnummer ist kein Ersatz dafür. Gäste bezahlen in dieser Zeit anders oder lösen den Gutschein beim nächsten Besuch ein.
 6. Nach dem Vorfall: kurzer Bericht (Ursache, Dauer, Auswirkung, Maßnahmen).
 
 ---

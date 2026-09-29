@@ -131,8 +131,8 @@ Funkcionalna provjera (oko 5 minuta):
 | Provjera | Očekivanje |
 |---|---|
 | Prijava kao administrator platforme | stranice platforme se učitavaju, nema crvenog e-mail banera |
-| Testni restoran: prodaja vaučera (evidentirati plaćanje) i otvaranje lista za štampu | QR kod vidljiv, bez broja vaučera i vrijednosti na listu |
-| Aplikacija za konobare na testnom uređaju: skeniranje testnog QR koda | predočenje s odbrojavanjem, tačno stanje |
+| Testni restoran: prodaja vaučera (evidentirati plaćanje) i otvaranje lista za štampu | QR kod i vrijednost vidljivi, bez broja vaučera na listu |
+| Aplikacija za konobare na testnom uređaju: skeniranje testnog QR koda | skeniranje s odbrojavanjem, tačno stanje |
 | Testno iskorištavanje od 0,01 € na internom testnom vaučeru, zatim storno | knjiženje i protuknjiženje u ledgeru |
 | `giftcard:verify-chains` | bez nalaza |
 | Uptime monitor | zelen |
@@ -154,7 +154,7 @@ Resurs → *Deployments* → izaberite raniji deployment → *Redeploy*. Baza se
 | Situacija | Mjera |
 |---|---|
 | `/up` nakon deploymenta ne vraća 200 | Provjerite logove (resurs → *Logs*, servis `api`); bez brzog rješenja odmah rollback |
-| Predočenja ili iskorištavanja ne uspijevaju (5xx) | Odmah rollback, zatim analiza |
+| Skeniranja ili iskorištavanja ne uspijevaju (5xx) | Odmah rollback, zatim analiza |
 | Pojedinačne greške u interfejsu bez veze s novcem | Izdanje s ispravkom umjesto rollbacka |
 
 ## 10. Noćni poslovi

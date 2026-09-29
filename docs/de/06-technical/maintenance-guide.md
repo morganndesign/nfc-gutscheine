@@ -103,7 +103,7 @@ In der Plattformadministration das Audit-Log des Monats sichten: Anlegen, Sperre
 
 - Zertifikatslaufzeit prüfen (erneuert der Coolify-Proxy automatisch; bei < 14 Tagen stimmt etwas nicht): `echo | openssl s_client -connect app.giftcardpro.at:443 -servername app.giftcardpro.at 2>/dev/null | openssl x509 -noout -enddate`
 - MySQL-Binärlogs belegen Platz im Volume `mysql-data`: `SHOW BINARY LOGS;` – bei Platzmangel Aufbewahrung (`binlog_expire_logs_seconds`) prüfen.
-- Größe der großen Tabellen beobachten (Ledger, Zahlungen, Audit-Log und Vorlagen wachsen stetig):
+- Größe der großen Tabellen beobachten (Ledger, Zahlungen, Audit-Log und Scans wachsen stetig):
 
 ```sql
 SELECT table_name, ROUND((data_length + index_length) / 1024 / 1024) AS mb, table_rows

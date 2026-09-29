@@ -11,7 +11,7 @@
 3. **Geringste Rechte.** Vergeben Sie die niedrigste Rolle, mit der eine Person ihre Arbeit erledigen kann.
 4. **Mandantentrennung.** Alle Berechtigungen gelten nur im eigenen Lokal. Auch eine Inhaberin sieht nie Daten eines anderen Lokals.
 5. **Persönliche Konten.** Ein Konto pro Person, keine Sammelkonten – nur so ist das Audit-Log aussagekräftig.
-6. **Einlösen braucht den Gutschein.** Keine Berechtigung erlaubt eine Abbuchung ohne frische Vorlage des Gutscheins (QR-Scan); die Gutscheinnummer ist nie ein Berechtigungsnachweis.
+6. **Einlösen braucht den Gutschein.** Keine Berechtigung erlaubt eine Abbuchung ohne frischen Scan des Gutscheins; die Gutscheinnummer ist nie ein Berechtigungsnachweis.
 
 ---
 
@@ -39,7 +39,7 @@ Die Plattform-Administration hat ausschließlich Plattformberechtigungen: Sie be
 | | `vouchers.sell` | Gutschein verkaufen (mit Zahlung) | – | ✔ | ✔ | – |
 | | `vouchers.sell_complimentary` | Gutschein ohne Zahlung ausgeben (Zahlungsart `complimentary`, mit Begründung) | – | ✔ | – | – |
 | | `vouchers.update` | Details bearbeiten (Kundin bzw. Kunde, Empfänger, Notizen) | – | ✔ | ✔ | – |
-| | `vouchers.redeem` | Guthaben einlösen (nur mit Vorlage des Gutscheins) | – | ✔ | ✔ | ✔ |
+| | `vouchers.redeem` | Guthaben einlösen (nur mit Scan des Gutscheins) | – | ✔ | ✔ | ✔ |
 | | `vouchers.reload` | Gutschein aufladen (mit Zahlung) | – | ✔ | ✔ | – |
 | | `vouchers.block` | Gutschein sperren | – | ✔ | ✔ | – |
 | | `vouchers.unblock` | Sperre aufheben | – | ✔ | ✔ | – |
@@ -100,7 +100,7 @@ Benutzerstatus: **Invited** (Einladung offen) → **Active** · **Locked** (vor�
 - **Automatische Registrierung:** Jedes Gerät (Handy, Tablet, PC, Kassa), das sich anmeldet, wird unter **Devices** erfasst. Umbenennen mit dem Stift-Symbol, z. B. „Bar iPhone“.
 - **Gerätebindung im Browser:** Eine Sitzung ist an die zufällige Gerätekennung gebunden, mit der sie begonnen hat. Ein kopiertes Sitzungs-Cookie funktioniert auf einem anderen Gerät nicht.
 - **„Keep me signed in on this device“:** ist standardmäßig aus. Eine so wiederhergestellte Sitzung wird nur auf einem aktiven Gerät akzeptiert, das die Person bereits verwendet hat.
-- **Kellner-App (GiftCard Waiter):** Die Anmeldung erzeugt ein Token, das nur mit der Kennung dieses Telefons funktioniert und nur die Anfragen der App erreicht (Vorlage, Einlösung, Abfrage eines unklaren Einlöseergebnisses; Betriebsleitung und Owner zusätzlich Verkauf). Es läuft nach 30 Tagen ohne Nutzung ab.
+- **Kellner-App (GiftCard Waiter):** Die Anmeldung erzeugt ein Token, das nur mit der Kennung dieses Telefons funktioniert und nur die Anfragen der App erreicht (Scan, Einlösung, Abfrage eines unklaren Einlöseergebnisses; Betriebsleitung und Owner zusätzlich Verkauf). Es läuft nach 30 Tagen ohne Nutzung ab.
 - **Sperren:** **„Revoke“** (mit Bestätigung) weist das Gerät ab der nächsten Anfrage ab – unabhängig von offenen Sitzungen oder Tokens – und beendet „Keep me signed in“ seiner Personen. **„Restore“** hebt die Sperre auf.
 - **Sitzungsdauer:** 8 Stunden Inaktivität.
 - **Passwortwechsel oder -zurücksetzung** widerruft alle Tokens der Person (Kellner-App und Integrationen) und beendet „Keep me signed in“ und alle anderen Browser-Sitzungen.
@@ -134,7 +134,7 @@ Die Plattform-Administration betreibt die Plattform, nicht die Lokale:
 | Widerruf | jederzeit manuell; automatisch beim Deaktivieren der erstellenden Person und bei deren Passwortwechsel oder -zurücksetzung; bei einem Vorfall auch durch die Plattform-Administration |
 | Cookies | Tokens verwenden keine Cookies und sind daher von CSRF nicht betroffen |
 
-**Empfehlung für eine Kassa-Anbindung:** nur `vouchers.view` und `vouchers.redeem` (Einlösen mit Vorlage des gescannten QR-Codes) und – falls die Kassa Gutscheine verkauft oder auflädt – `vouchers.sell` bzw. `vouchers.reload`. Laufzeit 90–180 Tage, Erneuerung im Kalender eintragen. Das Token von einer Person erstellen lassen, die dem Lokal voraussichtlich lange angehört – beim Deaktivieren dieser Person und bei ihrem Passwortwechsel wird das Token widerrufen.
+**Empfehlung für eine Kassa-Anbindung:** nur `vouchers.view` und `vouchers.redeem` (Einlösen nach Scan des QR-Codes) und – falls die Kassa Gutscheine verkauft oder auflädt – `vouchers.sell` bzw. `vouchers.reload`. Laufzeit 90–180 Tage, Erneuerung im Kalender eintragen. Das Token von einer Person erstellen lassen, die dem Lokal voraussichtlich lange angehört – beim Deaktivieren dieser Person und bei ihrem Passwortwechsel wird das Token widerrufen.
 
 ---
 
@@ -173,7 +173,7 @@ Einmal pro Quartal (z. B. im Jänner, April, Juli, Oktober) durch einen Owner, D
 - [ ] **Rollen:** Jede Person hat die niedrigste passende Rolle. Anzahl der Owner ist so klein wie möglich, aber mindestens zwei erreichbare Personen können im Notfall Geräte sperren (bei nur einem Owner: Vertretungsregel festlegen).
 - [ ] **Geräte:** Keine unbekannten oder ausgemusterten Geräte aktiv; alle Geräte eindeutig benannt.
 - [ ] **API-Tokens:** Jedes Token wird noch gebraucht, hat minimale Berechtigungen, läuft nicht unbemerkt ab; letzte Verwendung und IP-Adresse plausibel.
-- [ ] **Audit-Log:** fehlgeschlagene Vorlagen (`presentment.failed`) und Kontosperren des Quartals nachvollzogen; Gratis-Gutscheine, Storni, Ablauf und Wiederfreigaben plausibel.
+- [ ] **Audit-Log:** fehlgeschlagene Scans (`presentment.failed`) und Kontosperren des Quartals nachvollzogen; Gratis-Gutscheine, Storni, Ablauf und Wiederfreigaben plausibel.
 - [ ] **Einstellungen:** Grenzen je Einlösung, je Gutschein und Tag und je Stunde passend; Gültigkeit entspricht den Geschäftsbedingungen.
 - [ ] **Ergebnis dokumentiert:** Datum, prüfende Person, Änderungen (z. B. in einer kurzen Notiz oder im Betriebshandbuch des Lokals).
 

@@ -131,8 +131,8 @@ Funktionsprüfung (etwa 5 Minuten):
 | Prüfung | Erwartung |
 |---|---|
 | Anmeldung als Plattform-Administrator | Plattformseiten laden, kein rotes E-Mail-Banner |
-| Test-Lokal: Gutschein verkaufen (Zahlung erfassen) und Druckblatt öffnen | QR-Code sichtbar, keine Gutscheinnummer und kein Wert auf dem Blatt |
-| Kellner-App auf einem Testgerät: Test-QR scannen | Vorlage mit Countdown, Guthaben korrekt |
+| Test-Lokal: Gutschein verkaufen (Zahlung erfassen) und Druckblatt öffnen | QR-Code und Wert sichtbar, keine Gutscheinnummer auf dem Blatt |
+| Kellner-App auf einem Testgerät: Test-QR scannen | Scan mit Countdown, Guthaben korrekt |
 | Testeinlösung von € 0,01 auf einem internen Testgutschein, danach Storno | Buchung und Gegenbuchung im Ledger |
 | `giftcard:verify-chains` | ohne Befund |
 | Uptime-Monitor | grün |
@@ -154,7 +154,7 @@ Ressource → *Deployments* → ein früheres Deployment wählen → *Redeploy*.
 | Situation | Maßnahme |
 |---|---|
 | `/up` liefert nach dem Deployment kein 200 | Logs prüfen (Ressource → *Logs*, Dienst `api`); ohne schnelle Lösung sofort Rollback |
-| Vorlagen oder Einlösungen schlagen fehl (5xx) | Sofort Rollback, danach Analyse |
+| Scans oder Einlösungen schlagen fehl (5xx) | Sofort Rollback, danach Analyse |
 | Einzelne Oberflächenfehler ohne Geldbezug | Fix-Release statt Rollback |
 
 ## 10. Nächtliche Jobs

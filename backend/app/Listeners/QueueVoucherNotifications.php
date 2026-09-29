@@ -14,7 +14,7 @@ final class QueueVoucherNotifications
     public function handleIssued(VoucherIssued $event): void
     {
         if ($event->voucher->customer_id !== null) {
-            SendVoucherNotification::dispatch($event->voucher->getKey(), NotificationTemplate::KEY_VOUCHER_ISSUED);
+            SendVoucherNotification::dispatch($event->voucher->getKey(), NotificationTemplate::KEY_VOUCHER_ISSUED, $event->transaction->getKey());
         }
     }
 

@@ -13,7 +13,7 @@ Najvažnije ukratko:
 | Oblast | Implementacija |
 |---|---|
 | Vaučer | QR kod za štampu nosi nasumičnu 256-bitnu tajnu, ne link, ne stanje, ne lične podatke. Server pohranjuje samo njen SHA-256 hash. |
-| Iskorištavanje | Svako terećenje troši **predočenje**: dokaz da je vaučer sada ovdje – jednokratno, važi 60 sekundi, vezano za restoran, vaučer, osobu i uređaj. Broj vaučera nikada nije dokaz ovlaštenja. |
+| Iskorištavanje | Svako terećenje troši **skeniranje**: dokaz da je vaučer sada ovdje – jednokratno, važi 60 sekundi, vezano za restoran, vaučer, osobu i uređaj. Broj vaučera nikada nije dokaz ovlaštenja. |
 | Knjiženja | Svaka promjena stanja je atomarna (zaključavanje reda u bazi podataka), idempotentna (nema dvostrukog knjiženja kod dvostrukog dodira ili greške mreže) i upisuje se u ledger. Svaka prodaja i dopuna bilježi plaćanje. |
 | Nepromjenjiva historija | Ledger, plaćanja i zapisnik aktivnosti su append-only (okidači u bazi) i po restoranu povezani hash lancima; noćna provjera ponovo izračunava svaki lanac i svako stanje. |
 | Odvajanje klijenata | Svaki restoran vidi isključivo svoje podatke; odvajanje se provodi na više nivoa. |
@@ -28,7 +28,7 @@ Najvažnije ukratko:
 
 ## 2. Sigurnosni principi
 
-1. **Iskorištavanje zahtijeva dokaz prisutnosti.** Svako terećenje troši predočenje: jednokratno, 60 sekundi, vezano za osobu, uređaj, restoran i vaučer. Broj vaučera nikada nije dokaz ovlaštenja.
+1. **Iskorištavanje zahtijeva dokaz prisutnosti.** Svako terećenje troši skeniranje: jednokratno, 60 sekundi, vezano za osobu, uređaj, restoran i vaučer. Broj vaučera nikada nije dokaz ovlaštenja.
 2. **Server je jedini izvor istine** za stanja; svaka promjena je atomarna, zaključana, idempotentna i proknjižena u ledgeru.
 3. **Finansijska historija je nepromjenjiva.** Ledger, plaćanja i zapisnik aktivnosti se mogu samo proširivati (okidači u bazi) i povezani su hash lancima; noćna provjera kontroliše svaki lanac i svako stanje.
 4. **Podrazumijevano odbijanje.** Svako sučelje zahtijeva dozvolu; povezivanje s restoranom odvija se automatski i provjerava se više puta; tokeni su dodatno ograničeni svojim abilities i – kod aplikacije za konobare – metodom i putanjom.
@@ -56,7 +56,7 @@ flowchart LR
     PC["Dashboard<br/>računar, tablet, telefon"] --> Proxy
     Handy -->|HTTPS, TLS + HSTS| Proxy["Coolify proxy<br/>TLS"]
     Proxy --> GW["Gateway (Caddy)<br/>sigurnosna zaglavlja, logovi bez tajni"]
-    GW -->|/api| API["Laravel API<br/>dozvole, odvajanje klijenata,<br/>predočenja, zaključavanje reda, hash lanci"]
+    GW -->|/api| API["Laravel API<br/>dozvole, odvajanje klijenata,<br/>skeniranja, zaključavanje reda, hash lanci"]
     GW -->|stranice| Web["Next.js<br/>dashboard, web kasa"]
     API --> DB[("MySQL<br/>interna mreža")]
     API --> Redis[("Redis<br/>interna mreža")]
@@ -66,9 +66,9 @@ flowchart LR
 **Tok iskorištavanja:**
 
 1. Konobar skenira QR kod vaučera kamerom (aplikacija za konobare ili web kasa).
-2. Aplikacija šalje skenirani tekst na `POST /presentments`. Server provjerava blokadu za neuspjele pokušaje, traži hash među vaučerima **ovog** restorana, provjerava pravilo iskorištavanja za vrstu vaučera i kreira predočenje (važi 60 s, vezano za restoran, vaučer, svrhu, osobu i uređaj). Aplikacija odbrojava preostalo vrijeme.
-3. Konobar unosi iznos i potvrđuje. Aplikacija šalje `POST /vouchers/{id}/redemptions` s predočenjem i jedinstvenim **ključem idempotentnosti**; pokušaj prethodno šifrovano pohranjuje na uređaju.
-4. Server zaključava predočenje i vaučer u bazi, ponovo provjerava ključ, troši predočenje, provjerava status, stanje i granice, dodaje stavku ledgera i zapisnika aktivnosti u hash lance, ažurira stanje i tek tada potvrđuje.
+2. Aplikacija šalje skenirani tekst na `POST /presentments`. Server provjerava blokadu za neuspjele pokušaje, traži hash među vaučerima **ovog** restorana, provjerava pravilo iskorištavanja za vrstu vaučera i potvrđuje skeniranje (važi 60 s, vezano za restoran, vaučer, svrhu, osobu i uređaj). Aplikacija odbrojava preostalo vrijeme.
+3. Konobar unosi iznos i potvrđuje. Aplikacija šalje `POST /vouchers/{id}/redemptions` sa skeniranjem i jedinstvenim **ključem idempotentnosti**; pokušaj prethodno šifrovano pohranjuje na uređaju.
+4. Server zaključava skeniranje i vaučer u bazi, ponovo provjerava ključ, troši skeniranje, provjerava status, stanje i granice, dodaje stavku ledgera i zapisnika aktivnosti u hash lance, ažurira stanje i tek tada potvrđuje.
 5. Ako odgovor izostane, aplikacija pita `GET /vouchers/{id}/redemptions/{key}` – nikada ne knjiži drugi put i nikada ne prikazuje „ništa nije knjiženo“ dok je ishod nepoznat.
 
 ---
@@ -101,15 +101,15 @@ Ako se vaučer prijavi kao izgubljen, restoran ga blokira; od tog trenutka ne mo
 
 ### 5.2 Zaštita od pogađanja i isprobavanja
 
-Neuspjela predočenja (skenirani tekst ništa ne dokazuje) ograničena su na 10 u 5 minuta po restoranu, osobi i uređaju – nikada po IP adresi, kako se gosti iza istog WLAN-a ne bi međusobno blokirali. Svaki neuspjeli pokušaj bilježi se u zapisniku aktivnosti (`presentment.failed`, `presentment.rejected`). Ne postoji javna stranica stanja niti javna provjera vaučera.
+Neuspjela skeniranja (skenirani tekst ništa ne dokazuje) ograničena su na 10 u 5 minuta po restoranu, osobi i uređaju – nikada po IP adresi, kako se gosti iza istog WLAN-a ne bi međusobno blokirali. Svaki neuspjeli pokušaj bilježi se u zapisniku aktivnosti (`presentment.failed`, `presentment.rejected`). Ne postoji javna stranica stanja niti javna provjera vaučera.
 
-### 5.3 Predočenje
+### 5.3 Skeniranje
 
-Svako iskorištavanje troši provjereno, neisteklo predočenje tog vaučera, koje je napravila ista osoba na istom uređaju, u istoj transakciji baze (redoslijed zaključavanja predočenje → vaučer). Predočenja su jednokratna (`verified → consumed`), važe 60 sekundi, a stavka ledgera upućuje na najviše jedno (jedinstveni indeks). Pravila iskorištavanja po vrsti: digitalni vaučeri samo QR metodom, vaučeri kartice samo živom autentifikacijom.
+Svako iskorištavanje troši provjereno, neisteklo skeniranje tog vaučera, koje je napravila ista osoba na istom uređaju, u istoj transakciji baze (redoslijed zaključavanja skeniranje → vaučer). Skeniranja su jednokratna (`verified → consumed`), važe 60 sekundi, a stavka ledgera upućuje na najviše jedno (jedinstveni indeks). Pravila iskorištavanja po vrsti: digitalni vaučeri samo QR metodom, vaučeri kartice samo živom autentifikacijom.
 
 ### 5.4 Fizičke kartice: NTAG 424 DNA sa živom autentifikacijom
 
-Fizičke kartice predviđene su isključivo kao **NTAG 424 DNA**. Kartica se iskorištava samo nakon **žive autentifikacije**: aplikacija za konobare preko NFC-a prosljeđuje naredbe čipa **kripto servisu**, koji drži ključeve kartica u hardverskom sigurnosnom modulu i dokazuje da je pravi čip prisutan u tom trenutku. Rezultat je predočenje s metodom `live_auth` (nivo A3). Dok taj servis ne radi, server na `live_auth` odgovara s `422 PRESENTMENT_METHOD_UNAVAILABLE`; aplikacija za konobare nema NFC kod ni NFC dozvolu. Ključevi kartica nikada nisu dio konfiguracije. Detalji: [docs/NFC.md](../../NFC.md).
+Fizičke kartice predviđene su isključivo kao **NTAG 424 DNA**. Kartica se iskorištava samo nakon **žive autentifikacije**: aplikacija za konobare preko NFC-a prosljeđuje naredbe čipa **kripto servisu**, koji drži ključeve kartica u hardverskom sigurnosnom modulu i dokazuje da je pravi čip prisutan u tom trenutku. Rezultat je skeniranje prislanjanjem kartice s metodom `live_auth` (nivo A3). Dok taj servis ne radi, server na `live_auth` odgovara s `422 PRESENTMENT_METHOD_UNAVAILABLE`; aplikacija za konobare nema NFC kod ni NFC dozvolu. Ključevi kartica nikada nisu dio konfiguracije. Detalji: [docs/NFC.md](../../NFC.md).
 
 ---
 
@@ -128,7 +128,7 @@ Fizičke kartice predviđene su isključivo kao **NTAG 424 DNA**. Kartica se isk
 | **Ograničenja protiv zloupotrebe** | Maksimalan iznos po iskorištavanju, po vaučeru i danu, iskorištavanja po vaučeru i satu (standard 10), maksimalno stanje – provjereno pod zaključavanjem reda; gornje granice platforme za svaku postavku. |
 | **Bez gubitka novca gostiju** | Nema standardnog isteka; važenje iznosi najmanje 36 mjeseci; istek zadržava stanje, a vlasnik ili vlasnica može ponovo aktivirati vaučer. |
 
-Automatizovani testovi (`IdempotencyAndConcurrencyTest`, i nad MySQL-om, te testovi zloupotrebe u `tests/Feature/Abuse/`) pokrivaju istovremena iskorištavanja, ponovljene ključeve, tuđa i istekla predočenja, manipulaciju historije i plaćanja bez dozvole.
+Automatizovani testovi (`IdempotencyAndConcurrencyTest`, i nad MySQL-om, te testovi zloupotrebe u `tests/Feature/Abuse/`) pokrivaju istovremena iskorištavanja, ponovljene ključeve, tuđa i istekla skeniranja, manipulaciju historije i plaćanja bez dozvole.
 
 ---
 
@@ -183,7 +183,7 @@ Potpunu matricu dozvola pronaći ćete u [Vodiču za kontrolu pristupa](access-c
 
 - **Uloge prema GDPR-u:** za podatke gostiju i kupaca restoran je voditelj obrade; GiftCard Pro je izvršitelj obrade (čl. 28 GDPR) na osnovu ugovora o obradi podataka po nalogu.
 - **Hosting u EU:** Hetzner Online GmbH, data centri u Njemačkoj. Podizvršitelji obrade navedeni su u ugovoru (Hetzner za hosting i sigurnosne kopije, `[E-Mail-Versanddienstleister mit EU-Hosting]` za transakcijske e-mailove).
-- **Minimizacija podataka:** podaci o kupcima (ime, e-mail, telefon, bilješke, marketinška saglasnost) su neobavezni. Vaučeri se mogu prodati anonimno. E-mailovi gostima nikada ne sadrže stanje, iznos, broj vaučera ni link.
+- **Minimizacija podataka:** podaci o kupcima (ime, e-mail, telefon, bilješke, marketinška saglasnost) su neobavezni. Vaučeri se mogu prodati anonimno. E-mailovi gostima su računi (iznos, restoran, datum, način plaćanja) bez QR koda, broja vaučera, linka ili stanja.
 - **Bez ličnih podataka u zapisniku aktivnosti:** promjene imena, e-maila, telefona, bilješki ili imena primalaca bilježe se samo kao činjenica; lozinke, tokeni i hashovi tajni se zacrnjuju.
 - **Anonimizacija:** na zahtjev gosta anonimizacija uklanja sve lične podatke (uključujući imena primalaca na njegovim vaučerima i e-mail adrese u zapisniku slanja), a finansijski podaci potrebni za knjigovodstvo ostaju sačuvani.
 - **Bez kolačića za praćenje:** aplikacija koristi samo tehnički neophodne kolačiće (sesija, CSRF zaštita, opcionalno „Keep me signed in“) i u memoriji preglednika slučajni identifikator uređaja. Bez analitike, bez reklama, bez kolačića trećih strana.
@@ -193,8 +193,8 @@ Potpunu matricu dozvola pronaći ćete u [Vodiču za kontrolu pristupa](access-c
 
 ## 11. Bilježenje i revizijski trag
 
-- **Zapisnik aktivnosti:** svaka radnja relevantna za sigurnost i novac bilježi se s osobom, uređajem, IP adresom, vremenom (mikrosekunde) i identifikatorom zahtjeva (Request-ID), uključujući svako neuspjelo predočenje i svaku neuspjelu prijavu. Zapisi se ne mogu mijenjati ni brisati i povezani su hash lancem.
-- **Sigurnosni događaji:** neuspjela predočenja, zaključani računi, besplatni vaučeri, storna; zaključavanja računa i neuspjela provjera integriteta dodatno se upisuju u zapisnik aplikacije, a provjera integriteta uzbunjuje e-mailom.
+- **Zapisnik aktivnosti:** svaka radnja relevantna za sigurnost i novac bilježi se s osobom, uređajem, IP adresom, vremenom (mikrosekunde) i identifikatorom zahtjeva (Request-ID), uključujući svako neuspjelo skeniranje i svaku neuspjelu prijavu. Zapisi se ne mogu mijenjati ni brisati i povezani su hash lancem.
+- **Sigurnosni događaji:** neuspjela skeniranja, zaključani računi, besplatni vaučeri, storna; zaključavanja računa i neuspjela provjera integriteta dodatno se upisuju u zapisnik aplikacije, a provjera integriteta uzbunjuje e-mailom.
 - **Historija vaučera:** svako knjiženje i svaki događaj s vremenom, osobom, uređajem, načinom plaćanja i stanjem nakon toga.
 - **API tokeni:** bilježe se vrijeme i IP adresa posljednje upotrebe.
 
@@ -209,13 +209,13 @@ Potpunu matricu dozvola pronaći ćete u [Vodiču za kontrolu pristupa](access-c
 - **Ciljne vrijednosti:** dostupnost 99,5 % mjesečno (cilj, u paketu Start bez garancije), gubitak podataka najviše 24 sata (RPO), oporavak nakon potpunog ispada servera u roku od 4 sata (RTO, cilj). Detalji: [Plan oporavka od katastrofe](disaster-recovery-plan.md).
 - **Ažuriranja:** svaki deployment gradi se iz jednog commita i može se u Coolifyju vratiti na raniji deployment.
 
-GiftCard Pro za iskorištavanja treba internetsku vezu. Offline knjiženja namjerno ne postoje, jer samo server može provjeriti predočenja i sigurno spriječiti dvostruka knjiženja.
+GiftCard Pro za iskorištavanja treba internetsku vezu. Offline knjiženja namjerno ne postoje, jer samo server može provjeriti skeniranja i sigurno spriječiti dvostruka knjiženja.
 
 ---
 
 ## 13. Siguran razvoj i rad
 
-- **Automatizovani testovi:** backend testovi pokreću se pri svakoj promjeni, i na SQLite i na MySQL-u. Posebne grupe testova pokrivaju odvajanje klijenata, dozvole, predočenja, plaćanja, prijavu, idempotentnost i istovremenost. Svako pravilo koje nešto zabranjuje ima test zloupotrebe koji pokušava zabranjeni put – i svaku uklonjenu putanju.
+- **Automatizovani testovi:** backend testovi pokreću se pri svakoj promjeni, i na SQLite i na MySQL-u. Posebne grupe testova pokrivaju odvajanje klijenata, dozvole, skeniranja, plaćanja, prijavu, idempotentnost i istovremenost. Svako pravilo koje nešto zabranjuje ima test zloupotrebe koji pokušava zabranjeni put – i svaku uklonjenu putanju.
 - **Integritet u CI-ju:** CI kreira demo podatke na MySQL-u i zatim provjerava sve hash lance i stanja.
 - **Statička analiza:** Larastan, provjera TypeScripta, ESLint, `flutter analyze`.
 - **Zavisnosti:** `composer audit` i `npm audit` u CI pipelineu.
@@ -250,7 +250,7 @@ Sigurnost nastaje zajedno. Sljedeća tabela pokazuje ko je za šta nadležan.
 | Korisnički računi | pravila za lozinke, zaključavanja, vezivanje za uređaj | jedan račun po osobi, jake lozinke, odlaske deaktivirati istog dana |
 | Uloge | provođenje dozvola | dodjeljivati uloge po principu najmanjih prava, redovno provjeravati |
 | Krajnji uređaji | – | zaključavanje ekrana, ažuriranja operativnog sistema, izgubljene uređaje odmah blokirati |
-| Vaučeri | tajna u QR kodu, predočenje kod svakog iskorištavanja, nepromjenjiva historija | listove za štampu čuvati kao gotovinu, iskorištavati samo skeniranjem, blokirati sumnjive vaučere, tačno evidentirati plaćanja |
+| Vaučeri | tajna u QR kodu, skeniranje kod svakog iskorištavanja, nepromjenjiva historija | listove za štampu čuvati kao gotovinu, iskorištavati samo skeniranjem, blokirati sumnjive vaučere, tačno evidentirati plaćanja |
 | Zapisnik aktivnosti | potpuno, nepromjenjivo bilježenje | redovno pregledati sigurnosne događaje |
 | API tokeni | hashiranje, istek, opoziv | sigurno čuvati tokene, minimalna prava, opozvati one koji više nisu potrebni |
 | Zaštita podataka | obrada po nalogu prema ugovoru, tehničke mjere | voditelj obrade za podatke o gostima, obaveze informisanja, prijava tijelu za zaštitu podataka |

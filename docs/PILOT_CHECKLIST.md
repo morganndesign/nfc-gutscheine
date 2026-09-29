@@ -33,7 +33,7 @@ Use this list for the first restaurant. Tick each item. The journey in section B
    - [ ] **Brand color** and **e-mail footer** (company register, address).
    - [ ] **Team**: invite managers and waiters, each with their own e-mail.
 3. [ ] **Test voucher:** sell € 5 at the desk (Vouchers → Sell voucher, payment *Cash*) and print it. Check that the
-   sheet shows the QR code and the restaurant, but no voucher number and no value.
+   sheet shows the QR code, the restaurant and the value, but no voucher number.
 4. [ ] **On every restaurant phone:** sign in to GiftCard Waiter as a waiter, scan the test voucher, redeem € 1,
    then **Scan next voucher**. Rename the phone under Devices (for example "Bar iPhone").
 5. [ ] **Manager on a phone:** sell a voucher in the app (**Sell voucher**) and print it from the phone.

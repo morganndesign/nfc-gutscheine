@@ -163,7 +163,7 @@ All findings are from the code at commit `0493784`.
 | C10 | **Default expiry 36 months.** Unlawful for paid vouchers in Austria (audit blocker 1). | 3 (the voucher owns expiry) | The default is no expiry. Expiry is a legal parameter (§5.2). |
 | C11 | **No online sales, no payment provider.** | 10 | New: checkout, payment webhooks, e-mail voucher v2 (§6, §11.3). |
 | C12 | **The iPhone app cannot write**, so the manager flow is Android-only (`s05_ready.dart:585`). | 7 | Binding needs only APDU relay, which iOS supports. The manager flow works on both (§12). |
-| C13 | **Customer e-mails print the balance and the bearer link.** Every template contains `{{ balance }}`, and `balance_url` is the `/c/{public_token}` spend link. | 4, §13.2 invariant 5 | Templates rewritten: no amounts, only the e-mail voucher link (Phase 8, including the expiry-reminder command). (`NotificationTemplateSeeder.php:18–48`, `CardNotificationService.php:51–52`, `CardUrlBuilder.php:19–24`) |
+| C13 | **Customer e-mails print the balance and the bearer link.** Every template contains `{{ balance }}`, and `balance_url` is the `/c/{public_token}` spend link. | 4, §13.2 invariant 5 | Templates rewritten: receipts with the purchase or reload amount, no balance and no bearer link (ADR-003). (`NotificationTemplateSeeder.php:18–48`, `CardNotificationService.php:51–52`, `CardUrlBuilder.php:19–24`) |
 
 ### 3.3 What becomes simpler
 
@@ -378,7 +378,7 @@ All limits are restaurant settings, within platform bounds. They are checked in 
 
 ### 6.4 Consistency
 
-There is one ledger, and every medium reads it live: card, e-mail voucher page, app and dashboard. **No medium carries a value:** e-mails contain a link, never an amount; printable QRs show no value; the chip holds nothing. So "using one medium updates all others" is true by construction, and nothing needs synchronising.
+There is one ledger, and every medium reads it live: card, e-mail voucher page, app and dashboard. **No medium carries the balance:** e-mail receipts show what was paid, a printed voucher may show its original value (ADR-003), and the chip holds nothing; none of these is ever read as a balance. So "using one medium updates all others" is true by construction, and nothing needs synchronising.
 
 ---
 
@@ -885,7 +885,7 @@ Key sets (metadata and KCVs only), batches (create, approve, import manifest, ac
 2. **No card is bound** unless it is `available`, belongs to the voucher's restaurant, and was proven with A3.
 3. **No activation** without a payment record (cash, card terminal, online provider, bank transfer, or owner-approved complimentary). **No online voucher** without a verified webhook.
 4. **No key material** outside the HSM and the crypto service's memory.
-5. **No value on any medium,** and nothing identifying printed on a card.
+5. **No stored value on any medium:** the balance exists only in the ledger. A value printed as part of a voucher or card design is decoration, never read back (ADR-003). Nothing identifying is printed on a card.
 6. **Counters only go up.** Challenges and presentments are single-use and short-lived.
 7. **Card state changes only through `CardLifecycle`,** always with an event.
 8. **Changing who can use an existing voucher needs the guest.** This covers binding a card to a voucher that existed before this visit, re-issuing a printable QR, and changing the contact. It needs the guest's `select` presentment: the old card, the voucher's QR, the recovery code or an `email_link` to the confirmed contact. Owners cannot replace the guest in this, and anonymous vouchers have no recovery (§11.6). The known contacts are notified.

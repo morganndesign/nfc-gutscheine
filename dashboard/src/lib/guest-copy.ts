@@ -1,11 +1,13 @@
 /**
  * Texts that guests read (the printable voucher sheet). They follow the restaurant's language, not the staff UI
- * language: an Austrian guest should never see a mix of German and English. Guests never see a voucher number
- * or a value on paper (architecture §6.4): the QR is the voucher, the balance lives on the server.
+ * language: an Austrian guest should never see a mix of German and English. The sheet shows the voucher's value as
+ * part of the design (ADR-003); it is what was bought, not a balance — the balance lives on the server. It never
+ * shows the voucher number: the QR is the voucher.
  */
 const COPY = {
   de: {
     voucher: "Gutschein",
+    value: "Wert",
     for: "für",
     howTo: "Bitte zeigen Sie diesen Code beim Bezahlen vor.",
     keepSafe: "Wie Bargeld aufbewahren: Wer den Code besitzt, kann den Gutschein einlösen.",
@@ -14,6 +16,7 @@ const COPY = {
   },
   en: {
     voucher: "Voucher",
+    value: "Value",
     for: "for",
     howTo: "Please show this code when you pay.",
     keepSafe: "Keep it safe like cash: whoever holds the code can redeem the voucher.",
@@ -22,6 +25,7 @@ const COPY = {
   },
   bhs: {
     voucher: "Vaučer",
+    value: "Vrijednost",
     for: "za",
     howTo: "Molimo pokažite ovaj kôd prilikom plaćanja.",
     keepSafe: "Čuvajte ga kao gotovinu: ko ima kôd, može iskoristiti vaučer.",
@@ -38,4 +42,9 @@ export function guestCopy(locale: string | null | undefined): GuestCopy {
   if (language === "de") return COPY.de
   if (language === "bs" || language === "hr" || language === "sr") return COPY.bhs
   return COPY.en
+}
+
+/** The locale the restaurant's money is printed in (`de-AT`, `bs-BA`, …); guests read the restaurant's format. */
+export function guestLocale(locale: string | null | undefined): string {
+  return (locale ?? "de-AT").replace("_", "-")
 }

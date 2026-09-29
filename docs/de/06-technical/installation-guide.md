@@ -10,9 +10,9 @@ GiftCard Pro besteht aus drei Anwendungen und den Hintergrunddiensten:
 
 | Komponente | Technologie | Aufgabe |
 |---|---|---|
-| API | Laravel 12 / PHP 8.4 | Geschäftslogik, Vorlagen, Ledger, Authentifizierung, Hintergrundjobs |
+| API | Laravel 12 / PHP 8.4 | Geschäftslogik, Scans, Ledger, Authentifizierung, Hintergrundjobs |
 | Web-App | Next.js 15 / TypeScript | Dashboard, Web-Kassa (`/waiter`), Druckblatt der Gutscheine |
-| Kellner-App (GiftCard Waiter) | Flutter, Android und iPhone | QR-Scan → Vorlage → Einlösung; Verkauf für Betriebsleitung und Inhaberin bzw. Inhaber |
+| Kellner-App (GiftCard Waiter) | Flutter, Android und iPhone | QR-Scan → Einlösung; Verkauf für Betriebsleitung und Inhaberin bzw. Inhaber |
 | Datenbank | MySQL 8.4 | Mandanten, Gutscheine, Zahlungen, Ledger, Audit-Log |
 | Redis | 7.x | Sessions, Cache, Queues, Rate Limits, Sperren |
 | Mailpit | nur Entwicklung | Fängt alle E-Mails ab (Weboberfläche auf Port 8025) |

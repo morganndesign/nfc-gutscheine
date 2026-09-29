@@ -13,7 +13,7 @@ Die wichtigsten Punkte in Kürze:
 | Bereich | Umsetzung |
 |---|---|
 | Gutschein | Der druckbare QR-Code trägt ein zufälliges 256-Bit-Geheimnis, keinen Link, kein Guthaben, keine Personendaten. Der Server speichert nur dessen SHA-256-Hash. |
-| Einlösen | Jede Abbuchung verbraucht eine **Vorlage**: den Nachweis, dass der Gutschein jetzt hier ist – einmalig, 60 Sekunden gültig, gebunden an Lokal, Gutschein, Person und Gerät. Die Gutscheinnummer ist nie ein Berechtigungsnachweis. |
+| Einlösen | Jede Abbuchung verbraucht einen **Scan**: den Nachweis, dass der Gutschein jetzt hier ist – einmalig, 60 Sekunden gültig, gebunden an Lokal, Gutschein, Person und Gerät. Die Gutscheinnummer ist nie ein Berechtigungsnachweis. |
 | Buchungen | Jede Guthabenänderung ist atomar (Datenbank-Zeilensperre), idempotent (kein doppeltes Buchen bei Doppel-Tap oder Netzwerkfehler) und landet im Ledger. Jeder Verkauf und jede Aufladung hält die Zahlung fest. |
 | Unveränderliche Historie | Ledger, Zahlungen und Audit-Log sind append-only (Datenbank-Trigger) und je Lokal über Hash-Ketten verknüpft; eine nächtliche Prüfung berechnet jede Kette und jedes Guthaben neu. |
 | Mandantentrennung | Jedes Lokal sieht ausschließlich seine eigenen Daten; die Trennung wird auf mehreren Ebenen erzwungen. |
@@ -28,7 +28,7 @@ Die wichtigsten Punkte in Kürze:
 
 ## 2. Sicherheitsprinzipien
 
-1. **Einlösen braucht einen Anwesenheitsnachweis.** Jede Abbuchung verbraucht eine Vorlage: einmalig, 60 Sekunden, gebunden an Person, Gerät, Lokal und Gutschein. Eine Gutscheinnummer ist nie ein Berechtigungsnachweis.
+1. **Einlösen braucht einen Anwesenheitsnachweis.** Jede Abbuchung verbraucht einen Scan: einmalig, 60 Sekunden, gebunden an Person, Gerät, Lokal und Gutschein. Eine Gutscheinnummer ist nie ein Berechtigungsnachweis.
 2. **Der Server ist die einzige Quelle der Wahrheit** für Guthaben; jede Änderung ist atomar, gesperrt, idempotent und im Ledger verbucht.
 3. **Die Finanzhistorie ist unveränderlich.** Ledger, Zahlungen und Audit-Log sind nur erweiterbar (Datenbank-Trigger) und über Hash-Ketten verknüpft; eine nächtliche Prüfung kontrolliert jede Kette und jedes Guthaben.
 4. **Standardmäßig verweigern.** Jede Schnittstelle verlangt eine Berechtigung; die Zuordnung zum Lokal erfolgt automatisch und wird mehrfach geprüft; Tokens sind zusätzlich durch ihre Abilities und – bei der Kellner-App – durch Methode und Pfad begrenzt.
@@ -56,7 +56,7 @@ flowchart LR
     PC["Dashboard<br/>PC, Tablet, Handy"] --> Proxy
     Handy -->|HTTPS, TLS + HSTS| Proxy["Coolify-Proxy<br/>TLS"]
     Proxy --> GW["Gateway (Caddy)<br/>Sicherheits-Header, Logs ohne Geheimnisse"]
-    GW -->|/api| API["Laravel API<br/>Berechtigungen, Mandantentrennung,<br/>Vorlagen, Zeilensperre, Hash-Ketten"]
+    GW -->|/api| API["Laravel API<br/>Berechtigungen, Mandantentrennung,<br/>Scans, Zeilensperre, Hash-Ketten"]
     GW -->|Seiten| Web["Next.js<br/>Dashboard, Web-Kassa"]
     API --> DB[("MySQL<br/>internes Netz")]
     API --> Redis[("Redis<br/>internes Netz")]
@@ -66,9 +66,9 @@ flowchart LR
 **Ablauf einer Einlösung:**
 
 1. Die Servicekraft scannt den QR-Code des Gutscheins mit der Kamera (Kellner-App oder Web-Kassa).
-2. Die App sendet den gescannten Text an `POST /presentments`. Der Server prüft die Sperre für Fehlversuche, sucht den Hash im Bestand **dieses** Lokals, prüft die Einlöseregel der Gutscheinart und legt eine Vorlage an (gültig 60 s, gebunden an Lokal, Gutschein, Zweck, Person und Gerät). Die App zählt die Restzeit herunter.
-3. Die Servicekraft gibt den Betrag ein und bestätigt. Die App sendet `POST /vouchers/{id}/redemptions` mit der Vorlage und einem eindeutigen **Idempotenzschlüssel**; sie speichert den Versuch vorher verschlüsselt am Gerät.
-4. Der Server sperrt Vorlage und Gutschein in der Datenbank, prüft den Schlüssel erneut, verbraucht die Vorlage, prüft Status, Guthaben und Grenzen, hängt Ledger- und Audit-Eintrag an die Hash-Ketten an, aktualisiert das Guthaben und bestätigt erst dann.
+2. Die App sendet den gescannten Text an `POST /presentments`. Der Server prüft die Sperre für Fehlversuche, sucht den Hash im Bestand **dieses** Lokals, prüft die Einlöseregel der Gutscheinart und legt einen Scan an (gültig 60 s, gebunden an Lokal, Gutschein, Zweck, Person und Gerät). Die App zählt die Restzeit herunter.
+3. Die Servicekraft gibt den Betrag ein und bestätigt. Die App sendet `POST /vouchers/{id}/redemptions` mit dem Scan und einem eindeutigen **Idempotenzschlüssel**; sie speichert den Versuch vorher verschlüsselt am Gerät.
+4. Der Server sperrt Scan und Gutschein in der Datenbank, prüft den Schlüssel erneut, verbraucht den Scan, prüft Status, Guthaben und Grenzen, hängt Ledger- und Audit-Eintrag an die Hash-Ketten an, aktualisiert das Guthaben und bestätigt erst dann.
 5. Bleibt die Antwort aus, fragt die App `GET /vouchers/{id}/redemptions/{key}` ab – sie bucht nie ein zweites Mal und zeigt nie „nichts gebucht“, solange das Ergebnis unbekannt ist.
 
 ---
@@ -101,15 +101,15 @@ Wird ein Gutschein als verloren gemeldet, sperrt das Lokal ihn; ab sofort kann e
 
 ### 5.2 Schutz gegen Erraten und Durchprobieren
 
-Fehlgeschlagene Vorlagen (der gescannte Text beweist nichts) sind auf 10 pro 5 Minuten je Lokal, Person und Gerät begrenzt – nie je IP-Adresse, damit Gäste hinter demselben WLAN einander nicht aussperren. Jeder Fehlversuch wird im Audit-Log festgehalten (`presentment.failed`, `presentment.rejected`). Es gibt keine öffentliche Guthabenseite und keine öffentliche Gutscheinabfrage.
+Fehlgeschlagene Scans (der gescannte Text beweist nichts) sind auf 10 pro 5 Minuten je Lokal, Person und Gerät begrenzt – nie je IP-Adresse, damit Gäste hinter demselben WLAN einander nicht aussperren. Jeder Fehlversuch wird im Audit-Log festgehalten (`presentment.failed`, `presentment.rejected`). Es gibt keine öffentliche Guthabenseite und keine öffentliche Gutscheinabfrage.
 
-### 5.3 Die Vorlage
+### 5.3 Der Scan
 
-Jede Einlösung verbraucht eine geprüfte, nicht abgelaufene Vorlage dieses Gutscheins, erstellt von derselben Person auf demselben Gerät, in derselben Datenbanktransaktion (Sperrreihenfolge Vorlage → Gutschein). Vorlagen sind einmalig (`verified → consumed`), 60 Sekunden gültig, und ein Ledger-Eintrag verweist auf höchstens eine (eindeutiger Index). Einlöseregeln je Art: Digitale Gutscheine nur mit einer QR-Methode, Karten-Gutscheine nur mit Live-Authentifizierung.
+Jede Einlösung verbraucht einen geprüften, nicht abgelaufenen Scan dieses Gutscheins, erstellt von derselben Person auf demselben Gerät, in derselben Datenbanktransaktion (Sperrreihenfolge Scan → Gutschein). Scans sind einmalig (`verified → consumed`), 60 Sekunden gültig, und ein Ledger-Eintrag verweist auf höchstens einen (eindeutiger Index). Einlöseregeln je Art: Digitale Gutscheine nur mit einer QR-Methode, Karten-Gutscheine nur mit Live-Authentifizierung.
 
 ### 5.4 Physische Karten: NTAG 424 DNA mit Live-Authentifizierung
 
-Physische Karten sind ausschließlich als **NTAG 424 DNA** vorgesehen. Eine Karte wird nur nach **Live-Authentifizierung** eingelöst: Die Kellner-App leitet die Befehle des Chips über NFC an den **Krypto-Dienst** weiter, der die Kartenschlüssel in einem Hardware-Sicherheitsmodul hält und beweist, dass der echte Chip in diesem Moment vorliegt. Das Ergebnis ist eine Vorlage mit der Methode `live_auth` (Stufe A3). Solange dieser Dienst nicht in Betrieb ist, beantwortet der Server `live_auth` mit `422 PRESENTMENT_METHOD_UNAVAILABLE`; die Kellner-App hat keinen NFC-Code und keine NFC-Berechtigung. Kartenschlüssel sind nie Teil der Konfiguration. Details: [docs/NFC.md](../../NFC.md).
+Physische Karten sind ausschließlich als **NTAG 424 DNA** vorgesehen. Eine Karte wird nur nach **Live-Authentifizierung** eingelöst: Die Kellner-App leitet die Befehle des Chips über NFC an den **Krypto-Dienst** weiter, der die Kartenschlüssel in einem Hardware-Sicherheitsmodul hält und beweist, dass der echte Chip in diesem Moment vorliegt. Das Ergebnis ist ein Scan durch Antippen der Karte mit der Methode `live_auth` (Stufe A3). Solange dieser Dienst nicht in Betrieb ist, beantwortet der Server `live_auth` mit `422 PRESENTMENT_METHOD_UNAVAILABLE`; die Kellner-App hat keinen NFC-Code und keine NFC-Berechtigung. Kartenschlüssel sind nie Teil der Konfiguration. Details: [docs/NFC.md](../../NFC.md).
 
 ---
 
@@ -128,7 +128,7 @@ Physische Karten sind ausschließlich als **NTAG 424 DNA** vorgesehen. Eine Kart
 | **Missbrauchsgrenzen** | Maximaler Betrag je Einlösung, je Gutschein und Tag, Einlösungen je Gutschein und Stunde (Standard 10), maximales Guthaben – geprüft unter der Zeilensperre; Plattformobergrenzen für jede Einstellung. |
 | **Kein Verlust von Gästegeld** | Kein Standardablauf; eine Gültigkeit beträgt mindestens 36 Monate; ein Ablauf behält das Guthaben, die Inhaberin bzw. der Inhaber kann den Gutschein wieder freigeben. |
 
-Die automatisierten Tests (`IdempotencyAndConcurrencyTest`, auch gegen MySQL, sowie die Missbrauchstests in `tests/Feature/Abuse/`) decken gleichzeitige Einlösungen, wiederholte Schlüssel, fremde und abgelaufene Vorlagen, Manipulation der Historie und Zahlungen ohne Berechtigung ab.
+Die automatisierten Tests (`IdempotencyAndConcurrencyTest`, auch gegen MySQL, sowie die Missbrauchstests in `tests/Feature/Abuse/`) decken gleichzeitige Einlösungen, wiederholte Schlüssel, fremde und abgelaufene Scans, Manipulation der Historie und Zahlungen ohne Berechtigung ab.
 
 ---
 
@@ -183,7 +183,7 @@ Die vollständige Berechtigungsmatrix finden Sie im [Leitfaden Zugriffskontrolle
 
 - **Rollen nach DSGVO:** Für Gäste- und Kundendaten ist das Lokal Verantwortlicher; GiftCard Pro ist Auftragsverarbeiter (Art. 28 DSGVO) auf Basis eines Auftragsverarbeitungsvertrags (AVV).
 - **Hosting in der EU:** Hetzner Online GmbH, Rechenzentren in Deutschland. Unterauftragsverarbeiter sind im AVV aufgelistet (Hetzner für Hosting und Backups, `[E-Mail-Versanddienstleister mit EU-Hosting]` für Transaktions-E-Mails).
-- **Datenminimierung:** Kundendaten (Name, E-Mail, Telefon, Notizen, Marketing-Einwilligung) sind optional. Gutscheine können anonym verkauft werden. Gäste-E-Mails enthalten nie Guthaben, Betrag, Gutscheinnummer oder Link.
+- **Datenminimierung:** Kundendaten (Name, E-Mail, Telefon, Notizen, Marketing-Einwilligung) sind optional. Gutscheine können anonym verkauft werden. Gäste-E-Mails sind Quittungen (Betrag, Lokal, Datum, Zahlungsart) ohne QR-Code, Gutscheinnummer, Link oder Guthaben.
 - **Keine Personendaten im Audit-Log:** Änderungen an Namen, E-Mail, Telefon, Notizen oder Empfängernamen werden nur als Tatsache vermerkt; Passwörter, Tokens und Geheimnis-Hashes werden geschwärzt.
 - **Anonymisierung:** Auf Wunsch eines Gastes entfernt die Anonymisierung alle Personendaten (inkl. Empfängernamen auf seinen Gutscheinen und E-Mail-Adressen im Versandprotokoll); die für die Buchhaltung nötigen Finanzdaten bleiben erhalten.
 - **Keine Tracking-Cookies:** Die App verwendet nur technisch notwendige Cookies (Sitzung, CSRF-Schutz, optional „Keep me signed in“) und im Browser-Speicher eine zufällige Gerätekennung. Keine Analyse, keine Werbung, keine Cookies von Dritten.
@@ -193,8 +193,8 @@ Die vollständige Berechtigungsmatrix finden Sie im [Leitfaden Zugriffskontrolle
 
 ## 11. Protokollierung und Prüfspur
 
-- **Audit-Log:** Jede sicherheits- und geldrelevante Aktion wird mit Person, Gerät, IP-Adresse, Zeitpunkt (Mikrosekunden) und Anfrage-Kennung (Request-ID) festgehalten, auch jede fehlgeschlagene Vorlage und jede fehlgeschlagene Anmeldung. Einträge können nicht geändert oder gelöscht werden und sind über eine Hash-Kette verknüpft.
-- **Sicherheitsereignisse:** fehlgeschlagene Vorlagen, gesperrte Konten, Gratis-Gutscheine, Storni; Kontosperren und eine fehlgeschlagene Integritätsprüfung werden zusätzlich im Anwendungsprotokoll geschrieben, die Integritätsprüfung alarmiert per E-Mail.
+- **Audit-Log:** Jede sicherheits- und geldrelevante Aktion wird mit Person, Gerät, IP-Adresse, Zeitpunkt (Mikrosekunden) und Anfrage-Kennung (Request-ID) festgehalten, auch jeden fehlgeschlagenen Scan und jede fehlgeschlagene Anmeldung. Einträge können nicht geändert oder gelöscht werden und sind über eine Hash-Kette verknüpft.
+- **Sicherheitsereignisse:** fehlgeschlagene Scans, gesperrte Konten, Gratis-Gutscheine, Storni; Kontosperren und eine fehlgeschlagene Integritätsprüfung werden zusätzlich im Anwendungsprotokoll geschrieben, die Integritätsprüfung alarmiert per E-Mail.
 - **Gutscheinverlauf:** jede Buchung und jedes Ereignis mit Zeit, Person, Gerät, Zahlungsart und Saldo danach.
 - **API-Tokens:** Zeitpunkt und IP-Adresse der letzten Verwendung werden gespeichert.
 
@@ -209,13 +209,13 @@ Die vollständige Berechtigungsmatrix finden Sie im [Leitfaden Zugriffskontrolle
 - **Zielwerte:** Verfügbarkeit 99,5 % pro Monat (Ziel, im Tarif Start keine Garantie), Datenverlust höchstens 24 Stunden (RPO), Wiederherstellung nach Totalausfall des Servers innerhalb von 4 Stunden (RTO, Ziel). Details: [Notfallwiederherstellungsplan](disaster-recovery-plan.md).
 - **Aktualisierungen:** Jedes Deployment wird aus einem Commit gebaut und kann in Coolify auf ein früheres Deployment zurückgesetzt werden.
 
-GiftCard Pro benötigt für Einlösungen eine Internetverbindung. Offline-Buchungen gibt es bewusst nicht, weil nur der Server Vorlagen prüfen und Doppelbuchungen sicher verhindern kann.
+GiftCard Pro benötigt für Einlösungen eine Internetverbindung. Offline-Buchungen gibt es bewusst nicht, weil nur der Server Scans prüfen und Doppelbuchungen sicher verhindern kann.
 
 ---
 
 ## 13. Sichere Entwicklung und Betrieb
 
-- **Automatisierte Tests:** Backend-Tests laufen bei jeder Änderung, sowohl auf SQLite als auch auf MySQL. Eigene Testreihen decken Mandantentrennung, Berechtigungen, Vorlagen, Zahlungen, Anmeldung, Idempotenz und Gleichzeitigkeit ab. Jede Regel, die etwas verbietet, hat einen Missbrauchstest, der den verbotenen Weg versucht – auch jeden entfernten Pfad.
+- **Automatisierte Tests:** Backend-Tests laufen bei jeder Änderung, sowohl auf SQLite als auch auf MySQL. Eigene Testreihen decken Mandantentrennung, Berechtigungen, Scans, Zahlungen, Anmeldung, Idempotenz und Gleichzeitigkeit ab. Jede Regel, die etwas verbietet, hat einen Missbrauchstest, der den verbotenen Weg versucht – auch jeden entfernten Pfad.
 - **Integrität in der CI:** Die CI legt Demodaten auf MySQL an und prüft danach alle Hash-Ketten und Guthaben.
 - **Statische Analyse:** Larastan, TypeScript-Prüfung, ESLint, `flutter analyze`.
 - **Abhängigkeiten:** `composer audit` und `npm audit` in der CI-Pipeline.
@@ -250,7 +250,7 @@ Sicherheit entsteht gemeinsam. Die folgende Tabelle zeigt, wer wofür zuständig
 | Benutzerkonten | Passwortregeln, Sperren, Gerätebindung | Ein Konto pro Person, starke Passwörter, Austritte am selben Tag deaktivieren |
 | Rollen | Durchsetzung der Berechtigungen | Rollen nach dem Prinzip der geringsten Rechte vergeben, regelmäßig prüfen |
 | Endgeräte | – | Bildschirmsperre, Betriebssystem-Updates, verlorene Geräte sofort sperren |
-| Gutscheine | Geheimnis im QR-Code, Vorlage bei jeder Einlösung, unveränderliche Historie | Druckblätter wie Bargeld behandeln, nur per Scan einlösen, verdächtige Gutscheine sperren, Zahlungen korrekt erfassen |
+| Gutscheine | Geheimnis im QR-Code, Scan bei jeder Einlösung, unveränderliche Historie | Druckblätter wie Bargeld behandeln, nur per Scan einlösen, verdächtige Gutscheine sperren, Zahlungen korrekt erfassen |
 | Audit-Log | Vollständige, unveränderliche Erfassung | Sicherheitsereignisse regelmäßig ansehen |
 | API-Tokens | Hashing, Ablauf, Widerruf | Tokens sicher verwahren, minimale Rechte, nicht mehr benötigte widerrufen |
 | Datenschutz | Auftragsverarbeitung nach AVV, technische Maßnahmen | Verantwortlicher für Gästedaten, Informationspflichten, Meldung an die Datenschutzbehörde |
