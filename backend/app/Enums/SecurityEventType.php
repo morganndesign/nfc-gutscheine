@@ -12,8 +12,6 @@ namespace App\Enums;
  * analytics and model training. Changing the meaning of a key means a new key (or a new type), never a
  * reinterpretation of stored events; `schema_version` on every row marks the catalogue version it was written
  * under.
- *
- * Card types (activate, bind, replace, tap, challenge) are added with the card phases.
  */
 enum SecurityEventType: string
 {
@@ -74,6 +72,8 @@ enum SecurityEventType: string
     case CardAuthenticate = 'card.authenticate';
     /** A card batch changed its status (and moved its cards). */
     case CardBatchStatus = 'card.batch_status';
+    /** A station step of personalising a chip (keys, SDM settings, QA). Refused: CARD_PERSONALIZATION_FAILED:… */
+    case CardPersonalize = 'card.personalize';
 
     // Platform -------------------------------------------------------------------------------------------------
     case RestaurantSuspend = 'platform.restaurant_suspend';
@@ -116,6 +116,7 @@ enum SecurityEventType: string
             self::CardTap => ['key_set', 'card_number', 'counter', 'purpose'],
             self::CardAuthenticate => ['card_number', 'purpose', 'counter', 'presentment_id', 'stage'],
             self::CardBatchStatus => ['batch_code', 'from_status', 'to_status', 'cards_moved'],
+            self::CardPersonalize => ['card_number', 'batch_code', 'stage'],
             self::RestaurantSuspend, self::RestaurantReactivate => [],
         };
     }

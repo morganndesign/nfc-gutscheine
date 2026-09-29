@@ -34,7 +34,7 @@ class KeySet extends Model
         ];
     }
 
-    /** A root key of this set in the crypto provider, e.g. `ks-2026-01/k1`. */
+    /** A root key of this set in the crypto provider, e.g. `ks-2026-01/root-k1`. */
     public function key(string $role): KeyReference
     {
         return KeyReference::of($this->version, $role);

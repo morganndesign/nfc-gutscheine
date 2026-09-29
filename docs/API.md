@@ -447,3 +447,30 @@ invitation replaces it). Choosing a password with `POST /auth/reset-password` ac
 (`de-*` → `de`, `en-*` → `en`), otherwise `MAIL_LOCALE` (default `de`). Wording:
 `backend/lang/<locale>/invitation.php` and `backend/lang/<locale>.json`; a new language is added to
 `giftcard.mail_locales`.
+
+### Personalisation station `[platform.cards.personalize]`
+
+The internal station (Android) personalises blank NTAG 424 DNA chips of a batch ordered with
+`personalization: in_house_station` while the batch is `in_production`. The server builds every APDU (keys never
+leave it); the phone relays them round by round and stops at the first answer whose status word is not `9000`,
+`9100` or `91AF`, sending the answers it has.
+
+```http
+POST /admin/card-batches/{batch}/personalizations
+{ "rf_uid": "04A39493CC8680" }                       // the chip's 7-byte UID from anticollision
+→ 200 { "data": { "personalization": "01J…", "stage": "auth", "commands": ["00A4…", "908D…", "9071…"],
+                  "expires_in": 60, "card": { "card_number": "B-2026-001-0001", "state": "manufactured" } } }
+
+POST /admin/personalizations/{personalization}
+{ "responses": ["9000", "9100", "<16 bytes>91AF"] } // hex, with status words, same order as `commands`
+→ 200 next round (`stage` auth2, versions, script, qa) … until `stage: done`, `personalization: null`,
+      `card.state: qa_passed`
+```
+
+Rounds: register the chip (`manufactured`), write the NDEF tap URL, AuthenticateEV2First K0 (factory key, or the
+card's own K0 when the chip was keyed before), GetKeyVersion 1–3, ChangeFileSettings (SDM: encrypted PICCData
+under K1, MAC under K2) and ChangeKey K1, K2, K3, K0 (only keys not yet at version 01; K0 last) → `personalized`;
+then a guest-style read (SUN verified, counter stored) and a K3 challenge → `qa_passed`. Each round is valid 60 s
+and single use. A failed round is `422 CARD_PERSONALIZATION_FAILED` (`context.reason`, e.g. `auth:91AE` for a chip
+with unknown keys, `expired`, `already_personalized`, `batch_not_in_production`); tapping the chip again resumes
+safely. Every step is a `card.personalize` security event.

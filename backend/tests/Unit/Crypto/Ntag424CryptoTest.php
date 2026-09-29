@@ -35,10 +35,9 @@ final class Ntag424CryptoTest extends TestCase
 
     public function test_sun_an12196_reference_vector(): void
     {
-        $provider = InMemoryProvider::with(['test/sdm-meta-read' => str_repeat('00', 16)]);
         $zero = str_repeat("\0", 16);
 
-        $message = (new SunVerifier($provider))->verify(new KeyReference('test/sdm-meta-read'), static fn (string $uid): string => $zero, 'EF963FF7828658A599F3041510671E88', '94EED9EE65337086');
+        $message = SunVerifier::verify($zero, static fn (string $uid): string => $zero, 'EF963FF7828658A599F3041510671E88', '94EED9EE65337086');
 
         $this->assertSame('04DE5F1EACC040', $message->uid);
         $this->assertSame(61, $message->readCounter);
@@ -46,17 +45,15 @@ final class Ntag424CryptoTest extends TestCase
 
     public function test_sun_with_non_zero_keys_and_little_endian_counters(): void
     {
-        $provider = InMemoryProvider::with(['test/sdm-meta-read' => '0f1e2d3c4b5a69788796a5b4c3d2e1f0']);
         $file = (string) hex2bin('f0e1d2c3b4a5968778695a4b3c2d1e0f');
-        $verifier = new SunVerifier($provider);
-        $meta = new KeyReference('test/sdm-meta-read');
+        $meta = (string) hex2bin('0f1e2d3c4b5a69788796a5b4c3d2e1f0');
         $key = static fn (string $uid): string => $file;
 
-        $max = $verifier->verify($meta, $key, '60fcf1396f08fdca4a261e49b42c5fbb', '9a60324f845d7684');
+        $max = SunVerifier::verify($meta, $key, '60fcf1396f08fdca4a261e49b42c5fbb', '9a60324f845d7684');
         $this->assertSame('04A39493CC8680', $max->uid);
         $this->assertSame(0xFFFFFF, $max->readCounter);
-        $this->assertSame(1, $verifier->verify($meta, $key, 'ad12752466e17f121a6f56fcdf5bffb0', 'a7e44bf982933c3d')->readCounter);
-        $this->assertSame(65536, $verifier->verify($meta, $key, 'da78eed24789833a0f1c0a98d8e44337', 'abb9b5c0ec0273d7')->readCounter);
+        $this->assertSame(1, SunVerifier::verify($meta, $key, 'ad12752466e17f121a6f56fcdf5bffb0', 'a7e44bf982933c3d')->readCounter);
+        $this->assertSame(65536, SunVerifier::verify($meta, $key, 'da78eed24789833a0f1c0a98d8e44337', 'abb9b5c0ec0273d7')->readCounter);
 
         foreach ([
             ['60fcf1396f08fdca4a261e49b42c5fbb', '9b60324f845d7684'], // corrupted MAC
@@ -65,7 +62,7 @@ final class Ntag424CryptoTest extends TestCase
             ['zz', '00'],                                             // not hex
         ] as [$e, $m]) {
             try {
-                $verifier->verify($meta, $key, $e, $m);
+                SunVerifier::verify($meta, $key, $e, $m);
                 $this->fail("Accepted e={$e} m={$m}");
             } catch (SunVerificationFailedException) {
                 $this->addToAssertionCount(1);

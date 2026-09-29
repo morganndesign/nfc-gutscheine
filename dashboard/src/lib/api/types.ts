@@ -35,6 +35,7 @@ export type Permission =
   | "platform.restaurants.manage"
   | "platform.settings.manage"
   | "platform.audit.view"
+  | "platform.cards.personalize"
 
 export interface RestaurantSettings {
   /** null: vouchers do not expire (the default). */

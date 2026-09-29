@@ -7,6 +7,7 @@ namespace App\Services\Presentments;
 use App\Crypto\CryptoProvider;
 use App\Crypto\Ntag424\CardAuthenticator;
 use App\Crypto\Ntag424\CardKeys;
+use App\Crypto\Ntag424\TapUrl;
 use App\Enums\CardState;
 use App\Enums\MediumStatus;
 use App\Enums\MediumType;
@@ -19,7 +20,6 @@ use App\Exceptions\Domain\CardAuthenticationFailedException;
 use App\Exceptions\Domain\CardNotUsableException;
 use App\Exceptions\Domain\DomainException;
 use App\Exceptions\Domain\PresentmentThrottledException;
-use App\Exceptions\Domain\SunVerificationFailedException;
 use App\Models\Card;
 use App\Models\KeySet;
 use App\Models\Medium;
@@ -74,7 +74,8 @@ final class CardPresentmentService
         }
 
         try {
-            [$keySet, $e, $m] = $this->parse($tapUrl);
+            $tap = TapUrl::parse($tapUrl);
+            [$keySet, $e, $m] = [$tap->keySet, $tap->e, $tap->m];
             $card = $this->taps->verify($keySet, $e, $m, $actor, $purpose->value);
 
             // Anti-cloning: the SUN names the chip that computed it; the radio layer names the chip on the phone.
@@ -185,25 +186,6 @@ final class CardPresentmentService
         ], restaurantId: (string) $restaurant->getKey());
 
         return $presentment->setRelation('voucher', $voucher)->setRelation('card', $card);
-    }
-
-    /** @return array{0: string, 1: string, 2: string} key set version, e, m */
-    private function parse(string $tapUrl): array
-    {
-        $origin = (string) config('giftcard.tap_url');
-        if (! str_starts_with($tapUrl, $origin.'/')) {
-            throw new SunVerificationFailedException;
-        }
-        $path = (string) parse_url($tapUrl, PHP_URL_PATH);
-        parse_str((string) parse_url($tapUrl, PHP_URL_QUERY), $query);
-        $keySet = ltrim($path, '/');
-        $e = $query['e'] ?? null;
-        $m = $query['m'] ?? null;
-        if (! is_string($e) || ! is_string($m) || preg_match('/^[a-z0-9][a-z0-9._-]{0,31}$/', $keySet) !== 1) {
-            throw new SunVerificationFailedException;
-        }
-
-        return [$keySet, $e, $m];
     }
 
     private function keysFor(Card $card): CardKeys

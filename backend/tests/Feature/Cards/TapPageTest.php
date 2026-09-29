@@ -51,7 +51,7 @@ final class TapPageTest extends TestCase
         $this->app->forgetInstance(LocalKeystore::class);
         $this->app->forgetInstance(CryptoProvider::class);
         $this->artisan('crypto:keystore:init')->assertSuccessful();
-        foreach (['k1', 'root-k0', 'root-k2', 'root-k3'] as $role) {
+        foreach (['root-k0', 'root-k1', 'root-k2', 'root-k3'] as $role) {
             $this->artisan('crypto:key:generate', ['reference' => 'ks-2026-01/'.$role])->assertSuccessful();
         }
 
@@ -99,7 +99,7 @@ final class TapPageTest extends TestCase
         $keys = new CardKeys($provider, $keySet === 'ks-2026-01' ? $keySet : 'ks-2026-01', $this->card->batch_id);
         $uid = $this->card->uid;
         $ctr = chr($counter & 0xFF).chr(($counter >> 8) & 0xFF).chr(($counter >> 16) & 0xFF);
-        $e = bin2hex($provider->encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, "\xC7".$uid.$ctr.random_bytes(5)));
+        $e = bin2hex(Aes::encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, "\xC7".$uid.$ctr.random_bytes(5)));
         $m = SunVerifier::mac($keys->sdmMacKey($uid), $uid, $ctr);
 
         return "/t/{$keySet}?e={$e}&m={$m}";

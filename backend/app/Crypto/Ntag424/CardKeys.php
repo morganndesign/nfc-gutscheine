@@ -10,12 +10,12 @@ use InvalidArgumentException;
 
 /**
  * The keys of the cards of one batch (architecture §9.2). Card keys are never stored: they are derived on
- * demand in two AN10922 levels, root (in the provider) → batch → card.
+ * demand in two AN10922 levels, root (in the provider) → batch → card; K1 in one level, root → key set.
  *
  * | Slot | Purpose                          | Key                                  |
  * |------|----------------------------------|--------------------------------------|
  * | K0   | change keys and settings         | per card: AN10922(batch(root-k0))    |
- * | K1   | encrypt UID + counter (SUN `e`)  | per key set: `{version}/k1`          |
+ * | K1   | encrypt UID + counter (SUN `e`)  | per key set: AN10922(root-k1)        |
  * | K2   | SUN MAC (`m`)                    | per card: AN10922(batch(root-k2))    |
  * | K3   | live challenge at till / binding | per card: AN10922(batch(root-k3))    |
  */
@@ -42,9 +42,15 @@ final class CardKeys
     }
 
     /** K1: shared by the key set, it opens PICCData before the UID is known. */
-    public function metaReadKey(): KeyReference
+    public function metaReadKey(): string
     {
-        return KeyReference::of($this->keySetVersion, 'k1');
+        return self::keySetMetaReadKey($this->provider, $this->keySetVersion);
+    }
+
+    /** K1 of a key set, without a batch: the tap is decrypted before the card (and so its batch) is known. */
+    public static function keySetMetaReadKey(CryptoProvider $provider, string $keySetVersion): string
+    {
+        return An10922::fromProvider($provider, KeyReference::of($keySetVersion, 'root-k1'), 'K'.$keySetVersion."\x01".self::SYSTEM_IDENTIFIER);
     }
 
     /** K2 of the card with this UID. */

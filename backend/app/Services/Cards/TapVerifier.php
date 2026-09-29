@@ -61,8 +61,8 @@ final class TapVerifier
         }
 
         $card = null;
-        $message = (new SunVerifier($this->crypto))->verify(
-            $keySet->key('k1'),
+        $message = SunVerifier::verify(
+            CardKeys::keySetMetaReadKey($this->crypto, $keySet->version),
             function (string $uid) use ($keySet, &$card): string {
                 /** @var Card|null $found */
                 $found = Card::query()->withoutGlobalScopes()->where('uid', $uid)->where('key_set_id', $keySet->getKey())->first();

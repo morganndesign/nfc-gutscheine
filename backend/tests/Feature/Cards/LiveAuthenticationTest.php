@@ -15,7 +15,7 @@ use App\Services\Cards\CardLifecycle;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Illuminate\Testing\TestResponse;
-use Tests\Support\Ntag424Card;
+use Tests\Support\Ntag424Chip;
 use Tests\Support\WithCards;
 use Tests\TestCase;
 
@@ -43,7 +43,7 @@ final class LiveAuthenticationTest extends TestCase
     }
 
     /** What the phone does: read the NDEF URL, start EV2 with K3, relay the server's command, relay the answer. */
-    private function tap(Ntag424Card $chip, string $purpose = 'spend', ?string $rfUid = null, ?string $url = null): TestResponse
+    private function tap(Ntag424Chip $chip, string $purpose = 'spend', ?string $rfUid = null, ?string $url = null): TestResponse
     {
         $url ??= $chip->readNdefUrl();
         $challenge = substr($chip->authenticateFirst(), 0, 16);

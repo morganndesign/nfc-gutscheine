@@ -49,6 +49,8 @@ enum Permission: string
     case PlatformRestaurantsManage = 'platform.restaurants.manage';
     case PlatformSettingsManage = 'platform.settings.manage';
     case PlatformAuditView = 'platform.audit.view';
+    /** Personalise blank cards at the station (internal, Android). */
+    case PlatformCardsPersonalize = 'platform.cards.personalize';
 
     public function group(): string
     {

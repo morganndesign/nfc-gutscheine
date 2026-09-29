@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Crypto\Ntag424;
 
-use App\Crypto\CryptoProvider;
-use App\Crypto\KeyReference;
 use App\Crypto\Primitives\Aes;
 use App\Crypto\Primitives\Cmac;
 use App\Exceptions\Domain\SunVerificationFailedException;
@@ -26,19 +24,18 @@ final class SunVerifier
 
     private const COUNTER_MIRRORED = 0x40;
 
-    public function __construct(private readonly CryptoProvider $provider) {}
-
     /**
+     * @param  string  $metaReadKey  K1 of the key set (ephemeral, derived by the provider)
      * @param  Closure(string): string  $fileReadKey  The card's SDM file-read key for a 7-byte UID (ephemeral)
      * @param  string  $macInput  Bytes covered by the MAC (empty when SDMMACInputOffset = SDMMACOffset)
      */
-    public function verify(KeyReference $metaReadKey, Closure $fileReadKey, string $encryptedPiccHex, string $macHex, string $macInput = ''): SunMessage
+    public static function verify(string $metaReadKey, Closure $fileReadKey, string $encryptedPiccHex, string $macHex, string $macInput = ''): SunMessage
     {
         if (preg_match('/^[0-9A-Fa-f]{32}$/', $encryptedPiccHex) !== 1 || preg_match('/^[0-9A-Fa-f]{16}$/', $macHex) !== 1) {
             throw new SunVerificationFailedException;
         }
 
-        $picc = $this->provider->decryptCbc($metaReadKey, Aes::ZERO_IV, (string) hex2bin($encryptedPiccHex));
+        $picc = Aes::decryptCbc($metaReadKey, Aes::ZERO_IV, (string) hex2bin($encryptedPiccHex));
         $tag = ord($picc[0]);
         if (($tag & self::UID_MIRRORED) === 0 || ($tag & self::COUNTER_MIRRORED) === 0 || ($tag & 0x0F) !== 7) {
             throw new SunVerificationFailedException;
@@ -67,13 +64,7 @@ final class SunVerifier
     {
         // SV2 = 3C C3 00 01 00 80 ‖ UID ‖ SDMReadCtr
         $sessionKey = Cmac::compute($fileReadKey, "\x3C\xC3\x00\x01\x00\x80".$uid.$counterLsbFirst);
-        $full = Cmac::compute($sessionKey, $macInput);
 
-        $truncated = '';
-        for ($i = 1; $i < 16; $i += 2) {
-            $truncated .= $full[$i];
-        }
-
-        return strtoupper(bin2hex($truncated));
+        return strtoupper(bin2hex(SecureMessaging::truncatedMac($sessionKey, $macInput)));
     }
 }

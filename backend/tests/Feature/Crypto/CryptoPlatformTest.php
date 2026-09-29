@@ -83,7 +83,7 @@ final class CryptoPlatformTest extends TestCase
     private function keySet(): CardKeys
     {
         $this->artisan('crypto:keystore:init')->assertSuccessful();
-        foreach (['k1', 'root-k0', 'root-k2', 'root-k3'] as $role) {
+        foreach (['root-k0', 'root-k1', 'root-k2', 'root-k3'] as $role) {
             $this->artisan('crypto:key:generate', ['reference' => 'ks-1/'.$role])->assertSuccessful();
         }
 
@@ -98,10 +98,10 @@ final class CryptoPlatformTest extends TestCase
 
         // What a personalised card would put into its tap URL.
         $picc = "\xC7".$uid."\x05\x00\x00".random_bytes(5);
-        $e = strtoupper(bin2hex($provider->encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, $picc)));
+        $e = strtoupper(bin2hex(Aes::encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, $picc)));
         $m = SunVerifier::mac($keys->sdmMacKey($uid), $uid, "\x05\x00\x00");
 
-        $message = (new SunVerifier($provider))->verify($keys->metaReadKey(), $keys->sdmMacKey(...), $e, $m);
+        $message = SunVerifier::verify($keys->metaReadKey(), $keys->sdmMacKey(...), $e, $m);
         $this->assertSame('04A39493CC8680', $message->uid);
         $this->assertSame(5, $message->readCounter);
 

@@ -47,7 +47,7 @@ trait WithCards
         $this->app->forgetInstance(LocalKeystore::class);
         $this->app->forgetInstance(CryptoProvider::class);
         $this->artisan('crypto:keystore:init')->assertSuccessful();
-        foreach (['k1', 'root-k0', 'root-k2', 'root-k3'] as $role) {
+        foreach (['root-k0', 'root-k1', 'root-k2', 'root-k3'] as $role) {
             $this->artisan('crypto:key:generate', ['reference' => $keySet.'/'.$role])->assertSuccessful();
         }
         KeySet::query()->create(['version' => $keySet, 'manufacturer' => 'Card Co', 'status' => KeySetStatus::Active, 'key_check_values' => []]);
@@ -122,12 +122,12 @@ trait WithCards
         return [$card->refresh(), $voucher->refresh()];
     }
 
-    /** The simulated chip of a registered card. */
-    protected function chip(Card $card): Ntag424Card
+    /** The simulated chip of a registered card, personalised as the manufacturer delivers it. */
+    protected function chip(Card $card): Ntag424Chip
     {
         $provider = $this->app->make(CryptoProvider::class);
         $keySet = KeySet::query()->findOrFail($card->key_set_id);
 
-        return new Ntag424Card($provider, new CardKeys($provider, $keySet->version, $card->batch_id), $card->uid, $keySet->version);
+        return Ntag424Chip::personalized(new CardKeys($provider, $keySet->version, $card->batch_id), $card->uid, $keySet->version);
     }
 }

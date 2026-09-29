@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Admin\ApiTokenController as AdminApiTokenController;
+use App\Http\Controllers\Api\V1\Admin\CardStationController;
 use App\Http\Controllers\Api\V1\Admin\PlatformController;
 use App\Http\Controllers\Api\V1\Admin\RestaurantController;
 use App\Http\Controllers\Api\V1\ApiTokenController;
@@ -158,6 +159,13 @@ Route::prefix('v1')->group(function (): void {
             Route::put('system-settings', [PlatformController::class, 'updateSettings'])->middleware('can:platform.settings.manage');
             Route::get('mail', [PlatformController::class, 'mailStatus'])->middleware('can:platform.settings.manage');
             Route::post('mail/test', [PlatformController::class, 'sendTestMail'])->middleware('can:platform.settings.manage');
+        });
+
+        // ------------------------------------------------------ personalisation station (internal)
+        Route::prefix('admin')->middleware(['can:platform.cards.personalize', 'throttle:presentment'])->group(function (): void {
+            Route::post('card-batches/{batch}/personalizations', [CardStationController::class, 'begin'])->whereUuid('batch');
+            Route::post('personalizations/{personalization}', [CardStationController::class, 'continue'])
+                ->where('personalization', '[0-9A-HJKMNP-TV-Z]{26}');
         });
     });
 });
