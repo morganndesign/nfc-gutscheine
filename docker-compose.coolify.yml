@@ -71,6 +71,8 @@ services:
       APP_ENV: ${APP_ENV:-production}
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:-}
+      # Opens the encrypted keystore in the laravel-storage volume (App\Crypto); never the keys themselves.
+      CRYPTO_KEYSTORE_KEY: ${CRYPTO_KEYSTORE_KEY:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
@@ -145,6 +147,8 @@ services:
       APP_ENV: ${APP_ENV:-production}
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:-}
+      # Opens the encrypted keystore in the laravel-storage volume (App\Crypto); never the keys themselves.
+      CRYPTO_KEYSTORE_KEY: ${CRYPTO_KEYSTORE_KEY:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
@@ -218,6 +222,8 @@ services:
       APP_ENV: ${APP_ENV:-production}
       APP_DEBUG: "false"
       APP_KEY: ${APP_KEY:-}
+      # Opens the encrypted keystore in the laravel-storage volume (App\Crypto); never the keys themselves.
+      CRYPTO_KEYSTORE_KEY: ${CRYPTO_KEYSTORE_KEY:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}

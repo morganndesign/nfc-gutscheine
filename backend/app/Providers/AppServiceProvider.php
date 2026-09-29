@@ -8,7 +8,6 @@ use App\Enums\Permission;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Models\Voucher;
-use App\Services\Nfc\Ntag424SunVerifier;
 use App\Services\Presentments\PresentmentService;
 use App\Services\Presentments\PresentmentVerifier;
 use App\Services\Presentments\PrintableQrVerifier;
@@ -32,7 +31,6 @@ final class AppServiceProvider extends ServiceProvider
     {
         // Request-scoped: reset for every request / queued job (safe under Octane and queue workers).
         $this->app->scoped(TenantContext::class);
-        $this->app->singleton(Ntag424SunVerifier::class, static fn (): Ntag424SunVerifier => Ntag424SunVerifier::fromConfig());
 
         // One verifier per presentment method (architecture §10.1). live_auth joins with the crypto service.
         $this->app->tag([PrintableQrVerifier::class], PresentmentVerifier::class);

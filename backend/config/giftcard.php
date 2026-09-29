@@ -38,17 +38,6 @@ return [
         'min_validity_months' => 36,
     ],
 
-    'nfc' => [
-        'ntag424' => [
-            // AES-128 keys (32 hex chars). The meta-read key decrypts PICCData (UID + read counter);
-            // the file-read key is the SDM MAC master key. Both MUST be set to unique secrets in production.
-            'meta_read_key' => env('NTAG424_META_READ_KEY'),
-            'file_read_key' => env('NTAG424_FILE_READ_KEY'),
-            // When true, the per-tag MAC key = first 16 bytes of HMAC-SHA256(file_read_key, UID).
-            'diversify_keys' => (bool) env('NTAG424_DIVERSIFY_KEYS', true),
-        ],
-    ],
-
     'notifications' => [
         'expiring_days_before' => (int) env('VOUCHER_EXPIRING_NOTICE_DAYS', 30),
     ],

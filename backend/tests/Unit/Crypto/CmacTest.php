@@ -2,16 +2,15 @@
 
 declare(strict_types=1);
 
-namespace Tests\Unit;
+namespace Tests\Unit\Crypto;
 
-use App\Services\Nfc\AesCmac;
+use App\Crypto\KeyReference;
+use App\Crypto\Primitives\Cmac;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
-/**
- * RFC 4493 section 4 known-answer tests.
- */
-final class AesCmacTest extends TestCase
+/** RFC 4493 §4 known answers, with a software key and with a provider-held key. */
+final class CmacTest extends TestCase
 {
     private const KEY = '2b7e151628aed2a6abf7158809cf4f3c';
 
@@ -25,8 +24,16 @@ final class AesCmacTest extends TestCase
     }
 
     #[DataProvider('vectors')]
-    public function test_rfc4493_vectors(string $messageHex, string $expected): void
+    public function test_rfc4493_with_a_software_key(string $messageHex, string $expected): void
     {
-        $this->assertSame($expected, bin2hex(AesCmac::compute((string) hex2bin(self::KEY), (string) hex2bin($messageHex))));
+        $this->assertSame($expected, bin2hex(Cmac::compute((string) hex2bin(self::KEY), (string) hex2bin($messageHex))));
+    }
+
+    #[DataProvider('vectors')]
+    public function test_rfc4493_with_a_provider_key(string $messageHex, string $expected): void
+    {
+        $provider = InMemoryProvider::with(['test/cmac' => self::KEY]);
+
+        $this->assertSame($expected, bin2hex(Cmac::withProvider($provider, new KeyReference('test/cmac'), (string) hex2bin($messageHex))));
     }
 }

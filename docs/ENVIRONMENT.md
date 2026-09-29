@@ -107,7 +107,9 @@ A restaurant validity is at least 36 months (`min_validity_months`, fixed).
 
 | Variable | Description |
 |---|---|
-| `NTAG424_META_READ_KEY`, `NTAG424_FILE_READ_KEY`, `NTAG424_DIVERSIFY_KEYS` | Local test keys (32 hex characters each) for the SUN verification library (`app/Services/Nfc`, read through `config/giftcard.php → nfc.ntag424`). No endpoint uses the library and its unit tests bring their own keys. They are not part of the production configuration; card keys belong in the crypto service ([NFC.md](NFC.md)). |
+| `CRYPTO_PROVIDER` | `local` (default): keys in one encrypted keystore file. All key use goes through `App\Crypto\CryptoProvider`; an HSM provider replaces it without code changes. |
+| `CRYPTO_KEYSTORE_PATH` | Keystore file (default `storage/app/private/crypto/keystore.json`). A persistent volume in containers; back it up. |
+| `CRYPTO_KEYSTORE_KEY` | Master key of the keystore: `base64:` + 32 random bytes (`openssl rand -base64 32`). The only key in the environment; stored and backed up separately from the keystore. Rotation: `CRYPTO_KEYSTORE_NEW_KEY` + `php artisan crypto:keystore:rekey`. |
 | `SEED_DEMO_DATA` | `true` seeds the demo restaurants outside `local`/`testing`/`staging`. The Coolify stack fixes it to `false`. |
 | `LOG_CHANNEL` | `stack` locally; `stderr` in containers. |
 

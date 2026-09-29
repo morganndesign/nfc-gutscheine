@@ -129,7 +129,9 @@ Die Gültigkeit eines Lokals beträgt mindestens 36 Monate (`min_validity_months
 
 | Variable | Beschreibung |
 |---|---|
-| `NTAG424_META_READ_KEY`, `NTAG424_FILE_READ_KEY`, `NTAG424_DIVERSIFY_KEYS` | Lokale Testschlüssel (je 32 Hex-Zeichen) für die SUN-Prüfbibliothek (`app/Services/Nfc`, gelesen über `config/giftcard.php → nfc.ntag424`). Kein Endpunkt verwendet die Bibliothek, und ihre Unit-Tests bringen eigene Schlüssel mit. Sie gehören nicht zur Produktionskonfiguration; Kartenschlüssel liegen im Krypto-Dienst ([docs/NFC.md](../../NFC.md)). |
+| `CRYPTO_PROVIDER` | `local` (Standard): Schlüssel in einer verschlüsselten Schlüsseldatei. Jede Schlüsselnutzung läuft über `App\Crypto\CryptoProvider`; ein HSM-Anbieter ersetzt ihn ohne Codeänderung. |
+| `CRYPTO_KEYSTORE_PATH` | Schlüsseldatei (Standard `storage/app/private/crypto/keystore.json`), im Container ein dauerhaftes Volume; sichern. |
+| `CRYPTO_KEYSTORE_KEY` | Hauptschlüssel der Schlüsseldatei: `base64:` + 32 Zufallsbytes (`openssl rand -base64 32`). Der einzige Schlüssel in der Umgebung; getrennt von der Schlüsseldatei aufbewahren. Wechsel: `CRYPTO_KEYSTORE_NEW_KEY` + `php artisan crypto:keystore:rekey`. |
 | `SEED_DEMO_DATA` | `true` legt die Demo-Lokale auch außerhalb von `local`/`testing`/`staging` an. Der Coolify-Stack setzt es fest auf `false`. |
 
 ## 3. Web-App (`dashboard/.env.local`)

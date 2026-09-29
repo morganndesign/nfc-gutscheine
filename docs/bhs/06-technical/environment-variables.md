@@ -129,7 +129,9 @@ Važenje u restoranu iznosi najmanje 36 mjeseci (`min_validity_months`, fiksno).
 
 | Varijabla | Opis |
 |---|---|
-| `NTAG424_META_READ_KEY`, `NTAG424_FILE_READ_KEY`, `NTAG424_DIVERSIFY_KEYS` | Lokalni testni ključevi (po 32 heksadecimalna znaka) za biblioteku za SUN provjeru (`app/Services/Nfc`, čitano preko `config/giftcard.php → nfc.ntag424`). Nijedna krajnja tačka ne koristi biblioteku, a njeni unit testovi donose vlastite ključeve. Nisu dio produkcijske konfiguracije; ključevi kartica nalaze se u kripto servisu ([docs/NFC.md](../../NFC.md)). |
+| `CRYPTO_PROVIDER` | `local` (zadano): ključevi u jednoj šifrovanoj datoteci ključeva. Svako korištenje ključa ide preko `App\Crypto\CryptoProvider`; HSM pružalac ga zamjenjuje bez promjene koda. |
+| `CRYPTO_KEYSTORE_PATH` | Datoteka ključeva (zadano `storage/app/private/crypto/keystore.json`), u kontejneru trajni volumen; praviti rezervnu kopiju. |
+| `CRYPTO_KEYSTORE_KEY` | Glavni ključ datoteke ključeva: `base64:` + 32 nasumična bajta (`openssl rand -base64 32`). Jedini ključ u okruženju; čuvati odvojeno od datoteke ključeva. Promjena: `CRYPTO_KEYSTORE_NEW_KEY` + `php artisan crypto:keystore:rekey`. |
 | `SEED_DEMO_DATA` | `true` kreira demo restorane i izvan `local`/`testing`/`staging`. Coolify stack ga fiksno postavlja na `false`. |
 
 ## 3. Web aplikacija (`dashboard/.env.local`)
