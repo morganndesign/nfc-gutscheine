@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Services\Auth;
 
+use App\Enums\SecurityEventType;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
@@ -20,7 +22,10 @@ use Illuminate\Support\Str;
  */
 final class AccessRevoker
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly SecurityEventRecorder $events,
+    ) {}
 
     public function revokeEverywhere(User $user, Actor $actor, string $reason, ?PersonalAccessToken $except = null): int
     {
@@ -36,6 +41,10 @@ final class AccessRevoker
         $this->audit->log('auth.access_revoked', $actor, $user, null, null, [
             'reason' => $reason,
             'tokens_revoked' => $revoked,
+        ], restaurantId: $user->restaurant_id);
+        $this->events->record(SecurityEventType::AccessRevoke, $actor, subject: $user, data: [
+            'cause' => $reason,
+            'tokens' => $revoked,
         ], restaurantId: $user->restaurant_id);
 
         return $revoked;

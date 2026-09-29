@@ -66,6 +66,7 @@ jobs:
           MAIL_MAILER: array
         run: |
           php artisan migrate:fresh --seed --force
+          php artisan giftcard:seal-security-events
           php artisan giftcard:verify-chains
       - name: Security audit
         run: composer audit

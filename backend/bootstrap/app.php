@@ -11,6 +11,7 @@ use App\Http\Middleware\RequireTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackDevice;
+use App\Services\Security\AuthEvents;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authorize;
@@ -114,6 +115,10 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(static function (ThrottleRequestsException $e, Request $request) {
+            if ($request->is('api/*/auth/login', 'api/*/auth/token')) {
+                app(AuthEvents::class)->signInThrottled($request, (int) ($e->getHeaders()['Retry-After'] ?? 60));
+            }
+
             return response()->json([
                 'message' => 'Too many requests. Please slow down.',
                 'code' => 'TOO_MANY_REQUESTS',

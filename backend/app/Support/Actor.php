@@ -37,6 +37,12 @@ final readonly class Actor
         );
     }
 
+    /** The same request, attributed to [$user] (right after they signed in). */
+    public function withUser(User $user): self
+    {
+        return new self($user, $this->device, $this->ipAddress, $this->userAgent, $this->requestId);
+    }
+
     public static function system(): self
     {
         return new self(user: null);

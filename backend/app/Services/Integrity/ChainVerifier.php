@@ -9,17 +9,20 @@ use App\Models\Contracts\HashChainedRecord;
 use App\Models\Payment;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
+use App\Services\Security\SecurityEventSealer;
 use App\Support\HashChain;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Recomputes every hash chain and every voucher balance (architecture §13.1: "a nightly verifier recomputes
- * balances and chains"). Detects a changed, deleted, inserted or reordered row, a chain head that does not
+ * balances and chains"), and every seal of the security event stream. Detects a changed, deleted, inserted or reordered row, a chain head that does not
  * match its last row, a ledger row whose arithmetic is wrong and a voucher whose balance differs from its ledger.
  */
 final class ChainVerifier
 {
+    public function __construct(private readonly SecurityEventSealer $securityEvents) {}
+
     /** @var list<class-string<Model&HashChainedRecord>> */
     public const CHAINED = [Payment::class, VoucherTransaction::class, AuditLog::class];
 
@@ -58,6 +61,7 @@ final class ChainVerifier
         }
 
         array_push($problems, ...$this->verifyBalances());
+        array_push($problems, ...$this->securityEvents->verify());
 
         return $problems;
     }

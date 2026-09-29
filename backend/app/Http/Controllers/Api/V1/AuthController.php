@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\SecurityEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\DeviceTokenRequest;
 use App\Http\Requests\Auth\LoginRequest;
@@ -14,6 +15,8 @@ use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\CredentialVerifier;
 use App\Services\Auth\DeviceTokenService;
+use App\Services\Security\AuthEvents;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
@@ -27,6 +30,8 @@ final class AuthController extends Controller
         private readonly AuditLogger $audit,
         private readonly CredentialVerifier $credentials,
         private readonly DeviceTokenService $deviceTokens,
+        private readonly AuthEvents $authEvents,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     public function login(LoginRequest $request): JsonResponse
@@ -39,6 +44,7 @@ final class AuthController extends Controller
         }
 
         $this->audit->log('auth.login', Actor::fromRequest($request), $user, restaurantId: $user->restaurant_id);
+        $this->authEvents->signedIn($request, $user, 'web');
 
         return response()->json(['data' => $this->profile($user)]);
     }
@@ -55,6 +61,8 @@ final class AuthController extends Controller
             (string) $request->validated('device_name'),
             (string) $request->validated('platform'),
         );
+
+        $this->authEvents->signedIn($request, $user, 'app');
 
         /** @var PersonalAccessToken $model */
         $model = $token->accessToken;
@@ -86,6 +94,9 @@ final class AuthController extends Controller
         }
 
         $this->audit->log('auth.logout', Actor::fromRequest($request), $user, restaurantId: $user->restaurant_id);
+        $this->events->record(SecurityEventType::SignOut, Actor::fromRequest($request), subject: $user, data: [
+            'channel' => $token instanceof PersonalAccessToken ? 'app' : 'web',
+        ]);
 
         return response()->json(['message' => 'Logged out.']);
     }

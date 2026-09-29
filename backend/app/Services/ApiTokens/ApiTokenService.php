@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\ApiTokens;
 
+use App\Enums\SecurityEventType;
 use App\Exceptions\Domain\RoleAssignmentException;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Laravel\Sanctum\NewAccessToken;
@@ -18,7 +20,10 @@ use Laravel\Sanctum\NewAccessToken;
  */
 final class ApiTokenService
 {
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly SecurityEventRecorder $events,
+    ) {}
 
     /**
      * @param  list<string>  $abilities
@@ -55,6 +60,9 @@ final class ApiTokenService
             'abilities' => $abilities,
             'expires_at' => $expiresAt,
         ], restaurantId: $user->restaurant_id);
+        $this->events->record(SecurityEventType::IntegrationTokenCreate, $actor, subject: $user, data: [
+            'abilities' => array_values(array_unique($abilities)),
+        ], restaurantId: $user->restaurant_id);
 
         return $token;
     }
@@ -64,6 +72,7 @@ final class ApiTokenService
         if (! $token->isRevoked()) {
             $token->forceFill(['revoked_at' => Carbon::now(), 'revoked_by' => $actor->userId()])->save();
             $this->audit->log('api_token.revoked', $actor, $token, null, ['name' => $token->name], restaurantId: $token->restaurant_id);
+            $this->events->record(SecurityEventType::IntegrationTokenRevoke, $actor, restaurantId: $token->restaurant_id);
         }
 
         return $token;

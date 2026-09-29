@@ -8,11 +8,13 @@ use App\Data\PrintableSecret;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
 use App\Enums\MediumType;
+use App\Enums\SecurityEventType;
 use App\Enums\VoucherKind;
 use App\Exceptions\Domain\InvalidVoucherStateException;
 use App\Models\Medium;
 use App\Models\Voucher;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use SensitiveParameter;
@@ -30,7 +32,10 @@ final class PrintableQrService
 
     private const SECRET_BYTES = 32;
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly SecurityEventRecorder $events,
+    ) {}
 
     /**
      * Issues the voucher's printable QR and revokes a previous one. Must run inside the transaction that
@@ -62,6 +67,10 @@ final class PrintableQrService
             'type' => MediumType::PrintableQr,
             'voucher_id' => $voucher->getKey(),
         ], ['reason' => $reason]);
+        $this->events->record(SecurityEventType::MediumIssue, $actor, subject: $voucher, data: [
+            'medium_type' => MediumType::PrintableQr,
+            'cause' => $reason,
+        ]);
 
         return new PrintableSecret($medium, $payload);
     }
@@ -101,6 +110,10 @@ final class PrintableQrService
             ])->save();
 
             $this->audit->log('medium.revoked', $actor, $medium, ['status' => MediumStatus::Active], ['status' => MediumStatus::Revoked], ['reason' => $reason]);
+            $this->events->record(SecurityEventType::MediumRevoke, $actor, subject: $voucher, data: [
+                'medium_type' => MediumType::PrintableQr,
+                'cause' => $reason,
+            ]);
         }
     }
 }

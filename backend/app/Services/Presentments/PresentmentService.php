@@ -7,6 +7,7 @@ namespace App\Services\Presentments;
 use App\Enums\PresentmentMethod;
 use App\Enums\PresentmentPurpose;
 use App\Enums\PresentmentStatus;
+use App\Enums\SecurityEventType;
 use App\Exceptions\Domain\MediumNotRecognizedException;
 use App\Exceptions\Domain\PresentmentInvalidException;
 use App\Exceptions\Domain\PresentmentMethodNotAllowedException;
@@ -15,6 +16,7 @@ use App\Exceptions\Domain\PresentmentThrottledException;
 use App\Models\Presentment;
 use App\Models\Voucher;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Carbon;
@@ -44,6 +46,7 @@ final class PresentmentService
         iterable $verifiers,
         private readonly TenantContext $tenant,
         private readonly AuditLogger $audit,
+        private readonly SecurityEventRecorder $events,
     ) {
         foreach ($verifiers as $verifier) {
             $this->verifiers[$verifier->method()->value] = $verifier;
@@ -56,13 +59,21 @@ final class PresentmentService
         $throttleKey = $this->throttleKey($actor, $restaurant->getKey());
         $maxFailures = (int) config('giftcard.security.presentment_failure_limit', 10);
 
+        $scan = ['method' => $method, 'purpose' => $purpose];
+
         if (RateLimiter::tooManyAttempts($throttleKey, $maxFailures)) {
-            throw new PresentmentThrottledException('', ['retry_after' => RateLimiter::availableIn($throttleKey)]);
+            $e = new PresentmentThrottledException('', ['retry_after' => RateLimiter::availableIn($throttleKey)]);
+            $this->events->refused(SecurityEventType::VoucherScan, $actor, $e, data: $scan);
+
+            throw $e;
         }
 
         $verifier = $this->verifiers[$method->value] ?? null;
         if ($verifier === null || ! $verifier->supports($purpose)) {
-            throw new PresentmentMethodUnavailableException('', ['method' => $method->value, 'purpose' => $purpose->value]);
+            $e = new PresentmentMethodUnavailableException('', ['method' => $method->value, 'purpose' => $purpose->value]);
+            $this->events->refused(SecurityEventType::VoucherScan, $actor, $e, data: $scan);
+
+            throw $e;
         }
 
         $medium = $verifier->resolve($credential, $restaurant);
@@ -73,6 +84,7 @@ final class PresentmentService
                 'purpose' => $purpose->value,
                 'reason' => 'medium_not_recognized',
             ]);
+            $this->events->refused(SecurityEventType::VoucherScan, $actor, new MediumNotRecognizedException, data: $scan);
 
             throw new MediumNotRecognizedException;
         }
@@ -89,6 +101,7 @@ final class PresentmentService
                 'purpose' => $purpose->value,
                 'reason' => 'method_not_allowed_for_kind',
             ]);
+            $this->events->refused(SecurityEventType::VoucherScan, $actor, new PresentmentMethodNotAllowedException, $voucher, data: $scan);
 
             throw new PresentmentMethodNotAllowedException('', ['kind' => $voucher->kind->value, 'method' => $method->value]);
         }
@@ -107,6 +120,7 @@ final class PresentmentService
             'expires_at' => Carbon::now()->addSeconds(self::lifetimeSeconds()),
             'created_at' => Carbon::now(),
         ])->save();
+        $this->events->record(SecurityEventType::VoucherScan, $actor, subject: $voucher, data: $scan + ['presentment_id' => $presentment->getKey()]);
 
         return $presentment->setRelation('voucher', $voucher)->setRelation('medium', $medium);
     }

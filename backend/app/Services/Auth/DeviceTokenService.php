@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services\Auth;
 
 use App\Enums\Permission;
+use App\Enums\SecurityEventType;
 use App\Exceptions\Domain\DeviceRevokedException;
 use App\Models\Device;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Devices\DeviceService;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
@@ -56,6 +58,7 @@ final class DeviceTokenService
     public function __construct(
         private readonly DeviceService $devices,
         private readonly AuditLogger $audit,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     public function issue(Request $request, User $user, string $deviceId, string $deviceName, string $platform): NewAccessToken
@@ -69,11 +72,13 @@ final class DeviceTokenService
 
         $device = $this->devices->resolve($restaurant, $user, $deviceId, $request->userAgent(), $request->ip(), $deviceName);
 
+        $actor = new Actor($user, $device, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'));
+
         if (! $device->isActive()) {
+            $this->events->refused(SecurityEventType::DeviceTokenIssue, $actor, new DeviceRevokedException, $device, data: ['platform' => $platform]);
+
             throw new DeviceRevokedException;
         }
-
-        $actor = new Actor($user, $device, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'));
 
         return DB::transaction(function () use ($user, $device, $platform, $actor): NewAccessToken {
             PersonalAccessToken::query()
@@ -95,6 +100,10 @@ final class DeviceTokenService
             $this->audit->log('auth.device_token_issued', $actor, $device, null, [
                 'platform' => $platform,
                 'expires_at' => $model->expires_at,
+            ], restaurantId: $user->restaurant_id);
+            $this->events->record(SecurityEventType::DeviceTokenIssue, $actor, subject: $device, data: [
+                'platform' => $platform,
+                'abilities' => self::abilitiesFor($user),
             ], restaurantId: $user->restaurant_id);
 
             return $token;

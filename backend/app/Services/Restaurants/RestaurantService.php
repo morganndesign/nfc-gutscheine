@@ -6,6 +6,7 @@ namespace App\Services\Restaurants;
 
 use App\Enums\RestaurantStatus;
 use App\Enums\RoleSlug;
+use App\Enums\SecurityEventType;
 use App\Exceptions\Domain\InvitationNotPossibleException;
 use App\Exceptions\Domain\RestaurantNotDeletableException;
 use App\Models\Customer;
@@ -20,6 +21,7 @@ use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\SecurityEventRecorder;
 use App\Services\Users\InvitationService;
 use App\Services\Users\UserService;
 use App\Support\Actor;
@@ -39,6 +41,7 @@ final class RestaurantService
         private readonly AuditLogger $audit,
         private readonly UserService $users,
         private readonly InvitationService $invitations,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     /**
@@ -102,6 +105,7 @@ final class RestaurantService
         ])->save();
 
         $this->audit->log('restaurant.suspended', $actor, $restaurant, ['status' => RestaurantStatus::Active], ['status' => RestaurantStatus::Suspended], ['reason' => $reason], $restaurant->getKey());
+        $this->events->record(SecurityEventType::RestaurantSuspend, $actor, subject: $restaurant, restaurantId: $restaurant->getKey());
 
         return $restaurant;
     }
@@ -115,6 +119,7 @@ final class RestaurantService
         ])->save();
 
         $this->audit->log('restaurant.reactivated', $actor, $restaurant, ['status' => RestaurantStatus::Suspended], ['status' => RestaurantStatus::Active], restaurantId: $restaurant->getKey());
+        $this->events->record(SecurityEventType::RestaurantReactivate, $actor, subject: $restaurant, restaurantId: $restaurant->getKey());
 
         return $restaurant;
     }

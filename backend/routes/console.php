@@ -16,7 +16,10 @@ Schedule::command('vouchers:expire')->dailyAt('00:15')->timezone($tz)->withoutOv
 // Remind customers N days before their voucher expires (once per voucher).
 Schedule::command('vouchers:notify-expiring')->dailyAt('10:00')->timezone($tz)->withoutOverlapping()->onOneServer();
 
-// Tamper evidence: recompute every hash chain and every voucher balance from its ledger.
+// Security event stream: hash-chain settled events into seals (ADR-003).
+Schedule::command('giftcard:seal-security-events')->everyMinute()->withoutOverlapping()->onOneServer();
+
+// Tamper evidence: recompute every hash chain, every voucher balance from its ledger and every event seal.
 Schedule::command('giftcard:verify-chains')->dailyAt('02:30')->timezone($tz)->withoutOverlapping()->onOneServer();
 
 // Housekeeping.

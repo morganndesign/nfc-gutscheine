@@ -9,6 +9,7 @@ use App\Exceptions\Domain\AccountDeactivatedException;
 use App\Exceptions\Domain\RestaurantSuspendedException;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\AuthEvents;
 use App\Support\Actor;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -26,7 +27,10 @@ final class CredentialVerifier
     /** Pre-computed bcrypt hash used to keep timing identical for unknown e-mail addresses. */
     private const DUMMY_HASH = '$2y$12$wW.0dFZ1Hc2SUFVfXc/am.LR/cZrHgVhSSlWEILLPHenurYNk9JTO';
 
-    public function __construct(private readonly AuditLogger $audit) {}
+    public function __construct(
+        private readonly AuditLogger $audit,
+        private readonly AuthEvents $events,
+    ) {}
 
     /**
      * @param  bool  $deviceClient  The native waiter app gets 401 ACCOUNT_DEACTIVATED for a deactivated account
@@ -34,6 +38,8 @@ final class CredentialVerifier
      */
     public function verify(Request $request, string $email, string $password, bool $deviceClient = false): User
     {
+        $channel = $deviceClient ? 'app' : 'web';
+
         /** @var User|null $user */
         $user = User::query()->with(['role', 'restaurant'])->where('email', Str::lower($email))->first();
 
@@ -43,25 +49,29 @@ final class CredentialVerifier
 
         if ($user !== null && $user->isLocked()) {
             $this->audit->log('auth.locked_attempt', $this->actor($request), $user, restaurantId: $user->restaurant_id);
+            $this->events->signInRefused($request, $email, $user, 'account_locked', $channel);
 
             throw $this->failed();
         }
 
         if ($user === null || ! $valid) {
-            if ($user !== null) {
-                $this->registerFailure($user, $request);
-            }
+            $attempts = $user !== null ? $this->registerFailure($user, $request) : null;
+            $this->events->signInRefused($request, $email, $user, 'invalid_credentials', $channel, $attempts);
 
             throw $this->failed();
         }
 
         if (! $user->isActive()) {
+            $this->events->signInRefused($request, $email, $user, 'account_deactivated', $channel);
+
             throw $deviceClient
                 ? new AccountDeactivatedException
                 : ValidationException::withMessages(['email' => 'This account has been deactivated.']);
         }
 
         if ($user->roleSlug() !== RoleSlug::PlatformAdmin && ($user->restaurant === null || ! $user->restaurant->isActive())) {
+            $this->events->signInRefused($request, $email, $user, 'restaurant_suspended', $channel);
+
             throw new RestaurantSuspendedException;
         }
 
@@ -88,7 +98,8 @@ final class CredentialVerifier
         return new Actor(null, null, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'));
     }
 
-    private function registerFailure(User $user, Request $request): void
+    /** Counts a wrong password; returns the number of consecutive failures. */
+    private function registerFailure(User $user, Request $request): int
     {
         $threshold = (int) config('giftcard.security.login_lockout_threshold');
 
@@ -97,7 +108,9 @@ final class CredentialVerifier
         $attempts = (int) User::query()->whereKey($user->getKey())->value('failed_login_attempts');
 
         if ($attempts >= $threshold) {
-            $user->forceFill(['locked_until' => Carbon::now()->addMinutes((int) config('giftcard.security.login_lockout_minutes'))])->save();
+            $minutes = (int) config('giftcard.security.login_lockout_minutes');
+            $user->forceFill(['locked_until' => Carbon::now()->addMinutes($minutes)])->save();
+            $this->events->accountLocked($request, $user, $attempts, $minutes);
             Log::warning('Account locked after repeated failed logins', ['user_id' => $user->getKey(), 'ip' => $request->ip(), 'attempts' => $attempts]);
         }
 
@@ -108,5 +121,7 @@ final class CredentialVerifier
             metadata: ['attempts' => $attempts],
             restaurantId: $user->restaurant_id,
         );
+
+        return $attempts;
     }
 }

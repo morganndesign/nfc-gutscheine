@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\SecurityEventType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\ChangePasswordRequest;
 use App\Http\Requests\Auth\ForgotPasswordRequest;
@@ -13,6 +14,7 @@ use App\Jobs\SendPasswordResetLink;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\AccessRevoker;
+use App\Services\Security\SecurityEventRecorder;
 use App\Services\Users\UserService;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
@@ -27,6 +29,7 @@ final class PasswordController extends Controller
         private readonly AuditLogger $audit,
         private readonly UserService $users,
         private readonly AccessRevoker $access,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     /** The same answer for every failure, so the endpoint reveals neither accounts nor token state (audit S5). */
@@ -72,6 +75,9 @@ final class PasswordController extends Controller
                     $user,
                     restaurantId: $user->restaurant_id,
                 );
+                $this->events->record(SecurityEventType::PasswordReset, $actor, subject: $user, data: [
+                    'purpose' => $broker === 'invitations' ? 'invitation' : 'reset',
+                ]);
 
                 // "My account may be compromised → reset the password" must lock the attacker out (audit S3).
                 $this->access->revokeEverywhere($user, $actor, $broker === 'invitations' ? 'invitation_accepted' : 'password_reset');
@@ -79,6 +85,15 @@ final class PasswordController extends Controller
         );
 
         if ($status !== Password::PASSWORD_RESET) {
+            $this->events->refused(
+                SecurityEventType::PasswordReset,
+                new Actor(null, null, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id')),
+                'invalid_link',
+                $invited,
+                data: ['purpose' => $broker === 'invitations' ? 'invitation' : 'reset', 'email_hash' => $this->events->emailHash($email)],
+                restaurantId: $invited?->restaurant_id,
+            );
+
             throw ValidationException::withMessages(['email' => self::INVALID_LINK]);
         }
 

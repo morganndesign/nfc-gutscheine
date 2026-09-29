@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Users;
 
 use App\Enums\RoleSlug;
+use App\Enums\SecurityEventType;
 use App\Enums\UserStatus;
 use App\Exceptions\Domain\LastOwnerException;
 use App\Exceptions\Domain\RoleAssignmentException;
@@ -13,6 +14,7 @@ use App\Models\Restaurant;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +31,7 @@ final class UserService
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly InvitationService $invitations,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     /**
@@ -59,6 +62,7 @@ final class UserService
                 'email' => $user->email,
                 'role' => $role->slug,
             ], restaurantId: $restaurant->getKey());
+            $this->events->record(SecurityEventType::StaffCreate, $actor, subject: $user, data: ['role' => $role->slug], restaurantId: $restaurant->getKey());
 
             if ($sendInvite && ! isset($data['password'])) {
                 $inviter = $actor->user?->name;
@@ -78,6 +82,7 @@ final class UserService
 
         return DB::transaction(function () use ($actor, $user, $data): User {
             $old = $user->only(['name', 'email', 'locale', 'role_id']);
+            $previousRole = $user->roleSlug();
 
             if (isset($data['role'])) {
                 $role = Role::findBySlug(RoleSlug::from($data['role']));
@@ -98,6 +103,11 @@ final class UserService
                 $new = $user->getDirty();
                 $user->save();
                 $this->audit->log('user.updated', $actor, $user, array_intersect_key($old, $new), $new);
+                $this->events->record(SecurityEventType::StaffChange, $actor, subject: $user, data: array_filter([
+                    'fields' => array_keys($new),
+                    'role' => isset($new['role_id']) ? $user->load('role')->roleSlug() : null,
+                    'previous_role' => isset($new['role_id']) ? $previousRole : null,
+                ], static fn (mixed $v): bool => $v !== null));
             }
 
             return $user->refresh()->load('role');
@@ -118,6 +128,7 @@ final class UserService
             $user->forceFill(['status' => UserStatus::Inactive])->save();
             $this->terminateAccess($user, $actor);
             $this->audit->log('user.deactivated', $actor, $user, ['status' => UserStatus::Active], ['status' => UserStatus::Inactive]);
+            $this->events->record(SecurityEventType::StaffDeactivate, $actor, subject: $user);
 
             return $user;
         });
@@ -129,6 +140,7 @@ final class UserService
 
         $user->forceFill(['status' => UserStatus::Active, 'failed_login_attempts' => 0, 'locked_until' => null])->save();
         $this->audit->log('user.activated', $actor, $user, ['status' => UserStatus::Inactive], ['status' => UserStatus::Active]);
+        $this->events->record(SecurityEventType::StaffActivate, $actor, subject: $user);
 
         return $user;
     }
@@ -145,6 +157,7 @@ final class UserService
             // password hash stored in each session with the new one; tokens and remembered browsers are revoked by
             // the caller (AccessRevoker).
             $this->audit->log('user.password_changed', $actor, $user);
+            $this->events->record(SecurityEventType::PasswordChange, $actor, subject: $user, restaurantId: $user->restaurant_id);
         });
     }
 
@@ -164,6 +177,7 @@ final class UserService
 
         SendPasswordResetLink::dispatch($user->email);
         $this->audit->log('user.password_reset_sent', $actor, $user);
+        $this->events->record(SecurityEventType::PasswordResetRequest, $actor, subject: $user);
     }
 
     /** An account whose owner never chose a password (and never signed in). */

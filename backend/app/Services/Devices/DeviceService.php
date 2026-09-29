@@ -5,12 +5,14 @@ declare(strict_types=1);
 namespace App\Services\Devices;
 
 use App\Enums\DeviceStatus;
+use App\Enums\SecurityEventType;
 use App\Http\Middleware\TrackDevice;
 use App\Models\Device;
 use App\Models\Restaurant;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\AccessRevoker;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 
@@ -26,6 +28,7 @@ final class DeviceService
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly AccessRevoker $access,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     /**
@@ -56,6 +59,9 @@ final class DeviceService
             ])->save();
 
             $this->audit->log('device.registered', new Actor($user, $device, $ip, $userAgent), $device, null, ['name' => $device->name], restaurantId: $restaurant->getKey());
+            $this->events->record(SecurityEventType::DeviceRegister, new Actor($user, $device, $ip, $userAgent), subject: $device, data: [
+                'platform' => $device->type,
+            ], restaurantId: $restaurant->getKey());
 
             return $device;
         }
@@ -111,6 +117,7 @@ final class DeviceService
             ->each(fn (User $user) => $this->access->forgetRememberedBrowsers($user));
 
         $this->audit->log('device.revoked', $actor, $device, ['status' => DeviceStatus::Active], ['status' => DeviceStatus::Revoked]);
+        $this->events->record(SecurityEventType::DeviceRevoke, $actor, subject: $device);
 
         return $device;
     }
@@ -119,6 +126,7 @@ final class DeviceService
     {
         $device->forceFill(['status' => DeviceStatus::Active, 'revoked_at' => null])->save();
         $this->audit->log('device.restored', $actor, $device, ['status' => DeviceStatus::Revoked], ['status' => DeviceStatus::Active]);
+        $this->events->record(SecurityEventType::DeviceRestore, $actor, subject: $device);
 
         return $device;
     }

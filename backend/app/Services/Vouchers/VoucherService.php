@@ -11,6 +11,7 @@ use App\Data\TransactionResult;
 use App\Enums\PaymentMethod;
 use App\Enums\Permission;
 use App\Enums\PresentmentPurpose;
+use App\Enums\SecurityEventType;
 use App\Enums\TransactionType;
 use App\Enums\VoucherKind;
 use App\Enums\VoucherStatus;
@@ -20,6 +21,7 @@ use App\Events\VoucherReloaded;
 use App\Exceptions\Domain\BalanceLimitExceededException;
 use App\Exceptions\Domain\ComplimentaryNotAllowedException;
 use App\Exceptions\Domain\DebitLimitExceededException;
+use App\Exceptions\Domain\DomainException;
 use App\Exceptions\Domain\IdempotencyConflictException;
 use App\Exceptions\Domain\InsufficientBalanceException;
 use App\Exceptions\Domain\InvalidAmountException;
@@ -42,6 +44,7 @@ use App\Models\VoucherTransaction;
 use App\Services\Audit\AuditLogger;
 use App\Services\Media\PrintableQrService;
 use App\Services\Presentments\PresentmentService;
+use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use App\Support\Tenancy\TenantContext;
 use Closure;
@@ -72,6 +75,7 @@ final class VoucherService
         private readonly VoucherNumberGenerator $numbers,
         private readonly PresentmentService $presentments,
         private readonly PrintableQrService $printables,
+        private readonly SecurityEventRecorder $events,
     ) {}
 
     // ---------------------------------------------------------------------
@@ -85,6 +89,27 @@ final class VoucherService
      * (invariant 8, "media created within the sale itself").
      */
     public function sell(Actor $actor, IssueVoucherData $data): SaleResult
+    {
+        try {
+            $result = $this->performSale($actor, $data);
+        } catch (DomainException $e) {
+            $this->events->refused(SecurityEventType::VoucherIssue, $actor, $e, amount: $data->value, currency: $this->tenant->require()->currency, data: [
+                'payment_method' => $data->payment->method,
+            ]);
+
+            throw $e;
+        }
+        if ($result->replayed) {
+            $this->events->record(SecurityEventType::VoucherIssue, $actor, subject: $result->voucher, amount: $result->transaction->amount, data: [
+                'replayed' => true,
+                'transaction_id' => $result->transaction->getKey(),
+            ]);
+        }
+
+        return $result;
+    }
+
+    private function performSale(Actor $actor, IssueVoucherData $data): SaleResult
     {
         $restaurant = $this->tenant->require();
         $settings = $restaurant->settings;
@@ -141,6 +166,13 @@ final class VoucherService
                     'payment_method' => $data->payment->method,
                     'expires_at' => $voucher->expires_at,
                 ], ['transaction_id' => $tx->getKey(), 'payment_id' => $payment->getKey()]);
+                $this->events->record(SecurityEventType::VoucherIssue, $actor, subject: $voucher, amount: $data->value, data: [
+                    'kind' => $voucher->kind,
+                    'payment_method' => $data->payment->method,
+                    'replayed' => false,
+                    'transaction_id' => $tx->getKey(),
+                    'with_customer' => $voucher->customer_id !== null,
+                ]);
 
                 $printable = $this->printables->issue($actor, $voucher, 'sale');
 
@@ -174,6 +206,34 @@ final class VoucherService
         string $idempotencyKey,
         ?string $reference = null,
         ?string $note = null,
+    ): TransactionResult {
+        try {
+            $result = $this->performRedemption($actor, $voucher, $amount, $presentmentId, $idempotencyKey, $reference, $note);
+        } catch (DomainException $e) {
+            $this->events->refused(SecurityEventType::VoucherRedeem, $actor, $e, $voucher, $amount, $voucher->currency, data: [
+                'presentment_id' => $presentmentId,
+            ]);
+
+            throw $e;
+        }
+        if ($result->replayed) {
+            $this->events->record(SecurityEventType::VoucherRedeem, $actor, subject: $result->voucher, amount: -$result->transaction->amount, data: [
+                'replayed' => true,
+                'transaction_id' => $result->transaction->getKey(),
+            ]);
+        }
+
+        return $result;
+    }
+
+    private function performRedemption(
+        Actor $actor,
+        Voucher $voucher,
+        int $amount,
+        string $presentmentId,
+        string $idempotencyKey,
+        ?string $reference,
+        ?string $note,
     ): TransactionResult {
         $this->assertOwnedByTenant($voucher);
         $this->assertPositive($amount);
@@ -217,6 +277,12 @@ final class VoucherService
                     'amount' => $amount,
                     'balance' => $locked->balance,
                 ], ['transaction_id' => $tx->getKey(), 'presentment_id' => $presentment->getKey(), 'reference' => $reference]);
+                $this->events->record(SecurityEventType::VoucherRedeem, $actor, subject: $locked, amount: $amount, data: [
+                    'replayed' => false,
+                    'transaction_id' => $tx->getKey(),
+                    'presentment_id' => $presentment->getKey(),
+                    'balance_after' => $locked->balance,
+                ]);
 
                 VoucherRedeemed::dispatch($locked, $tx);
 
@@ -236,6 +302,33 @@ final class VoucherService
         PaymentData $payment,
         string $idempotencyKey,
         ?string $note = null,
+    ): TransactionResult {
+        try {
+            $result = $this->performReload($actor, $voucher, $amount, $payment, $idempotencyKey, $note);
+        } catch (DomainException $e) {
+            $this->events->refused(SecurityEventType::VoucherReload, $actor, $e, $voucher, $amount, $voucher->currency, data: [
+                'payment_method' => $payment->method,
+            ]);
+
+            throw $e;
+        }
+        if ($result->replayed) {
+            $this->events->record(SecurityEventType::VoucherReload, $actor, subject: $result->voucher, amount: $result->transaction->amount, data: [
+                'replayed' => true,
+                'transaction_id' => $result->transaction->getKey(),
+            ]);
+        }
+
+        return $result;
+    }
+
+    private function performReload(
+        Actor $actor,
+        Voucher $voucher,
+        int $amount,
+        PaymentData $payment,
+        string $idempotencyKey,
+        ?string $note,
     ): TransactionResult {
         $this->assertOwnedByTenant($voucher);
         $this->assertPositive($amount);
@@ -273,6 +366,11 @@ final class VoucherService
                 'balance' => $locked->balance,
                 'payment_method' => $payment->method,
             ], ['transaction_id' => $tx->getKey(), 'payment_id' => $paymentRow->getKey()]);
+            $this->events->record(SecurityEventType::VoucherReload, $actor, subject: $locked, amount: $amount, data: [
+                'payment_method' => $payment->method,
+                'replayed' => false,
+                'transaction_id' => $tx->getKey(),
+            ]);
 
             VoucherReloaded::dispatch($locked, $tx);
 
@@ -324,6 +422,11 @@ final class VoucherService
                     'amount' => $delta,
                     'balance' => $voucher->balance,
                 ], ['reason' => $reason, 'voucher_id' => $voucher->getKey()]);
+                $this->events->record(SecurityEventType::VoucherReverse, $actor, subject: $voucher, amount: $delta, data: [
+                    'transaction_id' => $tx->getKey(),
+                    'reversed_transaction_id' => $transaction->getKey(),
+                    'reversed_type' => $transaction->type,
+                ]);
 
                 return new TransactionResult($voucher, $tx);
             }, self::DB_ATTEMPTS);
@@ -351,6 +454,7 @@ final class VoucherService
             $locked->save();
 
             $this->audit->log('voucher.blocked', $actor, $locked, ['status' => $previous], ['status' => $locked->status], ['reason' => $reason]);
+            $this->events->record(SecurityEventType::VoucherBlock, $actor, subject: $locked, data: ['previous_status' => $previous]);
         });
     }
 
@@ -370,6 +474,7 @@ final class VoucherService
             $locked->save();
 
             $this->audit->log('voucher.unblocked', $actor, $locked, ['status' => VoucherStatus::Blocked], ['status' => $locked->status]);
+            $this->events->record(SecurityEventType::VoucherUnblock, $actor, subject: $locked);
         });
     }
 
@@ -392,6 +497,7 @@ final class VoucherService
                 'status' => VoucherStatus::Expired,
                 'balance' => $locked->balance,
             ], ['reason' => $reason ?? 'expiry_date_reached']);
+            $this->events->record(SecurityEventType::VoucherExpire, $actor, subject: $locked, data: ['previous_status' => VoucherStatus::Active]);
         });
     }
 
@@ -420,6 +526,7 @@ final class VoucherService
                 'expires_at' => $locked->expires_at,
                 'balance' => $locked->balance,
             ], ['reason' => $reason]);
+            $this->events->record(SecurityEventType::VoucherReinstate, $actor, subject: $locked, data: ['previous_status' => VoucherStatus::Expired]);
         });
     }
 
