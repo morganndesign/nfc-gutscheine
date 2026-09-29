@@ -12,7 +12,7 @@ import { PaymentFields, paymentComplete } from "@/components/vouchers/payment-fi
 import { type PaymentInput, useReloadVoucher } from "@/lib/api/hooks"
 import { errorMessage, newIdempotencyKey } from "@/lib/api/client"
 import { formatMoney, parseMoneyInput } from "@/lib/money"
-import { isUncertainOutcome } from "@/lib/outcome"
+import { RELOAD_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 
 export function ReloadDialog({
   voucherId,
@@ -37,8 +37,11 @@ export function ReloadDialog({
   const key = useRef(newIdempotencyKey())
   const mutation = useReloadVoucher()
   const cents = parseMoneyInput(amount)
-  const tooMuch = !!cents && balance + cents > maxBalance
-  const invalid = !cents || cents <= 0 || tooMuch || !paymentComplete(payment)
+  // While the outcome is unknown the balance shown may already include this reload: only "Check and reload"
+  // (the same request) finds out, so the limit check must not block it.
+  const tooMuch = !uncertain && !!cents && balance + cents > maxBalance
+  const invalid = !cents || cents <= 0 || tooMuch || (!uncertain && !paymentComplete(payment))
+  const scope = `reload:${voucherId}:${cents ?? 0}:${payment.method}:${payment.reference ?? ""}`
 
   const reset = () => {
     setAmount("")
@@ -72,22 +75,28 @@ export function ReloadDialog({
             e.preventDefault()
             if (invalid || !cents) return
             setError(null)
+            const stored = uncertain ? null : pendingKey(scope)
+            if (stored) key.current = stored
+            const unanswered = uncertain || stored !== null
             try {
               const result = await mutation.mutateAsync({
                 voucherId,
                 idempotencyKey: key.current,
                 input: { amount: cents, payment, note: note || null },
               })
+              forgetPendingKey(scope)
               toast.success(`${formatMoney(cents, currency)} loaded · new balance ${formatMoney(result.data.voucher.balance, currency)}`)
               reset()
               onOpenChange(false)
             } catch (err) {
-              if (isUncertainOutcome(err)) {
+              if (isUncertainOutcome(err, { unanswered, finalCodes: RELOAD_CODES })) {
+                rememberPendingKey(scope, key.current)
                 setUncertain(true)
                 setError(
                   "The connection was interrupted, so it is not known whether the reload was booked. Press “Check and reload”: it can never be booked twice.",
                 )
               } else {
+                forgetPendingKey(scope)
                 setUncertain(false)
                 setError(errorMessage(err))
                 key.current = newIdempotencyKey()

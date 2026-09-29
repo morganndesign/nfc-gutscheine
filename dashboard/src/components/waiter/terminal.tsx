@@ -14,7 +14,7 @@ import type { Presentment } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
-import { isUncertainOutcome } from "@/lib/outcome"
+import { REDEMPTION_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 import { cn } from "@/lib/utils"
 
 type Mode = "ready" | "qr" | "voucher" | "success"
@@ -35,7 +35,8 @@ const AUTO_RESET_MS = 8000
  *
  * Uncertain outcomes (audit M1, M2, M6): when the connection drops after "Redeem", the result is unknown. The
  * amount, the presentment and the idempotency key are kept, and the only way on is "Check again", which sends
- * the same request: the server books it once or returns the booking it already made.
+ * the same request: the server books it once or returns the booking it already made. The key is also kept in
+ * this tab for the voucher and amount, so scanning the voucher again after leaving reuses it.
  */
 export function WaiterTerminal() {
   const [mode, setMode] = useState<Mode>("ready")
@@ -80,7 +81,7 @@ export function WaiterTerminal() {
           e instanceof ApiError && e.code === "MEDIUM_NOT_RECOGNIZED"
             ? "This code is not a valid voucher of this restaurant."
             : e instanceof ApiError && e.code === "PRESENTMENT_METHOD_NOT_ALLOWED"
-              ? "This voucher belongs to a card. Redeem it by tapping the card in the waiter app."
+              ? "This voucher is on a card and cannot be redeemed with a QR code."
               : errorMessage(e, "The code could not be checked. Please try again."),
         )
         if ("vibrate" in navigator) navigator.vibrate?.([60, 40, 60])
@@ -96,26 +97,41 @@ export function WaiterTerminal() {
     return () => clearTimeout(t)
   }, [mode, reset])
 
+  // Leaving while the outcome is unknown asks first (the key survives in this tab either way).
+  useEffect(() => {
+    if (!uncertain) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [uncertain])
+
   const submit = async () => {
     if (!presentment || amount <= 0) return
     setRedeemError(null)
+    const scope = `redeem:${presentment.voucher.id}:${amount}`
+    const stored = uncertain ? null : pendingKey(scope)
+    if (stored) idempotencyKey.current = stored
+    const unanswered = uncertain || stored !== null
     try {
       const result = await redeem.mutateAsync({
         voucherId: presentment.voucher.id,
         idempotencyKey: idempotencyKey.current,
         input: { amount, presentment_id: presentment.id },
       })
+      forgetPendingKey(scope)
       setUncertain(false)
       setSuccess({ amount, balance: result.data.voucher.balance, currency: presentment.voucher.currency, replayed: result.replayed })
       setMode("success")
       if ("vibrate" in navigator) navigator.vibrate?.([20, 30, 20])
     } catch (e) {
-      if (isUncertainOutcome(e)) {
+      if (isUncertainOutcome(e, { unanswered, finalCodes: REDEMPTION_CODES })) {
         // Keep key, amount and presentment: the retry replays the booking if it was made.
+        rememberPendingKey(scope, idempotencyKey.current)
         setUncertain(true)
         setRedeemError("No answer from the server. It is not known yet whether the amount was booked. Press “Check again” — it is never booked twice.")
         return
       }
+      forgetPendingKey(scope)
       setUncertain(false)
       idempotencyKey.current = newIdempotencyKey()
       if (e instanceof ApiError && e.code === "PRESENTMENT_INVALID") {
@@ -245,7 +261,7 @@ export function WaiterTerminal() {
             <Button
               size="lg"
               className="short:h-14 h-16 rounded-2xl text-lg"
-              disabled={amount <= 0 || tooMuch || overLimit || redeem.isPending || (!uncertain && fullOnly)}
+              disabled={amount <= 0 || redeem.isPending || (!uncertain && (tooMuch || overLimit || fullOnly))}
               onClick={submit}
             >
               {redeem.isPending ? <Loader2 className="animate-spin" /> : uncertain ? <RefreshCw /> : null}

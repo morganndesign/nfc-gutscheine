@@ -81,7 +81,7 @@ function DevicesContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Devices" description="Phones and terminals that scanned or redeemed cards. Revoke a lost device to block it immediately." />
+      <PageHeader title="Devices" description="Phones and terminals that scanned or redeemed vouchers. Revoke a lost device to block it immediately." />
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (

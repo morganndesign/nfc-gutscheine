@@ -23,7 +23,7 @@ import { ApiError, errorMessage, newIdempotencyKey } from "@/lib/api/client"
 import { useAuth } from "@/lib/auth"
 import { useDebounce } from "@/hooks/use-debounce"
 import { centsToInput, formatMoney, formatMoneyShort, parseMoneyInput } from "@/lib/money"
-import { isUncertainOutcome } from "@/lib/outcome"
+import { SALE_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 import { cn } from "@/lib/utils"
 
 const PRESETS = [2500, 5000, 7500, 10000, 15000]
@@ -147,11 +147,23 @@ function SellVoucherContent() {
   const valueCents = parseMoneyInput(form.watch("value")) ?? 0
   const { errors, isSubmitting } = form.formState
 
+  // Leaving while the outcome is unknown asks first; the key also survives in this tab for the same sale.
+  useEffect(() => {
+    if (!uncertain) return
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault()
+    window.addEventListener("beforeunload", warn)
+    return () => window.removeEventListener("beforeunload", warn)
+  }, [uncertain])
+
   const onSubmit = form.handleSubmit(async (v) => {
     if (!paymentComplete(payment)) {
       form.setError("root", { message: "Complete the payment details." })
       return
     }
+    const scope = `sale:${parseMoneyInput(v.value) ?? 0}:${payment.method}:${payment.reference ?? ""}`
+    const stored = uncertain ? null : pendingKey(scope)
+    if (stored) idempotencyKey.current = stored
+    const unanswered = uncertain || stored !== null
     try {
       const result = await sell.mutateAsync({
         idempotencyKey: idempotencyKey.current,
@@ -168,18 +180,21 @@ function SellVoucherContent() {
           notes: v.notes || null,
         },
       })
+      forgetPendingKey(scope)
       setUncertain(false)
       setSale(result)
       toast.success(result.replayed ? "The sale was already booked" : "Voucher sold")
     } catch (e) {
-      if (isUncertainOutcome(e)) {
+      if (isUncertainOutcome(e, { unanswered, finalCodes: SALE_CODES })) {
         // The sale may have been booked. Sending the same key again returns it (and a fresh QR) instead of selling twice.
+        rememberPendingKey(scope, idempotencyKey.current)
         setUncertain(true)
         form.setError("root", {
           message: "No answer from the server: it is not known whether the voucher was sold. Press “Check sale” — it is never sold twice.",
         })
         return
       }
+      forgetPendingKey(scope)
       setUncertain(false)
       if (e instanceof ApiError && e.status === 422 && e.code === "VALIDATION_FAILED") {
         for (const [field, messages] of Object.entries(e.fieldErrors)) {
@@ -215,7 +230,7 @@ function SellVoucherContent() {
             <ArrowLeft /> Vouchers
           </Link>
         </Button>
-        <PageHeader title="Sell a voucher" description="A printable voucher with a QR code. Vouchers on a physical card are sold in the waiter app." />
+        <PageHeader title="Sell a voucher" description="A printable voucher with a QR code, printed right after the sale." />
       </div>
 
       <fieldset disabled={uncertain} className="contents">
