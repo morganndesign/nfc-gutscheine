@@ -5,13 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Cards;
 
 use App\Crypto\CryptoProvider;
-use App\Crypto\Local\LocalKeystore;
 use App\Crypto\Ntag424\CardKeys;
 use App\Crypto\Ntag424\SunVerifier;
 use App\Crypto\Primitives\Aes;
-use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
-use App\Enums\KeySetStatus;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
 use App\Enums\MediumType;
@@ -19,22 +16,20 @@ use App\Enums\RoleSlug;
 use App\Enums\SecurityEventOutcome;
 use App\Enums\SecurityEventType;
 use App\Models\Card;
-use App\Models\KeySet;
 use App\Models\Medium;
 use App\Models\Restaurant;
 use App\Models\SecurityEvent;
-use App\Models\User;
 use App\Models\Voucher;
-use App\Services\Cards\CardBatchLifecycle;
 use App\Services\Cards\CardLifecycle;
 use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
+use Tests\Support\WithCards;
 use Tests\TestCase;
 
 /** Phase 3: SUN-verified taps with counter compare-and-set, and the guest balance page. */
 final class TapPageTest extends TestCase
 {
-    private string $keystorePath;
+    use WithCards;
 
     private Restaurant $restaurant;
 
@@ -43,17 +38,7 @@ final class TapPageTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->keystorePath = sys_get_temp_dir().'/gcp-tap-'.bin2hex(random_bytes(6)).'/keystore.json';
-        config([
-            'crypto.local.keystore_path' => $this->keystorePath,
-            'crypto.local.master_key' => 'base64:'.base64_encode(random_bytes(32)),
-        ]);
-        $this->app->forgetInstance(LocalKeystore::class);
-        $this->app->forgetInstance(CryptoProvider::class);
-        $this->artisan('crypto:keystore:init')->assertSuccessful();
-        foreach (['root-k0', 'root-k1', 'root-k2', 'root-k3'] as $role) {
-            $this->artisan('crypto:key:generate', ['reference' => 'ks-2026-01/'.$role])->assertSuccessful();
-        }
+        $this->setUpCardKeystore();
 
         $this->restaurant = $this->restaurant(['name' => 'Beisl am Eck', 'locale' => 'de-AT']);
         $this->card = $this->cardInStock();
@@ -61,35 +46,13 @@ final class TapPageTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (is_file($this->keystorePath)) {
-            unlink($this->keystorePath);
-            rmdir(dirname($this->keystorePath));
-        }
+        $this->tearDownCardKeystore();
         parent::tearDown();
     }
 
     private function cardInStock(): Card
     {
-        $admin = new Actor(User::factory()->platformAdmin()->create());
-        $second = new Actor(User::factory()->platformAdmin()->create());
-        $keySet = KeySet::query()->create(['version' => 'ks-2026-01', 'manufacturer' => 'Card Co', 'status' => KeySetStatus::Active, 'key_check_values' => []]);
-        $batches = app(CardBatchLifecycle::class);
-        $cards = app(CardLifecycle::class);
-
-        $batch = $batches->order($this->restaurant, $keySet, 'Card Co', 1, 'manufacturer', $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::InProduction, 'printing', $admin);
-        $card = $cards->register($batch, (string) hex2bin('04A39493CC8680'), CardState::Personalized, $admin);
-        $cards->transition($card, CardState::QaPassed, 'sample passed', $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::Personalized, 'done', $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::QaTesting, 'sample', $admin);
-        $batches->approve($batch, $admin);
-        $batch = $batches->approve($batch, $second);
-        foreach ([CardBatchStatus::Assigned, CardBatchStatus::Shipped, CardBatchStatus::Delivered] as $status) {
-            $batch = $batches->changeStatus($batch, $status, $status->value, $admin);
-        }
-        $batches->receive($batch, 1, $card->refresh(), $admin);
-
-        return $card->refresh();
+        return $this->availableCard($this->restaurant);
     }
 
     /** What the card writes into its NDEF URL on a tap with read counter `$counter`. */
@@ -142,7 +105,8 @@ final class TapPageTest extends TestCase
         $this->assertCount(0, $page->headers->getCookies(), 'the page sets no cookies');
         $this->assertSame(5, $this->card->refresh()->sdm_counter);
 
-        $event = SecurityEvent::query()->where('type', SecurityEventType::CardTap->value)->sole();
+        // The station's QA read was the card's first tap.
+        $event = SecurityEvent::query()->where('type', SecurityEventType::CardTap->value)->get()->filter(static fn (SecurityEvent $e): bool => $e->data['purpose'] === 'balance')->sole();
         $this->assertSame(SecurityEventOutcome::Succeeded, $event->outcome);
         $this->assertSame(5, $event->data['counter']);
     }
@@ -170,23 +134,24 @@ final class TapPageTest extends TestCase
         $this->get(str_replace('/t/ks-2026-01', '/t/ks-2099-01', $url))->assertForbidden();
         $this->get('/t/ks-2026-01?e=zz&m=00')->assertForbidden();
         $this->get('/t/ks-2026-01')->assertForbidden();
-        $this->assertNull($this->card->refresh()->sdm_counter, 'nothing was accepted');
+        $this->assertSame(1, $this->card->refresh()->sdm_counter, 'nothing after the station QA read was accepted');
     }
 
     public function test_the_page_follows_the_card_and_voucher_state_and_the_restaurant_setting(): void
     {
-        $this->get($this->tapUrl(1))->assertOk()->assertSee('noch nicht aktiviert');
+        $this->get($this->tapUrl(2))->assertOk()->assertSee('noch nicht aktiviert');
 
         $voucher = $this->activate();
         $this->restaurant->settings->forceFill(['public_balance' => false])->save();
-        $this->get($this->tapUrl(2))->assertOk()->assertSee('erfahren Sie im Lokal')->assertDontSee('class="amount"', false);
+        $this->get($this->tapUrl(3))->assertOk()->assertSee('erfahren Sie im Lokal')->assertDontSee('class="amount"', false);
 
         $this->restaurant->settings->forceFill(['public_balance' => true])->save();
         $this->asTenant($this->restaurant, fn () => app(VoucherService::class)->block(Actor::system(), $voucher, 'lost'));
-        $this->get($this->tapUrl(3))->assertOk()->assertSee('gesperrt');
+        $this->get($this->tapUrl(4))->assertOk()->assertSee('gesperrt');
 
+        app(CardLifecycle::class)->transition($this->card->refresh(), CardState::Suspended, 'lost', Actor::system());
         app(CardLifecycle::class)->transition($this->card->refresh(), CardState::Revoked, 'fraud', Actor::system());
-        $this->get($this->tapUrl(4))->assertOk()->assertSee('nicht mehr gültig');
+        $this->get($this->tapUrl(5))->assertOk()->assertSee('nicht mehr gültig');
     }
 
     public function test_the_restaurant_controls_the_public_balance(): void

@@ -4,21 +4,31 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Vouchers;
 
+use App\Enums\Permission;
 use App\Http\Requests\ApiRequest;
+use App\Models\User;
 
 /**
  * Sale of a voucher. Amounts are integers in minor units; floats, strings and booleans are refused (audit P9).
+ * A card sale (`form: card`) also needs `cards.bind` and the `bind` presentment of the tapped card.
  */
 final class StoreVoucherRequest extends ApiRequest
 {
+    public function authorize(): bool
+    {
+        $user = $this->user();
+
+        return $this->input('form') !== 'card' || ($user instanceof User && $user->hasPermission(Permission::CardsBind));
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {
         return [
             'value' => ['required', 'integer:strict', 'min:1', 'max:100000000'],
-            // How the voucher is handed over. Card vouchers are sold by binding a card (Phase 5), e-mail
-            // vouchers arrive with the online shop (Phase 7).
-            'form' => ['required', 'string', 'in:printable'],
+            // How the voucher is handed over: a printed QR, or a physical card tapped for this sale.
+            'form' => ['required', 'string', 'in:printable,card'],
+            'presentment_id' => ['required_if:form,card', 'prohibited_unless:form,card', 'uuid'],
             ...PaymentRules::rules(),
             'customer_id' => ['nullable', 'uuid', $this->existsInTenant('customers')],
             'customer' => ['nullable', 'array', 'prohibits:customer_id'],

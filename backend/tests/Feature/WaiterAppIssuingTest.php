@@ -63,8 +63,8 @@ final class WaiterAppIssuingTest extends TestCase
         $this->staff($restaurant, RoleSlug::Waiter, ['email' => 'anna@example.com']);
 
         $expected = [
-            'mia@example.com' => ['manager', ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind']],
-            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'cards.receive', 'cards.bind']],
+            'mia@example.com' => ['manager', ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage']],
+            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage']],
         ];
         foreach ($expected as $email => [$role, $abilities]) {
             $permissions = $this->signIn($email)->assertCreated()
@@ -170,9 +170,9 @@ final class WaiterAppIssuingTest extends TestCase
         $model->forceFill(['expires_at' => Carbon::now()->addDays(3)])->save();
         $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk();
 
-        $this->assertSame(['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind'], $model->refresh()->abilities);
+        $this->assertSame(['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'], $model->refresh()->abilities);
         $this->assertEqualsCanonicalizing(
-            ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind'],
+            ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'],
             $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk()->json('data.permissions'),
         );
     }

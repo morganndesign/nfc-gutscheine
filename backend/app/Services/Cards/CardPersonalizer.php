@@ -61,9 +61,6 @@ final class CardPersonalizer
     public function begin(CardBatch $batch, string $rfUid, Actor $actor): PersonalizationStep
     {
         return $this->guard($actor, 'begin', $batch, null, function () use ($batch, $rfUid, $actor): PersonalizationStep {
-            if ($batch->personalization !== 'in_house_station') {
-                $this->fail('batch_not_station');
-            }
             if ($batch->status !== CardBatchStatus::InProduction) {
                 $this->fail('batch_not_in_production');
             }
@@ -79,7 +76,7 @@ final class CardPersonalizer
             /** @var Card|null $card */
             $card = Card::query()->withoutGlobalScopes()->where('uid', $rfUid)->first();
             if ($card === null) {
-                $card = $this->lifecycle->register($batch, $rfUid, CardState::Manufactured, $actor);
+                $card = $this->lifecycle->register($batch, $rfUid, $actor);
             } elseif ($card->batch_id !== $batch->getKey()) {
                 $this->fail('other_batch');
             } elseif (! in_array($card->state, [CardState::Manufactured, CardState::Personalized], true)) {

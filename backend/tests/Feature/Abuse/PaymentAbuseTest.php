@@ -23,8 +23,9 @@ final class PaymentAbuseTest extends TestCase
             $this->withHeaders($this->idempotency())->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable'] + $body)
                 ->assertStatus(422);
         }
+        // A card sale needs the tapped card's presentment.
         $this->withHeaders($this->idempotency())->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'card', 'payment' => ['method' => 'cash']])
-            ->assertStatus(422)->assertJsonValidationErrors('form');
+            ->assertStatus(422)->assertJsonValidationErrors('presentment_id');
 
         $this->assertSame(0, Voucher::query()->count());
     }

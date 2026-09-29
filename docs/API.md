@@ -256,7 +256,7 @@ lockout as failed scans (`429 PRESENTMENT_THROTTLED`). A redemption refuses a ca
 |---|---|---|---|
 | GET | `/vouchers` | vouchers.view | `search` (voucher number digits, recipient, notes, customer), `status[]` or comma list (`active`, `blocked`, `expired`), `kind`, `customer_id`, `created_from/to`, `expires_from/to`, `min_balance`, `max_balance`, `sort` (±`created_at`, ±`balance`, ±`expires_at`, ±`voucher_number`, ±`last_used_at`), `page`, `per_page` |
 | GET | `/vouchers/export` | vouchers.export | Same filters → streamed CSV (`;`, UTF-8 BOM, decimal comma for German locales, readable status names, formula-injection safe) |
-| POST | `/vouchers` | vouchers.sell | **Idempotency-Key** · sale of a digital voucher, below |
+| POST | `/vouchers` | vouchers.sell | **Idempotency-Key** · sale of a printable or card voucher, below |
 | GET | `/vouchers/{id}` | vouchers.view | `Voucher` with `customer`, `issued_by`, `media[]`, `payments[]` |
 | PATCH | `/vouchers/{id}` | vouchers.update | `{customer_id?, recipient_name?, notes?}` |
 | POST | `/vouchers/{id}/redemptions` | vouchers.redeem | **Idempotency-Key** · below |
@@ -291,15 +291,20 @@ Idempotency-Key: 7b1c…
 | Field | |
 |---|---|
 | `value` | Minor units; within the restaurant's `min_voucher_value` and `max_voucher_balance` |
-| `form` | `printable` (a digital voucher with a printable QR) |
+| `form` | `printable` (a digital voucher with a printable QR) or `card` (needs `cards.bind` and `presentment_id`: the `bind` presentment of the stock card tapped for this sale) |
 | `payment.method` | `cash`, `card_terminal` (needs `reference`: terminal receipt), `bank_transfer` (needs `reference`), `complimentary` (needs `reason`, 3–500 characters, and `vouchers.sell_complimentary`) |
 | `customer_id` or `customer` | Optional: an existing customer, or a new one (`first_name, last_name, email, phone, marketing_consent`) |
 | `recipient_name`, `notes` | Optional |
 
 ```json
 → 201 { "data": Voucher, "transaction": Transaction, "payment": Payment,
-        "printable": { "payload": "GCPV1.q7Jx…", "qr_svg": "<svg …>" }, "replayed": false }
+        "printable": { "payload": "GCPV1.q7Jx…", "qr_svg": "<svg …>" }, "card": null, "replayed": false }
 ```
+
+A card sale answers `"card": {"card_number", "state": "active"}` and `"printable": null`: in one transaction the
+presentment is consumed, the voucher (`kind: card`) and payment are booked, and the card goes `available → bound →
+active`. A presentment of another user, device or purpose, used or older than 60 s, or a card that is no longer in
+stock is `422 PRESENTMENT_INVALID` (`context.reason`); nothing is booked.
 
 Without `vouchers.view` (e.g. a manager's app token) `data` is only `{id, kind, balance, currency}`.
 `printable.payload` is returned only here and cannot be fetched again; the print sheet shows the QR, the
@@ -349,6 +354,39 @@ curl -X POST "https://app.example.com/api/v1/vouchers/$(echo "$P" | jq -r .data.
   -H "Idempotency-Key: $(uuidgen)" \
   -d "{\"amount\": 1850, \"presentment_id\": \"$(echo "$P" | jq -r .data.id)\", \"reference\": \"Bill 4711\"}"
 ```
+
+### Cards `[cards.view]`, `[cards.manage]`
+
+Physical cards are addressed by their inventory number (`B-2026-0001-0042`); ids and UIDs never leave the server.
+
+| Method | Path | Permission | Body / notes |
+|---|---|---|---|
+| GET | `/cards?state[]=&search=&batch=` | cards.view | `{card_number, state, state_changed_at, batch_code, voucher: {id, voucher_number, status, balance, currency} \| null, successor}` |
+| GET | `/cards/{number}` | cards.view | The card plus `history[] {from_state, to_state, reason, at}` |
+| POST | `/cards/{number}/suspend` | cards.manage | `{reason}` — active → suspended (lost, stolen, check); it pays no more, earlier taps included |
+| POST | `/cards/{number}/resume` | cards.manage | `{reason}` — suspended → active |
+| POST | `/cards/{number}/replacement` | cards.manage + cards.bind | `{presentment_id, reason}` — the `bind` presentment of a stock card; the old card (active or suspended) becomes `replaced` for good, the new one takes over the voucher and its balance. Answers the new card |
+| POST | `/cards/{number}/revoke` | cards.manage | `{reason}` — a stock card (delivered, available) out of service for good; a guest's card is suspended and replaced instead |
+| GET | `/card-batches` | cards.view | The restaurant's batches with `counts` |
+| POST | `/card-batches/{id}/receipt` | cards.receive | `{count, presentment_id}` — the counted quantity and the `receive` presentment of one card of the batch. Matching count → `in_service`, every card `available`; otherwise `on_hold` for the platform |
+
+A refused change is `409 CARD_STATE_INVALID` (`context.state`) and a `card.transition` security event with
+outcome `refused`.
+
+### Card batches (platform) `[platform.cards.manage]`
+
+| Method | Path | Body / notes |
+|---|---|---|
+| GET | `/admin/card-batches?status=&restaurant_id=` | Batches with `counts`, `restaurant`, `key_set`, `approvals`, `qa_report` |
+| POST | `/admin/card-batches` | `{restaurant_id, manufacturer, quantity, key_set?, card_design_ref?}` → `201`, `ordered`; the key set defaults to the active one |
+| POST | `/admin/card-batches/{id}/status` | `{status, reason, tracking_ref?, production_date?}` — in_production, personalized, qa_testing, rejected, assigned, shipped, delivered, lost, depleted, compromised, closed, along the lifecycle |
+| POST | `/admin/card-batches/{id}/approval` | Acceptance needs two different platform staff; the second approval moves the QA-passed cards to stock and every chip that did not pass the station to `qa_failed` |
+| POST | `/admin/card-batches/{id}/hold-resolution` | `{missing: [card_number]}` — those cards become `lost`, the other delivered cards `available` |
+
+Key sets are created at a key ceremony on the server: `php artisan cards:key-set:create ks-2027-01` (generates the
+four root keys in the keystore, records their key check values, makes the set active and the previous one
+`verify_only`), `cards:key-set:status {version} retired` (only when none of its cards is in use) and the daily
+`cards:key-set:verify` tamper check.
 
 ### Transactions
 
@@ -455,8 +493,8 @@ invitation replaces it). Choosing a password with `POST /auth/reset-password` ac
 
 ### Personalisation station `[platform.cards.personalize]`
 
-The internal station (Android) personalises blank NTAG 424 DNA chips of a batch ordered with
-`personalization: in_house_station` while the batch is `in_production`. The server builds every APDU (keys never
+The internal station personalises the blank NTAG 424 DNA chips of a batch while the batch is `in_production`
+(every batch is personalised in house: card keys never leave the key provider). The server builds every APDU (keys never
 leave it); the phone relays them round by round and stops at the first answer whose status word is not `9000`,
 `9100` or `91AF`, sending the answers it has.
 

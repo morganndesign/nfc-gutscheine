@@ -6,10 +6,8 @@ namespace Tests\Support;
 
 use App\Crypto\CryptoProvider;
 use App\Crypto\Local\LocalKeystore;
-use App\Crypto\Ntag424\CardKeys;
 use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
-use App\Enums\KeySetStatus;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
 use App\Enums\MediumType;
@@ -23,7 +21,9 @@ use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Cards\CardBatchLifecycle;
 use App\Services\Cards\CardLifecycle;
+use App\Services\Cards\CardPersonalizer;
 use App\Support\Actor;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /**
@@ -47,10 +47,7 @@ trait WithCards
         $this->app->forgetInstance(LocalKeystore::class);
         $this->app->forgetInstance(CryptoProvider::class);
         $this->artisan('crypto:keystore:init')->assertSuccessful();
-        foreach (['root-k0', 'root-k1', 'root-k2', 'root-k3'] as $role) {
-            $this->artisan('crypto:key:generate', ['reference' => $keySet.'/'.$role])->assertSuccessful();
-        }
-        KeySet::query()->create(['version' => $keySet, 'manufacturer' => 'Card Co', 'status' => KeySetStatus::Active, 'key_check_values' => []]);
+        $this->artisan('cards:key-set:create', ['version' => $keySet])->assertSuccessful();
     }
 
     protected function tearDownCardKeystore(): void
@@ -71,14 +68,12 @@ trait WithCards
         $admin = new Actor(User::factory()->platformAdmin()->create());
         $second = new Actor(User::factory()->platformAdmin()->create());
         $batches = app(CardBatchLifecycle::class);
-        $lifecycle = app(CardLifecycle::class);
 
-        $batch = $batches->order($restaurant, KeySet::query()->where('version', $keySet)->firstOrFail(), 'Card Co', $count, 'manufacturer', $admin);
+        $batch = $batches->order($restaurant, KeySet::query()->where('version', $keySet)->firstOrFail(), 'Card Co', $count, $admin);
         $batch = $batches->changeStatus($batch, CardBatchStatus::InProduction, 'printing', $admin);
         $cards = [];
         for ($i = 0; $i < $count; $i++) {
-            $card = $lifecycle->register($batch, "\x04".random_bytes(6), CardState::Personalized, $admin);
-            $cards[] = $lifecycle->transition($card, CardState::QaPassed, 'sample passed', $admin);
+            $cards[] = $this->personalizeAtStation($batch, Ntag424Chip::factory(), $admin);
         }
         $batch = $batches->changeStatus($batch, CardBatchStatus::Personalized, 'done', $admin);
         $batch = $batches->changeStatus($batch, CardBatchStatus::QaTesting, 'sample', $admin);
@@ -89,6 +84,32 @@ trait WithCards
         }
 
         return [$batch, array_map(static fn (Card $c): Card => $c->refresh(), $cards)];
+    }
+
+    /** @var array<string, Ntag424Chip> card number => the simulated chip personalised for it */
+    private array $chips = [];
+
+    /**
+     * Runs the real station personalisation (server rounds relayed to a simulated chip) and returns the card,
+     * `qa_passed`. The chip is kept for {@see chip()}.
+     */
+    protected function personalizeAtStation(CardBatch $batch, Ntag424Chip $chip, Actor $actor): Card
+    {
+        $personalizer = app(CardPersonalizer::class);
+        $step = $personalizer->begin($batch, $chip->uid, $actor);
+        while (! $step->done()) {
+            $answers = [];
+            foreach ($step->commands as $command) {
+                $answers[] = $answer = $chip->transceive($command);
+                if (! in_array(substr($answer, -2), ["\x90\x00", "\x91\x00", "\x91\xAF"], true)) {
+                    break;
+                }
+            }
+            $step = $personalizer->next((string) $step->id, $answers, $actor);
+        }
+        $this->chips[$step->card->card_number] = $chip;
+
+        return $step->card;
     }
 
     /** One card in the restaurant's stock (`available`). */
@@ -122,12 +143,31 @@ trait WithCards
         return [$card->refresh(), $voucher->refresh()];
     }
 
-    /** The simulated chip of a registered card, personalised as the manufacturer delivers it. */
+    /**
+     * What the phone does for a card: read the NDEF URL, start EV2 with K3, relay the server's command and the
+     * card's answer. Returns the final response (the presentment, or the refusal of either step).
+     */
+    protected function tapCard(Ntag424Chip $chip, string $purpose = 'spend'): TestResponse
+    {
+        $url = $chip->readNdefUrl();
+        $challenge = substr($chip->authenticateFirst(), 0, 16);
+        $begun = $this->postJson('/api/v1/presentments/cards', [
+            'purpose' => $purpose,
+            'tap_url' => $url,
+            'rf_uid' => $chip->uidHex(),
+            'challenge' => bin2hex($challenge),
+        ]);
+        if ($begun->status() !== 200) {
+            return $begun;
+        }
+        $answer = $chip->transceive((string) hex2bin((string) $begun->json('data.command')));
+
+        return $this->postJson('/api/v1/presentments/cards/'.$begun->json('data.authentication'), ['response' => bin2hex($answer)]);
+    }
+
+    /** The simulated chip personalised for a card. */
     protected function chip(Card $card): Ntag424Chip
     {
-        $provider = $this->app->make(CryptoProvider::class);
-        $keySet = KeySet::query()->findOrFail($card->key_set_id);
-
-        return Ntag424Chip::personalized(new CardKeys($provider, $keySet->version, $card->batch_id), $card->uid, $keySet->version);
+        return $this->chips[$card->card_number] ?? throw new \LogicException("No chip for {$card->card_number}.");
     }
 }

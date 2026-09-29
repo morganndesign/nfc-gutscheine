@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\CardState;
+use App\Enums\MediumStatus;
 use App\Models\Concerns\BelongsToRestaurant;
 use App\Services\Cards\CardLifecycle;
 use Illuminate\Database\Eloquent\Concerns\HasVersion4Uuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -67,6 +69,18 @@ class Card extends Model
     public function batch(): BelongsTo
     {
         return $this->belongsTo(CardBatch::class, 'batch_id');
+    }
+
+    /** @return HasOne<Medium, $this> The medium through which this card pays for its voucher. */
+    public function activeMedium(): HasOne
+    {
+        return $this->hasOne(Medium::class, 'card_id')->where('status', MediumStatus::Active->value);
+    }
+
+    /** @return BelongsTo<Card, $this> The card that replaced this one. */
+    public function successor(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'successor_card_id')->withoutGlobalScopes();
     }
 
     /** @return BelongsTo<KeySet, $this> */

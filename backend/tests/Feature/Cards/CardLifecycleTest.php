@@ -73,11 +73,11 @@ final class CardLifecycleTest extends TestCase
     /** @return array{CardBatch, list<Card>} a batch of `$quantity` cards, personalised and QA-tested */
     private function qaTestedBatch(int $quantity = 3): array
     {
-        $batch = $this->batches()->order($this->restaurant, $this->keySet(), 'Card Co', $quantity, 'in_house_station', $this->actor());
+        $batch = $this->batches()->order($this->restaurant, $this->keySet(), 'Card Co', $quantity, $this->actor());
         $batch = $this->batches()->changeStatus($batch, CardBatchStatus::InProduction, 'printing', $this->actor());
         $cards = [];
         for ($i = 0; $i < $quantity; $i++) {
-            $card = $this->cards()->register($batch, "\x04".random_bytes(6), CardState::Manufactured, $this->actor());
+            $card = $this->cards()->register($batch, "\x04".random_bytes(6), $this->actor());
             $card = $this->cards()->transition($card, CardState::Personalized, 'station verified', $this->actor());
             $cards[] = $this->cards()->transition($card, CardState::QaPassed, 'outsider test passed', $this->actor());
         }
@@ -208,14 +208,14 @@ final class CardLifecycleTest extends TestCase
 
     public function test_registration_refuses_duplicates_surplus_and_closed_batches(): void
     {
-        $batch = $this->batches()->order($this->restaurant, $this->keySet(), 'Card Co', 1, 'manufacturer', $this->actor());
+        $batch = $this->batches()->order($this->restaurant, $this->keySet(), 'Card Co', 1, $this->actor());
         $uid = "\x04\x11\x22\x33\x44\x55\x66";
-        $this->cards()->register($batch, $uid, CardState::Personalized, $this->actor());
+        $this->cards()->register($batch, $uid, $this->actor());
 
         foreach ([
-            fn () => $this->cards()->register($batch, "\x04\x99\x22\x33\x44\x55\x66", CardState::Personalized, $this->actor()), // surplus
-            fn () => $this->cards()->register($batch, "\x04\x11", CardState::Personalized, $this->actor()),                     // not a UID
-            fn () => $this->cards()->register($batch, $uid, CardState::Available, $this->actor()),                               // wrong entry state
+            fn () => $this->cards()->register($batch, "\x04\x99\x22\x33\x44\x55\x66", $this->actor()), // surplus
+            fn () => $this->cards()->register($batch, "\x04\x11", $this->actor()),                     // not a UID
+            fn () => $this->cards()->register($batch, $uid, $this->actor()),                             // duplicate
         ] as $attempt) {
             try {
                 $attempt();

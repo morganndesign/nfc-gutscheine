@@ -24,7 +24,6 @@ final class RemovedPathsTest extends TestCase
             ['POST', '/api/v1/scan'],
             ['GET', "/api/v1/public/cards/{$id}"],
             ['POST', '/api/v1/cards'],
-            ['GET', '/api/v1/cards'],
             ['POST', "/api/v1/cards/{$id}/redeem"],
             ['POST', "/api/v1/cards/{$id}/reload"],
             ['POST', "/api/v1/cards/{$id}/transfer"],

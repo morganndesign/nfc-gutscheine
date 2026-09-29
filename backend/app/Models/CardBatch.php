@@ -28,9 +28,15 @@ use Illuminate\Support\Carbon;
  * @property string $chip_type
  * @property string|null $card_design_ref
  * @property int $quantity_ordered
- * @property string $personalization
  * @property CardBatchStatus $status
  * @property Carbon|null $accepted_at
+ * @property Carbon|null $ordered_at
+ * @property Carbon|null $personalized_at
+ * @property Carbon|null $shipped_at
+ * @property Carbon|null $delivered_at
+ * @property Carbon|null $received_at
+ * @property string|null $tracking_ref
+ * @property array<string, mixed>|null $qa_report
  * @property string|null $accepted_by
  * @property string|null $accepted_second_by
  * @property string|null $received_by

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Data\IssueVoucherData;
+use App\Enums\MediumStatus;
+use App\Enums\VoucherKind;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Requests\Vouchers\StoreVoucherRequest;
@@ -13,6 +15,8 @@ use App\Http\Requests\Vouchers\VoucherIndexRequest;
 use App\Http\Resources\PaymentResource;
 use App\Http\Resources\TransactionResource;
 use App\Http\Resources\VoucherResource;
+use App\Models\Card;
+use App\Models\Medium;
 use App\Models\Voucher;
 use App\Services\Exports\CsvExporter;
 use App\Services\Vouchers\QrCodeService;
@@ -65,12 +69,27 @@ final class VoucherController extends Controller
                 ],
             'transaction' => TransactionResource::make($result->transaction)->resolve($request),
             'payment' => PaymentResource::make($result->payment)->resolve($request),
+            'card' => $this->cardOf($voucher),
             'printable' => $result->printable !== null ? [
                 'payload' => $result->printable->payload,
                 'qr_svg' => $qr->svg($result->printable->payload),
             ] : null,
             'replayed' => $result->replayed,
         ], $result->replayed ? 200 : 201)->header('Cache-Control', 'no-store, private');
+    }
+
+    /** @return array{card_number: string, state: string}|null */
+    private function cardOf(Voucher $voucher): ?array
+    {
+        if ($voucher->kind !== VoucherKind::Card) {
+            return null;
+        }
+        /** @var Card|null $card */
+        $card = Card::query()->withoutGlobalScopes()
+            ->whereIn('id', Medium::query()->where('voucher_id', $voucher->getKey())->where('status', MediumStatus::Active->value)->whereNotNull('card_id')->select('card_id'))
+            ->first();
+
+        return $card !== null ? ['card_number' => $card->card_number, 'state' => $card->state->value] : null;
     }
 
     public function show(Voucher $voucher): VoucherResource

@@ -63,6 +63,7 @@ enum RoleSlug: string
                 Permission::CardsView,
                 Permission::CardsReceive,
                 Permission::CardsBind,
+                Permission::CardsManage,
                 Permission::TransactionsView,
                 Permission::TransactionsReverse,
                 Permission::TransactionsExport,

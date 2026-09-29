@@ -8,6 +8,7 @@ use App\Data\IssueVoucherData;
 use App\Data\PaymentData;
 use App\Data\SaleResult;
 use App\Data\TransactionResult;
+use App\Enums\CardState;
 use App\Enums\PaymentMethod;
 use App\Enums\Permission;
 use App\Enums\PresentmentPurpose;
@@ -42,6 +43,8 @@ use App\Models\RestaurantSetting;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
 use App\Services\Audit\AuditLogger;
+use App\Services\Cards\CardLifecycle;
+use App\Services\Media\CardMediumService;
 use App\Services\Media\PrintableQrService;
 use App\Services\Presentments\PresentmentService;
 use App\Services\Security\SecurityEventRecorder;
@@ -76,6 +79,8 @@ final class VoucherService
         private readonly PresentmentService $presentments,
         private readonly PrintableQrService $printables,
         private readonly SecurityEventRecorder $events,
+        private readonly CardLifecycle $cards,
+        private readonly CardMediumService $cardMedia,
     ) {}
 
     // ---------------------------------------------------------------------
@@ -83,7 +88,8 @@ final class VoucherService
     // ---------------------------------------------------------------------
 
     /**
-     * Sells a digital voucher with its printable QR. The QR payload is part of the result only; it is never
+     * Sells a voucher: a digital one with its printable QR, or a card voucher bound to the tapped card (the card
+     * becomes `active` in the same transaction; no QR). The QR payload is part of the result only; it is never
      * stored. A retry of the same sale (same key, same user and device) within the sale window, before the
      * voucher was used, issues a fresh QR and revokes the unseen one: the buyer is still at the counter
      * (invariant 8, "media created within the sale itself").
@@ -94,6 +100,7 @@ final class VoucherService
             $result = $this->performSale($actor, $data);
         } catch (DomainException $e) {
             $this->events->refused(SecurityEventType::VoucherIssue, $actor, $e, amount: $data->value, currency: $this->tenant->require()->currency, data: [
+                'kind' => $data->isCard() ? VoucherKind::Card : VoucherKind::Digital,
                 'payment_method' => $data->payment->method,
             ]);
 
@@ -126,11 +133,23 @@ final class VoucherService
 
         try {
             $result = DB::transaction(function () use ($actor, $data, $restaurant, $settings): SaleResult {
+                // A card sale: lock order presentment → card (architecture §10.6); the card must still be in stock.
+                $card = null;
+                if ($data->isCard()) {
+                    $presentment = $this->presentments->lockForUse($data->cardPresentmentId);
+                    // A retry that waited on the presentment while the first attempt committed replays it.
+                    $replay = $this->findByKey($restaurant->getKey(), $data->idempotencyKey);
+                    if ($replay !== null) {
+                        return $this->replaySale($actor, $replay, $data);
+                    }
+                    $card = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Bind);
+                }
+
                 $voucher = new Voucher;
                 $voucher->forceFill([
                     'restaurant_id' => $restaurant->getKey(),
                     'customer_id' => $data->customerId,
-                    'kind' => VoucherKind::Digital,
+                    'kind' => $card !== null ? VoucherKind::Card : VoucherKind::Digital,
                     'voucher_number' => $this->numbers->generate($restaurant),
                     'status' => VoucherStatus::Active,
                     'currency' => $restaurant->currency,
@@ -174,7 +193,14 @@ final class VoucherService
                     'with_customer' => $voucher->customer_id !== null,
                 ]);
 
-                $printable = $this->printables->issue($actor, $voucher, 'sale');
+                $printable = null;
+                if ($card !== null) {
+                    $this->cards->transition($card, CardState::Bound, 'sold', $actor, $voucher);
+                    $this->cardMedia->attach($actor, $voucher, $card, 'sale');
+                    $this->cards->transition($card, CardState::Active, 'voucher activated', $actor, $voucher);
+                } else {
+                    $printable = $this->printables->issue($actor, $voucher, 'sale');
+                }
 
                 VoucherIssued::dispatch($voucher, $tx);
 

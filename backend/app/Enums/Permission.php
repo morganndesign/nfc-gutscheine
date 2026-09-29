@@ -28,6 +28,8 @@ enum Permission: string
     case CardsReceive = 'cards.receive';
     /** Link an available card to a paid voucher. */
     case CardsBind = 'cards.bind';
+    /** Suspend, resume, replace and take out of stock the restaurant's cards. */
+    case CardsManage = 'cards.manage';
 
     case TransactionsView = 'transactions.view';
     case TransactionsReverse = 'transactions.reverse';
@@ -51,6 +53,8 @@ enum Permission: string
     case PlatformAuditView = 'platform.audit.view';
     /** Personalise blank cards at the station (internal, Android). */
     case PlatformCardsPersonalize = 'platform.cards.personalize';
+    /** Order card batches, move them through production and shipping, approve and resolve them. */
+    case PlatformCardsManage = 'platform.cards.manage';
 
     public function group(): string
     {

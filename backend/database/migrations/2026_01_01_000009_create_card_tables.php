@@ -44,7 +44,6 @@ return new class extends Migration
             $table->string('chip_type', 20);
             $table->string('card_design_ref', 120)->nullable();
             $table->unsignedInteger('quantity_ordered');
-            $table->string('personalization', 20);
             $table->string('status', 20);
             $table->date('production_date')->nullable();
             foreach (['ordered', 'personalized', 'accepted', 'shipped', 'delivered', 'received'] as $moment) {

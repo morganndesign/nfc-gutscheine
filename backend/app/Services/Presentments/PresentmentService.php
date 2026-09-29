@@ -162,6 +162,53 @@ final class PresentmentService
         return $presentment;
     }
 
+    /**
+     * Consumes a card presentment that has no voucher yet (bind, receive) and returns its card, locked. Call
+     * inside the operation's transaction, before anything is written.
+     *
+     * @param  Presentment|null  $presentment  The presentment row, locked FOR UPDATE by the caller
+     */
+    public function consumeCard(?Presentment $presentment, Actor $actor, PresentmentPurpose $purpose): Card
+    {
+        $card = $presentment?->card_id !== null
+            ? Card::query()->withoutGlobalScopes()->whereKey($presentment->card_id)->lockForUpdate()->first()
+            : null;
+        $reason = match (true) {
+            $presentment === null => 'not_found',
+            $presentment->status !== PresentmentStatus::Verified => 'already_used',
+            $presentment->isExpired() => 'expired',
+            $presentment->purpose !== $purpose => 'wrong_purpose',
+            $presentment->restaurant_id !== $this->tenant->id() => 'wrong_restaurant',
+            $presentment->user_id !== $actor->userId() => 'other_user',
+            $presentment->device_id !== $actor->deviceId() => 'other_device',
+            $presentment->method !== PresentmentMethod::LiveAuth || $card === null => 'not_a_card',
+            $card->restaurant_id !== $presentment->restaurant_id => 'wrong_restaurant',
+            // The card may have changed state since it was tapped (sold at another till, taken out of stock).
+            ! in_array($card->state, $purpose->cardStates(), true) => 'card_state',
+            default => null,
+        };
+        if ($reason !== null) {
+            throw new PresentmentInvalidException('', ['reason' => $reason]);
+        }
+
+        /** @var Presentment $presentment */
+        /** @var Card $card */
+        $presentment->forceFill(['status' => PresentmentStatus::Consumed, 'consumed_at' => Carbon::now()])->save();
+
+        return $card;
+    }
+
+    /** Locks a presentment row for {@see consume()} / {@see consumeCard()}. Unknown or malformed ids give null. */
+    public function lockForUse(?string $id): ?Presentment
+    {
+        if ($id === null || preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id) !== 1) {
+            return null;
+        }
+
+        /** @var Presentment|null */
+        return Presentment::query()->whereKey($id)->lockForUpdate()->first();
+    }
+
     /** Security event for a refused presentment; written outside the refused operation's transaction. */
     public function recordRejection(Actor $actor, Voucher $voucher, ?string $presentmentId, PresentmentInvalidException $e): void
     {

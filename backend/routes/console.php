@@ -22,6 +22,9 @@ Schedule::command('giftcard:seal-security-events')->everyMinute()->withoutOverla
 // Tamper evidence: recompute every hash chain, every voucher balance from its ledger and every event seal.
 Schedule::command('giftcard:verify-chains')->dailyAt('02:30')->timezone($tz)->withoutOverlapping()->onOneServer();
 
+// Tamper check of the card root keys against the key check values of their ceremony.
+Schedule::command('cards:key-set:verify')->dailyAt('02:40')->timezone($tz)->withoutOverlapping()->onOneServer();
+
 // Housekeeping.
 Schedule::command('queue:prune-failed --hours=720')->dailyAt('03:30')->timezone($tz)->onOneServer();
 Schedule::command('auth:clear-resets')->everyFifteenMinutes()->onOneServer();

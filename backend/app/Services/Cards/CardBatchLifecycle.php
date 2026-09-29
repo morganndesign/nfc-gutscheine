@@ -29,7 +29,8 @@ final class CardBatchLifecycle
         private readonly SecurityEventRecorder $events,
     ) {}
 
-    public function order(Restaurant $restaurant, KeySet $keySet, string $manufacturer, int $quantity, string $personalization, Actor $actor, ?string $designRef = null): CardBatch
+    /** Every batch is personalised at the in-house station (keys never leave the provider). */
+    public function order(Restaurant $restaurant, KeySet $keySet, string $manufacturer, int $quantity, Actor $actor, ?string $designRef = null): CardBatch
     {
         if ($keySet->status !== KeySetStatus::Active) {
             throw new CardStateException('New batches use an active key set.');
@@ -37,11 +38,8 @@ final class CardBatchLifecycle
         if ($quantity < 1 || $quantity > 100_000) {
             throw new CardStateException('A batch orders between 1 and 100 000 cards.');
         }
-        if (! in_array($personalization, ['in_house_station', 'manufacturer'], true)) {
-            throw new CardStateException('Personalisation is in_house_station or manufacturer.');
-        }
 
-        return DB::transaction(function () use ($restaurant, $keySet, $manufacturer, $quantity, $personalization, $actor, $designRef): CardBatch {
+        return DB::transaction(function () use ($restaurant, $keySet, $manufacturer, $quantity, $actor, $designRef): CardBatch {
             $year = Carbon::now()->format('Y');
             $last = CardBatch::query()->withoutGlobalScopes()->where('batch_code', 'like', "B-{$year}-%")->lockForUpdate()->max('batch_code');
             $sequence = is_string($last) ? ((int) substr($last, -4)) + 1 : 1;
@@ -55,7 +53,6 @@ final class CardBatchLifecycle
                 'chip_type' => 'ntag424_dna',
                 'card_design_ref' => $designRef,
                 'quantity_ordered' => $quantity,
-                'personalization' => $personalization,
                 'status' => CardBatchStatus::Ordered,
                 'ordered_at' => Carbon::now(),
             ])->save();
@@ -87,6 +84,8 @@ final class CardBatchLifecycle
                 throw new CardStateException('The second approval must come from another person.');
             }
             $locked->forceFill(['accepted_second_by' => $approver])->save();
+            // Every card is checked on its own at the station: a chip that never passed QA is not accepted.
+            $this->cards->moveBatch($locked, CardState::QaFailed, [CardState::Manufactured, CardState::Personalized], 'not QA-passed at acceptance', $actor);
 
             return $this->move($locked, CardBatchStatus::Accepted, $actor, 'batch accepted');
         });

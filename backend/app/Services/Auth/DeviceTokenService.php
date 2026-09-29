@@ -46,7 +46,7 @@ final class DeviceTokenService
     public const ISSUING_ABILITIES = [Permission::VouchersSell->value, Permission::VouchersSellComplimentary->value];
 
     /** Physical cards in the app: confirm a delivery, link a card to a voucher (when the role has it). */
-    public const CARD_ABILITIES = [Permission::CardsReceive->value, Permission::CardsBind->value];
+    public const CARD_ABILITIES = [Permission::CardsReceive->value, Permission::CardsBind->value, Permission::CardsView->value, Permission::CardsManage->value];
 
     /** Platform staff sign into the app only as the personalisation station (internal, never vouchers). */
     public const STATION_ABILITIES = [Permission::PlatformCardsPersonalize->value];

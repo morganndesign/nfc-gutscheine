@@ -54,11 +54,11 @@ final class StationPersonalizationTest extends TestCase
         parent::tearDown();
     }
 
-    private function stationBatch(int $quantity = 3, string $personalization = 'in_house_station', bool $inProduction = true): CardBatch
+    private function stationBatch(int $quantity = 3, bool $inProduction = true): CardBatch
     {
         $admin = new Actor(User::factory()->platformAdmin()->create());
         $batches = app(CardBatchLifecycle::class);
-        $batch = $batches->order($this->restaurant, KeySet::query()->where('version', 'ks-2026-01')->firstOrFail(), 'Card Co', $quantity, $personalization, $admin);
+        $batch = $batches->order($this->restaurant, KeySet::query()->where('version', 'ks-2026-01')->firstOrFail(), 'Card Co', $quantity, $admin);
 
         return $inProduction ? $batches->changeStatus($batch, CardBatchStatus::InProduction, 'station run', $admin) : $batch;
     }
@@ -236,28 +236,26 @@ final class StationPersonalizationTest extends TestCase
         $this->assertSame('CARD_PERSONALIZATION_FAILED:expired', SecurityEvent::query()->where('outcome', 'refused')->orderByDesc('seq')->value('reason'));
     }
 
-    public function test_only_station_batches_in_production_take_chips(): void
+    public function test_only_batches_in_production_take_chips(): void
     {
         $this->actingAsStation();
         $chip = Ntag424Chip::factory();
 
-        $this->station($chip, $this->stationBatch(personalization: 'manufacturer'))->assertStatus(422)
+        $this->station($chip, $this->stationBatch(inProduction: false))->assertStatus(422)
             ->assertJsonPath('code', 'CARD_PERSONALIZATION_FAILED');
-        $this->station($chip, $this->stationBatch(inProduction: false))->assertStatus(422);
         $this->assertSame(0, Card::query()->withoutGlobalScopes()->count());
 
         // A card that already passed QA is not personalised again.
         $batch = $this->stationBatch();
         $this->station($chip, $batch)->assertOk();
         $this->station($chip, $batch)->assertStatus(422);
-        $this->assertSame(['CARD_PERSONALIZATION_FAILED:batch_not_station', 'CARD_PERSONALIZATION_FAILED:batch_not_in_production', 'CARD_PERSONALIZATION_FAILED:already_personalized'],
+        $this->assertSame(['CARD_PERSONALIZATION_FAILED:batch_not_in_production', 'CARD_PERSONALIZATION_FAILED:already_personalized'],
             SecurityEvent::query()->where('outcome', 'refused')->orderBy('seq')->pluck('reason')->all());
     }
 
     public function test_the_station_lists_the_batches_it_may_personalise(): void
     {
         $batch = $this->stationBatch(2);
-        $this->stationBatch(personalization: 'manufacturer');
         $this->stationBatch(inProduction: false);
         $this->actingAsStation();
         $this->station(Ntag424Chip::factory(), $batch)->assertOk();

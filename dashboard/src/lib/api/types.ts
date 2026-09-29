@@ -20,6 +20,10 @@ export type Permission =
   | "vouchers.expire"
   | "vouchers.reinstate"
   | "vouchers.export"
+  | "cards.view"
+  | "cards.receive"
+  | "cards.bind"
+  | "cards.manage"
   | "transactions.view"
   | "transactions.reverse"
   | "transactions.export"
@@ -36,6 +40,7 @@ export type Permission =
   | "platform.settings.manage"
   | "platform.audit.view"
   | "platform.cards.personalize"
+  | "platform.cards.manage"
 
 export interface RestaurantSettings {
   /** null: vouchers do not expire (the default). */

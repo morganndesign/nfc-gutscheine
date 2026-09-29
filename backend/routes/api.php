@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Admin\ApiTokenController as AdminApiTokenController;
+use App\Http\Controllers\Api\V1\Admin\CardBatchController as AdminCardBatchController;
 use App\Http\Controllers\Api\V1\Admin\CardStationController;
 use App\Http\Controllers\Api\V1\Admin\PlatformController;
 use App\Http\Controllers\Api\V1\Admin\RestaurantController;
@@ -10,6 +11,7 @@ use App\Http\Controllers\Api\V1\ApiTokenController;
 use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CardController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeviceController;
@@ -93,6 +95,18 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('history', 'history')->middleware('can:vouchers.view');
             });
 
+            // Physical cards (architecture §11), addressed by inventory number.
+            Route::get('cards', [CardController::class, 'index'])->middleware('can:cards.view');
+            Route::get('cards/{card}', [CardController::class, 'show'])->where('card', 'B-[0-9]{4}-[0-9]{4}-[0-9]{4,}')->middleware('can:cards.view');
+            Route::prefix('cards/{card}')->where(['card' => 'B-[0-9]{4}-[0-9]{4}-[0-9]{4,}'])->middleware(['can:cards.manage', 'throttle:voucher-operation'])->group(function (): void {
+                Route::post('suspend', [CardController::class, 'suspend']);
+                Route::post('resume', [CardController::class, 'resume']);
+                Route::post('revoke', [CardController::class, 'revoke']);
+                Route::post('replacement', [CardController::class, 'replace'])->middleware('can:cards.bind');
+            });
+            Route::get('card-batches', [CardController::class, 'batches'])->middleware('can:cards.view');
+            Route::post('card-batches/{batch}/receipt', [CardController::class, 'receive'])->whereUuid('batch')->middleware(['can:cards.receive', 'throttle:voucher-operation']);
+
             Route::get('transactions/export', [TransactionController::class, 'export'])->middleware('can:transactions.export');
             Route::get('transactions', [TransactionController::class, 'index'])->middleware('can:transactions.view');
             Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->middleware('can:transactions.view');
@@ -159,6 +173,16 @@ Route::prefix('v1')->group(function (): void {
             Route::put('system-settings', [PlatformController::class, 'updateSettings'])->middleware('can:platform.settings.manage');
             Route::get('mail', [PlatformController::class, 'mailStatus'])->middleware('can:platform.settings.manage');
             Route::post('mail/test', [PlatformController::class, 'sendTestMail'])->middleware('can:platform.settings.manage');
+        });
+
+        // ------------------------------------------------------ card batches (platform)
+        Route::prefix('admin/card-batches')->middleware('can:platform.cards.manage')->controller(AdminCardBatchController::class)->group(function (): void {
+            Route::get('/', 'index');
+            Route::post('/', 'store');
+            Route::get('{batch}', 'show')->whereUuid('batch');
+            Route::post('{batch}/status', 'status')->whereUuid('batch');
+            Route::post('{batch}/approval', 'approve')->whereUuid('batch');
+            Route::post('{batch}/hold-resolution', 'resolveHold')->whereUuid('batch');
         });
 
         // ------------------------------------------------------ personalisation station (internal)

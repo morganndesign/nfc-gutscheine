@@ -25,7 +25,6 @@ final class CardStationController extends Controller
     {
         $batches = CardBatch::query()->withoutGlobalScopes()
             ->with('restaurant:id,name')
-            ->where('personalization', 'in_house_station')
             ->where('status', CardBatchStatus::InProduction->value)
             ->orderBy('batch_code')
             ->get();

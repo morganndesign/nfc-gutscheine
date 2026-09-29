@@ -35,14 +35,12 @@ final class CardLifecycle
     }
 
     /**
-     * Registers a card for its batch: a blank chip at an in-house station (`manufactured`) or a card from a
-     * manufacturer's manifest (`personalized`). The inventory number is `<batch code>-<sequence>`.
+     * Registers a blank chip tapped at the station for its batch (`manufactured`). The inventory number is
+     * `<batch code>-<sequence>`.
      */
-    public function register(CardBatch $batch, string $uid, CardState $initial, Actor $actor, ?string $originalitySignature = null): Card
+    public function register(CardBatch $batch, string $uid, Actor $actor, ?string $originalitySignature = null): Card
     {
-        if (! in_array($initial, [CardState::Manufactured, CardState::Personalized], true)) {
-            throw new CardStateException('A card is registered as manufactured or personalized.');
-        }
+        $initial = CardState::Manufactured;
         if (strlen($uid) !== 7) {
             throw new CardStateException('An NTAG 424 DNA UID is 7 bytes.');
         }
@@ -82,9 +80,10 @@ final class CardLifecycle
     }
 
     /** One card, one step along the lifecycle. The card row is locked; a concurrent change waits and is re-checked. */
-    public function transition(Card $card, CardState $to, string $reason, Actor $actor, ?Model $ref = null): Card
+    /** @param  Card|null  $successor  the card that takes over (replacement) */
+    public function transition(Card $card, CardState $to, string $reason, Actor $actor, ?Model $ref = null, ?Card $successor = null): Card
     {
-        return DB::transaction(function () use ($card, $to, $reason, $actor, $ref): Card {
+        return DB::transaction(function () use ($card, $to, $reason, $actor, $ref, $successor): Card {
             /** @var Card $locked */
             $locked = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
             $from = $locked->state;
@@ -92,8 +91,12 @@ final class CardLifecycle
                 throw new CardStateException("A card cannot go from {$from->value} to {$to->value}.", ['from' => $from->value, 'to' => $to->value]);
             }
 
-            return $this->writing(function () use ($locked, $from, $to, $reason, $actor, $ref): Card {
-                $locked->forceFill(['state' => $to, 'state_changed_at' => Carbon::now()])->save();
+            if ($successor !== null && $to !== CardState::Replaced) {
+                throw new CardStateException('Only a replaced card has a successor.');
+            }
+
+            return $this->writing(function () use ($locked, $from, $to, $reason, $actor, $ref, $successor): Card {
+                $locked->forceFill(['state' => $to, 'state_changed_at' => Carbon::now()] + ($successor !== null ? ['successor_card_id' => $successor->getKey()] : []))->save();
                 $this->record($locked, $from, $to, $reason, $actor, $ref);
 
                 return $locked;

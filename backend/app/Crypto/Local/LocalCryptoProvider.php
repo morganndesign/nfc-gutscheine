@@ -27,7 +27,7 @@ final class LocalCryptoProvider implements CryptoProvider
 
     public function has(KeyReference $key): bool
     {
-        return isset($this->keys()[$key->name]);
+        return $this->lookup($key) !== null;
     }
 
     public function encryptCbc(KeyReference $key, string $iv, string $data): string
@@ -47,7 +47,22 @@ final class LocalCryptoProvider implements CryptoProvider
 
     private function material(KeyReference $key): string
     {
-        return $this->keys()[$key->name] ?? throw KeyNotFoundException::for($key);
+        return $this->lookup($key) ?? throw KeyNotFoundException::for($key);
+    }
+
+    /**
+     * A key added after this process loaded the keystore (a new key set in a long-running worker) is found by
+     * reading the keystore again once; keys are never changed or removed, so a loaded key is always current.
+     */
+    private function lookup(KeyReference $key): ?string
+    {
+        $found = $this->keys()[$key->name] ?? null;
+        if ($found === null) {
+            $this->keys = null;
+            $found = $this->keys()[$key->name] ?? null;
+        }
+
+        return $found;
     }
 
     /** @return array<string, string> */

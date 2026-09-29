@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Data;
 
 /**
- * A sale. In Phase 0 every voucher is sold as a printable digital voucher; card vouchers are sold by binding
- * a card (Phase 5), e-mail vouchers arrive with Phase 7.
+ * A sale: a printable digital voucher, or a card voucher bound to the card tapped for it (`cardPresentmentId`,
+ * a `bind` presentment of an available card).
  */
 final readonly class IssueVoucherData
 {
@@ -21,7 +21,13 @@ final readonly class IssueVoucherData
         public ?string $recipientName = null,
         public ?string $notes = null,
         public ?array $newCustomer = null,
+        public ?string $cardPresentmentId = null,
     ) {}
+
+    public function isCard(): bool
+    {
+        return $this->cardPresentmentId !== null;
+    }
 
     /** @param array<string, mixed> $input Validated request input */
     public static function fromArray(array $input, string $idempotencyKey): self
@@ -41,6 +47,7 @@ final readonly class IssueVoucherData
             recipientName: $input['recipient_name'] ?? null,
             notes: $input['notes'] ?? null,
             newCustomer: $hasCustomer ? $customer : null,
+            cardPresentmentId: ($input['form'] ?? null) === 'card' ? (string) $input['presentment_id'] : null,
         );
     }
 }
