@@ -5,6 +5,10 @@ declare(strict_types=1);
 return [
     'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
 
+    // Origin written into every card's NDEF URL (https://t.giftcardpro.at/{k}?e=…&m=…). Only URLs of this origin
+    // are accepted from a tapped card.
+    'tap_url' => rtrim((string) env('TAP_URL', 'https://t.giftcardpro.at'), '/'),
+
     'voucher_number' => [
         // Total digits including the Luhn check digit.
         'length' => 16,

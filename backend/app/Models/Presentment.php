@@ -19,8 +19,11 @@ use Illuminate\Support\Carbon;
  *
  * @property string $id
  * @property string $restaurant_id
- * @property string $voucher_id
- * @property string $medium_id
+ * @property string|null $voucher_id
+ * @property string|null $medium_id
+ * @property string|null $card_id
+ * @property string|null $rf_uid 7 raw bytes: the UID the phone saw on the radio layer
+ * @property int|null $sdm_counter
  * @property PresentmentPurpose $purpose
  * @property PresentmentMethod $method
  * @property string $level
@@ -30,8 +33,9 @@ use Illuminate\Support\Carbon;
  * @property Carbon $expires_at
  * @property Carbon|null $consumed_at
  * @property Carbon $created_at
- * @property-read Voucher $voucher
- * @property-read Medium $medium
+ * @property-read Voucher|null $voucher
+ * @property-read Medium|null $medium
+ * @property-read Card|null $card
  */
 class Presentment extends Model
 {
@@ -42,6 +46,8 @@ class Presentment extends Model
 
     protected $guarded = ['id'];
 
+    protected $hidden = ['card_id', 'rf_uid'];
+
     protected function casts(): array
     {
         return [
@@ -51,6 +57,7 @@ class Presentment extends Model
             'expires_at' => 'datetime',
             'consumed_at' => 'datetime',
             'created_at' => 'datetime',
+            'sdm_counter' => 'integer',
         ];
     }
 
@@ -69,5 +76,11 @@ class Presentment extends Model
     public function medium(): BelongsTo
     {
         return $this->belongsTo(Medium::class);
+    }
+
+    /** @return BelongsTo<Card, $this> */
+    public function card(): BelongsTo
+    {
+        return $this->belongsTo(Card::class);
     }
 }

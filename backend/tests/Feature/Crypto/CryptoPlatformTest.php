@@ -133,11 +133,11 @@ final class CryptoPlatformTest extends TestCase
 
         $begun = $authenticator->begin($keys, $uid, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
         $answer = $cardAnswer($begun['response']);
-        $session = $authenticator->finish($keys, $begun['challenge'], $answer);
+        [$session] = $authenticator->finish(static fn (): CardKeys => $keys, $begun['challenge'], $answer);
         $this->assertSame('01020304', bin2hex($session->transactionId));
 
         try {
-            $authenticator->finish($keys, $begun['challenge'], $answer);
+            $authenticator->finish(static fn (): CardKeys => $keys, $begun['challenge'], $answer);
             $this->fail('A challenge was finished twice.');
         } catch (CardAuthenticationFailedException) {
             $this->addToAssertionCount(1);
@@ -146,7 +146,7 @@ final class CryptoPlatformTest extends TestCase
         $late = $authenticator->begin($keys, $uid, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
         Carbon::setTestNow(Carbon::now()->addSeconds(CardAuthenticator::LIFETIME_SECONDS + 1));
         $this->expectException(CardAuthenticationFailedException::class);
-        $authenticator->finish($keys, $late['challenge'], $cardAnswer($late['response']));
+        $authenticator->finish(static fn (): CardKeys => $keys, $late['challenge'], $cardAnswer($late['response']));
     }
 
     public function test_no_key_is_configured_in_the_environment_and_only_the_crypto_module_touches_ciphers(): void

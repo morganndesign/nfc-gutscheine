@@ -22,6 +22,13 @@ enum Permission: string
     case VouchersReinstate = 'vouchers.reinstate';
     case VouchersExport = 'vouchers.export';
 
+    /** Physical cards of the restaurant: stock, lifecycle. */
+    case CardsView = 'cards.view';
+    /** Confirm a card delivery (count + one tapped card). */
+    case CardsReceive = 'cards.receive';
+    /** Link an available card to a paid voucher. */
+    case CardsBind = 'cards.bind';
+
     case TransactionsView = 'transactions.view';
     case TransactionsReverse = 'transactions.reverse';
     case TransactionsExport = 'transactions.export';

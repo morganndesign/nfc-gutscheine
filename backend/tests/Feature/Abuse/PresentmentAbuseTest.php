@@ -198,15 +198,17 @@ final class PresentmentAbuseTest extends TestCase
         $this->assertSame(0, VoucherTransaction::query()->count());
     }
 
-    public function test_live_authentication_is_not_available_before_the_crypto_service(): void
+    /** A card is presented only through its two-step live authentication (POST /presentments/cards). */
+    public function test_a_card_is_never_presented_through_the_scan_endpoint(): void
     {
         $restaurant = $this->restaurant();
         $this->actingAsStaff($restaurant, RoleSlug::Waiter);
 
         $this->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'live_auth', 'credential' => 'anything'])
             ->assertStatus(422)->assertJsonPath('code', 'PRESENTMENT_METHOD_UNAVAILABLE');
+        // A printable QR only ever pays.
         $this->postJson('/api/v1/presentments', ['purpose' => 'bind', 'method' => 'printable_qr', 'credential' => 'x'])
-            ->assertStatus(422)->assertJsonValidationErrors('purpose');
+            ->assertStatus(422)->assertJsonPath('code', 'PRESENTMENT_METHOD_UNAVAILABLE');
     }
 
     /** Audit S7: failed scans lock out this user on this device only, never everyone behind the same IP. */

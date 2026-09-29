@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Presentments;
 
+use App\Enums\CardState;
 use App\Enums\PresentmentMethod;
 use App\Enums\PresentmentPurpose;
 use App\Enums\PresentmentStatus;
@@ -13,6 +14,7 @@ use App\Exceptions\Domain\PresentmentInvalidException;
 use App\Exceptions\Domain\PresentmentMethodNotAllowedException;
 use App\Exceptions\Domain\PresentmentMethodUnavailableException;
 use App\Exceptions\Domain\PresentmentThrottledException;
+use App\Models\Card;
 use App\Models\Presentment;
 use App\Models\Voucher;
 use App\Services\Audit\AuditLogger;
@@ -94,6 +96,7 @@ final class PresentmentService
         // Each purpose has its own state rule (architecture §10.1); for spending, the voucher's kind decides.
         $refused = match ($purpose) {
             PresentmentPurpose::Spend => ! $voucher->kind->allowsSpendingWith($method),
+            PresentmentPurpose::Bind, PresentmentPurpose::Receive => true,
         };
         if ($refused) {
             $this->audit->log('presentment.failed', $actor, $voucher, null, null, [
@@ -142,7 +145,9 @@ final class PresentmentService
             $presentment->user_id !== $actor->userId() => 'other_user',
             $presentment->device_id !== $actor->deviceId() => 'other_device',
             ! $voucher->kind->allowsSpendingWith($presentment->method) => 'method_not_allowed_for_kind',
-            ! $presentment->medium()->firstOrFail()->isActive() => 'medium_revoked',
+            $presentment->medium_id === null || ! $presentment->medium()->firstOrFail()->isActive() => 'medium_revoked',
+            // A card suspended or revoked after it was tapped no longer pays.
+            $presentment->card_id !== null && Card::query()->withoutGlobalScopes()->whereKey($presentment->card_id)->where('state', CardState::Active->value)->doesntExist() => 'card_not_active',
             default => null,
         };
 

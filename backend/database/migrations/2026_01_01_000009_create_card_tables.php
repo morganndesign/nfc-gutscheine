@@ -111,6 +111,14 @@ return new class extends Migration
             $table->foreignUuid('card_id')->nullable()->unique()->after('status')->constrained('cards')->restrictOnDelete();
         });
 
+        // A live-authenticated card presentment records the card, the UID the phone saw on the radio layer and the
+        // SUN counter of the tap.
+        Schema::table('presentments', function (Blueprint $table): void {
+            $table->foreignUuid('card_id')->nullable()->after('medium_id')->constrained('cards')->restrictOnDelete();
+            $table->binary('rf_uid', 7, fixed: true)->nullable()->after('card_id');
+            $table->unsignedInteger('sdm_counter')->nullable()->after('rf_uid');
+        });
+
         $states = "'".implode("','", self::CARD_STATES)."'";
         if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
             DB::statement("ALTER TABLE cards ADD CONSTRAINT cards_state_check CHECK (state IN ({$states}))");
@@ -128,6 +136,10 @@ return new class extends Migration
     public function down(): void
     {
         AppendOnlyTriggers::drop('card_events');
+        Schema::table('presentments', function (Blueprint $table): void {
+            $table->dropConstrainedForeignId('card_id');
+            $table->dropColumn(['rf_uid', 'sdm_counter']);
+        });
         Schema::table('media', function (Blueprint $table): void {
             $table->dropConstrainedForeignId('card_id');
         });

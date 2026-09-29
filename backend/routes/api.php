@@ -64,6 +64,11 @@ Route::prefix('v1')->group(function (): void {
             // Proof that a voucher's medium is here, now: single use, 60 seconds (architecture §10.1).
             Route::post('presentments', [PresentmentController::class, 'store'])
                 ->middleware(['can:vouchers.redeem', 'throttle:presentment']);
+            // A physical card: live authentication relayed by the phone, two steps (architecture §10.2).
+            Route::post('presentments/cards', [PresentmentController::class, 'beginCard'])->middleware('throttle:presentment');
+            Route::post('presentments/cards/{authentication}', [PresentmentController::class, 'completeCard'])
+                ->where('authentication', '[0-9A-HJKMNP-TV-Z]{26}')
+                ->middleware('throttle:presentment');
 
             Route::get('vouchers/export', [VoucherController::class, 'export'])->middleware('can:vouchers.export');
             Route::get('vouchers', [VoucherController::class, 'index'])->middleware('can:vouchers.view');

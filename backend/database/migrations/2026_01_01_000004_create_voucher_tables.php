@@ -66,8 +66,9 @@ return new class extends Migration
         Schema::create('presentments', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignUuid('restaurant_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('voucher_id')->constrained()->restrictOnDelete();
-            $table->foreignUuid('medium_id')->constrained('media')->restrictOnDelete();
+            // Null for a card presented before it belongs to a voucher (receive, bind).
+            $table->foreignUuid('voucher_id')->nullable()->constrained()->restrictOnDelete();
+            $table->foreignUuid('medium_id')->nullable()->constrained('media')->restrictOnDelete();
             $table->string('purpose', 20);
             $table->string('method', 20);
             $table->string('level', 4);

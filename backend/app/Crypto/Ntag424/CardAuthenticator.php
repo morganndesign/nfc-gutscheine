@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 /**
  * Live card authentication over a relay: `begin` answers the card's challenge and keeps RndA on the server,
  * `finish` checks the card's answer. A challenge lives 30 seconds and can be finished once. The card key is
- * derived again at `finish`; neither key nor RndA ever leaves the server.
+ * derived again at `finish`; neither key nor RndA ever leaves the server. The caller's context (who asked, for
+ * what) travels with the challenge, sealed like RndA.
  */
 final class CardAuthenticator
 {
@@ -29,9 +30,10 @@ final class CardAuthenticator
      * Uses the card's K3 (live challenge key; no write rights on the card).
      *
      * @param  string  $uid  7-byte UID (known from the card's verified SUN message)
-     * @return array{challenge: string, response: string} response = bytes to relay to the card
+     * @param  array<string, scalar|null>  $context
+     * @return array{challenge: string, response: string} response = E(K3, RndA ‖ RndB'), for the card
      */
-    public function begin(CardKeys $keys, string $uid, string $encryptedRndB): array
+    public function begin(CardKeys $keys, string $uid, string $encryptedRndB, array $context = []): array
     {
         $step = Ev2FirstAuthentication::respond($keys->challengeKey($uid), $encryptedRndB);
         $challenge = (string) Str::ulid();
@@ -40,28 +42,36 @@ final class CardAuthenticator
             'uid' => bin2hex($uid),
             'a' => base64_encode($step['rndA']),
             'b' => base64_encode($step['rndB']),
+            'context' => $context,
         ], JSON_THROW_ON_ERROR)), self::LIFETIME_SECONDS);
 
         return ['challenge' => $challenge, 'response' => $step['response']];
     }
 
-    /** Single use: a second finish of the same challenge fails, whatever its answer. */
-    public function finish(CardKeys $keys, string $challenge, string $encryptedCardResponse): Ev2Session
+    /**
+     * Single use: a second finish of the same challenge fails, whatever its answer.
+     *
+     * @param  \Closure(array<string, scalar|null>): CardKeys  $keys  The card keys for the challenge's context
+     * @return array{0: Ev2Session, 1: array<string, scalar|null>} the session and the context given at begin
+     */
+    public function finish(\Closure $keys, string $challenge, string $encryptedCardResponse): array
     {
         $sealed = $this->cache->pull(self::PREFIX.$challenge);
         if (! is_string($sealed)) {
             throw new CardAuthenticationFailedException;
         }
 
-        /** @var array{uid: string, a: string, b: string} $state */
+        /** @var array{uid: string, a: string, b: string, context: array<string, scalar|null>} $state */
         $state = json_decode($this->encrypter->decryptString($sealed), true, 4, JSON_THROW_ON_ERROR);
         $uid = (string) hex2bin($state['uid']);
 
-        return Ev2FirstAuthentication::complete(
-            $keys->challengeKey($uid),
+        $session = Ev2FirstAuthentication::complete(
+            $keys($state['context'])->challengeKey($uid),
             (string) base64_decode($state['a'], true),
             (string) base64_decode($state['b'], true),
             $encryptedCardResponse,
         );
+
+        return [$session, $state['context']];
     }
 }

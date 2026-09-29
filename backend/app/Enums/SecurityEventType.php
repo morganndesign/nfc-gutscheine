@@ -70,6 +70,8 @@ enum SecurityEventType: string
     case CardTransition = 'card.transition';
     /** A card was tapped and its SUN message checked (guest balance page). Refused: SUN_VERIFICATION_FAILED, SUN_REPLAYED, … */
     case CardTap = 'card.tap';
+    /** Live authentication of a card (AES challenge answered by the card, relayed by the phone). */
+    case CardAuthenticate = 'card.authenticate';
     /** A card batch changed its status (and moved its cards). */
     case CardBatchStatus = 'card.batch_status';
 
@@ -112,6 +114,7 @@ enum SecurityEventType: string
             self::MediumRevoke => ['medium_type', 'cause'],
             self::CardTransition => ['card_number', 'from_state', 'to_state', 'cause', 'batch_code'],
             self::CardTap => ['key_set', 'card_number', 'counter', 'purpose'],
+            self::CardAuthenticate => ['card_number', 'purpose', 'counter', 'presentment_id', 'stage'],
             self::CardBatchStatus => ['batch_code', 'from_status', 'to_status', 'cards_moved'],
             self::RestaurantSuspend, self::RestaurantReactivate => [],
         };

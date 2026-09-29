@@ -44,15 +44,16 @@ final class DeviceTokenService
      */
     public const ISSUING_ABILITIES = [Permission::VouchersSell->value, Permission::VouchersSellComplimentary->value];
 
+    /** Physical cards in the app: confirm a delivery, link a card to a voucher (when the role has it). */
+    public const CARD_ABILITIES = [Permission::CardsReceive->value, Permission::CardsBind->value];
+
     /** @return list<string> */
     public static function abilitiesFor(User $user): array
     {
         $granted = $user->role->permissionSlugs();
-        if (! in_array(Permission::VouchersSell->value, $granted, true)) {
-            return self::ABILITIES;
-        }
+        $issuing = in_array(Permission::VouchersSell->value, $granted, true) ? array_intersect(self::ISSUING_ABILITIES, $granted) : [];
 
-        return [...self::ABILITIES, ...array_values(array_intersect(self::ISSUING_ABILITIES, $granted))];
+        return [...self::ABILITIES, ...array_values($issuing), ...array_values(array_intersect(self::CARD_ABILITIES, $granted))];
     }
 
     public function __construct(

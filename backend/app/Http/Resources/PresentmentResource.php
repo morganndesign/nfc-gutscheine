@@ -27,7 +27,13 @@ final class PresentmentResource extends JsonResource
             'expires_at' => $presentment->expires_at->toIso8601String(),
             // Seconds left as seen by the server: clients count down from receipt, independent of their clock.
             'expires_in' => max(0, (int) floor(now()->diffInSeconds($presentment->expires_at, false))),
-            'voucher' => PresentedVoucherResource::make($presentment->voucher)->resolve($request),
+            // Null for a card presented before it pays for a voucher (receive, bind).
+            'voucher' => $presentment->voucher !== null ? PresentedVoucherResource::make($presentment->voucher)->resolve($request) : null,
+            // A physical card: its inventory number and state, for staff. Never its id or UID.
+            'card' => $presentment->card !== null ? [
+                'card_number' => $presentment->card->card_number,
+                'state' => $presentment->card->state->value,
+            ] : null,
         ];
     }
 }

@@ -36,6 +36,9 @@ final class EnforceDeviceToken
         ['POST', 'api/v1/auth/logout'],
         ['GET', 'api/v1/devices/current'],
         ['POST', 'api/v1/presentments'],
+        // A physical card: live authentication relayed by the phone.
+        ['POST', 'api/v1/presentments/cards'],
+        ['POST', 'api/v1/presentments/cards/*'],
         ['POST', 'api/v1/vouchers/*/redemptions'],
         // The outcome of one of this user's own attempts (unknown outcome after a lost answer).
         ['GET', 'api/v1/vouchers/*/redemptions/*'],
