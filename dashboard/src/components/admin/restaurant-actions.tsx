@@ -70,7 +70,7 @@ export function EditRestaurantDialog({ restaurant, open, onOpenChange }: { resta
       {errors[k] ? <p className="text-destructive text-xs">{errors[k][0]}</p> : null}
     </div>
   )
-  const lockedCurrency = (restaurant.gift_cards_count ?? 0) > 0
+  const lockedCurrency = (restaurant.vouchers_count ?? 0) > 0
 
   return (
     <Dialog
@@ -160,7 +160,7 @@ export function EditRestaurantDialog({ restaurant, open, onOpenChange }: { resta
                   ))}
                 </SelectContent>
               </Select>
-              {lockedCurrency ? <p className="text-muted-foreground text-xs">Fixed: gift cards were issued in {restaurant.currency}.</p> : null}
+              {lockedCurrency ? <p className="text-muted-foreground text-xs">Fixed: vouchers were issued in {restaurant.currency}.</p> : null}
               {errors.currency ? <p className="text-destructive text-xs">{errors.currency[0]}</p> : null}
             </div>
             {field("plan", "Plan", { required: true })}
@@ -295,7 +295,7 @@ export function DeleteRestaurantDialog({
           <DialogTitle>Delete {restaurant.name} permanently?</DialogTitle>
           <DialogDescription>
             This removes the restaurant with all its user accounts, devices and settings and cannot be undone. It is only possible when the restaurant has no
-            gift cards, transactions or customers; otherwise archive it.
+            vouchers, transactions or customers; otherwise archive it.
           </DialogDescription>
         </DialogHeader>
         <form

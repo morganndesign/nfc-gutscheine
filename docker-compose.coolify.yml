@@ -285,9 +285,6 @@ services:
         max-file: "5"
     environment:
       NODE_ENV: production
-      WAITER_IOS_APP_IDS: ${WAITER_IOS_APP_IDS:-}
-      WAITER_ANDROID_PACKAGE: ${WAITER_ANDROID_PACKAGE:-}
-      WAITER_ANDROID_CERT_SHA256: ${WAITER_ANDROID_CERT_SHA256:-}
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/login >/dev/null || exit 1"]
       interval: 15s

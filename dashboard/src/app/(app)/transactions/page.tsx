@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { EmptyState } from "@/components/common/empty-state"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { ReasonDialog } from "@/components/common/reason-dialog"
-import { TRANSACTION_TYPES, TransactionTypeIcon, transactionLabel } from "@/components/cards/transaction-type"
+import { TRANSACTION_TYPES, TransactionTypeIcon, transactionLabel } from "@/components/vouchers/transaction-type"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
 import {
@@ -83,7 +83,7 @@ function TransactionsContent() {
                 setSearch(e.target.value)
                 setPage(1)
               }}
-              placeholder="Card number or reference…"
+              placeholder="Voucher number or reference…"
               className="h-9 pl-9"
               aria-label="Search transactions"
             />
@@ -107,7 +107,7 @@ function TransactionsContent() {
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuLabel>Transaction type</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {TRANSACTION_TYPES.filter((t) => t !== "adjustment").map((t) => (
+                {TRANSACTION_TYPES.map((t) => (
                   <DropdownMenuCheckboxItem
                     key={t}
                     checked={types.includes(t)}
@@ -137,7 +137,7 @@ function TransactionsContent() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-4">Type</TableHead>
-                  <TableHead className="hidden sm:table-cell">Card</TableHead>
+                  <TableHead className="hidden sm:table-cell">Voucher</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead className="hidden text-right md:table-cell">Balance after</TableHead>
                   <TableHead className="hidden lg:table-cell">Reference</TableHead>
@@ -156,16 +156,16 @@ function TransactionsContent() {
                           <span className="text-sm">{tx.type_label}</span>
                           {tx.reversed ? <span className="bg-muted text-muted-foreground ml-1.5 rounded px-1.5 text-[10px] uppercase">reversed</span> : null}
                           <span className="text-muted-foreground block text-xs sm:hidden">
-                            {tx.gift_card ? `•••• ${tx.gift_card.card_number.slice(-4)} · ` : ""}
+                            {tx.voucher ? `•••• ${tx.voucher.voucher_number.slice(-4)} · ` : ""}
                             {formatDateTime(tx.created_at)}
                           </span>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      {tx.gift_card ? (
-                        <Link href={`/cards/${tx.gift_card.id}`} className="card-number text-sm hover:underline">
-                          •••• {tx.gift_card.card_number.slice(-4)}
+                      {tx.voucher ? (
+                        <Link href={`/vouchers/${tx.voucher.id}`} className="card-number text-sm hover:underline">
+                          •••• {tx.voucher.voucher_number.slice(-4)}
                         </Link>
                       ) : (
                         "—"
@@ -207,7 +207,7 @@ function TransactionsContent() {
         open={reversing !== null}
         onOpenChange={(o) => !o && setReversing(null)}
         title="Reverse transaction"
-        suggestions={["Wrong amount", "Wrong card", "Guest cancelled"]}
+        suggestions={["Wrong amount", "Wrong voucher", "Guest cancelled"]}
         description="A counter-entry restores the previous balance. The original transaction stays in the ledger."
         confirmLabel="Reverse"
         destructive

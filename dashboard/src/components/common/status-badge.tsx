@@ -1,19 +1,23 @@
-import { Ban, CheckCircle2, Circle, CircleDashed, Clock, Replace } from "lucide-react"
+import { Ban, CheckCircle2, Circle, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { CardStatus } from "@/lib/api/types"
+import type { VoucherStatus } from "@/lib/api/types"
 
-const STATUS: Record<CardStatus, { label: string; className: string; icon: typeof Circle }> = {
+/** Expired and blocked vouchers keep their balance; an empty active voucher is shown as "Empty". */
+const STATUS: Record<VoucherStatus | "empty", { label: string; className: string; icon: typeof Circle }> = {
   active: { label: "Active", className: "bg-emerald-50 text-emerald-700 ring-emerald-600/15 dark:bg-emerald-500/10 dark:text-emerald-400", icon: CheckCircle2 },
-  inactive: { label: "Inactive", className: "bg-zinc-100 text-zinc-600 ring-zinc-500/15 dark:bg-zinc-500/10 dark:text-zinc-400", icon: CircleDashed },
-  redeemed: { label: "Redeemed", className: "bg-sky-50 text-sky-700 ring-sky-600/15 dark:bg-sky-500/10 dark:text-sky-400", icon: Circle },
+  empty: { label: "Empty", className: "bg-sky-50 text-sky-700 ring-sky-600/15 dark:bg-sky-500/10 dark:text-sky-400", icon: Circle },
   blocked: { label: "Blocked", className: "bg-red-50 text-red-700 ring-red-600/15 dark:bg-red-500/10 dark:text-red-400", icon: Ban },
   expired: { label: "Expired", className: "bg-amber-50 text-amber-800 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400", icon: Clock },
-  replaced: { label: "Replaced", className: "bg-violet-50 text-violet-700 ring-violet-600/15 dark:bg-violet-500/10 dark:text-violet-400", icon: Replace },
 }
 
-export const CARD_STATUSES = Object.keys(STATUS) as CardStatus[]
+export const VOUCHER_STATUSES: VoucherStatus[] = ["active", "blocked", "expired"]
 
-export function statusLabel(status: CardStatus): string {
+/** The badge status of a voucher: "empty" for an active voucher without balance. */
+export function displayStatus(voucher: { status: VoucherStatus; balance: number }): VoucherStatus | "empty" {
+  return voucher.status === "active" && voucher.balance === 0 ? "empty" : voucher.status
+}
+
+export function statusLabel(status: VoucherStatus | "empty"): string {
   return STATUS[status].label
 }
 
@@ -23,7 +27,7 @@ export function StatusBadge({
   size = "sm",
   label,
 }: {
-  status: CardStatus
+  status: VoucherStatus | "empty"
   className?: string
   size?: "sm" | "lg"
   /** Override the text, e.g. for guest-facing pages in the restaurant's language. */

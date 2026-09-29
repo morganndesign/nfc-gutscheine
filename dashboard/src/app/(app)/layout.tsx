@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react"
 import { AppSidebar } from "@/components/layout/app-sidebar"
-import { ActingBanner } from "@/components/layout/acting-banner"
 import { AuthGuard } from "@/components/layout/auth-guard"
 import { PlatformNotice } from "@/components/layout/platform-notice"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
@@ -27,7 +26,6 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <AppSidebar />
         <SidebarInset className="min-w-0">
           <PlatformNotice />
-          <ActingBanner />
           <TopBar />
           <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
         </SidebarInset>

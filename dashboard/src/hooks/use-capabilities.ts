@@ -1,7 +1,6 @@
 "use client"
 
 import { useSyncExternalStore } from "react"
-import { isWebNfcSupported } from "@/lib/nfc"
 import { isQrScanSupported } from "@/components/waiter/qr-scanner"
 
 const subscribe = () => () => undefined
@@ -9,9 +8,9 @@ const subscribe = () => () => undefined
 /**
  * Browser capabilities, hydration-safe: the server render (and the first client render) report
  * "unsupported", the real values apply right after hydration — no mismatch warnings, no flicker bugs.
+ * The web app never reads cards: card vouchers are redeemed in the Android and iPhone app (architecture §10.3).
  */
-export function useCapabilities(): { nfc: boolean; qr: boolean } {
-  const nfc = useSyncExternalStore(subscribe, isWebNfcSupported, () => false)
+export function useCapabilities(): { qr: boolean } {
   const qr = useSyncExternalStore(subscribe, isQrScanSupported, () => false)
-  return { nfc, qr }
+  return { qr }
 }

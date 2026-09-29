@@ -1,8 +1,8 @@
 "use client"
 
-import { Suspense, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -10,8 +10,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { api, errorMessage } from "@/lib/api/client"
 
+/**
+ * Invitation and reset links carry their token in the URL fragment (#token=…&email=…), which browsers never send
+ * to a server, so it cannot end up in access logs or Referer headers. It is read once and removed from the address
+ * bar and history right away.
+ */
+function useLinkParams(): URLSearchParams | null {
+  const [params, setParams] = useState<URLSearchParams | null>(null)
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, "")
+    setParams(new URLSearchParams(hash))
+    if (hash) window.history.replaceState(null, "", window.location.pathname)
+  }, [])
+  return params
+}
+
 function ResetForm() {
-  const params = useSearchParams()
+  const linkParams = useLinkParams()
+  const params = linkParams ?? new URLSearchParams()
   const router = useRouter()
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
@@ -20,6 +36,8 @@ function ResetForm() {
   const token = params.get("token") ?? ""
   const email = params.get("email") ?? ""
   const invite = params.get("invite") === "1"
+
+  if (linkParams === null) return null
 
   if (!token || !email) {
     return (

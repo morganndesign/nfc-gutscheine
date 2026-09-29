@@ -6,7 +6,7 @@ import { useMailStatus } from "@/lib/api/hooks"
 
 /**
  * Shown on the platform pages while e-mails are not delivered (MAIL_MAILER=log): invitations, password
- * links and card e-mails would silently go to the log only.
+ * links and voucher e-mails would silently go to the log only.
  */
 export function MailWarning({ showLink = true }: { showLink?: boolean }) {
   const { data } = useMailStatus()

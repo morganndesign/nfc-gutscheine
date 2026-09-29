@@ -1,8 +1,11 @@
 // End-to-end acceptance test: the complete first day of a pilot restaurant, in real browsers.
 //
 //   platform admin onboards a restaurant → owner accepts the invitation → owner invites a waiter →
-//   owner sells a card → waiter redeems on a phone → owner reloads, replaces the "lost" card and
-//   exports the ledger → the old card is rejected → accessibility scan of the main screens.
+//   owner sells a printable voucher (cash) → waiter scans its QR on a phone and redeems → owner reloads and
+//   blocks the voucher → the waiter's next scan shows it blocked → ledger export → accessibility scan.
+//
+// The phone camera is simulated: Chromium's fake camera feeds the video, and BarcodeDetector is replaced by one
+// that "sees" the printed voucher's QR payload (taken from the sale response, exactly what is printed).
 //
 // Requirements: API + web app running locally with MAIL_MAILER=log and LOG_LEVEL=debug (invitation links
 // are read from the Laravel log), and a platform admin (php artisan platform:create-admin).
@@ -20,7 +23,11 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@giftcardpro.test'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? 'Password123!'
 const run = Date.now().toString(36)
 
-const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {})
+const browser = await chromium.launch({
+  ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+  // A fake camera for the waiter's QR scan (see the header).
+  args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+})
 const errors = []
 const step = (n, text) => console.log(`${String(n).padStart(2)}. ${text}`)
 
@@ -81,58 +88,66 @@ await o.getByRole('button', { name: 'Send invitation' }).click()
 await o.getByText('Invited', { exact: true }).first().waitFor()
 step(3, 'waiter invited')
 
-// 4. Owner sells a €100 card to a customer and marks the tag as written
-await o.goto(`${BASE}/cards/new`)
+// 4. Owner sells a €100 printable voucher to a new customer, paid in cash
+await o.goto(`${BASE}/vouchers/new`)
 await o.getByRole('button', { name: /^€\s?100$/ }).click()
-await o.getByRole('radio', { name: 'New customer' }).click()
+await o.getByRole('radio', { name: 'New', exact: true }).click()
 await o.fill('#first_name', 'Klara')
 await o.fill('#email', `klara-${run}@example.com`)
-await o.getByRole('button', { name: 'Create card' }).click()
-await o.getByText('Program the card').waitFor()
-await o.getByRole('button', { name: 'Mark as written' }).click()
-await o.getByText('Card recorded', { exact: true }).waitFor()
-await o.getByRole('link', { name: 'Open card' }).click()
-await o.waitForURL(/\/cards\/[0-9a-f-]{36}$/)
+const [saleResponse] = await Promise.all([
+  o.waitForResponse((r) => r.url().endsWith('/api/v1/vouchers') && r.request().method() === 'POST'),
+  o.getByRole('button', { name: 'Sell voucher' }).click(),
+])
+const sale = await saleResponse.json()
+const qr = sale.printable.payload
+assert.match(qr, /^GCPV1\.[A-Za-z0-9_-]{43}$/)
+await o.getByRole('heading', { name: 'Voucher sold' }).waitFor()
+await o.getByRole('img', { name: 'QR code' }).waitFor()
+assert.equal(await o.getByText(sale.data.voucher_number_formatted).count(), 0, 'the voucher number is never on the printable sheet')
+await o.getByRole('link', { name: 'Open voucher' }).click()
+await o.waitForURL(/\/vouchers\/[0-9a-f-]{36}$/)
 await o.getByRole('button', { name: 'More actions' }).waitFor()
-const cardNumber = (await o.locator('h1').first().textContent()).trim()
-step(4, `card sold: ${cardNumber}`)
+step(4, `voucher sold: ${sale.data.voucher_number_formatted}`)
 
-// 5. Waiter redeems €24,90 on a phone — timed
-const w = await newPage({ ...devices['Pixel 7'] }, 'waiter')
+// 5. Waiter scans the printed QR on a phone and redeems €24,90 — timed
+const w = await newPage({ ...devices['Pixel 7'], permissions: ['camera'] }, 'waiter')
+await w.addInitScript((payload) => {
+  window.BarcodeDetector = class {
+    async detect() {
+      return [{ rawValue: payload }]
+    }
+  }
+}, qr)
 await acceptInvitation(w, waiter.email, waiter.password)
 await w.waitForURL('**/waiter')
 const t0 = Date.now()
-await w.getByRole('button', { name: 'Card number' }).click()
-await w.getByPlaceholder('1234 5678 9012 3456').fill(cardNumber)
-await w.getByRole('button', { name: 'Find card' }).click()
+await w.getByRole('button', { name: 'Scan voucher QR code' }).click()
 await w.getByRole('button', { name: /Full balance/ }).waitFor()
 for (const k of ['2', '4', '9', '0']) await w.getByRole('button', { name: k, exact: true }).click()
 await w.getByRole('button', { name: /^Redeem/ }).click()
 await w.getByText('Remaining balance').waitFor()
 const seconds = (Date.now() - t0) / 1000
 assert.ok(seconds < 5, `waiter flow took ${seconds}s`)
-step(5, `waiter redeemed € 24,90 in ${seconds.toFixed(2)} s (incl. typing the card number)`)
+step(5, `waiter scanned and redeemed € 24,90 in ${seconds.toFixed(2)} s`)
 
-// 6. Owner reloads, then replaces the lost card
+// 6. Owner reloads €20 (cash), then blocks the voucher
 await o.reload()
 await o.getByRole('button', { name: /Reload/ }).click()
 await o.fill('#amount', '20')
-await o.getByRole('dialog').getByRole('button', { name: /Reload/ }).click()
+await o.getByRole('dialog').getByRole('button', { name: /^Reload/ }).click()
 await o.getByText(/loaded/).first().waitFor()
 await o.getByRole('button', { name: 'More actions' }).click()
-await o.getByRole('menuitem', { name: 'Replace lost card' }).click()
-await o.getByRole('button', { name: 'Lost', exact: true }).click()
-await o.getByRole('button', { name: 'Issue replacement' }).click()
-await o.waitForURL('**write=1')
-step(6, 'reloaded € 20 and issued a replacement card')
+await o.getByRole('menuitem', { name: 'Block voucher' }).click()
+await o.getByRole('button', { name: 'Reported lost', exact: true }).click()
+await o.getByRole('dialog').getByRole('button', { name: 'Block voucher' }).click()
+await o.getByText(/Blocked .*Reported lost/).waitFor()
+step(6, 'reloaded € 20 and blocked the voucher')
 
-// 7. The old card is rejected at the table
-await w.getByRole('button', { name: 'Next card' }).click()
-await w.getByRole('button', { name: 'Card number' }).click()
-await w.getByPlaceholder('1234 5678 9012 3456').fill(cardNumber)
-await w.getByRole('button', { name: 'Find card' }).click()
-await w.getByText('This card was replaced').waitFor()
-step(7, 'old card shows "replaced" to the waiter')
+// 7. The blocked voucher is refused at the table
+await w.getByRole('button', { name: 'Next voucher' }).click()
+await w.getByRole('button', { name: 'Scan voucher QR code' }).click()
+await w.getByText('This voucher is blocked').waitFor()
+step(7, 'blocked voucher shown as blocked to the waiter')
 
 // 8. Ledger export opens in Austrian Excel (decimal comma, readable types)
 await o.goto(`${BASE}/transactions`)
@@ -143,7 +158,7 @@ assert.match(csv, /;-24,90;/)
 step(8, `export ok (${csv.trim().split('\n').length - 1} rows)`)
 
 // 9. No accessibility violations on the owner's main screens
-for (const url of ['/dashboard', '/cards', '/transactions']) {
+for (const url of ['/dashboard', '/vouchers', '/vouchers/new', '/transactions']) {
   await o.goto(BASE + url)
   await o.waitForLoadState('networkidle')
   const { violations } = await new AxeBuilder({ page: o }).withTags(['wcag2a', 'wcag2aa']).analyze()

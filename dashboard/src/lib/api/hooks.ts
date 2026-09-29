@@ -5,38 +5,36 @@ import { api } from "@/lib/api/client"
 import type {
   ApiToken,
   AuditLog,
-  CardStatus,
   Customer,
   DashboardCharts,
   DashboardStats,
   Device,
-  GiftCard,
   HistoryEntry,
   MailStatus,
-  NfcPayload,
-  NfcTagType,
-  NfcWriteAttempt,
-  NfcWriteMethod,
   NotificationTemplate,
   Paginated,
+  Payment,
+  PaymentMethod,
   PlatformStats,
-  PublicCard,
+  PresentedVoucher,
+  Presentment,
   Restaurant,
   RestaurantSettings,
   Role,
-  ScanMethod,
-  ScannedCard,
   StaffUser,
   SystemSetting,
   Transaction,
   TransactionType,
+  Voucher,
+  VoucherKind,
+  VoucherStatus,
 } from "@/lib/api/types"
 
 export const keys = {
   dashboard: ["dashboard"] as const,
-  cards: ["cards"] as const,
-  card: (id: string) => ["cards", id] as const,
-  cardHistory: (id: string) => ["cards", id, "history"] as const,
+  vouchers: ["vouchers"] as const,
+  voucher: (id: string) => ["vouchers", id] as const,
+  voucherHistory: (id: string) => ["vouchers", id, "history"] as const,
   transactions: ["transactions"] as const,
   customers: ["customers"] as const,
   customer: (id: string) => ["customers", id] as const,
@@ -76,173 +74,159 @@ export function useRecentActivity(limit = 8) {
   })
 }
 
-// ---------------------------------------------------------------- cards
+// ---------------------------------------------------------------- vouchers
 
-export interface CardFilters {
+export interface VoucherFilters {
   search?: string
-  status?: CardStatus[]
+  status?: VoucherStatus[]
+  kind?: VoucherKind
   sort?: string
   page?: number
   per_page?: number
   customer_id?: string
   expires_to?: string
   min_balance?: number
-  nfc_status?: "unprogrammed" | "unverified" | "verified"
-  card_number_after?: string
 }
 
-export function useCards(filters: CardFilters) {
+export function useVouchers(filters: VoucherFilters) {
   return useQuery({
-    queryKey: [...keys.cards, "list", filters],
-    queryFn: () => api<Paginated<GiftCard>>("/cards", { query: { ...filters } }),
+    queryKey: [...keys.vouchers, "list", filters],
+    queryFn: () => api<Paginated<Voucher>>("/vouchers", { query: { ...filters } }),
     placeholderData: keepPreviousData,
   })
 }
 
-export function useCard(id: string) {
+export function useVoucher(id: string) {
   return useQuery({
-    queryKey: keys.card(id),
-    queryFn: async () => (await api<{ data: GiftCard }>(`/cards/${id}`)).data,
+    queryKey: keys.voucher(id),
+    queryFn: async () => (await api<{ data: Voucher }>(`/vouchers/${id}`)).data,
   })
 }
 
-export function useCardHistory(id: string, enabled = true) {
+export function useVoucherHistory(id: string, enabled = true) {
   return useQuery({
-    queryKey: keys.cardHistory(id),
-    queryFn: async () => (await api<{ data: HistoryEntry[] }>(`/cards/${id}/history`)).data,
+    queryKey: keys.voucherHistory(id),
+    queryFn: async () => (await api<{ data: HistoryEntry[] }>(`/vouchers/${id}/history`)).data,
     enabled,
   })
 }
 
-export interface CreateCardInput {
+/** How the money was received (decision 25). The amount is always the amount sold or reloaded. */
+export interface PaymentInput {
+  method: PaymentMethod
+  /** Terminal receipt number or bank reference: required for card_terminal and bank_transfer. */
+  reference?: string | null
+  /** Required for complimentary vouchers (owner only). */
+  reason?: string | null
+}
+
+export interface SellVoucherInput {
   value: number
-  expires_at?: string | null
+  form: "printable"
+  payment: PaymentInput
   customer_id?: string | null
   customer?: { first_name?: string; last_name?: string; email?: string; phone?: string; marketing_consent?: boolean } | null
   recipient_name?: string | null
   notes?: string | null
-  activate?: boolean
-  nfc_tag_type?: NfcTagType | null
 }
 
-export function useCreateCard() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ input, idempotencyKey }: { input: CreateCardInput; idempotencyKey: string }) =>
-      api<{ data: GiftCard; transaction: Transaction; nfc: NfcPayload; replayed: boolean }>("/cards", {
-        method: "POST",
-        body: input,
-        idempotencyKey,
-      }),
-    onSuccess: () => invalidateCardData(qc),
-  })
-}
-
-export function useUpdateCard(id: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: (input: { customer_id?: string | null; recipient_name?: string | null; notes?: string | null; expires_at?: string | null }) =>
-      api<{ data: GiftCard }>(`/cards/${id}`, { method: "PATCH", body: input }),
-    onSuccess: () => invalidateCardData(qc, id),
-  })
-}
-
-export type CardAction = "activate" | "block" | "unblock" | "expire"
-
-export function useCardAction(id: string) {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: ({ action, reason }: { action: CardAction; reason?: string }) =>
-      api<{ data: GiftCard }>(`/cards/${id}/${action}`, { method: "POST", body: reason !== undefined ? { reason } : {} }),
-    onSuccess: () => invalidateCardData(qc, id),
-  })
-}
-
-export interface MoneyInput {
-  amount: number
-  reference?: string | null
-  note?: string | null
-}
-
-export interface MoneyResult {
-  data: { card: GiftCard | ScannedCard; transaction: Transaction }
+export interface SaleResult {
+  data: Voucher
+  transaction: Transaction
+  payment: Payment
+  /** The printable QR, shown exactly once. Null on a retried sale that may no longer show it. */
+  printable: { payload: string; qr_svg: string } | null
   replayed: boolean
 }
 
-export function useMoneyOperation(kind: "redeem" | "reload") {
+export function useSellVoucher() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ cardId, input, idempotencyKey }: { cardId: string; input: MoneyInput; idempotencyKey: string }) =>
-      api<MoneyResult>(`/cards/${cardId}/${kind}`, { method: "POST", body: input, idempotencyKey }),
-    onSuccess: (_data, vars) => invalidateCardData(qc, vars.cardId),
+    mutationFn: ({ input, idempotencyKey }: { input: SellVoucherInput; idempotencyKey: string }) =>
+      api<SaleResult>("/vouchers", { method: "POST", body: input, idempotencyKey }),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
-export function useTransferBalance(id: string) {
+export function useUpdateVoucher(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ input, idempotencyKey }: { input: { target_card_number: string; amount?: number | null; note?: string | null }; idempotencyKey: string }) =>
-      api<{ data: { source: GiftCard; target: GiftCard } }>(`/cards/${id}/transfer`, { method: "POST", body: input, idempotencyKey }),
-    onSuccess: () => invalidateCardData(qc),
+    mutationFn: (input: { customer_id?: string | null; recipient_name?: string | null; notes?: string | null }) =>
+      api<{ data: Voucher }>(`/vouchers/${id}`, { method: "PATCH", body: input }),
+    onSuccess: () => invalidateVoucherData(qc, id),
   })
 }
 
-export function useReplaceCard(id: string) {
+export type VoucherAction = "block" | "unblock" | "expire"
+
+export function useVoucherAction(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { reason: string; nfc_tag_type?: NfcTagType | null }) =>
-      api<{ data: GiftCard; nfc: NfcPayload }>(`/cards/${id}/replace`, { method: "POST", body: input }),
-    onSuccess: () => invalidateCardData(qc),
+    mutationFn: ({ action, reason }: { action: VoucherAction; reason?: string }) =>
+      api<{ data: Voucher }>(`/vouchers/${id}/${action}`, { method: "POST", body: reason !== undefined ? { reason } : {} }),
+    onSuccess: () => invalidateVoucherData(qc, id),
   })
 }
 
-export function useNfcPayload(id: string, enabled: boolean) {
-  return useQuery({
-    queryKey: [...keys.card(id), "nfc"],
-    queryFn: async () => (await api<{ data: NfcPayload }>(`/cards/${id}/nfc`)).data,
-    enabled,
-  })
-}
-
-export function useBindNfc(id: string) {
+export function useReinstateVoucher(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { method: Exclude<NfcWriteMethod, "web_nfc">; tag_type: NfcTagType; locked?: boolean }) =>
-      api<{ data: GiftCard }>(`/cards/${id}/nfc`, { method: "POST", body: input }),
-    onSuccess: () => invalidateCardData(qc, id),
+    mutationFn: (input: { reason: string; expires_on?: string | null }) => api<{ data: Voucher }>(`/vouchers/${id}/reinstate`, { method: "POST", body: input }),
+    onSuccess: () => invalidateVoucherData(qc, id),
   })
 }
 
-export function useNfcAttempts(id: string, enabled = true) {
-  return useQuery({
-    queryKey: [...keys.card(id), "nfc-attempts"],
-    queryFn: async () => (await api<{ data: NfcWriteAttempt[] }>(`/cards/${id}/nfc/attempts`)).data,
-    enabled,
-  })
+export interface MoneyResult {
+  data: { voucher: Voucher | PresentedVoucher; transaction: Transaction }
+  replayed: boolean
 }
 
-export function useScanCard() {
+export function useReloadVoucher() {
+  const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { method: ScanMethod; token?: string; card_number?: string; nfc_uid?: string | null }) =>
-      api<{ data: ScannedCard }>("/scan", { method: "POST", body: input }),
+    mutationFn: ({
+      voucherId,
+      input,
+      idempotencyKey,
+    }: {
+      voucherId: string
+      input: { amount: number; payment: PaymentInput; note?: string | null }
+      idempotencyKey: string
+    }) => api<MoneyResult>(`/vouchers/${voucherId}/reloads`, { method: "POST", body: input, idempotencyKey }),
+    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
   })
 }
 
-export function usePublicCard(token: string, enabled: boolean) {
-  return useQuery({
-    queryKey: ["public-card", token],
-    queryFn: async () => (await api<{ data: PublicCard }>(`/public/cards/${token}`)).data,
-    enabled,
-    retry: false,
+/** The till: scanning a voucher's QR creates a single-use presentment for the redemption that follows. */
+export function usePresent() {
+  return useMutation({
+    mutationFn: (credential: string) =>
+      api<{ data: Presentment }>("/presentments", { method: "POST", body: { purpose: "spend", method: "printable_qr", credential } }),
   })
 }
 
-function invalidateCardData(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  void qc.invalidateQueries({ queryKey: keys.cards })
+export function useRedeemVoucher() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      voucherId,
+      input,
+      idempotencyKey,
+    }: {
+      voucherId: string
+      input: { amount: number; presentment_id: string; reference?: string | null }
+      idempotencyKey: string
+    }) => api<MoneyResult>(`/vouchers/${voucherId}/redemptions`, { method: "POST", body: input, idempotencyKey }),
+    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+  })
+}
+
+function invalidateVoucherData(qc: ReturnType<typeof useQueryClient>, id?: string) {
+  void qc.invalidateQueries({ queryKey: keys.vouchers })
   void qc.invalidateQueries({ queryKey: keys.dashboard })
   void qc.invalidateQueries({ queryKey: keys.transactions })
   void qc.invalidateQueries({ queryKey: keys.customers })
-  if (id) void qc.invalidateQueries({ queryKey: keys.card(id) })
+  if (id) void qc.invalidateQueries({ queryKey: keys.voucher(id) })
 }
 
 // ---------------------------------------------------------------- transactions
@@ -252,7 +236,7 @@ export interface TransactionFilters {
   search?: string
   from?: string
   to?: string
-  gift_card_id?: string
+  voucher_id?: string
   page?: number
   per_page?: number
 }
@@ -270,7 +254,7 @@ export function useReverseTransaction() {
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason: string }) =>
       api<{ data: Transaction }>(`/transactions/${id}/reverse`, { method: "POST", body: { reason } }),
-    onSuccess: () => invalidateCardData(qc),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -287,7 +271,7 @@ export function useCustomers(search: string, page = 1) {
 export function useCustomer(id: string) {
   return useQuery({
     queryKey: keys.customer(id),
-    queryFn: () => api<{ data: Customer; gift_cards: GiftCard[] }>(`/customers/${id}`),
+    queryFn: () => api<{ data: Customer; vouchers: Voucher[] }>(`/customers/${id}`),
   })
 }
 
@@ -381,10 +365,11 @@ export function useUpdateRestaurantProfile() {
   })
 }
 
-export function useUpdateCardSettings() {
+export function useUpdateVoucherSettings() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: Partial<RestaurantSettings>) => api<{ data: RestaurantSettings }>("/settings/cards", { method: "PUT", body: input }),
+    mutationFn: (input: Partial<Omit<RestaurantSettings, "platform_limits">>) =>
+      api<{ data: RestaurantSettings }>("/settings/vouchers", { method: "PUT", body: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.settings })
       void qc.invalidateQueries({ queryKey: ["session"] })
@@ -461,7 +446,7 @@ export function useAdminRestaurants(search: string, page = 1, status: AdminResta
 
 /** Records that make a restaurant non-deletable (they must be kept; archive instead). */
 export interface RestaurantBusinessData {
-  gift_cards: number
+  vouchers: number
   transactions: number
   customers: number
 }
@@ -577,6 +562,23 @@ export function useRestaurantStatus() {
     mutationFn: ({ id, action, reason }: { id: string; action: "suspend" | "reactivate" | "archive" | "restore"; reason?: string }) =>
       api(`/admin/restaurants/${id}/${action}`, { method: "POST", body: reason ? { reason } : {} }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.admin }),
+  })
+}
+
+/** Incident response (audit S2): every restaurant's access tokens, revocable by the platform. */
+export function useAdminApiTokens(restaurantId: string, activeOnly = true) {
+  return useQuery({
+    queryKey: [...keys.admin, "api-tokens", restaurantId, activeOnly],
+    queryFn: () => api<Paginated<ApiToken>>("/admin/api-tokens", { query: { restaurant_id: restaurantId, active: activeOnly ? 1 : undefined, per_page: 100 } }),
+    enabled: restaurantId !== "",
+  })
+}
+
+export function useAdminRevokeApiToken() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api<{ data: ApiToken }>(`/admin/api-tokens/${id}/revoke`, { method: "POST" }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: [...keys.admin, "api-tokens"] }),
   })
 }
 

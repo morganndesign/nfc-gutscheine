@@ -2,7 +2,7 @@
 //
 //   onboard a restaurant (owner invited) → list shows owner / e-mail / status / invitation → edit →
 //   invite again with a corrected e-mail address → owner accepts → disable / enable → archive / restore →
-//   delete refused for a restaurant with gift cards → delete an empty restaurant with typed confirmation →
+//   delete refused for a restaurant with vouchers → delete an empty restaurant with typed confirmation →
 //   audit log filtered by restaurant → accessibility scan of the admin screens.
 //
 // Requirements: as pilot-journey.mjs (API + web app, a platform admin). Works with every local mail setup: with
@@ -80,10 +80,11 @@ await admin.fill('#r-name', name)
 await admin.fill('#o-name', owner.name)
 await admin.fill('#o-email', typo)
 await admin.getByRole('button', { name: 'Create restaurant' }).click()
-await toast(admin, delivers ? `invitation sent to ${typo}` : 'the invitation was not delivered')
+// Invitations are sent from the queue: "is being sent" when a worker runs, "sent" with QUEUE_CONNECTION=sync.
+await toast(admin, delivers ? new RegExp(`invitation (sent to|to) ${typo.replace(/[.]/g, '\\.')}`) : 'the invitation was not delivered')
 await admin.waitForURL('**/admin/restaurants/**')
 const restaurantUrl = admin.url()
-const inviteBadge = delivers ? 'Invitation pending' : 'Invitation not delivered'
+const inviteBadge = delivers ? /Invitation pending|Sending invitation/ : 'Invitation not delivered'
 await admin.getByText(inviteBadge).first().waitFor()
 step(1, `restaurant onboarded; invitation ${delivers ? `delivered (${mail.mailer})` : 'reported as not delivered (log mailer)'}`)
 
@@ -92,7 +93,8 @@ await openList(admin, name)
 const headers = (await admin.getByRole('columnheader').allInnerTexts()).map((h) => h.trim()).filter(Boolean)
 assert.deepEqual(headers, ['Restaurant', 'Owner', 'Email', 'Status', 'Created', 'Actions'])
 const cells = await row(admin, name).first().innerText()
-for (const text of [owner.name, typo, 'Active', inviteBadge]) assert.ok(cells.includes(text), `row shows "${text}": ${cells}`)
+for (const text of [owner.name, typo, 'Active']) assert.ok(cells.includes(text), `row shows "${text}": ${cells}`)
+assert.match(cells, delivers ? /Invitation pending|Sending invitation/ : /Invitation not delivered/)
 step(2, 'list shows owner, e-mail, status and invitation state')
 
 // 3. Edit.
@@ -112,7 +114,7 @@ await openList(admin, name)
 await menu(admin, name, 'Invite again')
 await admin.fill('#invite-email', owner.email)
 await admin.getByRole('button', { name: 'Send invitation' }).click()
-await toast(admin, delivers ? `Invitation sent to ${owner.email}` : 'MAIL_MAILER')
+await toast(admin, delivers ? new RegExp(`(Invitation sent to|invitation to) ${owner.email.replace(/[.]/g, '\\.')}`) : 'MAIL_MAILER')
 await admin.keyboard.press('Escape')
 await openList(admin, name)
 assert.ok((await row(admin, name).first().innerText()).includes(owner.email), 'corrected e-mail address shown')
@@ -155,7 +157,7 @@ await menu(admin, name, 'Restore')
 await toast(admin, 'restored')
 step(7, 'archived and restored')
 
-// 8. A restaurant with gift cards cannot be deleted (only when the demo data exists).
+// 8. A restaurant with vouchers cannot be deleted (only when the demo data exists).
 await admin.goto(`${BASE}/admin`)
 await admin.getByPlaceholder(/Search by restaurant/).fill('Bella Vista')
 if (await row(admin, 'Bella Vista').first().waitFor({ timeout: 5000 }).then(() => true, () => false)) {
@@ -164,7 +166,7 @@ if (await row(admin, 'Bella Vista').first().waitFor({ timeout: 5000 }).then(() =
   await admin.getByRole('button', { name: 'Delete permanently' }).click()
   await admin.getByRole('dialog').getByText(/cannot be deleted\. Archive it instead/).waitFor()
   await admin.keyboard.press('Escape')
-  step(8, 'delete refused for a restaurant with gift cards')
+  step(8, 'delete refused for a restaurant with vouchers')
 } else {
   step(8, 'delete refusal skipped (no demo data)')
 }

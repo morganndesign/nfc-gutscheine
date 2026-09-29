@@ -27,7 +27,7 @@ function LoginForm() {
   const params = useSearchParams()
   const next = params.get("next")
 
-  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "", remember: true } })
+  const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "", remember: false } })
 
   useEffect(() => {
     if (user) router.replace(safeRedirectPath(next) ?? homeFor(user))
@@ -79,7 +79,10 @@ function LoginForm() {
         </div>
         <label className="text-muted-foreground flex items-center gap-2 text-sm">
           <Checkbox checked={form.watch("remember")} onCheckedChange={(v) => form.setValue("remember", v === true)} />
-          Keep me signed in on this device
+          <span>
+            Keep me signed in on this device
+            <span className="block text-xs">Only on your own device, never on a shared one.</span>
+          </span>
         </label>
         {errors.root ? (
           <p role="alert" className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">

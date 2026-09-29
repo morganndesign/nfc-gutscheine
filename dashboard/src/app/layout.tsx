@@ -6,7 +6,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: { default: "GiftCard Pro", template: "%s · GiftCard Pro" },
-  description: "NFC gift cards for restaurants — issue, redeem and track in seconds.",
+  description: "Vouchers and gift cards for restaurants: sell, redeem and track them securely.",
   applicationName: "GiftCard Pro",
   robots: { index: false, follow: false },
   manifest: "/manifest.webmanifest",

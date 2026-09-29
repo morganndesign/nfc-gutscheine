@@ -5,10 +5,10 @@ import { History, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { EmptyState } from "@/components/common/empty-state"
 import { ReasonDialog } from "@/components/common/reason-dialog"
-import { TransactionTypeIcon } from "@/components/cards/transaction-type"
+import { TransactionTypeIcon } from "@/components/vouchers/transaction-type"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useCardHistory, useReverseTransaction } from "@/lib/api/hooks"
+import { useReverseTransaction, useVoucherHistory } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { TransactionType } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
@@ -19,9 +19,11 @@ import { cn } from "@/lib/utils"
 
 const REVERSIBLE: string[] = ["redemption", "reload"]
 
-export function CardHistory({ cardId, currency }: { cardId: string; currency: string }) {
+const PAYMENT_LABELS: Record<string, string> = { cash: "cash", card_terminal: "card terminal", bank_transfer: "bank transfer", complimentary: "complimentary" }
+
+export function VoucherHistory({ voucherId, currency }: { voucherId: string; currency: string }) {
   const { can } = useAuth()
-  const { data, isLoading } = useCardHistory(cardId)
+  const { data, isLoading } = useVoucherHistory(voucherId)
   const reverse = useReverseTransaction()
   const [reversing, setReversing] = useState<string | null>(null)
 
@@ -70,6 +72,7 @@ export function CardHistory({ cardId, currency }: { cardId: string; currency: st
                 {formatDateTime(entry.created_at)}
                 {entry.user ? ` · ${entry.user}` : ""}
                 {entry.device ? ` · ${entry.device}` : ""}
+                {entry.payment_method ? ` · Paid by ${PAYMENT_LABELS[entry.payment_method] ?? entry.payment_method}` : ""}
                 {entry.reference ? ` · Ref. ${entry.reference}` : ""}
                 {entry.balance_after !== null ? ` · Balance ${formatMoney(entry.balance_after, currency)}` : ""}
               </p>
@@ -95,7 +98,7 @@ export function CardHistory({ cardId, currency }: { cardId: string; currency: st
         open={reversing !== null}
         onOpenChange={(o) => !o && setReversing(null)}
         title="Reverse transaction"
-        suggestions={["Wrong amount", "Wrong card", "Guest cancelled"]}
+        suggestions={["Wrong amount", "Wrong voucher", "Guest cancelled"]}
         description="Creates a counter-entry that restores the previous balance. The original entry stays in the ledger."
         confirmLabel="Reverse"
         destructive

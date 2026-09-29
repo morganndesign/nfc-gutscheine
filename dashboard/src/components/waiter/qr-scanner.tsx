@@ -23,48 +23,64 @@ export function isQrScanSupported(): boolean {
 export function QrScanner({ onResult, onError }: { onResult: (value: string) => void; onError: (message: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [ready, setReady] = useState(false)
+  // The camera starts once per mount; the latest callbacks are read through refs so that a re-render of the
+  // parent never restarts (and races) the camera.
+  const onResultRef = useRef(onResult)
+  const onErrorRef = useRef(onError)
+  useEffect(() => {
+    onResultRef.current = onResult
+    onErrorRef.current = onError
+  })
 
   useEffect(() => {
     let stream: MediaStream | null = null
     let timer: ReturnType<typeof setInterval> | null = null
-    let done = false
+    let stopped = false
 
     const start = async () => {
       try {
         const Detector = window.BarcodeDetector
         if (!Detector) throw new Error("QR scanning is not supported on this device.")
         const detector = new Detector({ formats: ["qr_code"] })
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+        const acquired = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
+        if (stopped) {
+          // Unmounted while the permission prompt was open: release the camera at once.
+          acquired.getTracks().forEach((t) => t.stop())
+          return
+        }
+        stream = acquired
         const video = videoRef.current
         if (!video) return
         video.srcObject = stream
         await video.play()
+        if (stopped) return
         setReady(true)
         timer = setInterval(async () => {
-          if (done || video.readyState < 2) return
+          if (stopped || video.readyState < 2) return
           try {
             const codes = await detector.detect(video)
             const hit = codes[0]?.rawValue
-            if (hit) {
-              done = true
-              onResult(hit)
+            if (hit && !stopped) {
+              stopped = true
+              onResultRef.current(hit)
             }
           } catch {
             /* frame not decodable — keep trying */
           }
         }, 200)
       } catch (e) {
-        onError(e instanceof Error && e.name === "NotAllowedError" ? "Camera access was denied." : (e as Error).message || "Camera unavailable.")
+        if (stopped) return
+        onErrorRef.current(e instanceof Error && e.name === "NotAllowedError" ? "Camera access was denied." : (e as Error).message || "Camera unavailable.")
       }
     }
 
     void start()
     return () => {
-      done = true
+      stopped = true
       if (timer) clearInterval(timer)
       stream?.getTracks().forEach((t) => t.stop())
     }
-  }, [onResult, onError])
+  }, [])
 
   return (
     <div className="relative aspect-square w-full overflow-hidden rounded-3xl bg-black">

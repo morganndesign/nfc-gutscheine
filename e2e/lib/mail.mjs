@@ -5,7 +5,7 @@ import fs from 'node:fs'
 
 const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025'
 const LOG_DIR = process.env.LARAVEL_LOG_DIR ?? new URL('../../backend/storage/logs/', import.meta.url).pathname
-const LINK = /reset-password\?token=([a-f0-9]{64})&(?:amp;)?email=([^&\s"\]<)]+)/g
+const LINK = /reset-password#token=([a-f0-9]{64})&(?:amp;)?email=([^&\s"\]<)]+)/g
 
 function lastToken(text, email) {
   let token = null
@@ -41,7 +41,7 @@ function fromLog(email) {
 export async function invitationLink(base, email) {
   for (let i = 0; i < 20; i++) {
     const token = (await fromMailpit(email)) ?? fromLog(email)
-    if (token) return `${base}/reset-password?token=${token}&email=${encodeURIComponent(email)}&invite=1`
+    if (token) return `${base}/reset-password#token=${token}&email=${encodeURIComponent(email)}&invite=1`
     await new Promise((r) => setTimeout(r, 500))
   }
   assert.fail(`invitation e-mail for ${email} found neither in Mailpit (${MAILPIT}) nor in ${LOG_DIR}`)

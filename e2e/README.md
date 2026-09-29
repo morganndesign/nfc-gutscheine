@@ -4,8 +4,9 @@
 a Pixel 7 for the waiter) and fails on any broken step, console error or accessibility violation:
 
 1. platform admin onboards a restaurant, 2. owner accepts the invitation, 3. invites a waiter,
-4. sells a card, 5. the waiter redeems on the phone (must take < 5 s), 6. owner reloads and replaces the
-"lost" card, 7. the old card is rejected, 8. CSV export (decimal comma), 9. axe accessibility scan.
+4. sells a printable voucher (cash) and checks the sheet carries no voucher number, 5. the waiter scans its QR
+on the phone and redeems (must take < 5 s; camera and QR detection are simulated), 6. owner reloads and blocks
+the voucher, 7. the waiter's next scan shows it blocked, 8. CSV export (decimal comma), 9. axe accessibility scan.
 
 ```bash
 # API (default MAIL_MAILER=failover: Mailpit if running, else the log), web app on :3000, a platform admin exists
@@ -28,15 +29,15 @@ Each run creates a new restaurant with unique addresses, so it can run repeatedl
 
 `npm run test:admin` (same requirements as the pilot journey): onboards a restaurant, checks the list columns
 (Restaurant · Owner · Email · Status · Created · Actions), edits it, sends the invitation again with a corrected
-address, lets the owner accept, disables/enables, archives/restores, checks that a restaurant with gift cards
+address, lets the owner accept, disables/enables, archives/restores, checks that a restaurant with vouchers
 cannot be deleted (with the demo data) and deletes the empty one after the typed confirmation, filters the
 audit log and scans the admin screens with axe. It checks the delivered or (with `MAIL_MAILER=log`) "not delivered" behaviour, whichever the API reports.
 
 # Waiter app API — `waiter-api.mjs`
 
 Plays the calls of the native waiter app (GiftCard Waiter) against a running API: start-up config, device-bound
-token sign-in, `/auth/me`, scan, redeem with an idempotent replay, the token's limits, device revocation and
-sign-out. Needs only Node 22 (no browser).
+token sign-in, `/auth/me`, a voucher number refused as a credential, a QR presentment, redeem with an idempotent
+replay, the single use of the presentment, the token's limits, device revocation and sign-out. Needs only Node 22 (no browser).
 
 ```bash
 cd e2e

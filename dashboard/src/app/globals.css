@@ -150,7 +150,7 @@
   .tabular {
     font-variant-numeric: tabular-nums;
   }
-  /* Card numbers: grouped digits, evenly spaced, readable at a glance. */
+  /* Voucher numbers (staff only): grouped digits, evenly spaced, readable at a glance. */
   .card-number {
     font-variant-numeric: tabular-nums;
     letter-spacing: 0.04em;
@@ -164,5 +164,20 @@
   }
   body {
     background: white !important;
+  }
+  /* A page with a printable voucher prints the voucher sheet only, never the staff screen around it. */
+  body:has(.print-sheet) * {
+    visibility: hidden;
+  }
+  body:has(.print-sheet) .print-sheet,
+  body:has(.print-sheet) .print-sheet * {
+    visibility: visible;
+  }
+  body:has(.print-sheet) .print-sheet {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    border: 0;
+    box-shadow: none;
   }
 }

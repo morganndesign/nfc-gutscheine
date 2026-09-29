@@ -13,6 +13,7 @@ export function invitationDetail(invitation: InvitationSummary): string {
   if (invitation.status === "accepted") return "The account is active."
   if (invitation.delivery === "failed") return `The last invitation could not be sent: ${invitation.error ?? "mail server error"}`
   if (invitation.delivery === "logged") return invitation.error ?? "E-mail is not delivered by this platform (MAIL_MAILER=log)."
+  if (invitation.delivery === "queued") return "The invitation is being sent. Refresh in a moment to see whether it went out."
   if (invitation.status === "pending")
     return `Invitation sent ${formatDateTime(invitation.last_sent_at)}; the link is valid until ${formatDateTime(invitation.expires_at)}.`
   if (invitation.status === "expired") return "The invitation link has expired. Send it again."
@@ -29,11 +30,13 @@ export function InvitationBadge({ invitation }: { invitation: InvitationSummary 
   const [label, variant] =
     invitation.delivery === "failed" || invitation.delivery === "logged"
       ? (["Invitation not delivered", "destructive"] as const)
-      : invitation.status === "pending"
-        ? (["Invitation pending", "outline"] as const)
-        : invitation.status === "expired"
-          ? (["Invitation expired", "outline"] as const)
-          : (["Not invited", "outline"] as const)
+      : invitation.delivery === "queued"
+        ? (["Sending invitation…", "outline"] as const)
+        : invitation.status === "pending"
+          ? (["Invitation pending", "outline"] as const)
+          : invitation.status === "expired"
+            ? (["Invitation expired", "outline"] as const)
+            : (["Not invited", "outline"] as const)
 
   return (
     <Tooltip>

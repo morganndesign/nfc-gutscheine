@@ -55,6 +55,18 @@ jobs:
         run: |
           sed -e 's#<env name="DB_CONNECTION" value="sqlite"/>##' -e 's#<env name="DB_DATABASE" value=":memory:"/>##' phpunit.xml > phpunit.mysql.xml
           php artisan test --configuration=phpunit.mysql.xml
+      - name: Demo data on MySQL, then the integrity check (hash chains and balances after a JSON round trip)
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: giftcard_test
+          DB_USERNAME: root
+          DB_PASSWORD: root
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+        run: |
+          php artisan migrate:fresh --seed --force
+          php artisan giftcard:verify-chains
       - name: Security audit
         run: composer audit
 

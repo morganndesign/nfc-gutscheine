@@ -12,8 +12,8 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // NFC must stay enabled for the waiter app; camera for QR scanning.
-  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), nfc=(self)" },
+  // Camera for scanning voucher QR codes. The web app never reads cards (architecture §10.3).
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), nfc=()" },
   {
     key: "Content-Security-Policy",
     value: [

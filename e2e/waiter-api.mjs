@@ -1,6 +1,7 @@
 // End-to-end test of the native waiter app API (GiftCard Waiter) against a running stack.
 // Plays the app's calls exactly as docs/design/waiter-app/09-flutter-handoff.md §9 specifies them:
-// start-up config → token sign-in → /auth/me → scan → redeem (+ idempotent replay) → device checks → sign-out.
+// start-up config → token sign-in → /auth/me → scan the voucher QR (presentment) → redeem (+ idempotent replay)
+// → device checks → sign-out.
 //
 //   API_URL=http://localhost:8000 OWNER_EMAIL=owner@bellavista.test WAITER_EMAIL=waiter@bellavista.test node waiter-api.mjs
 
@@ -36,7 +37,7 @@ function createSession() {
     }
   }
 
-  return async function request(method, path, body) {
+  return async function request(method, path, body, extraHeaders = {}) {
     const xsrf = jar.get("XSRF-TOKEN")
     const res = await fetch(`${API}${path}`, {
       method,
@@ -47,6 +48,7 @@ function createSession() {
         Referer: `${ORIGIN}/`,
         Cookie: cookieHeader(),
         ...(xsrf ? { "X-XSRF-TOKEN": decodeURIComponent(xsrf) } : {}),
+        ...extraHeaders,
       },
       body: body ? JSON.stringify(body) : undefined,
     })
@@ -77,7 +79,8 @@ async function app(method, path, { token, body, device = DEVICE, headers = {} } 
 
 const owner = createSession()
 let token
-let card
+let voucher
+let qr
 let deviceId
 
 await check("owner signs in to the dashboard", async () => {
@@ -86,10 +89,13 @@ await check("owner signs in to the dashboard", async () => {
   assert.equal(res.status, 200, `owner login failed: ${res.status}`)
 })
 
-await check("owner sells a € 50 card", async () => {
-  const res = await owner("POST", "/api/v1/cards", { value: 5000, recipient_name: "E2E waiter app" })
+await check("owner sells a € 50 printable voucher, paid in cash", async () => {
+  const res = await owner("POST", "/api/v1/vouchers", { value: 5000, form: "printable", payment: { method: "cash" }, recipient_name: "E2E waiter app" }, { "Idempotency-Key": randomUUID() })
   assert.equal(res.status, 201)
-  card = (await res.json()).data
+  const json = await res.json()
+  voucher = json.data
+  qr = json.printable.payload
+  assert.match(qr, /^GCPV1\.[A-Za-z0-9_-]{43}$/)
 })
 
 await check("app reads start-up config", async () => {
@@ -105,40 +111,55 @@ await check("waiter signs in with a device-bound token", async () => {
   })
   assert.equal(res.status, 201, JSON.stringify(res.json))
   token = res.json.data.token
-  assert.deepEqual(res.json.data.user.permissions, ["cards.scan", "cards.redeem"])
+  assert.deepEqual(res.json.data.user.permissions, ["vouchers.redeem"])
 })
 
 await check("/auth/me returns the restaurant settings the app needs", async () => {
   const res = await app("GET", "/auth/me", { token })
   assert.equal(res.status, 200)
   const settings = res.json.data.restaurant.settings
-  for (const key of ["max_single_redemption", "brand_color", "allow_partial_redemption"]) assert.ok(key in settings, key)
+  for (const key of ["max_debit_per_transaction", "brand_color", "allow_partial_redemption"]) assert.ok(key in settings, key)
   assert.ok(res.json.data.restaurant.locale)
 })
 
-await check("manual lookup finds the card", async () => {
-  const res = await app("POST", "/scan", { token, body: { method: "manual", card_number: card.card_number } })
-  assert.equal(res.status, 200)
-  assert.equal(res.json.data.balance, 5000)
+await check("a typed voucher number is not a credential", async () => {
+  const res = await app("POST", "/presentments", { token, body: { purpose: "spend", method: "printable_qr", credential: voucher.voucher_number } })
+  assert.equal(res.status, 422)
+  assert.equal(res.json.code, "MEDIUM_NOT_RECOGNIZED")
+})
+
+let presentment
+await check("scanning the QR creates a single-use presentment", async () => {
+  const res = await app("POST", "/presentments", { token, body: { purpose: "spend", method: "printable_qr", credential: qr } })
+  assert.equal(res.status, 201, JSON.stringify(res.json))
+  assert.equal(res.json.data.voucher.balance, 5000)
+  presentment = res.json.data.id
 })
 
 await check("redeem € 12,50 is booked once, a retry with the same key is replayed", async () => {
   const key = randomUUID()
+  const body = { amount: 1250, presentment_id: presentment }
   const started = performance.now()
-  const first = await app("POST", `/cards/${card.id}/redeem`, { token, body: { amount: 1250 }, headers: { "Idempotency-Key": key } })
+  const first = await app("POST", `/vouchers/${voucher.id}/redemptions`, { token, body, headers: { "Idempotency-Key": key } })
   const elapsed = performance.now() - started
   assert.equal(first.status, 201, JSON.stringify(first.json))
-  assert.equal(first.json.data.card.balance, 3750)
+  assert.equal(first.json.data.voucher.balance, 3750)
   assert.ok(elapsed < 2000, `redeem took ${elapsed} ms`)
 
-  const replay = await app("POST", `/cards/${card.id}/redeem`, { token, body: { amount: 1250 }, headers: { "Idempotency-Key": key } })
+  const replay = await app("POST", `/vouchers/${voucher.id}/redemptions`, { token, body, headers: { "Idempotency-Key": key } })
   assert.equal(replay.status, 200)
   assert.equal(replay.json.replayed, true)
-  assert.equal(replay.json.data.card.balance, 3750)
+  assert.equal(replay.json.data.voucher.balance, 3750)
+})
+
+await check("the used presentment cannot pay again", async () => {
+  const res = await app("POST", `/vouchers/${voucher.id}/redemptions`, { token, body: { amount: 100, presentment_id: presentment }, headers: { "Idempotency-Key": randomUUID() } })
+  assert.equal(res.status, 422)
+  assert.equal(res.json.code, "PRESENTMENT_INVALID")
 })
 
 await check("the token cannot reach management endpoints", async () => {
-  const res = await app("GET", "/cards", { token })
+  const res = await app("GET", "/vouchers", { token })
   assert.equal(res.status, 403)
 })
 

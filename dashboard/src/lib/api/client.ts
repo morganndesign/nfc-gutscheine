@@ -36,26 +36,6 @@ export class ApiError extends Error {
   }
 }
 
-const ACTING_RESTAURANT_KEY = "gcp.acting-restaurant"
-
-/** Platform admins can operate inside a restaurant; stored per browser tab. */
-export function setActingRestaurant(id: string | null): void {
-  try {
-    if (id) sessionStorage.setItem(ACTING_RESTAURANT_KEY, id)
-    else sessionStorage.removeItem(ACTING_RESTAURANT_KEY)
-  } catch {
-    /* storage unavailable */
-  }
-}
-
-export function getActingRestaurant(): string | null {
-  try {
-    return sessionStorage.getItem(ACTING_RESTAURANT_KEY)
-  } catch {
-    return null
-  }
-}
-
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null
   const match = document.cookie.split("; ").find((row) => row.startsWith(`${name}=`))
@@ -119,8 +99,6 @@ async function send(path: string, options: RequestOptions, retry: boolean): Prom
   if (xsrf) headers["X-XSRF-TOKEN"] = xsrf
   const deviceId = getDeviceId()
   if (deviceId) headers["X-Device-Id"] = deviceId
-  const acting = getActingRestaurant()
-  if (acting) headers["X-Restaurant-Id"] = acting
   if (options.idempotencyKey) headers["Idempotency-Key"] = options.idempotencyKey
 
   const response = await fetch(`/api/v1${path}${buildQuery(options.query)}`, {

@@ -1,7 +1,8 @@
 import {
   ArrowLeftRight,
   Building2,
-  CreditCard,
+  QrCode,
+  Ticket,
   LayoutDashboard,
   ScrollText,
   Settings,
@@ -10,7 +11,6 @@ import {
   SlidersHorizontal,
   Users,
   UserSquare2,
-  Nfc,
   type LucideIcon,
 } from "lucide-react"
 import type { Permission } from "@/lib/api/types"
@@ -25,10 +25,10 @@ export interface NavItem {
 
 export const RESTAURANT_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, permission: "dashboard.view", requiresRestaurant: true },
-  { href: "/cards", label: "Gift cards", icon: CreditCard, permission: "cards.view", requiresRestaurant: true },
+  { href: "/vouchers", label: "Vouchers", icon: Ticket, permission: "vouchers.view", requiresRestaurant: true },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight, permission: "transactions.view", requiresRestaurant: true },
   { href: "/customers", label: "Customers", icon: UserSquare2, permission: "customers.view", requiresRestaurant: true },
-  { href: "/waiter", label: "Waiter mode", icon: Nfc, permission: "cards.scan", requiresRestaurant: true },
+  { href: "/waiter", label: "Redeem", icon: QrCode, permission: "vouchers.redeem", requiresRestaurant: true },
 ]
 
 export const MANAGE_NAV: NavItem[] = [

@@ -132,7 +132,7 @@ function DevicesContent() {
           })}
         </div>
       ) : (
-        <EmptyState icon={Smartphone} title="No devices yet" description="Devices appear automatically the first time a team member scans a card." />
+        <EmptyState icon={Smartphone} title="No devices yet" description="Devices appear automatically the first time a team member signs in on them." />
       )}
       {renaming ? <RenameDialog device={renaming} onClose={() => setRenaming(null)} /> : null}
       <ReasonDialog

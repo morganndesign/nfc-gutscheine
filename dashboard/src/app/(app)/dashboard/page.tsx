@@ -3,13 +3,13 @@
 import { useState } from "react"
 import dynamic from "next/dynamic"
 import Link from "next/link"
-import { ArrowDownRight, ArrowRight, CalendarClock, CreditCard, Euro, Plus, Receipt, Wallet } from "lucide-react"
+import { ArrowDownRight, ArrowRight, CalendarClock, Euro, Plus, Receipt, Ticket, Wallet } from "lucide-react"
 import { GettingStarted } from "@/components/dashboard/getting-started"
 import { PageHeader } from "@/components/common/page-header"
 import { StatCard } from "@/components/common/stat-card"
 import { EmptyState } from "@/components/common/empty-state"
 import { StatusBreakdown } from "@/components/charts/status-breakdown"
-import { TransactionTypeIcon } from "@/components/cards/transaction-type"
+import { TransactionTypeIcon } from "@/components/vouchers/transaction-type"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -59,17 +59,17 @@ function DashboardContent() {
         title="Dashboard"
         description={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, ${user?.name.split(" ")[0] ?? ""}.`}
         actions={
-          can("cards.create") ? (
+          can("vouchers.sell") ? (
             <Button asChild>
-              <Link href="/cards/new">
-                <Plus /> New gift card
+              <Link href="/vouchers/new">
+                <Plus /> Sell voucher
               </Link>
             </Button>
           ) : null
         }
       />
 
-      {s && s.cards_sold === 0 ? <GettingStarted /> : null}
+      {s && s.vouchers_sold === 0 ? <GettingStarted /> : null}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
@@ -77,7 +77,7 @@ function DashboardContent() {
           icon={Wallet}
           loading={stats.isLoading}
           value={formatMoney(s?.outstanding_balance, currency)}
-          hint={s ? `Open liability on ${s.outstanding_cards} card${s.outstanding_cards === 1 ? "" : "s"}` : null}
+          hint={s ? `Owed to guests on ${s.outstanding_vouchers} voucher${s.outstanding_vouchers === 1 ? "" : "s"}` : null}
         />
         <StatCard
           label="Revenue this month"
@@ -94,11 +94,11 @@ function DashboardContent() {
           hint={s ? `${formatMoney(s.today_redeemed, currency)} today` : null}
         />
         <StatCard
-          label="Cards sold"
-          icon={CreditCard}
+          label="Vouchers sold"
+          icon={Ticket}
           loading={stats.isLoading}
-          value={s?.cards_sold ?? 0}
-          hint={s ? `${s.cards_sold_this_month} this month · ${s.cards_active} in use` : null}
+          value={s?.vouchers_sold ?? 0}
+          hint={s ? `${s.vouchers_sold_this_month} this month · ${s.vouchers_empty} used up` : null}
         />
       </div>
 
@@ -106,7 +106,7 @@ function DashboardContent() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Sales & redemptions</CardTitle>
-            <CardDescription>Daily card value sold vs. redeemed</CardDescription>
+            <CardDescription>Daily voucher value sold vs. redeemed</CardDescription>
             <CardAction>
               <Segmented
                 label="Period"
@@ -129,7 +129,7 @@ function DashboardContent() {
             <CardDescription>
               {s && s.expiring_soon > 0 ? (
                 <span className="inline-flex items-center gap-1">
-                  <CalendarClock className="size-3.5" /> {s.expiring_soon} card{s.expiring_soon === 1 ? "" : "s"} expire within 30 days
+                  <CalendarClock className="size-3.5" /> {s.expiring_soon} voucher{s.expiring_soon === 1 ? "" : "s"} expire within 30 days
                 </span>
               ) : (
                 "All cards by status"
@@ -177,12 +177,12 @@ function DashboardContent() {
               <ul>
                 {activity.data.map((tx) => (
                   <li key={tx.id}>
-                    <Link href={tx.gift_card ? `/cards/${tx.gift_card.id}` : "#"} className="hover:bg-muted flex items-center gap-3 rounded-lg px-2 py-2">
+                    <Link href={tx.voucher ? `/vouchers/${tx.voucher.id}` : "#"} className="hover:bg-muted flex items-center gap-3 rounded-lg px-2 py-2">
                       <TransactionTypeIcon type={tx.type} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{tx.type_label}</p>
                         <p className="text-muted-foreground truncate text-xs">
-                          ••{tx.gift_card?.card_number.slice(-4)} · {tx.user?.name ?? "System"} · {formatRelative(tx.created_at)}
+                          ••{tx.voucher?.voucher_number.slice(-4)} · {tx.user?.name ?? "System"} · {formatRelative(tx.created_at)}
                         </p>
                       </div>
                       <span

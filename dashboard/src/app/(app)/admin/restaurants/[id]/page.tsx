@@ -2,12 +2,11 @@
 
 import { use, useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useQueryClient } from "@tanstack/react-query"
-import { ArrowLeft, History, LogIn, Mail, MoreHorizontal } from "lucide-react"
+import { ArrowLeft, History, Mail, MoreHorizontal } from "lucide-react"
 import { canInviteAgain, InvitationBadge } from "@/components/admin/invitation-badge"
 import { MailWarning } from "@/components/admin/mail-warning"
 import { InviteAgainDialog, RestaurantActions, RestaurantStatusBadge } from "@/components/admin/restaurant-actions"
+import { RestaurantTokens } from "@/components/admin/restaurant-tokens"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,7 +15,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { UserStatusBadge } from "@/components/common/user-status-badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useAdminRestaurant } from "@/lib/api/hooks"
-import { setActingRestaurant } from "@/lib/api/client"
 import type { StaffUser } from "@/lib/api/types"
 import { formatDate, formatRelative } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
@@ -24,8 +22,6 @@ import { formatMoney } from "@/lib/money"
 function RestaurantContent({ id }: { id: string }) {
   const { data, isLoading, isError } = useAdminRestaurant(id)
   const [inviting, setInviting] = useState<StaffUser | null>(null)
-  const qc = useQueryClient()
-  const router = useRouter()
 
   if (isError)
     return (
@@ -44,7 +40,7 @@ function RestaurantContent({ id }: { id: string }) {
   const archived = r.archived_at !== null
   const usable = !archived && r.status === "active"
   const business = data.business_data
-  const hasBusinessData = business.gift_cards + business.transactions + business.customers > 0
+  const hasBusinessData = business.vouchers + business.transactions + business.customers > 0
 
   return (
     <div className="space-y-6">
@@ -60,17 +56,6 @@ function RestaurantContent({ id }: { id: string }) {
             <RestaurantStatusBadge restaurant={r} />
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              disabled={!usable}
-              onClick={() => {
-                setActingRestaurant(r.id)
-                void qc.resetQueries()
-                router.push("/dashboard")
-              }}
-            >
-              <LogIn /> Open restaurant
-            </Button>
             <Button variant="outline" asChild>
               <Link href={`/admin/audit?restaurant_id=${r.id}`}>
                 <History /> Audit log
@@ -112,12 +97,12 @@ function RestaurantContent({ id }: { id: string }) {
             </p>
             <p className="text-muted-foreground">Customer since {formatDate(r.created_at)}</p>
             <p className="pt-2 font-medium">
-              {business.gift_cards} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)} outstanding
+              {business.vouchers} vouchers · {formatMoney(r.outstanding_balance ?? 0, r.currency)} outstanding
             </p>
             <p className="text-muted-foreground text-xs">
               {hasBusinessData
                 ? `${business.transactions} transactions and ${business.customers} customers are kept: this restaurant can be archived but not deleted.`
-                : "No gift cards, transactions or customers yet: the restaurant can be deleted permanently."}
+                : "No vouchers, transactions or customers yet: the restaurant can be deleted permanently."}
             </p>
           </CardContent>
         </Card>
@@ -176,6 +161,7 @@ function RestaurantContent({ id }: { id: string }) {
             {data.users.length === 0 ? <p className="text-muted-foreground px-6 py-4 text-sm">No users.</p> : null}
           </CardContent>
         </Card>
+        <RestaurantTokens restaurantId={r.id} />
       </div>
 
       {inviting ? (

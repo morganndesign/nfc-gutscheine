@@ -1,42 +1,26 @@
-import type { CardStatus } from "@/lib/api/types"
-
 /**
- * Texts that guests read (public balance page, printed card). They follow the restaurant's language,
- * not the staff UI language — an Austrian guest should never see a mix of German and English.
+ * Texts that guests read (the printable voucher sheet). They follow the restaurant's language, not the staff UI
+ * language: an Austrian guest should never see a mix of German and English. Guests never see a voucher number
+ * or a value on paper (architecture §6.4): the QR is the voucher, the balance lives on the server.
  */
 const COPY = {
   de: {
-    giftCard: "Gutschein",
-    balance: "Aktuelles Guthaben",
-    validUntil: "Gültig bis",
-    noExpiry: "Unbegrenzt gültig",
-    askStaff: "Bitte fragen Sie im Restaurant nach Ihrem Guthaben.",
-    scanHint: "Code scannen oder Karte ans Handy halten, um das Guthaben zu prüfen.",
+    voucher: "Gutschein",
     for: "für",
-    notFoundTitle: "Gutschein nicht gefunden",
-    notFoundText: "Dieser Link ist ungültig. Bitte wenden Sie sich an das Restaurant.",
-    status: {
-      active: "Gültig",
-      inactive: "Noch nicht aktiviert",
-      redeemed: "Vollständig eingelöst",
-      blocked: "Gesperrt",
-      expired: "Abgelaufen",
-      replaced: "Ersetzt",
-    },
+    howTo: "Bitte zeigen Sie diesen Code beim Bezahlen vor.",
+    keepSafe: "Wie Bargeld aufbewahren: Wer den Code besitzt, kann den Gutschein einlösen.",
+    noExpiry: "Unbefristet gültig",
+    validUntil: "Gültig bis",
   },
   en: {
-    giftCard: "Gift card",
-    balance: "Current balance",
-    validUntil: "Valid until",
-    noExpiry: "No expiry date",
-    askStaff: "Please ask the restaurant staff for your balance.",
-    scanHint: "Scan the code or tap the card with your phone to check the balance.",
+    voucher: "Voucher",
     for: "for",
-    notFoundTitle: "Gift card not found",
-    notFoundText: "This link is not valid. Please contact the restaurant.",
-    status: { active: "Valid", inactive: "Not activated yet", redeemed: "Fully redeemed", blocked: "Blocked", expired: "Expired", replaced: "Replaced" },
+    howTo: "Please show this code when you pay.",
+    keepSafe: "Keep it safe like cash: whoever holds the code can redeem the voucher.",
+    noExpiry: "No expiry date",
+    validUntil: "Valid until",
   },
-} satisfies Record<string, { status: Record<CardStatus, string> } & Record<string, unknown>>
+} satisfies Record<string, Record<string, string>>
 
 export type GuestCopy = (typeof COPY)["de"]
 

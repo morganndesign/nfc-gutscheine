@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { api, ApiError, prefetchCsrfCookie, setActingRestaurant } from "@/lib/api/client"
+import { api, ApiError, prefetchCsrfCookie } from "@/lib/api/client"
 import { setRegional } from "@/lib/regional"
 import type { Permission, SessionUser } from "@/lib/api/types"
 
@@ -66,7 +66,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api("/auth/logout", { method: "POST" })
     } finally {
-      setActingRestaurant(null)
       queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_QUERY_KEY[0] })
       queryClient.setQueryData(SESSION_QUERY_KEY, null)
     }

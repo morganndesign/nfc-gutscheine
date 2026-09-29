@@ -32,7 +32,7 @@ function CustomersContent() {
     <div className="space-y-6">
       <PageHeader
         title="Customers"
-        description="Buyers and holders of your gift cards."
+        description="Buyers and holders of your vouchers."
         actions={
           can("customers.manage") ? (
             <Button onClick={() => setCreating(true)}>
@@ -87,8 +87,8 @@ function CustomersContent() {
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden md:table-cell">{c.email ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground hidden lg:table-cell">{c.phone ?? "—"}</TableCell>
-                    <TableCell className="tabular text-right">{c.gift_cards_count ?? 0}</TableCell>
-                    <TableCell className="tabular text-right">{formatMoney(c.gift_cards_balance ?? 0, currency)}</TableCell>
+                    <TableCell className="tabular text-right">{c.vouchers_count ?? 0}</TableCell>
+                    <TableCell className="tabular text-right">{formatMoney(c.vouchers_balance ?? 0, currency)}</TableCell>
                     <TableCell className="text-muted-foreground hidden pr-4 md:table-cell">{formatDate(c.created_at)}</TableCell>
                   </TableRow>
                 ))}
@@ -97,7 +97,7 @@ function CustomersContent() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={UserSquare2} title="No customers" description="Customers are created when you issue a card with customer details." />
+          <EmptyState icon={UserSquare2} title="No customers" description="Customers are created when you sell a voucher with customer details." />
         )}
       </div>
       <CustomerDialog open={creating} onOpenChange={setCreating} />

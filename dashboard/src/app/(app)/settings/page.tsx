@@ -3,7 +3,7 @@
 import { PageHeader } from "@/components/common/page-header"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { ApiTokens } from "@/components/settings/api-tokens"
-import { CardSettingsForm } from "@/components/settings/card-settings-form"
+import { VoucherSettingsForm } from "@/components/settings/voucher-settings-form"
 import { NotificationTemplates } from "@/components/settings/notification-templates"
 import { RestaurantProfileForm } from "@/components/settings/restaurant-profile-form"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -21,14 +21,14 @@ function SettingsContent() {
       {!data ? (
         <Skeleton className="h-96 w-full rounded-2xl" />
       ) : (
-        <Tabs defaultValue="cards" className="space-y-4">
+        <Tabs defaultValue="vouchers" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="cards">Gift cards</TabsTrigger>
+            <TabsTrigger value="vouchers">Vouchers</TabsTrigger>
             <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
             <TabsTrigger value="emails">E-mails</TabsTrigger>
             {can("api_tokens.manage") ? <TabsTrigger value="api">API</TabsTrigger> : null}
           </TabsList>
-          <TabsContent value="cards">{data.settings ? <CardSettingsForm settings={data.settings} /> : null}</TabsContent>
+          <TabsContent value="vouchers">{data.settings ? <VoucherSettingsForm settings={data.settings} /> : null}</TabsContent>
           <TabsContent value="restaurant">
             <RestaurantProfileForm restaurant={data} />
           </TabsContent>

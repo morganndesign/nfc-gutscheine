@@ -1,4 +1,4 @@
-/** Human wording for audit events, shared by the audit log and the card history. */
+/** Human wording for audit events, shared by the audit log and the voucher history. */
 const LABELS: Record<string, string> = {
   "api_token.created": "API token created",
   "api_token.revoked": "API token revoked",
@@ -6,6 +6,9 @@ const LABELS: Record<string, string> = {
   "auth.logout": "Signed out",
   "auth.failed": "Failed sign-in",
   "auth.locked": "Account locked after failed sign-ins",
+  "auth.locked_attempt": "Sign-in attempt on a locked account",
+  "auth.access_revoked": "All sign-ins and tokens revoked",
+  "auth.device_token_issued": "Waiter app signed in",
   "auth.password_reset": "Password set via e-mail link",
   "customer.anonymized": "Customer anonymized (GDPR)",
   "customer.created": "Customer created",
@@ -14,33 +17,18 @@ const LABELS: Record<string, string> = {
   "device.restored": "Device restored",
   "device.revoked": "Device revoked",
   "device.updated": "Device renamed",
-  "gift_card.activated": "Card activated",
-  "gift_card.balance_transferred": "Balance transferred",
-  "gift_card.blocked": "Card blocked",
-  "gift_card.expired": "Card expired",
-  "gift_card.foreign_scan": "Card of another restaurant scanned",
-  "gift_card.issued": "Card issued",
-  "gift_card.nfc_replay": "Copied NFC tap rejected",
-  "gift_card.nfc_signature_invalid": "Invalid NFC signature rejected",
-  "gift_card.nfc_uid_mismatch": "Cloned card rejected",
-  "gift_card.nfc_written": "NFC tag written",
-  "gift_card.nfc_write_failed": "NFC tag programming failed",
-  "gift_card.nfc_write_refused": "NFC tag refused (belongs to another card)",
-  "gift_card.nfc_locked": "NFC tag locked",
-  "gift_card.nfc_lock_failed": "NFC tag could not be locked",
-  "gift_card.redeemed": "Card redeemed",
-  "gift_card.reloaded": "Card reloaded",
-  "gift_card.replaced": "Card replaced",
-  "gift_card.unblocked": "Card unblocked",
-  "gift_card.updated": "Card details edited",
+  "medium.issued": "QR code issued",
+  "medium.revoked": "QR code revoked",
   "notification_template.updated": "E-mail template edited",
+  "presentment.failed": "Unknown or foreign voucher code scanned",
+  "presentment.rejected": "Redemption with an invalid scan refused",
   "platform.mail_test": "Test e-mail sent",
   "restaurant.archived": "Restaurant archived",
   "restaurant.created": "Restaurant created",
   "restaurant.deleted": "Restaurant deleted permanently",
   "restaurant.reactivated": "Restaurant enabled",
   "restaurant.restored": "Restaurant restored",
-  "restaurant.settings_updated": "Card rules changed",
+  "restaurant.settings_updated": "Voucher rules changed",
   "restaurant.suspended": "Restaurant disabled",
   "restaurant.updated": "Restaurant profile edited",
   "system_setting.updated": "Platform setting changed",
@@ -54,6 +42,14 @@ const LABELS: Record<string, string> = {
   "user.password_reset_sent": "Password reset e-mail sent",
   "user.profile_updated": "Profile edited",
   "user.updated": "Team member edited",
+  "voucher.blocked": "Voucher blocked",
+  "voucher.expired": "Voucher expired (balance kept)",
+  "voucher.redeemed": "Voucher redeemed",
+  "voucher.reinstated": "Voucher reinstated",
+  "voucher.reloaded": "Voucher reloaded",
+  "voucher.sold": "Voucher sold",
+  "voucher.unblocked": "Voucher unblocked",
+  "voucher.updated": "Voucher details edited",
 }
 
 const CATEGORIES: Record<string, string> = {
@@ -61,7 +57,9 @@ const CATEGORIES: Record<string, string> = {
   auth: "Sign-in",
   customer: "Customer",
   device: "Device",
-  gift_card: "Gift card",
+  medium: "Voucher",
+  presentment: "Voucher",
+  voucher: "Voucher",
   notification_template: "E-mails",
   platform: "Platform",
   restaurant: "Restaurant",
@@ -71,7 +69,7 @@ const CATEGORIES: Record<string, string> = {
 }
 
 /** Events an owner should notice: possible fraud or lock-outs. */
-const ALERTS = new Set(["auth.locked", "gift_card.foreign_scan", "gift_card.nfc_replay", "gift_card.nfc_signature_invalid", "gift_card.nfc_uid_mismatch"])
+const ALERTS = new Set(["auth.locked", "auth.locked_attempt", "presentment.failed", "presentment.rejected"])
 
 export function auditLabel(action: string): string {
   if (LABELS[action]) return LABELS[action]

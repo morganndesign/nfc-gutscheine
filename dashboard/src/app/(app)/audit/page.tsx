@@ -13,7 +13,8 @@ import { useAuditLogs } from "@/lib/api/hooks"
 
 const GROUPS = [
   { value: "all", label: "All events" },
-  { value: "gift_card.", label: "Gift cards" },
+  { value: "voucher.", label: "Vouchers" },
+  { value: "presentment.", label: "Scans" },
   { value: "transaction.", label: "Transactions" },
   { value: "auth.", label: "Sign-ins" },
   { value: "user.", label: "Team" },

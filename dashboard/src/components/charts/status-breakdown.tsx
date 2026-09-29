@@ -1,15 +1,15 @@
 import { StatusBadge } from "@/components/common/status-badge"
 import { formatMoney } from "@/lib/money"
-import type { CardStatus } from "@/lib/api/types"
+import type { VoucherStatus } from "@/lib/api/types"
 import { ChartEmpty } from "@/components/charts/chart-empty"
 
-/** Card count per status as labelled bars (single hue — magnitude, not identity). */
-export function StatusBreakdown({ data, currency }: { data: { status: CardStatus; count: number; balance: number }[]; currency: string }) {
-  const order: CardStatus[] = ["active", "inactive", "redeemed", "blocked", "expired", "replaced"]
+/** Voucher count per status as labelled bars (single hue — magnitude, not identity). */
+export function StatusBreakdown({ data, currency }: { data: { status: VoucherStatus; count: number; balance: number }[]; currency: string }) {
+  const order: VoucherStatus[] = ["active", "blocked", "expired"]
   const rows = order.map((s) => data.find((d) => d.status === s) ?? { status: s, count: 0, balance: 0 }).filter((r) => r.count > 0)
   const max = Math.max(1, ...rows.map((r) => r.count))
 
-  if (!rows.length) return <ChartEmpty className="h-48" title="No cards yet" description="Issued cards appear here grouped by status." />
+  if (!rows.length) return <ChartEmpty className="h-48" title="No vouchers yet" description="Sold vouchers appear here grouped by status." />
 
   return (
     <ul className="space-y-3">

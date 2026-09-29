@@ -4,7 +4,7 @@ import { use, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, EyeOff, Mail, Pencil, Phone } from "lucide-react"
 import { toast } from "sonner"
-import { StatusBadge } from "@/components/common/status-badge"
+import { StatusBadge, displayStatus } from "@/components/common/status-badge"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { CustomerDialog } from "@/components/common/customer-dialog"
 import { RequirePermission } from "@/components/layout/auth-guard"
@@ -72,37 +72,37 @@ function CustomerContent({ id }: { id: string }) {
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Gift cards · {formatMoney(c.gift_cards_balance ?? 0, data.gift_cards[0]?.currency ?? "EUR")} open</CardTitle>
+            <CardTitle>Vouchers · {formatMoney(c.vouchers_balance ?? 0, data.vouchers[0]?.currency ?? "EUR")} open</CardTitle>
           </CardHeader>
           <CardContent className="px-0">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-6">Card</TableHead>
+                  <TableHead className="pl-6">Voucher</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Balance</TableHead>
                   <TableHead className="pr-6">Expires</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.gift_cards.map((card) => (
-                  <TableRow key={card.id}>
+                {data.vouchers.map((voucher) => (
+                  <TableRow key={voucher.id}>
                     <TableCell className="pl-6">
-                      <Link href={`/cards/${card.id}`} className="card-number hover:underline">
-                        {card.card_number_formatted}
+                      <Link href={`/vouchers/${voucher.id}`} className="card-number hover:underline">
+                        {voucher.voucher_number_formatted}
                       </Link>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={card.status} />
+                      <StatusBadge status={displayStatus(voucher)} />
                     </TableCell>
-                    <TableCell className="tabular text-right">{formatMoney(card.balance, card.currency)}</TableCell>
-                    <TableCell className="text-muted-foreground pr-6">{formatDate(card.expires_at)}</TableCell>
+                    <TableCell className="tabular text-right">{formatMoney(voucher.balance, voucher.currency)}</TableCell>
+                    <TableCell className="text-muted-foreground pr-6">{formatDate(voucher.expires_at)}</TableCell>
                   </TableRow>
                 ))}
-                {!data.gift_cards.length ? (
+                {!data.vouchers.length ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
-                      No cards.
+                      No vouchers.
                     </TableCell>
                   </TableRow>
                 ) : null}

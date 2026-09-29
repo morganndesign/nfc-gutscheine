@@ -63,7 +63,10 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
             try {
               const res = await create.mutateAsync(input)
               const invitation = res.owner.invitation
-              if (invitation && invitation.delivery !== "sent") {
+              if (invitation?.delivery === "queued") {
+                // Invitations are sent from the queue; the restaurant page shows when it went out.
+                toast.success(`${res.data.name} created · invitation to ${res.owner.email} is being sent`)
+              } else if (invitation && invitation.delivery !== "sent") {
                 // The restaurant exists; the owner can be invited again from its page once mail works.
                 toast.warning(`${res.data.name} created, but the invitation was not delivered`, { description: invitationDetail(invitation), duration: 15_000 })
               } else {
@@ -161,11 +164,11 @@ function AdminContent() {
           hint={`${s?.restaurants_active ?? 0} active${s?.restaurants_archived ? ` · ${s.restaurants_archived} archived` : ""}`}
         />
         <StatCard
-          label="Gift cards"
+          label="Vouchers"
           icon={CreditCard}
           loading={stats.isLoading}
-          value={formatNumber(s?.cards_total ?? 0)}
-          hint={`${formatNumber(s?.cards_active ?? 0)} active`}
+          value={formatNumber(s?.vouchers_total ?? 0)}
+          hint={`${formatNumber(s?.vouchers_active ?? 0)} active`}
         />
         <StatCard label="Transactions this month" icon={Receipt} loading={stats.isLoading} value={formatNumber(s?.transactions_this_month ?? 0)} />
         <StatCard label="Volume sold this month" icon={Euro} loading={stats.isLoading} value={formatMoney(s?.volume_sold_this_month ?? 0, "EUR")} />
@@ -226,7 +229,7 @@ function AdminContent() {
                         {r.name}
                       </Link>
                       <div className="text-muted-foreground text-xs">
-                        {r.city ?? r.slug} · {r.gift_cards_count ?? 0} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)}
+                        {r.city ?? r.slug} · {r.vouchers_count ?? 0} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)}
                       </div>
                       <div className="text-muted-foreground text-xs md:hidden">{r.owner ? `${r.owner.name} · ${r.owner.email}` : "No owner"}</div>
                     </TableCell>

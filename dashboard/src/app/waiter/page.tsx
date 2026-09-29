@@ -6,7 +6,7 @@ import { WaiterTerminal } from "@/components/waiter/terminal"
 
 export default function WaiterPage() {
   return (
-    <AuthGuard permission="cards.scan">
+    <AuthGuard permission="vouchers.redeem">
       <WaiterShell>
         <WaiterTerminal />
       </WaiterShell>

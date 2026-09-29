@@ -6,7 +6,6 @@
   "scripts": {
     "test": "node pilot-journey.mjs",
     "test:waiter-api": "node waiter-api.mjs",
-    "test:nfc": "node nfc-programming.mjs",
     "test:admin": "node platform-admin.mjs"
   },
   "dependencies": {

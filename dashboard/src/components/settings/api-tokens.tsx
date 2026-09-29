@@ -17,16 +17,8 @@ import type { Permission } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate, formatRelative } from "@/lib/format"
 
-const PRESET_ABILITIES: Permission[] = [
-  "cards.scan",
-  "cards.redeem",
-  "cards.view",
-  "cards.reload",
-  "cards.create",
-  "transactions.view",
-  "transactions.export",
-  "cards.export",
-]
+/** An integration never spends without a presentment: "vouchers.redeem" also needs a scanned voucher QR. */
+const PRESET_ABILITIES: Permission[] = ["vouchers.redeem", "vouchers.view", "vouchers.export", "transactions.view", "transactions.export"]
 
 export function ApiTokens() {
   const { user } = useAuth()
@@ -35,7 +27,7 @@ export function ApiTokens() {
   const revoke = useRevokeApiToken()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
-  const [abilities, setAbilities] = useState<string[]>(["cards.scan", "cards.redeem"])
+  const [abilities, setAbilities] = useState<string[]>(["transactions.view", "transactions.export"])
   const [expires, setExpires] = useState("")
   const [plain, setPlain] = useState<string | null>(null)
   const available = PRESET_ABILITIES.filter((a) => user?.permissions.includes(a))

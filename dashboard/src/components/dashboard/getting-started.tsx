@@ -1,20 +1,20 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, CreditCard, Nfc, Settings2, Users } from "lucide-react"
+import { ArrowRight, QrCode, Settings2, Ticket, Users } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useAuth } from "@/lib/auth"
 import type { Permission } from "@/lib/api/types"
 
 const STEPS: { title: string; description: string; href: string; icon: LucideIcon; permission: Permission }[] = [
-  { title: "Check your card rules", description: "Values, validity and limits", href: "/settings", icon: Settings2, permission: "settings.manage" },
+  { title: "Check your voucher rules", description: "Values, limits and validity", href: "/settings", icon: Settings2, permission: "settings.manage" },
   { title: "Invite your team", description: "Managers and waiters get an e-mail", href: "/team", icon: Users, permission: "users.manage" },
-  { title: "Issue the first gift card", description: "Sell, write the NFC tag or print it", href: "/cards/new", icon: CreditCard, permission: "cards.create" },
-  { title: "Open waiter mode on the phones", description: "Tap a card and redeem in seconds", href: "/waiter", icon: Nfc, permission: "cards.redeem" },
+  { title: "Sell the first voucher", description: "Record the payment and print the QR", href: "/vouchers/new", icon: Ticket, permission: "vouchers.sell" },
+  { title: "Install the waiter app", description: "Scan a voucher and redeem in seconds", href: "/waiter", icon: QrCode, permission: "vouchers.redeem" },
 ]
 
-/** Shown on the dashboard of a brand-new restaurant until the first card has been sold. */
+/** Shown on the dashboard of a brand-new restaurant until the first voucher has been sold. */
 export function GettingStarted() {
   const { can } = useAuth()
   const steps = STEPS.filter((s) => can(s.permission))
@@ -24,7 +24,7 @@ export function GettingStarted() {
     <Card>
       <CardHeader>
         <CardTitle>Welcome to GiftCard Pro</CardTitle>
-        <CardDescription>A few quick steps and your restaurant is ready to sell gift cards.</CardDescription>
+        <CardDescription>A few quick steps and your restaurant is ready to sell vouchers.</CardDescription>
       </CardHeader>
       <CardContent>
         <ol className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

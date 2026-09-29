@@ -1,13 +1,13 @@
-import { Nfc } from "lucide-react"
+import { QrCode } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatMoney } from "@/lib/money"
 import { formatDate } from "@/lib/format"
-import type { CardStatus } from "@/lib/api/types"
+import type { VoucherKind, VoucherStatus } from "@/lib/api/types"
 
-/** A wallet-style rendering of a gift card. */
-export function CardVisual({
+/** A wallet-style rendering of a voucher for staff screens. Guests never see the voucher number. */
+export function VoucherVisual({
   restaurantName,
-  cardNumber,
+  kind,
   balance,
   currency,
   expiresAt,
@@ -16,11 +16,11 @@ export function CardVisual({
   className,
 }: {
   restaurantName: string
-  cardNumber: string
+  kind: VoucherKind
   balance: number
   currency: string
   expiresAt: string | null
-  status: CardStatus
+  status: VoucherStatus
   brandColor?: string
   className?: string
 }) {
@@ -38,17 +38,14 @@ export function CardVisual({
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs tracking-widest text-white/70 uppercase">Gift card</p>
+            <p className="text-xs tracking-widest text-white/70 uppercase">{kind === "digital" ? "Digital voucher" : "Card voucher"}</p>
             <p className="mt-0.5 text-base font-semibold">{restaurantName}</p>
           </div>
-          <Nfc className="size-6 text-white/80" aria-hidden />
+          <QrCode className="size-6 text-white/80" aria-hidden />
         </div>
         <div>
           <p className="tabular text-3xl font-semibold tracking-tight">{formatMoney(balance, currency)}</p>
-          <div className="mt-2 flex items-end justify-between text-xs text-white/75">
-            <span className="card-number">{cardNumber}</span>
-            <span>{expiresAt ? `Valid until ${formatDate(expiresAt)}` : "No expiry"}</span>
-          </div>
+          <p className="mt-2 text-xs text-white/75">{expiresAt ? `Valid until ${formatDate(expiresAt)}` : "No expiry"}</p>
         </div>
       </div>
     </div>
