@@ -25,6 +25,7 @@ final class UpdateVoucherSettingsRequest extends ApiRequest
             'allow_reload' => ['sometimes', 'boolean:strict'],
             'allow_partial_redemption' => ['sometimes', 'boolean:strict'],
             'send_customer_emails' => ['sometimes', 'boolean:strict'],
+            'public_balance' => ['sometimes', 'boolean:strict'],
             'brand_color' => ['sometimes', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'receipt_footer' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];

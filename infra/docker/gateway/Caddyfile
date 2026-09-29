@@ -3,7 +3,7 @@
 #
 #   Internet ──HTTPS──▶ Coolify proxy (Traefik/Caddy, TLS certificates, domain)
 #            ──HTTP───▶ gateway:80 (this file)
-#                         ├─ /api/* /sanctum/* /up  ─FastCGI─▶ api:9000 (Laravel, php-fpm)
+#                         ├─ /api/* /sanctum/* /up /t/*  ─FastCGI─▶ api:9000 (Laravel, php-fpm)
 #                         └─ everything else        ─HTTP────▶ web:3000 (Next.js)
 #
 # One origin for the whole product, so session cookies, CSRF and the waiter app's
@@ -43,7 +43,8 @@
 	header {
 		Strict-Transport-Security "max-age=63072000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
-		Referrer-Policy "strict-origin-when-cross-origin"
+		# Default only: the guest tap page (/t/*) sends no-referrer, its URL carries SUN values.
+		?Referrer-Policy "strict-origin-when-cross-origin"
 		-Server
 	}
 
@@ -52,8 +53,8 @@
 		respond "ok" 200
 	}
 
-	# Laravel: API, Sanctum CSRF cookie, health check (/up checks database + cache).
-	@laravel path /api/* /sanctum/* /up
+	# Laravel: API, Sanctum CSRF cookie, health check (/up checks database + cache), guest tap page (tap domain).
+	@laravel path /api/* /sanctum/* /up /t/*
 	handle @laravel {
 		# The API has no static files: every request goes to Laravel's front controller.
 		# REQUEST_URI keeps the original path and query, so Laravel routing works unchanged.

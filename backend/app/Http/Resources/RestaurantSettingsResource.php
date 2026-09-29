@@ -29,6 +29,7 @@ final class RestaurantSettingsResource extends JsonResource
             'allow_reload' => $s->allow_reload,
             'allow_partial_redemption' => $s->allow_partial_redemption,
             'send_customer_emails' => $s->send_customer_emails,
+            'public_balance' => $s->public_balance,
             'brand_color' => $s->brand_color,
             'receipt_footer' => $s->receipt_footer,
             'platform_limits' => [

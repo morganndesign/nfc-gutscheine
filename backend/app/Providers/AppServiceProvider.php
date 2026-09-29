@@ -106,6 +106,9 @@ final class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('password-reset', static fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip()));
 
+        // Guest tap page: generous for real guests, a wall for URL guessing.
+        RateLimiter::for('tap', static fn (Request $request): Limit => Limit::perMinute(30)->by('tap:'.$request->ip()));
+
         RateLimiter::for('app-config', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
 
         // Per user *and* terminal: several phones may share one waiter login during a busy service.

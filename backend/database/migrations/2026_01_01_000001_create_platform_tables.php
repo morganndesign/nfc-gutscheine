@@ -49,6 +49,8 @@ return new class extends Migration
             $table->boolean('allow_reload')->default(true);
             $table->boolean('allow_partial_redemption')->default(true);
             $table->boolean('send_customer_emails')->default(true);
+            // A guest tapping their card with their own phone sees the balance (SUN-verified, architecture §10.3).
+            $table->boolean('public_balance')->default(true);
             $table->string('brand_color', 7)->default('#0F172A');
             $table->string('receipt_footer', 500)->nullable();
             $table->timestamps();

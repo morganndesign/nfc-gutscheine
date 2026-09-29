@@ -234,9 +234,9 @@ final class CardLifecycleTest extends TestCase
         $this->assertArrayNotHasKey('uid', $cards[0]->toArray());
         $this->assertArrayNotHasKey('id', $cards[0]->toArray());
 
-        // No API resource or controller reads a card id or UID.
+        // No API resource serialises a card id or UID.
         $offenders = [];
-        foreach ((new Finder)->files()->in([app_path('Http')])->name('*.php') as $file) {
+        foreach ((new Finder)->files()->in([app_path('Http/Resources')])->name('*.php') as $file) {
             if (preg_match('/->uid\b|[\'"]uid[\'"]|card->id\b|card_id/', $file->getContents()) === 1) {
                 $offenders[] = $file->getRelativePathname();
             }

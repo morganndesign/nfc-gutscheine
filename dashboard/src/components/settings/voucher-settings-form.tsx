@@ -19,13 +19,18 @@ import { centsToInput, formatMoney, parseMoneyInput } from "@/lib/money"
 type EditableSettings = Omit<RestaurantSettings, "platform_limits">
 type MoneyKey = "min_voucher_value" | "max_voucher_balance" | "max_debit_per_transaction" | "max_debit_per_voucher_per_day"
 
-const TOGGLES: { key: "allow_reload" | "allow_partial_redemption" | "send_customer_emails"; label: string; description: string }[] = [
+const TOGGLES: { key: "allow_reload" | "allow_partial_redemption" | "send_customer_emails" | "public_balance"; label: string; description: string }[] = [
   { key: "allow_reload", label: "Allow reloading", description: "Vouchers can be topped up with additional value (always with a payment)." },
   { key: "allow_partial_redemption", label: "Partial redemption", description: "Guests can spend part of the balance and keep the rest." },
   {
     key: "send_customer_emails",
     label: "Customer e-mails",
-    description: "Confirmations and reminders to registered customers. They never contain an amount or a link.",
+    description: "Receipts (amount, date, payment) and reminders to registered customers. Never a QR code, voucher number or link.",
+  },
+  {
+    key: "public_balance",
+    label: "Balance on the guest's phone",
+    description: "A guest who taps their card with their own phone sees the balance. Off: the page asks them to ask you.",
   },
 ]
 

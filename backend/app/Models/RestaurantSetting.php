@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $allow_reload
  * @property bool $allow_partial_redemption
  * @property bool $send_customer_emails
+ * @property bool $public_balance
  * @property string $brand_color
  * @property string|null $receipt_footer
  */
@@ -33,7 +34,7 @@ class RestaurantSetting extends Model
     protected $fillable = [
         'validity_months', 'min_voucher_value', 'max_voucher_balance', 'max_debit_per_transaction',
         'max_debit_per_voucher_per_day', 'max_redemptions_per_voucher_per_hour', 'allow_reload',
-        'allow_partial_redemption', 'send_customer_emails', 'brand_color', 'receipt_footer',
+        'allow_partial_redemption', 'send_customer_emails', 'public_balance', 'brand_color', 'receipt_footer',
     ];
 
     protected $attributes = [
@@ -46,6 +47,7 @@ class RestaurantSetting extends Model
         'allow_reload' => true,
         'allow_partial_redemption' => true,
         'send_customer_emails' => true,
+        'public_balance' => true,
         'brand_color' => '#0F172A',
     ];
 
@@ -61,6 +63,7 @@ class RestaurantSetting extends Model
             'allow_reload' => 'boolean',
             'allow_partial_redemption' => 'boolean',
             'send_customer_emails' => 'boolean',
+            'public_balance' => 'boolean',
         ];
     }
 

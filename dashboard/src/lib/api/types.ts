@@ -47,6 +47,7 @@ export interface RestaurantSettings {
   allow_reload: boolean
   allow_partial_redemption: boolean
   send_customer_emails: boolean
+  public_balance: boolean
   brand_color: string
   receipt_footer: string | null
   platform_limits: {
