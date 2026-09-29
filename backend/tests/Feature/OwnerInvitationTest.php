@@ -126,7 +126,7 @@ final class OwnerInvitationTest extends TestCase
         $owner = User::query()->where('email', 'hanna@hirsch.test')->firstOrFail();
         $this->assertNotNull($owner->password_changed_at);
         Sanctum::actingAs($owner, ['*']);
-        $this->getJson('/api/v1/cards')->assertOk();
+        $this->getJson('/api/v1/vouchers')->assertOk();
 
         // 8. The admin list shows the invitation as accepted.
         $this->actingAsAdmin();

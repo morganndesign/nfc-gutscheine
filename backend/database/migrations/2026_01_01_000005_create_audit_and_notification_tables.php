@@ -12,9 +12,11 @@ return new class extends Migration
     {
         Schema::create('audit_logs', function (Blueprint $table): void {
             $table->uuid('id')->primary();
-            $table->foreignUuid('restaurant_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignUuid('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignUuid('device_id')->nullable()->constrained()->nullOnDelete();
+            // Plain references without foreign keys: the append-only trail outlives the subjects it describes
+            // (a deleted restaurant or user must not rewrite, or block, its history).
+            $table->uuid('restaurant_id')->nullable();
+            $table->uuid('user_id')->nullable()->index();
+            $table->uuid('device_id')->nullable();
             $table->string('action', 80)->index();
             $table->string('auditable_type', 80)->nullable();
             $table->uuid('auditable_id')->nullable();
@@ -25,6 +27,11 @@ return new class extends Migration
             $table->string('user_agent', 500)->nullable();
             $table->string('request_id', 64)->nullable();
             $table->timestamp('created_at', 6)->useCurrent();
+            $table->string('chain_scope', 36);
+            $table->unsignedBigInteger('chain_seq');
+            $table->char('prev_hash', 64);
+            $table->char('entry_hash', 64);
+            $table->unique(['chain_scope', 'chain_seq']);
             $table->index(['auditable_type', 'auditable_id']);
             $table->index(['restaurant_id', 'created_at']);
         });
@@ -45,7 +52,7 @@ return new class extends Migration
         Schema::create('notification_logs', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignUuid('restaurant_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignUuid('gift_card_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignUuid('voucher_id')->nullable()->constrained()->nullOnDelete();
             $table->string('template_key', 60);
             $table->string('channel', 20);
             $table->string('recipient', 191);

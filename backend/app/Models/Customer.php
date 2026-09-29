@@ -52,10 +52,10 @@ class Customer extends Model
         return trim(($this->first_name ?? '').' '.($this->last_name ?? '')) ?: ($this->email ?? '—');
     }
 
-    /** @return HasMany<GiftCard, $this> */
-    public function giftCards(): HasMany
+    /** @return HasMany<Voucher, $this> */
+    public function vouchers(): HasMany
     {
-        return $this->hasMany(GiftCard::class);
+        return $this->hasMany(Voucher::class);
     }
 
     /**

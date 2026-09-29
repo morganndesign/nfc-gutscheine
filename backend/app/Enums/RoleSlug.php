@@ -41,27 +41,25 @@ enum RoleSlug: string
     public function defaultPermissions(): array
     {
         return match ($this) {
-            self::PlatformAdmin => Permission::cases(),
+            // Platform staff operate the platform (restaurants, batches, stations), never vouchers (architecture §13.1).
+            self::PlatformAdmin => array_values(array_filter(
+                Permission::cases(),
+                static fn (Permission $p): bool => $p->isPlatform(),
+            )),
             self::Owner => array_values(array_filter(
                 Permission::cases(),
                 static fn (Permission $p): bool => ! $p->isPlatform(),
             )),
             self::Manager => [
                 Permission::DashboardView,
-                Permission::CardsView,
-                Permission::CardsScan,
-                Permission::CardsCreate,
-                Permission::CardsUpdate,
-                Permission::CardsActivate,
-                Permission::CardsRedeem,
-                Permission::CardsReload,
-                Permission::CardsBlock,
-                Permission::CardsUnblock,
-                Permission::CardsExpire,
-                Permission::CardsTransfer,
-                Permission::CardsReplace,
-                Permission::CardsWriteNfc,
-                Permission::CardsExport,
+                Permission::VouchersView,
+                Permission::VouchersSell,
+                Permission::VouchersUpdate,
+                Permission::VouchersRedeem,
+                Permission::VouchersReload,
+                Permission::VouchersBlock,
+                Permission::VouchersUnblock,
+                Permission::VouchersExport,
                 Permission::TransactionsView,
                 Permission::TransactionsReverse,
                 Permission::TransactionsExport,
@@ -71,8 +69,7 @@ enum RoleSlug: string
                 Permission::DevicesView,
             ],
             self::Waiter => [
-                Permission::CardsScan,
-                Permission::CardsRedeem,
+                Permission::VouchersRedeem,
             ],
         };
     }

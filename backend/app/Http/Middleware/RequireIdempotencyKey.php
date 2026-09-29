@@ -12,8 +12,7 @@ use Symfony\Component\HttpFoundation\Response;
  * Validates the Idempotency-Key header (client-generated, e.g. a UUID per attempt) so network
  * retries or double taps can never book twice.
  *
- * Usage: `idempotent` (header required — money movements) or `idempotent:optional`.
- * The ":" character is reserved for keys derived by the server (e.g. "<key>:in" for transfers).
+ * Usage: `idempotent` (header required: sales and money movements) or `idempotent:optional`.
  */
 final class RequireIdempotencyKey
 {

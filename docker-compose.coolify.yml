@@ -61,7 +61,6 @@ services:
       APP_KEY: ${APP_KEY:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
-      CARD_BASE_URL: ${CARD_BASE_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
       SERVICE_FQDN_GATEWAY: ${SERVICE_FQDN_GATEWAY}
       APP_LOCALE: ${APP_LOCALE:-en}
@@ -102,9 +101,6 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-GiftCard Pro}
       MAIL_LOCALE: ${MAIL_LOCALE:-de}
       OPS_ALERT_EMAIL: ${OPS_ALERT_EMAIL:-}
-      NTAG424_META_READ_KEY: ${NTAG424_META_READ_KEY:-}
-      NTAG424_FILE_READ_KEY: ${NTAG424_FILE_READ_KEY:-}
-      NTAG424_DIVERSIFY_KEYS: ${NTAG424_DIVERSIFY_KEYS:-true}
       SEED_DEMO_DATA: "false"
     volumes:
       - laravel-storage:/var/www/html/storage/app
@@ -132,7 +128,6 @@ services:
       APP_KEY: ${APP_KEY:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
-      CARD_BASE_URL: ${CARD_BASE_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
       SERVICE_FQDN_GATEWAY: ${SERVICE_FQDN_GATEWAY}
       APP_LOCALE: ${APP_LOCALE:-en}
@@ -173,9 +168,6 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-GiftCard Pro}
       MAIL_LOCALE: ${MAIL_LOCALE:-de}
       OPS_ALERT_EMAIL: ${OPS_ALERT_EMAIL:-}
-      NTAG424_META_READ_KEY: ${NTAG424_META_READ_KEY:-}
-      NTAG424_FILE_READ_KEY: ${NTAG424_FILE_READ_KEY:-}
-      NTAG424_DIVERSIFY_KEYS: ${NTAG424_DIVERSIFY_KEYS:-true}
       SEED_DEMO_DATA: "false"
     volumes:
       - laravel-storage:/var/www/html/storage/app
@@ -202,7 +194,6 @@ services:
       APP_KEY: ${APP_KEY:-}
       APP_URL: ${APP_URL:-}
       FRONTEND_URL: ${FRONTEND_URL:-}
-      CARD_BASE_URL: ${CARD_BASE_URL:-}
       SERVICE_URL_GATEWAY: ${SERVICE_URL_GATEWAY:?is empty - give the gateway service an https domain in Coolify, then redeploy}
       SERVICE_FQDN_GATEWAY: ${SERVICE_FQDN_GATEWAY}
       APP_LOCALE: ${APP_LOCALE:-en}
@@ -243,9 +234,6 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-GiftCard Pro}
       MAIL_LOCALE: ${MAIL_LOCALE:-de}
       OPS_ALERT_EMAIL: ${OPS_ALERT_EMAIL:-}
-      NTAG424_META_READ_KEY: ${NTAG424_META_READ_KEY:-}
-      NTAG424_FILE_READ_KEY: ${NTAG424_FILE_READ_KEY:-}
-      NTAG424_DIVERSIFY_KEYS: ${NTAG424_DIVERSIFY_KEYS:-true}
       SEED_DEMO_DATA: "false"
     volumes:
       - laravel-storage:/var/www/html/storage/app
@@ -282,6 +270,9 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --transaction-isolation=READ-COMMITTED
+      # The migrations create the append-only triggers on the ledger, payments and audit log as the app user;
+      # with binary logging on, MySQL requires this for a non-SUPER user to create triggers.
+      - --log-bin-trust-function-creators=1
       - --innodb-buffer-pool-size=512M
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-giftcard_pro}

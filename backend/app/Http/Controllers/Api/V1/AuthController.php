@@ -43,7 +43,7 @@ final class AuthController extends Controller
         return response()->json(['data' => $this->profile($user)]);
     }
 
-    /** Sign-in for the native waiter app: a device-bound bearer token (scan and redeem; managers and owners also sell and program cards). */
+    /** Sign-in for the native waiter app: a device-bound bearer token (present and redeem vouchers; managers and owners also sell them). */
     public function token(DeviceTokenRequest $request): JsonResponse
     {
         $user = $this->credentials->verify($request, (string) $request->validated('email'), (string) $request->validated('password'), deviceClient: true);

@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\PresentmentMethod;
+use App\Enums\PresentmentPurpose;
 use App\Enums\RoleSlug;
-use App\Exceptions\Domain\IdempotencyConflictException;
-use App\Exceptions\Domain\InsufficientBalanceException;
-use App\Models\GiftCardTransaction;
-use App\Services\GiftCards\GiftCardService;
+use App\Models\Presentment;
+use App\Models\VoucherTransaction;
+use App\Services\Presentments\PresentmentService;
+use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 final class IdempotencyAndConcurrencyTest extends TestCase
@@ -18,106 +21,157 @@ final class IdempotencyAndConcurrencyTest extends TestCase
     public function test_retried_redemption_is_not_charged_twice(): void
     {
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant, 5000);
+        $sale = $this->sell($restaurant, 5000);
         $this->actingAsStaff($restaurant, RoleSlug::Waiter);
-        $headers = $this->idempotency('c3d7a0c0-0000-4000-8000-000000000001');
 
-        $first = $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 2000], $headers)->assertCreated();
-        $second = $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 2000], $headers)->assertOk();
+        $presentment = $this->present($sale->printable->payload)->json('data.id');
+        $key = (string) Str::uuid();
+        $body = ['amount' => 1500, 'presentment_id' => $presentment];
 
-        $this->assertTrue($second->json('replayed'));
-        $this->assertSame($first->json('data.transaction.id'), $second->json('data.transaction.id'));
-        $this->assertSame(3000, $card->refresh()->balance);
-        $this->assertSame(1, GiftCardTransaction::query()->withoutGlobalScopes()->where('gift_card_id', $card->id)->where('type', 'redemption')->count());
+        $this->withHeaders($this->idempotency($key))->postJson("/api/v1/vouchers/{$sale->voucher->id}/redemptions", $body)
+            ->assertCreated()->assertJsonPath('replayed', false);
+        // The response was lost; the app retries with the same key and the same (now consumed) presentment.
+        $this->withHeaders($this->idempotency($key))->postJson("/api/v1/vouchers/{$sale->voucher->id}/redemptions", $body)
+            ->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('data.voucher.balance', 3500);
+
+        $this->assertSame(3500, $sale->voucher->refresh()->balance);
+        $this->assertSame(2, VoucherTransaction::query()->where('voucher_id', $sale->voucher->id)->count());
+    }
+
+    /**
+     * Audit P2: a retry that arrives while the first attempt holds the lock must replay the first attempt's
+     * result after the lock, never answer "declined". The first attempt is run at the moment the retry takes
+     * its first lock, i.e. after the retry's pre-lock key lookup found nothing.
+     */
+    public function test_a_retry_waiting_on_the_lock_replays_the_first_attempt(): void
+    {
+        $restaurant = $this->restaurant();
+        $sale = $this->sell($restaurant, 5000);
+        $waiter = $this->staff($restaurant, RoleSlug::Waiter);
+        $actor = new Actor($waiter);
+        $key = (string) Str::uuid();
+
+        $result = $this->asTenant($restaurant, function () use ($actor, $sale, $key) {
+            $service = app(VoucherService::class);
+            $presentment = app(PresentmentService::class)->present($actor, PresentmentPurpose::Spend, PresentmentMethod::PrintableQr, $sale->printable->payload);
+
+            $armed = true;
+            Presentment::retrieved(static function () use (&$armed, $service, $actor, $sale, $presentment, $key): void {
+                if ($armed) {
+                    $armed = false;
+                    // The first attempt: books the full balance while the retry waits.
+                    $service->redeem($actor, $sale->voucher, 5000, $presentment->getKey(), $key);
+                }
+            });
+
+            return $service->redeem($actor, $sale->voucher, 5000, $presentment->getKey(), $key);
+        });
+
+        $this->assertTrue($result->replayed);
+        $this->assertSame(0, $result->voucher->balance);
+        $this->assertSame(1, VoucherTransaction::query()->withoutGlobalScopes()->where('idempotency_key', $key)->count());
     }
 
     public function test_reusing_a_key_for_a_different_request_is_rejected(): void
     {
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant, 5000);
+        $sale = $this->sell($restaurant, 5000);
         $this->actingAsStaff($restaurant, RoleSlug::Waiter);
-        $headers = $this->idempotency();
+        $key = (string) Str::uuid();
 
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 2000], $headers)->assertCreated();
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 2500], $headers)
+        $this->redeemWithQr($sale->voucher, $sale->printable->payload, 1000, $key)->assertCreated();
+        $this->redeemWithQr($sale->voucher, $sale->printable->payload, 2000, $key)
             ->assertStatus(409)->assertJsonPath('code', 'IDEMPOTENCY_CONFLICT');
+
+        $this->assertSame(4000, $sale->voucher->refresh()->balance);
     }
 
     public function test_money_endpoints_require_an_idempotency_key(): void
     {
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant, 5000);
-        $this->actingAsStaff($restaurant, RoleSlug::Waiter);
+        $sale = $this->sell($restaurant, 5000);
+        $this->actingAsStaff($restaurant, RoleSlug::Owner);
+        $presentment = $this->present($sale->printable->payload)->json('data.id');
 
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 100])
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/redemptions", ['amount' => 100, 'presentment_id' => $presentment])
             ->assertStatus(400)->assertJsonPath('code', 'IDEMPOTENCY_KEY_REQUIRED');
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 100], ['Idempotency-Key' => "'; DROP TABLE--"])
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 100, 'payment' => $this->cashPayment()])
+            ->assertStatus(400)->assertJsonPath('code', 'IDEMPOTENCY_KEY_REQUIRED');
+        $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment()])
+            ->assertStatus(400)->assertJsonPath('code', 'IDEMPOTENCY_KEY_REQUIRED');
+        $this->withHeaders(['Idempotency-Key' => 'short'])->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment()])
             ->assertStatus(400);
+    }
+
+    public function test_a_retried_sale_replays_and_shows_a_fresh_qr_to_the_same_seller(): void
+    {
+        $restaurant = $this->restaurant();
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $key = $this->idempotency();
+        $body = ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment()];
+
+        $first = $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertCreated();
+        $retry = $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)
+            ->assertOk()
+            ->assertJsonPath('replayed', true)
+            ->assertJsonPath('data.id', $first->json('data.id'));
+
+        // The first QR was never seen (its response was lost): it is revoked, only the new one works.
+        $this->assertNotSame($first->json('printable.payload'), $retry->json('printable.payload'));
+        $this->present((string) $first->json('printable.payload'))->assertStatus(422)->assertJsonPath('code', 'MEDIUM_NOT_RECOGNIZED');
+        $this->present((string) $retry->json('printable.payload'))->assertCreated();
+
+        $this->withHeaders($key)->postJson('/api/v1/vouchers', ['value' => 6000] + $body)
+            ->assertStatus(409)->assertJsonPath('code', 'IDEMPOTENCY_CONFLICT');
+        $this->assertSame(1, VoucherTransaction::query()->where('idempotency_key', $key['Idempotency-Key'])->count());
+    }
+
+    public function test_a_late_or_foreign_sale_retry_never_shows_the_qr_again(): void
+    {
+        Carbon::setTestNow('2026-10-01 12:00:00');
+        $restaurant = $this->restaurant();
+        $seller = $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $key = $this->idempotency();
+        $body = ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment()];
+        $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertCreated();
+
+        Carbon::setTestNow('2026-10-01 12:16:00');
+        $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertOk()->assertJsonPath('printable', null);
+
+        Carbon::setTestNow('2026-10-01 12:01:00');
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $this->withHeaders($key)->postJson('/api/v1/vouchers', $body)->assertOk()->assertJsonPath('printable', null);
+        unset($seller);
     }
 
     public function test_sequential_redemptions_can_never_overdraw(): void
     {
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant, 1000);
-        $waiter = $this->staff($restaurant, RoleSlug::Waiter);
-        $service = app(GiftCardService::class);
+        $restaurant->settings->forceFill(['max_redemptions_per_voucher_per_hour' => 0])->save();
+        $sale = $this->sell($restaurant, 1000);
+        $this->actingAsStaff($restaurant, RoleSlug::Waiter);
 
-        $this->asTenant($restaurant, function () use ($service, $waiter, $card): void {
-            // Two "stale" in-memory copies of the same card, as two waiters would hold them.
-            $copyA = $card->fresh();
-            $copyB = $card->fresh();
+        $ok = 0;
+        for ($i = 0; $i < 5; $i++) {
+            $status = $this->redeemWithQr($sale->voucher, $sale->printable->payload, 300)->status();
+            $ok += $status === 201 ? 1 : 0;
+        }
 
-            $service->redeem(new Actor($waiter), $copyA, 800, 'key-aaaaaaaa');
-
-            try {
-                $service->redeem(new Actor($waiter), $copyB, 800, 'key-bbbbbbbb');
-                $this->fail('Second redemption must fail even though its in-memory copy still shows 10.00.');
-            } catch (InsufficientBalanceException) {
-                // expected: the service re-reads the locked row, not the stale model
-            }
-        });
-
-        $this->assertSame(200, $card->refresh()->balance);
-        $this->assertLedgerConsistent($card);
-    }
-
-    public function test_idempotency_is_scoped_per_card_and_type(): void
-    {
-        $restaurant = $this->restaurant();
-        $a = $this->issueCard($restaurant, 5000);
-        $b = $this->issueCard($restaurant, 5000);
-        $waiter = $this->staff($restaurant, RoleSlug::Manager);
-        $service = app(GiftCardService::class);
-
-        $this->asTenant($restaurant, function () use ($service, $waiter, $a, $b): void {
-            $service->redeem(new Actor($waiter), $a, 100, 'shared-key-123');
-
-            $this->expectException(IdempotencyConflictException::class);
-            $service->redeem(new Actor($waiter), $b, 100, 'shared-key-123');
-        });
+        $this->assertSame(3, $ok);
+        $this->assertSame(100, $sale->voucher->refresh()->balance);
+        $this->assertLedgerConsistent($sale->voucher);
     }
 
     public function test_velocity_limit_stops_rapid_repeated_redemptions(): void
     {
         $restaurant = $this->restaurant();
-        $restaurant->settings->forceFill(['max_redemptions_per_card_per_hour' => 2])->save();
-        $card = $this->issueCard($restaurant, 5000);
+        $restaurant->settings->forceFill(['max_redemptions_per_voucher_per_hour' => 2])->save();
+        $sale = $this->sell($restaurant, 5000);
         $this->actingAsStaff($restaurant, RoleSlug::Waiter);
 
-        Carbon::setTestNow(Carbon::now()->subMinutes(20));
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 100], $this->idempotency())->assertCreated();
-        Carbon::setTestNow(Carbon::now()->addMinutes(10));
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 100], $this->idempotency())->assertCreated();
-        Carbon::setTestNow(Carbon::now()->addMinutes(10));
-
-        // The first redemption leaves the one-hour window in 40 minutes.
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 100], $this->idempotency())
-            ->assertStatus(429)
-            ->assertJsonPath('code', 'VELOCITY_LIMIT_EXCEEDED')
-            ->assertJsonPath('context.retry_after', 40 * 60);
-
-        Carbon::setTestNow(Carbon::now()->addMinutes(41));
-        $this->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 100], $this->idempotency())->assertCreated();
-        Carbon::setTestNow();
+        $this->redeemWithQr($sale->voucher, $sale->printable->payload, 100)->assertCreated();
+        $this->redeemWithQr($sale->voucher, $sale->printable->payload, 100)->assertCreated();
+        $this->redeemWithQr($sale->voucher, $sale->printable->payload, 100)
+            ->assertStatus(429)->assertJsonPath('code', 'VELOCITY_LIMIT_EXCEEDED');
     }
 }

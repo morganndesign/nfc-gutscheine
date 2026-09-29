@@ -58,7 +58,7 @@ final class WaiterAppTokenTest extends TestCase
         $response = $this->signIn('Anna@Example.com')
             ->assertCreated()
             ->assertJsonPath('data.user.id', $user->id)
-            ->assertJsonPath('data.user.permissions', ['cards.scan', 'cards.redeem'])
+            ->assertJsonPath('data.user.permissions', ['vouchers.redeem'])
             ->assertJsonPath('data.user.restaurant.id', $restaurant->id);
 
         $this->assertNotEmpty($response->json('data.token'));
@@ -72,34 +72,36 @@ final class WaiterAppTokenTest extends TestCase
         $token = PersonalAccessToken::query()->sole();
         $this->assertSame($device->id, $token->device_id);
         $this->assertSame($restaurant->id, $token->restaurant_id);
-        $this->assertSame(['cards.scan', 'cards.redeem'], $token->abilities);
+        $this->assertSame(['vouchers.redeem'], $token->abilities);
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.device_token_issued', 'user_id' => $user->id, 'device_id' => $device->id]);
     }
 
-    public function test_token_can_scan_and_redeem_with_idempotency(): void
+    public function test_token_can_present_and_redeem_with_idempotency(): void
     {
         [$restaurant, , $token] = $this->signedInWaiter();
-        $card = $this->issueCard($restaurant, 5000);
+        $sale = $this->sell($restaurant, 5000);
+        $voucher = $sale->voucher;
 
         $this->bearer($token)->getJson('/api/v1/auth/me')
             ->assertOk()
-            ->assertJsonPath('data.permissions', ['cards.scan', 'cards.redeem'])
-            ->assertJsonPath('data.restaurant.settings.max_single_redemption', null);
+            ->assertJsonPath('data.permissions', ['vouchers.redeem'])
+            ->assertJsonPath('data.restaurant.settings.max_debit_per_transaction', 25000);
 
-        $this->bearer($token)->postJson('/api/v1/scan', ['method' => 'manual', 'card_number' => $card->card_number])
-            ->assertOk()->assertJsonPath('data.id', $card->id);
+        $presentment = $this->bearer($token)->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'printable_qr', 'credential' => $sale->printable->payload])
+            ->assertCreated()->assertJsonPath('data.voucher.id', $voucher->id)->json('data.id');
 
         $key = (string) Str::uuid();
+        $body = ['amount' => 1250, 'presentment_id' => $presentment];
         $this->bearer($token)->withHeaders(['Idempotency-Key' => $key])
-            ->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 1250])
-            ->assertCreated()->assertJsonPath('data.card.balance', 3750);
+            ->postJson("/api/v1/vouchers/{$voucher->id}/redemptions", $body)
+            ->assertCreated()->assertJsonPath('data.voucher.balance', 3750);
 
         $this->bearer($token)->withHeaders(['Idempotency-Key' => $key])
-            ->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 1250])
-            ->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('data.card.balance', 3750);
+            ->postJson("/api/v1/vouchers/{$voucher->id}/redemptions", $body)
+            ->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('data.voucher.balance', 3750);
 
-        $this->assertSame(3750, $card->refresh()->balance);
-        $this->assertLedgerConsistent($card);
+        $this->assertSame(3750, $voucher->refresh()->balance);
+        $this->assertLedgerConsistent($voucher);
     }
 
     public function test_token_is_limited_to_the_waiter_endpoints_even_for_owners(): void
@@ -107,10 +109,10 @@ final class WaiterAppTokenTest extends TestCase
         $restaurant = $this->restaurant();
         $this->staff($restaurant, RoleSlug::Owner, ['email' => 'owner@example.com']);
         $token = (string) $this->signIn('owner@example.com')->assertCreated()->json('data.token');
-        $card = $this->issueCard($restaurant);
+        $voucher = $this->issueVoucher($restaurant);
 
-        $this->bearer($token)->getJson('/api/v1/cards')->assertForbidden();
-        $this->bearer($token)->getJson("/api/v1/cards/{$card->id}")->assertForbidden();
+        $this->bearer($token)->getJson('/api/v1/vouchers')->assertForbidden();
+        $this->bearer($token)->getJson("/api/v1/vouchers/{$voucher->id}")->assertForbidden();
         $this->bearer($token)->getJson('/api/v1/dashboard/stats')->assertForbidden();
         $this->bearer($token)->putJson('/api/v1/auth/profile', ['name' => 'Mallory'])->assertForbidden()->assertJsonPath('code', 'FORBIDDEN');
         $this->bearer($token)->getJson('/api/v1/devices/current')->assertOk();
@@ -210,7 +212,7 @@ final class WaiterAppTokenTest extends TestCase
         $user->forceFill(['status' => UserStatus::Inactive])->save();
 
         $this->bearer($token)->getJson('/api/v1/auth/me')->assertUnauthorized()->assertJsonPath('code', 'ACCOUNT_DEACTIVATED');
-        $this->bearer($token)->postJson('/api/v1/scan', ['method' => 'manual', 'card_number' => '1234'])
+        $this->bearer($token)->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'printable_qr', 'credential' => 'x'])
             ->assertUnauthorized()->assertJsonPath('code', 'ACCOUNT_DEACTIVATED');
         $this->signIn('anna@example.com')->assertUnauthorized()->assertJsonPath('code', 'ACCOUNT_DEACTIVATED');
     }

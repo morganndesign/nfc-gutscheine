@@ -13,39 +13,31 @@ final class NotificationTemplateSeeder extends Seeder
     {
         $templates = [
             'en' => [
-                NotificationTemplate::KEY_CARD_ISSUED => [
-                    'Your gift card from {{ restaurant_name }}',
-                    "Hello {{ customer_name }},\n\nthank you for your purchase! Your gift card {{ card_number }} has a balance of {{ balance }} and is valid until {{ expires_at }}.\n\nYou can check your balance at any time: {{ balance_url }}\n\nWe look forward to your visit!\n{{ restaurant_name }}",
+                NotificationTemplate::KEY_VOUCHER_ISSUED => [
+                    'Your voucher from {{ restaurant_name }}',
+                    "Hello {{ customer_name }},\n\nthank you for your purchase! Your voucher is {{ validity }}.\n\nPlease bring it with you on your next visit. We look forward to seeing you!\n{{ restaurant_name }}",
                 ],
-                NotificationTemplate::KEY_CARD_RELOADED => [
-                    'Your gift card has been topped up',
-                    "Hello {{ customer_name }},\n\n{{ amount }} has been added to your gift card {{ card_number }}. New balance: {{ balance }}.\n\nCheck your balance: {{ balance_url }}\n\n{{ restaurant_name }}",
+                NotificationTemplate::KEY_VOUCHER_RELOADED => [
+                    'Your voucher has been topped up',
+                    "Hello {{ customer_name }},\n\nyour voucher from {{ restaurant_name }} has just been topped up. If this was not you, please contact us.\n\n{{ restaurant_name }}",
                 ],
-                NotificationTemplate::KEY_CARD_EXPIRING => [
-                    'Your gift card expires soon',
-                    "Hello {{ customer_name }},\n\nyour gift card {{ card_number }} still has a balance of {{ balance }} and expires on {{ expires_at }}. We would love to welcome you before then!\n\n{{ restaurant_name }}",
-                ],
-                NotificationTemplate::KEY_BALANCE_LOW => [
-                    'Your gift card balance is running low',
-                    "Hello {{ customer_name }},\n\nthe remaining balance on your gift card {{ card_number }} is {{ balance }}.\n\n{{ restaurant_name }}",
+                NotificationTemplate::KEY_VOUCHER_EXPIRING => [
+                    'Your voucher expires soon',
+                    "Hello {{ customer_name }},\n\nyour voucher from {{ restaurant_name }} is valid until {{ expires_at }}. We would love to welcome you before then!\n\n{{ restaurant_name }}",
                 ],
             ],
             'de' => [
-                NotificationTemplate::KEY_CARD_ISSUED => [
+                NotificationTemplate::KEY_VOUCHER_ISSUED => [
                     'Ihr Gutschein von {{ restaurant_name }}',
-                    "Hallo {{ customer_name }},\n\nvielen Dank für Ihren Einkauf! Ihr Gutschein {{ card_number }} hat ein Guthaben von {{ balance }} und ist gültig bis {{ expires_at }}.\n\nIhr Guthaben können Sie jederzeit hier abfragen: {{ balance_url }}\n\nWir freuen uns auf Ihren Besuch!\n{{ restaurant_name }}",
+                    "Hallo {{ customer_name }},\n\nvielen Dank für Ihren Einkauf! Ihr Gutschein ist {{ validity }}.\n\nBitte bringen Sie ihn bei Ihrem nächsten Besuch mit. Wir freuen uns auf Sie!\n{{ restaurant_name }}",
                 ],
-                NotificationTemplate::KEY_CARD_RELOADED => [
+                NotificationTemplate::KEY_VOUCHER_RELOADED => [
                     'Ihr Gutschein wurde aufgeladen',
-                    "Hallo {{ customer_name }},\n\nIhr Gutschein {{ card_number }} wurde um {{ amount }} aufgeladen. Neues Guthaben: {{ balance }}.\n\nGuthaben abfragen: {{ balance_url }}\n\n{{ restaurant_name }}",
+                    "Hallo {{ customer_name }},\n\nIhr Gutschein von {{ restaurant_name }} wurde soeben aufgeladen. Falls Sie das nicht waren, melden Sie sich bitte bei uns.\n\n{{ restaurant_name }}",
                 ],
-                NotificationTemplate::KEY_CARD_EXPIRING => [
+                NotificationTemplate::KEY_VOUCHER_EXPIRING => [
                     'Ihr Gutschein läuft bald ab',
-                    "Hallo {{ customer_name }},\n\nIhr Gutschein {{ card_number }} hat noch ein Guthaben von {{ balance }} und ist gültig bis {{ expires_at }}. Wir freuen uns auf Ihren Besuch!\n\n{{ restaurant_name }}",
-                ],
-                NotificationTemplate::KEY_BALANCE_LOW => [
-                    'Ihr Gutscheinguthaben ist fast aufgebraucht',
-                    "Hallo {{ customer_name }},\n\ndas Restguthaben Ihres Gutscheins {{ card_number }} beträgt {{ balance }}.\n\n{{ restaurant_name }}",
+                    "Hallo {{ customer_name }},\n\nIhr Gutschein von {{ restaurant_name }} ist gültig bis {{ expires_at }}. Wir freuen uns auf Ihren Besuch!\n\n{{ restaurant_name }}",
                 ],
             ],
         ];

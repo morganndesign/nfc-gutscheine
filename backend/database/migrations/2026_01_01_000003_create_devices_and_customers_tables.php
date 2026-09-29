@@ -28,6 +28,24 @@ return new class extends Migration
             $table->unique(['restaurant_id', 'fingerprint']);
         });
 
+        Schema::create('personal_access_tokens', function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->uuidMorphs('tokenable');
+            $table->foreignUuid('restaurant_id')->nullable()->index();
+            // Waiter app tokens are bound to the device that signed in (X-Device-Id) and die with it.
+            $table->foreignUuid('device_id')->nullable()->constrained('devices')->nullOnDelete();
+            $table->string('name');
+            $table->string('token', 64)->unique();
+            $table->text('abilities')->nullable();
+            $table->timestamp('last_used_at')->nullable();
+            $table->string('last_used_ip', 45)->nullable();
+            $table->timestamp('expires_at')->nullable()->index();
+            $table->timestamp('revoked_at')->nullable();
+            $table->foreignUuid('revoked_by')->nullable();
+            $table->timestamps();
+            $table->index(['tokenable_id', 'device_id', 'revoked_at']);
+        });
+
         Schema::create('customers', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignUuid('restaurant_id')->constrained()->restrictOnDelete();
@@ -48,6 +66,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('customers');
+        Schema::dropIfExists('personal_access_tokens');
         Schema::dropIfExists('devices');
     }
 };

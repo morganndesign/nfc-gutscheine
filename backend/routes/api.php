@@ -8,19 +8,18 @@ use App\Http\Controllers\Api\V1\ApiTokenController;
 use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\CardScanController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeviceController;
-use App\Http\Controllers\Api\V1\GiftCardActionController;
-use App\Http\Controllers\Api\V1\GiftCardController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\PasswordController;
-use App\Http\Controllers\Api\V1\PublicCardController;
+use App\Http\Controllers\Api\V1\PresentmentController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SettingsController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\UserController;
+use App\Http\Controllers\Api\V1\VoucherActionController;
+use App\Http\Controllers\Api\V1\VoucherController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,10 +34,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
     // ---------------------------------------------------------------- public
-    Route::get('public/cards/{token}', [PublicCardController::class, 'show'])
-        ->middleware('throttle:public-card')
-        ->where('token', '[0-9a-fA-F\-]{36}');
-
     Route::get('app/config', AppConfigController::class)->middleware('throttle:app-config');
 
     Route::prefix('auth')->group(function (): void {
@@ -65,36 +60,26 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('activity', [DashboardController::class, 'activity']);
             });
 
-            // Waiter flow: tap → card
-            Route::post('scan', CardScanController::class)->middleware(['can:cards.scan', 'throttle:card-scan']);
+            // Proof that a voucher's medium is here, now: single use, 60 seconds (architecture §10.1).
+            Route::post('presentments', [PresentmentController::class, 'store'])
+                ->middleware(['can:vouchers.redeem', 'throttle:presentment']);
 
-            Route::get('cards/export', [GiftCardController::class, 'export'])->middleware('can:cards.export');
-            Route::get('cards', [GiftCardController::class, 'index'])->middleware('can:cards.view');
-            Route::post('cards', [GiftCardController::class, 'store'])->middleware(['can:cards.create', 'idempotent:optional']);
-            Route::get('cards/{card}', [GiftCardController::class, 'show'])->middleware('can:cards.view');
-            Route::patch('cards/{card}', [GiftCardController::class, 'update'])->middleware('can:cards.update');
+            Route::get('vouchers/export', [VoucherController::class, 'export'])->middleware('can:vouchers.export');
+            Route::get('vouchers', [VoucherController::class, 'index'])->middleware('can:vouchers.view');
+            Route::post('vouchers', [VoucherController::class, 'store'])->middleware(['can:vouchers.sell', 'idempotent', 'throttle:voucher-operation']);
+            Route::get('vouchers/{voucher}', [VoucherController::class, 'show'])->middleware('can:vouchers.view');
+            Route::patch('vouchers/{voucher}', [VoucherController::class, 'update'])->middleware('can:vouchers.update');
 
-            Route::prefix('cards/{card}')->controller(GiftCardActionController::class)->group(function (): void {
-                Route::middleware(['idempotent', 'throttle:card-operation'])->group(function (): void {
-                    Route::post('redeem', 'redeem')->middleware('can:cards.redeem');
-                    Route::post('reload', 'reload')->middleware('can:cards.reload');
-                    Route::post('transfer', 'transfer')->middleware('can:cards.transfer');
+            Route::prefix('vouchers/{voucher}')->controller(VoucherActionController::class)->group(function (): void {
+                Route::middleware(['idempotent', 'throttle:voucher-operation'])->group(function (): void {
+                    Route::post('redemptions', 'redeem')->middleware('can:vouchers.redeem');
+                    Route::post('reloads', 'reload')->middleware('can:vouchers.reload');
                 });
-                Route::post('activate', 'activate')->middleware('can:cards.activate');
-                Route::post('block', 'block')->middleware('can:cards.block');
-                Route::post('unblock', 'unblock')->middleware('can:cards.unblock');
-                Route::post('expire', 'expire')->middleware('can:cards.expire');
-                Route::post('replace', 'replace')->middleware('can:cards.replace');
-                Route::get('nfc', 'nfcPayload')->middleware('can:cards.write_nfc');
-                Route::middleware(['can:cards.write_nfc', 'throttle:nfc-programming'])->group(function (): void {
-                    Route::post('nfc', 'bindNfc');
-                    Route::post('nfc/check', 'checkNfc');
-                    Route::post('nfc/lock', 'lockNfc');
-                    Route::post('nfc/attempts', 'reportNfcFailure');
-                });
-                Route::get('nfc/attempts', 'nfcAttempts')->middleware('can:cards.write_nfc');
-                Route::get('history', 'history')->middleware('can:cards.view');
-                Route::get('qr', 'qr')->middleware('can:cards.write_nfc');
+                Route::post('block', 'block')->middleware('can:vouchers.block');
+                Route::post('unblock', 'unblock')->middleware('can:vouchers.unblock');
+                Route::post('expire', 'expire')->middleware('can:vouchers.expire');
+                Route::post('reinstate', 'reinstate')->middleware('can:vouchers.reinstate');
+                Route::get('history', 'history')->middleware('can:vouchers.view');
             });
 
             Route::get('transactions/export', [TransactionController::class, 'export'])->middleware('can:transactions.export');
@@ -126,7 +111,7 @@ Route::prefix('v1')->group(function (): void {
             Route::middleware('can:settings.manage')->prefix('settings')->group(function (): void {
                 Route::get('/', [SettingsController::class, 'show']);
                 Route::put('restaurant', [SettingsController::class, 'updateRestaurant']);
-                Route::put('cards', [SettingsController::class, 'updateCardSettings']);
+                Route::put('vouchers', [SettingsController::class, 'updateVoucherSettings']);
                 Route::get('notification-templates', [NotificationTemplateController::class, 'index']);
                 Route::put('notification-templates/{key}', [NotificationTemplateController::class, 'update'])->where('key', '[a-z_]+');
             });

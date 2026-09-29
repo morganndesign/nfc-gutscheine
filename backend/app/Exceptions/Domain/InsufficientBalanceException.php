@@ -18,6 +18,6 @@ final class InsufficientBalanceException extends DomainException
 
     protected function defaultMessage(): string
     {
-        return 'The gift card balance is insufficient for this amount.';
+        return 'The voucher balance is insufficient for this amount.';
     }
 }

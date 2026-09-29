@@ -18,15 +18,13 @@ final class WaiterAppConfigTest extends TestCase
 
     public function test_config_is_public_and_cacheable(): void
     {
-        config(['giftcard.card_base_url' => 'https://cards.example.at']);
-
         $this->getJson('/api/v1/app/config')
             ->assertOk()
             ->assertHeader('Cache-Control', 'max-age=60, public')
             ->assertJsonPath('data.min_version', ['android' => null, 'ios' => null])
             ->assertJsonPath('data.update_required', null)
             ->assertJsonPath('data.maintenance_notice', null)
-            ->assertJsonPath('data.card_domains', ['cards.example.at']);
+            ->assertJsonMissingPath('data.card_domains');
     }
 
     public function test_update_is_required_below_the_minimum_version_of_the_platform(): void

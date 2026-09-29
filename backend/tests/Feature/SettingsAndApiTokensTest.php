@@ -11,18 +11,24 @@ use Tests\TestCase;
 
 final class SettingsAndApiTokensTest extends TestCase
 {
-    public function test_owner_updates_card_settings_with_validation(): void
+    public function test_owner_updates_voucher_settings_within_the_platform_limits(): void
     {
         $restaurant = $this->restaurant();
         $this->actingAsStaff($restaurant, RoleSlug::Owner);
 
-        $this->putJson('/api/v1/settings/cards', ['allow_reload' => false, 'default_validity_months' => 24, 'brand_color' => '#112233'])
+        $this->putJson('/api/v1/settings/vouchers', ['allow_reload' => false, 'validity_months' => 60, 'brand_color' => '#112233'])
             ->assertOk()
             ->assertJsonPath('data.allow_reload', false)
-            ->assertJsonPath('data.default_validity_months', 24);
+            ->assertJsonPath('data.validity_months', 60)
+            ->assertJsonPath('data.platform_limits.max_voucher_balance', 50000);
 
-        $this->putJson('/api/v1/settings/cards', ['brand_color' => 'red'])->assertJsonValidationErrors('brand_color');
-        $this->putJson('/api/v1/settings/cards', ['max_card_value' => 500000])->assertJsonValidationErrors('max_card_value');
+        $this->putJson('/api/v1/settings/vouchers', ['brand_color' => 'red'])->assertJsonValidationErrors('brand_color');
+        $this->putJson('/api/v1/settings/vouchers', ['max_voucher_balance' => 50001])->assertJsonValidationErrors('max_voucher_balance');
+        $this->putJson('/api/v1/settings/vouchers', ['max_debit_per_transaction' => '100'])->assertJsonValidationErrors('max_debit_per_transaction');
+        $this->putJson('/api/v1/settings/vouchers', ['allow_reload' => 'yes'])->assertJsonValidationErrors('allow_reload');
+        $this->putJson('/api/v1/settings/vouchers', ['max_debit_per_transaction' => 30000, 'max_debit_per_voucher_per_day' => 20000])
+            ->assertJsonValidationErrors('max_debit_per_transaction');
+        $this->putJson('/api/v1/settings/vouchers', ['validity_months' => null])->assertOk()->assertJsonPath('data.validity_months', null);
         $this->assertDatabaseHas('audit_logs', ['action' => 'restaurant.settings_updated', 'restaurant_id' => $restaurant->id]);
     }
 
@@ -33,7 +39,7 @@ final class SettingsAndApiTokensTest extends TestCase
 
         $this->getJson('/api/v1/settings/notification-templates')->assertOk()->assertJsonPath('data.0.is_default', true);
 
-        $this->putJson('/api/v1/settings/notification-templates/card_issued', [
+        $this->putJson('/api/v1/settings/notification-templates/voucher_issued', [
             'locale' => 'de', 'subject' => 'Ihr Gutschein', 'body' => 'Hallo {{ customer_name }}',
         ])->assertSuccessful()->assertJsonPath('data.is_default', false);
 
@@ -43,10 +49,11 @@ final class SettingsAndApiTokensTest extends TestCase
     public function test_api_token_is_restricted_to_its_abilities_and_can_be_revoked(): void
     {
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant, 5000);
+        $sale = $this->sell($restaurant, 5000);
+        $voucher = $sale->voucher;
         $this->actingAsStaff($restaurant, RoleSlug::Owner);
 
-        $created = $this->postJson('/api/v1/api-tokens', ['name' => 'POS', 'abilities' => ['cards.scan', 'cards.redeem']])
+        $created = $this->postJson('/api/v1/api-tokens', ['name' => 'POS', 'abilities' => ['vouchers.redeem']])
             ->assertCreated();
         $plain = $created->json('plain_text_token');
         $this->assertNotEmpty($plain);
@@ -54,10 +61,11 @@ final class SettingsAndApiTokensTest extends TestCase
         // Switch from the session user to pure bearer authentication.
         $this->app['auth']->forgetGuards();
 
-        $this->withToken($plain)->postJson('/api/v1/scan', ['method' => 'api', 'token' => $card->public_token])->assertOk();
-        $this->withToken($plain)->postJson("/api/v1/cards/{$card->id}/redeem", ['amount' => 500], $this->idempotency())->assertCreated();
-        $this->withToken($plain)->getJson('/api/v1/cards')->assertForbidden();
-        $this->withToken($plain)->postJson("/api/v1/cards/{$card->id}/reload", ['amount' => 500], $this->idempotency())->assertForbidden();
+        $presentment = $this->withToken($plain)->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'printable_qr', 'credential' => $sale->printable->payload])
+            ->assertCreated()->json('data.id');
+        $this->withToken($plain)->postJson("/api/v1/vouchers/{$voucher->id}/redemptions", ['amount' => 500, 'presentment_id' => $presentment], $this->idempotency())->assertCreated();
+        $this->withToken($plain)->getJson('/api/v1/vouchers')->assertForbidden();
+        $this->withToken($plain)->postJson("/api/v1/vouchers/{$voucher->id}/reloads", ['amount' => 500, 'payment' => $this->cashPayment()], $this->idempotency())->assertForbidden();
 
         $tokenId = $created->json('data.id');
         $owner = $this->staff($restaurant, RoleSlug::Owner);
@@ -67,7 +75,7 @@ final class SettingsAndApiTokensTest extends TestCase
 
         $this->app['auth']->forgetGuards();
         Auth::forgetUser();
-        $this->withToken($plain)->postJson('/api/v1/scan', ['method' => 'api', 'token' => $card->public_token])->assertUnauthorized();
+        $this->withToken($plain)->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'printable_qr', 'credential' => $sale->printable->payload])->assertUnauthorized();
     }
 
     public function test_tokens_cannot_exceed_creator_permissions(): void

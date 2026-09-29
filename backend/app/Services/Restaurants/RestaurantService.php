@@ -10,8 +10,6 @@ use App\Exceptions\Domain\InvitationNotPossibleException;
 use App\Exceptions\Domain\RestaurantNotDeletableException;
 use App\Models\Customer;
 use App\Models\Device;
-use App\Models\GiftCard;
-use App\Models\GiftCardTransaction;
 use App\Models\NotificationLog;
 use App\Models\NotificationTemplate;
 use App\Models\PersonalAccessToken;
@@ -19,6 +17,8 @@ use App\Models\Restaurant;
 use App\Models\RestaurantSetting;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Models\Voucher;
+use App\Models\VoucherTransaction;
 use App\Services\Audit\AuditLogger;
 use App\Services\Users\InvitationService;
 use App\Services\Users\UserService;
@@ -77,8 +77,8 @@ final class RestaurantService
     public function update(Actor $actor, Restaurant $restaurant, array $data): Restaurant
     {
         if (isset($data['currency']) && $data['currency'] !== $restaurant->currency
-            && GiftCard::query()->withoutGlobalScopes()->withTrashed()->where('restaurant_id', $restaurant->getKey())->exists()) {
-            throw ValidationException::withMessages(['currency' => 'The currency cannot be changed after gift cards were issued.']);
+            && Voucher::query()->withoutGlobalScopes()->where('restaurant_id', $restaurant->getKey())->exists()) {
+            throw ValidationException::withMessages(['currency' => 'The currency cannot be changed after vouchers were issued.']);
         }
 
         $restaurant->fill($data);
@@ -146,15 +146,15 @@ final class RestaurantService
     /**
      * Counts of the records that make a restaurant non-deletable.
      *
-     * @return array{gift_cards: int, transactions: int, customers: int}
+     * @return array{vouchers: int, transactions: int, customers: int}
      */
     public function businessData(Restaurant $restaurant): array
     {
         $id = $restaurant->getKey();
 
         return [
-            'gift_cards' => GiftCard::query()->withoutGlobalScopes()->withTrashed()->where('restaurant_id', $id)->count(),
-            'transactions' => GiftCardTransaction::query()->withoutGlobalScopes()->where('restaurant_id', $id)->count(),
+            'vouchers' => Voucher::query()->withoutGlobalScopes()->where('restaurant_id', $id)->count(),
+            'transactions' => VoucherTransaction::query()->withoutGlobalScopes()->where('restaurant_id', $id)->count(),
             'customers' => Customer::query()->withoutGlobalScopes()->withTrashed()->where('restaurant_id', $id)->count(),
         ];
     }
@@ -162,9 +162,9 @@ final class RestaurantService
     /**
      * Permanently deletes a restaurant that has no business data (e.g. created by mistake): its users with
      * their tokens, sessions and pending invitations, devices, settings and own e-mail templates.
-     * Audit and notification logs are kept (their restaurant reference becomes empty).
+     * The audit trail is append-only and is kept; its entries keep the deleted restaurant's id.
      *
-     * @throws RestaurantNotDeletableException when gift cards, transactions or customers exist
+     * @throws RestaurantNotDeletableException when vouchers, transactions or customers exist
      */
     public function delete(Actor $actor, Restaurant $restaurant, string $confirmation): void
     {
@@ -178,8 +178,8 @@ final class RestaurantService
 
             if (array_sum($counts) > 0) {
                 throw new RestaurantNotDeletableException(sprintf(
-                    '%s has %d gift card(s), %d transaction(s) and %d customer(s). These records must be kept, so the restaurant cannot be deleted. Archive it instead.',
-                    $locked->name, $counts['gift_cards'], $counts['transactions'], $counts['customers'],
+                    '%s has %d voucher(s), %d transaction(s) and %d customer(s). These records must be kept, so the restaurant cannot be deleted. Archive it instead.',
+                    $locked->name, $counts['vouchers'], $counts['transactions'], $counts['customers'],
                 ), $counts);
             }
 

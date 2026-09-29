@@ -4,20 +4,19 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\GiftCardStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\DeleteRestaurantRequest;
 use App\Http\Requests\Admin\ResendInvitationRequest;
 use App\Http\Requests\Admin\StoreRestaurantRequest;
 use App\Http\Requests\Admin\UpdateRestaurantRequest;
-use App\Http\Requests\Cards\OptionalReasonRequest;
-use App\Http\Requests\Cards\ReasonRequest;
+use App\Http\Requests\OptionalReasonRequest;
+use App\Http\Requests\ReasonRequest;
 use App\Http\Resources\RestaurantResource;
 use App\Http\Resources\UserResource;
-use App\Models\GiftCard;
 use App\Models\NotificationLog;
 use App\Models\Restaurant;
 use App\Models\User;
+use App\Models\Voucher;
 use App\Services\Restaurants\RestaurantService;
 use App\Services\Users\InvitationService;
 use App\Support\Actor;
@@ -45,12 +44,12 @@ final class RestaurantController extends Controller
 
         $restaurants = Restaurant::query()
             ->with(['owner'])
-            ->withCount(['users', 'giftCards'])
-            ->addSelect(['outstanding_balance' => GiftCard::query()
+            ->withCount(['users', 'vouchers'])
+            ->addSelect(['outstanding_balance' => Voucher::query()
                 ->withoutGlobalScopes()
                 ->selectRaw('COALESCE(SUM(balance), 0)')
-                ->whereColumn('gift_cards.restaurant_id', 'restaurants.id')
-                ->whereIn('status', [GiftCardStatus::Active->value, GiftCardStatus::Inactive->value, GiftCardStatus::Blocked->value]),
+                // Liability towards guests: expired and blocked vouchers keep their balance.
+                ->whereColumn('vouchers.restaurant_id', 'restaurants.id'),
             ])
             ->when($search !== '', static fn ($q) => $q->where(static fn ($w) => $w
                 ->where('name', 'like', $like)
@@ -89,7 +88,7 @@ final class RestaurantController extends Controller
 
     public function show(Restaurant $restaurant): JsonResponse
     {
-        $restaurant->load(['settings', 'owner'])->loadCount(['users', 'giftCards']);
+        $restaurant->load(['settings', 'owner'])->loadCount(['users', 'vouchers']);
         $users = User::query()->with('role')->where('restaurant_id', $restaurant->getKey())->orderBy('name')->get();
         $this->attachInvitations($users);
         if ($restaurant->owner !== null) {

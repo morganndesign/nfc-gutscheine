@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use App\Exceptions\Domain\NfcSignatureInvalidException;
+use App\Exceptions\Domain\SunVerificationFailedException;
 use App\Services\Nfc\Ntag424SunVerifier;
 use PHPUnit\Framework\TestCase;
 
@@ -45,7 +45,7 @@ final class Ntag424SunVerifierTest extends TestCase
     {
         $verifier = new Ntag424SunVerifier('0f1e2d3c4b5a69788796a5b4c3d2e1f0', 'f0e1d2c3b4a5968778695a4b3c2d1e0f', false);
 
-        $this->expectException(NfcSignatureInvalidException::class);
+        $this->expectException(SunVerificationFailedException::class);
         $verifier->verify('60fcf1396f08fdca4a261e49b42c5fbb', '9b60324f845d7684');
     }
 
@@ -53,7 +53,7 @@ final class Ntag424SunVerifierTest extends TestCase
     {
         $verifier = new Ntag424SunVerifier('0f1e2d3c4b5a69788796a5b4c3d2e1f0', 'f0e1d2c3b4a5968778695a4b3c2d1e0f', false);
 
-        $this->expectException(NfcSignatureInvalidException::class);
+        $this->expectException(SunVerificationFailedException::class);
         $verifier->verify('da78eed24789833a0f1c0a98d8e44337', 'a7e44bf982933c3d');
     }
 
@@ -61,7 +61,7 @@ final class Ntag424SunVerifierTest extends TestCase
     {
         $verifier = new Ntag424SunVerifier('0f1e2d3c4b5a69788796a5b4c3d2e1f0', 'f0e1d2c3b4a5968778695a4b3c2d1e0f', false);
 
-        $this->expectException(NfcSignatureInvalidException::class);
+        $this->expectException(SunVerificationFailedException::class);
         $verifier->verify('af539b7388d4f796c70b01ea69d12e2e', '7980fea08da0721e');
     }
 
@@ -70,7 +70,7 @@ final class Ntag424SunVerifierTest extends TestCase
         $verifier = new Ntag424SunVerifier(null, null);
 
         $this->assertFalse($verifier->isConfigured());
-        $this->expectException(NfcSignatureInvalidException::class);
+        $this->expectException(SunVerificationFailedException::class);
         $verifier->verify('EF963FF7828658A599F3041510671E88', '94EED9EE65337086');
     }
 

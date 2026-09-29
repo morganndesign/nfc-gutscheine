@@ -10,11 +10,14 @@ use Illuminate\Support\Facades\Schedule;
 */
 $tz = (string) config('giftcard.schedule_timezone');
 
-// Expire cards whose last valid day has ended; the remaining balance is written off via the ledger.
-Schedule::command('giftcards:expire')->dailyAt('00:15')->timezone($tz)->withoutOverlapping()->onOneServer();
+// Expire vouchers whose last valid day has ended. The balance is kept (no write-off); owners can reinstate.
+Schedule::command('vouchers:expire')->dailyAt('00:15')->timezone($tz)->withoutOverlapping()->onOneServer();
 
-// Remind customers N days before their card expires (once per card).
-Schedule::command('giftcards:notify-expiring')->dailyAt('10:00')->timezone($tz)->withoutOverlapping()->onOneServer();
+// Remind customers N days before their voucher expires (once per voucher).
+Schedule::command('vouchers:notify-expiring')->dailyAt('10:00')->timezone($tz)->withoutOverlapping()->onOneServer();
+
+// Tamper evidence: recompute every hash chain and every voucher balance from its ledger.
+Schedule::command('giftcard:verify-chains')->dailyAt('02:30')->timezone($tz)->withoutOverlapping()->onOneServer();
 
 // Housekeeping.
 Schedule::command('queue:prune-failed --hours=720')->dailyAt('03:30')->timezone($tz)->onOneServer();

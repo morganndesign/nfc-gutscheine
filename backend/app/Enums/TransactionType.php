@@ -9,11 +9,8 @@ enum TransactionType: string
     case Issue = 'issue';
     case Redemption = 'redemption';
     case Reload = 'reload';
-    case TransferOut = 'transfer_out';
-    case TransferIn = 'transfer_in';
-    case Expiration = 'expiration';
+    /** Correction of an earlier redemption or reload: a new entry, the original is never touched. */
     case Reversal = 'reversal';
-    case Adjustment = 'adjustment';
 
     public function label(): string
     {
@@ -21,15 +18,11 @@ enum TransactionType: string
             self::Issue => 'Sale',
             self::Redemption => 'Redemption',
             self::Reload => 'Reload',
-            self::TransferOut => 'Transfer out',
-            self::TransferIn => 'Transfer in',
-            self::Expiration => 'Expiration',
             self::Reversal => 'Reversal',
-            self::Adjustment => 'Adjustment',
         };
     }
 
-    /** Transaction types that count as money sold (revenue from card sales). */
+    /** Entries that bring money in (paid for by a payment). */
     public function isSale(): bool
     {
         return in_array($this, [self::Issue, self::Reload], true);

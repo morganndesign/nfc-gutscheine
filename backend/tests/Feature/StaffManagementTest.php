@@ -41,7 +41,7 @@ final class StaffManagementTest extends TestCase
         $restaurant = $this->restaurant();
         $owner = $this->actingAsStaff($restaurant, RoleSlug::Owner);
         $waiter = $this->staff($restaurant, RoleSlug::Waiter);
-        $token = $waiter->createToken('pos', ['cards.scan']);
+        $token = $waiter->createToken('pos', ['vouchers.redeem']);
         $token->accessToken->forceFill(['restaurant_id' => $restaurant->id])->save();
 
         $this->postJson("/api/v1/users/{$waiter->id}/deactivate")->assertOk()->assertJsonPath('data.status', 'inactive');

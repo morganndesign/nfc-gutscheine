@@ -16,9 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Binds the authenticated user's restaurant as the tenant for this request.
  *
- * Platform administrators have no restaurant of their own; they may explicitly act inside a
- * restaurant by sending the X-Restaurant-Id header (every such request is audit-attributable
- * to the administrator).
+ * Platform administrators have no restaurant and never act inside one: they operate the platform
+ * (restaurants, batches, stations), never vouchers (architecture §13.1).
  */
 final class ResolveTenant
 {
@@ -39,15 +38,7 @@ final class ResolveTenant
             throw new AuthenticationException('This account is deactivated.');
         }
 
-        $restaurant = null;
-
-        if ($user->isPlatformAdmin()) {
-            $requested = $request->header('X-Restaurant-Id');
-            if (is_string($requested) && $requested !== '') {
-                $restaurant = Restaurant::query()->find($requested);
-                abort_if($restaurant === null, 404, 'Restaurant not found.');
-            }
-        } else {
+        if (! $user->isPlatformAdmin()) {
             // Always read fresh (settings may have changed; long-running workers must not use stale data).
             $restaurant = $user->restaurant_id !== null
                 ? Restaurant::query()->with('settings')->find($user->restaurant_id)
@@ -59,10 +50,7 @@ final class ResolveTenant
             if (! $restaurant->isActive()) {
                 throw new RestaurantSuspendedException;
             }
-        }
 
-        if ($restaurant !== null) {
-            $restaurant->loadMissing('settings');
             $this->tenant->set($restaurant);
         }
 

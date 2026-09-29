@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 final class AuditLogger
 {
     /** @var list<string> */
-    private const REDACTED = ['password', 'remember_token', 'token', 'public_token', 'two_factor_secret'];
+    private const REDACTED = ['password', 'remember_token', 'token', 'secret_hash', 'two_factor_secret'];
 
     /**
      * Guest (customer) personal data is never copied into the append-only audit trail, otherwise
@@ -25,7 +25,7 @@ final class AuditLogger
      */
     private const PERSONAL_DATA = [
         'customers' => ['first_name', 'last_name', 'email', 'phone', 'notes'],
-        'gift_cards' => ['recipient_name', 'notes'],
+        'vouchers' => ['recipient_name', 'notes'],
     ];
 
     public function __construct(private readonly TenantContext $tenant) {}

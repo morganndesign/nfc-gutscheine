@@ -26,8 +26,8 @@ final class RolesAndPermissionsSeeder extends Seeder
         $descriptions = [
             RoleSlug::PlatformAdmin->value => 'Operates the GiftCard Pro platform and manages all restaurants.',
             RoleSlug::Owner->value => 'Full control over one restaurant, its staff, settings and integrations.',
-            RoleSlug::Manager->value => 'Manages gift cards, customers and reports of the restaurant.',
-            RoleSlug::Waiter->value => 'Scans cards and redeems balances.',
+            RoleSlug::Manager->value => 'Sells and manages vouchers, customers and reports of the restaurant.',
+            RoleSlug::Waiter->value => 'Redeems vouchers at the till.',
         ];
 
         foreach (RoleSlug::cases() as $slug) {

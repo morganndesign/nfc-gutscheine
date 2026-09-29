@@ -18,6 +18,6 @@ final class ReloadNotAllowedException extends DomainException
 
     protected function defaultMessage(): string
     {
-        return 'Reloading gift cards is disabled for this restaurant.';
+        return 'Reloading vouchers is disabled for this restaurant.';
     }
 }

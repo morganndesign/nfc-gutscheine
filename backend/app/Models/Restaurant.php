@@ -68,9 +68,7 @@ class Restaurant extends Model
     {
         static::created(static function (Restaurant $restaurant): void {
             if (! $restaurant->settings()->exists()) {
-                $restaurant->settings()->create([
-                    'card_number_prefix' => '',
-                ]);
+                $restaurant->settings()->create();
             }
         });
     }
@@ -105,10 +103,10 @@ class Restaurant extends Model
         );
     }
 
-    /** @return HasMany<GiftCard, $this> */
-    public function giftCards(): HasMany
+    /** @return HasMany<Voucher, $this> */
+    public function vouchers(): HasMany
     {
-        return $this->hasMany(GiftCard::class)->withoutGlobalScopes();
+        return $this->hasMany(Voucher::class)->withoutGlobalScopes();
     }
 
     /** @return HasMany<Device, $this> */

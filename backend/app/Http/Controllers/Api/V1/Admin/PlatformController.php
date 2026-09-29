@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
-use App\Enums\GiftCardStatus;
 use App\Enums\RestaurantStatus;
 use App\Enums\TransactionType;
+use App\Enums\VoucherStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdateSystemSettingsRequest;
 use App\Http\Resources\AuditLogResource;
 use App\Models\AuditLog;
-use App\Models\GiftCard;
-use App\Models\GiftCardTransaction;
 use App\Models\Restaurant;
 use App\Models\SystemSetting;
+use App\Models\Voucher;
+use App\Models\VoucherTransaction;
 use App\Services\Audit\AuditLogger;
 use App\Services\Users\InvitationService;
 use App\Support\Actor;
@@ -40,12 +40,12 @@ final class PlatformController extends Controller
             'restaurants_total' => Restaurant::query()->count(),
             'restaurants_active' => Restaurant::query()->where('status', RestaurantStatus::Active->value)->count(),
             'restaurants_archived' => Restaurant::onlyTrashed()->count(),
-            'cards_total' => GiftCard::query()->withoutGlobalScopes()->count(),
-            'cards_active' => GiftCard::query()->withoutGlobalScopes()->where('status', GiftCardStatus::Active->value)->count(),
-            'transactions_this_month' => GiftCardTransaction::query()->withoutGlobalScopes()->where('created_at', '>=', $monthStart)->count(),
-            'volume_sold_this_month' => (int) GiftCardTransaction::query()->withoutGlobalScopes()
+            'vouchers_total' => Voucher::query()->withoutGlobalScopes()->count(),
+            'vouchers_active' => Voucher::query()->withoutGlobalScopes()->where('status', VoucherStatus::Active->value)->count(),
+            'transactions_this_month' => VoucherTransaction::query()->withoutGlobalScopes()->where('created_at', '>=', $monthStart)->count(),
+            'volume_sold_this_month' => (int) VoucherTransaction::query()->withoutGlobalScopes()
                 ->whereIn('type', [TransactionType::Issue->value, TransactionType::Reload->value])
-                ->whereNull('reversed_at')
+                ->whereDoesntHave('reversal')
                 ->where('created_at', '>=', $monthStart)
                 ->sum('amount'),
         ]]);

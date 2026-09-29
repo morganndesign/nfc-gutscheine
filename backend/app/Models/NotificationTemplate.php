@@ -26,20 +26,22 @@ class NotificationTemplate extends Model
 {
     use HasUuids;
 
-    public const KEY_CARD_ISSUED = 'card_issued';
+    public const KEY_VOUCHER_ISSUED = 'voucher_issued';
 
-    public const KEY_CARD_RELOADED = 'card_reloaded';
+    public const KEY_VOUCHER_RELOADED = 'voucher_reloaded';
 
-    public const KEY_CARD_EXPIRING = 'card_expiring';
+    public const KEY_VOUCHER_EXPIRING = 'voucher_expiring';
 
-    public const KEY_BALANCE_LOW = 'balance_low';
-
-    /** @var array<string, list<string>> */
+    /**
+     * Guest e-mails never contain a balance, an amount, the voucher number or a link that shows the voucher
+     * (architecture §6.4, decision 24): whoever reads a forwarded e-mail learns nothing they could use.
+     *
+     * @var array<string, list<string>>
+     */
     public const PLACEHOLDERS = [
-        self::KEY_CARD_ISSUED => ['restaurant_name', 'customer_name', 'card_number', 'balance', 'expires_at', 'balance_url'],
-        self::KEY_CARD_RELOADED => ['restaurant_name', 'customer_name', 'card_number', 'amount', 'balance', 'balance_url'],
-        self::KEY_CARD_EXPIRING => ['restaurant_name', 'customer_name', 'card_number', 'balance', 'expires_at', 'balance_url'],
-        self::KEY_BALANCE_LOW => ['restaurant_name', 'customer_name', 'card_number', 'balance', 'balance_url'],
+        self::KEY_VOUCHER_ISSUED => ['restaurant_name', 'customer_name', 'validity'],
+        self::KEY_VOUCHER_RELOADED => ['restaurant_name', 'customer_name'],
+        self::KEY_VOUCHER_EXPIRING => ['restaurant_name', 'customer_name', 'expires_at'],
     ];
 
     protected $fillable = ['restaurant_id', 'key', 'channel', 'locale', 'subject', 'body', 'is_active'];

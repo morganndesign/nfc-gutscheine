@@ -18,6 +18,6 @@ final class BalanceLimitExceededException extends DomainException
 
     protected function defaultMessage(): string
     {
-        return 'The resulting balance would exceed the maximum allowed card balance.';
+        return 'The resulting balance would exceed the maximum voucher balance.';
     }
 }

@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Cards\ReasonRequest;
-use App\Http\Requests\Cards\TransactionIndexRequest;
+use App\Http\Requests\ReasonRequest;
+use App\Http\Requests\Vouchers\TransactionIndexRequest;
 use App\Http\Resources\TransactionResource;
-use App\Models\GiftCardTransaction;
+use App\Models\VoucherTransaction;
 use App\Services\Exports\CsvExporter;
-use App\Services\GiftCards\GiftCardService;
+use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
-use App\Support\CardNumber;
+use App\Support\VoucherNumber;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,24 +24,24 @@ final class TransactionController extends Controller
     public function index(TransactionIndexRequest $request): AnonymousResourceCollection
     {
         $transactions = $this->filteredQuery($request)
-            ->with(['giftCard', 'user', 'device'])
+            ->with(['voucher', 'user', 'device', 'reversal', 'payment'])
             ->paginate($this->perPage($request))
             ->withQueryString();
 
         return TransactionResource::collection($transactions);
     }
 
-    public function show(GiftCardTransaction $transaction): TransactionResource
+    public function show(VoucherTransaction $transaction): TransactionResource
     {
-        return TransactionResource::make($transaction->load(['giftCard', 'user', 'device']));
+        return TransactionResource::make($transaction->load(['voucher', 'user', 'device', 'reversal', 'payment']));
     }
 
-    public function reverse(ReasonRequest $request, GiftCardTransaction $transaction, GiftCardService $cards): JsonResponse
+    public function reverse(ReasonRequest $request, VoucherTransaction $transaction, VoucherService $vouchers): JsonResponse
     {
-        $result = $cards->reverse(Actor::fromRequest($request), $transaction, (string) $request->validated('reason'));
+        $result = $vouchers->reverse(Actor::fromRequest($request), $transaction, (string) $request->validated('reason'));
 
         return response()->json([
-            'data' => TransactionResource::make($result->transaction->load(['giftCard', 'user']))->resolve($request),
+            'data' => TransactionResource::make($result->transaction->load(['voucher', 'user']))->resolve($request),
         ], 201);
     }
 
@@ -52,38 +52,39 @@ final class TransactionController extends Controller
         $money = static fn (int $cents): string => $exporter->amount($cents, $restaurant->locale);
 
         return $exporter->stream(
-            $this->filteredQuery($request)->with(['giftCard', 'user', 'device'])->reorder(),
+            $this->filteredQuery($request)->with(['voucher', 'user', 'device', 'reversal', 'payment'])->reorder(),
             [
-                'Date' => static fn (GiftCardTransaction $t): string => $t->created_at->timezone($tz)->format('Y-m-d H:i:s'),
-                'Transaction ID' => static fn (GiftCardTransaction $t): string => $t->id,
-                'Type' => static fn (GiftCardTransaction $t): string => $t->type->label(),
-                'Card number' => static fn (GiftCardTransaction $t): string => CardNumber::format($t->giftCard->card_number),
-                'Amount' => static fn (GiftCardTransaction $t): string => $money($t->amount),
-                'Balance after' => static fn (GiftCardTransaction $t): string => $money($t->balance_after),
-                'Currency' => static fn (GiftCardTransaction $t): string => $t->currency,
-                'Reference' => static fn (GiftCardTransaction $t): ?string => $t->reference,
-                'Note' => static fn (GiftCardTransaction $t): ?string => $t->note,
-                'Reversed' => static fn (GiftCardTransaction $t): bool => $t->isReversed(),
-                'User' => static fn (GiftCardTransaction $t): ?string => $t->user?->name,
-                'Device' => static fn (GiftCardTransaction $t): ?string => $t->device?->name,
+                'Date' => static fn (VoucherTransaction $t): string => $t->created_at->timezone($tz)->format('Y-m-d H:i:s'),
+                'Transaction ID' => static fn (VoucherTransaction $t): string => $t->id,
+                'Type' => static fn (VoucherTransaction $t): string => $t->type->label(),
+                'Voucher number' => static fn (VoucherTransaction $t): string => VoucherNumber::format($t->voucher->voucher_number),
+                'Amount' => static fn (VoucherTransaction $t): string => $money($t->amount),
+                'Balance after' => static fn (VoucherTransaction $t): string => $money($t->balance_after),
+                'Currency' => static fn (VoucherTransaction $t): string => $t->currency,
+                'Reference' => static fn (VoucherTransaction $t): ?string => $t->reference,
+                'Payment method' => static fn (VoucherTransaction $t): ?string => $t->payment?->method->label(),
+                'Note' => static fn (VoucherTransaction $t): ?string => $t->note,
+                'Reversed' => static fn (VoucherTransaction $t): bool => $t->isReversed(),
+                'User' => static fn (VoucherTransaction $t): ?string => $t->user?->name,
+                'Device' => static fn (VoucherTransaction $t): ?string => $t->device?->name,
             ],
             'transactions-'.Carbon::now($tz)->format('Y-m-d-His').'.csv',
         );
     }
 
     /**
-     * @return Builder<GiftCardTransaction>
+     * @return Builder<VoucherTransaction>
      */
     private function filteredQuery(TransactionIndexRequest $request): Builder
     {
         $v = $request->validated();
-        $query = GiftCardTransaction::query();
+        $query = VoucherTransaction::query();
 
         if (! empty($v['type'])) {
             $query->whereIn('type', $v['type']);
         }
-        if (! empty($v['gift_card_id'])) {
-            $query->where('gift_card_id', $v['gift_card_id']);
+        if (! empty($v['voucher_id'])) {
+            $query->where('voucher_id', $v['voucher_id']);
         }
         if (! empty($v['user_id'])) {
             $query->where('user_id', $v['user_id']);
@@ -96,11 +97,11 @@ final class TransactionController extends Controller
         }
         if (! empty($v['search'])) {
             $term = (string) $v['search'];
-            $digits = CardNumber::normalize($term);
+            $digits = VoucherNumber::normalize($term);
             $query->where(static function (Builder $q) use ($term, $digits): void {
                 $q->where('reference', 'like', '%'.addcslashes($term, '%_\\').'%');
                 if ($digits !== '') {
-                    $q->orWhereHas('giftCard', static fn (Builder $c) => $c->where('card_number', 'like', '%'.$digits.'%'));
+                    $q->orWhereHas('voucher', static fn (Builder $c) => $c->where('voucher_number', 'like', '%'.$digits.'%'));
                 }
             });
         }

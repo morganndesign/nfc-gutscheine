@@ -86,11 +86,11 @@ final class RestaurantManagementTest extends TestCase
         $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", ['currency' => 'XYZ'])->assertUnprocessable();
     }
 
-    public function test_currency_is_locked_once_cards_exist(): void
+    public function test_currency_is_locked_once_vouchers_exist(): void
     {
         $this->actingAsAdmin();
         $restaurant = $this->restaurant(['currency' => 'EUR']);
-        $this->issueCard($restaurant);
+        $this->issueVoucher($restaurant);
 
         $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", ['currency' => 'CHF'])
             ->assertUnprocessable()
@@ -115,7 +115,7 @@ final class RestaurantManagementTest extends TestCase
     {
         $this->actingAsAdmin();
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant, 2500);
+        $voucher = $this->issueVoucher($restaurant, 2500);
         $owner = $this->staff($restaurant, RoleSlug::Owner);
 
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/archive", ['reason' => 'Closed down'])
@@ -125,14 +125,14 @@ final class RestaurantManagementTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'restaurant.archived', 'restaurant_id' => $restaurant->id]);
         $this->getJson('/api/v1/admin/restaurants')->assertJsonCount(0, 'data');
         $this->getJson('/api/v1/admin/restaurants?status=archived')->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $restaurant->id);
-        $this->getJson("/api/v1/admin/restaurants/{$restaurant->id}")->assertOk()->assertJsonPath('business_data.gift_cards', 1);
+        $this->getJson("/api/v1/admin/restaurants/{$restaurant->id}")->assertOk()->assertJsonPath('business_data.vouchers', 1);
 
         // Archived restaurants cannot be edited or disabled, only viewed, restored or deleted.
         $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", ['name' => 'X'])->assertNotFound();
 
         // Staff of an archived restaurant are locked out.
         Sanctum::actingAs($owner, ['*']);
-        $this->getJson('/api/v1/cards')->assertUnauthorized();
+        $this->getJson('/api/v1/vouchers')->assertUnauthorized();
 
         $this->actingAsAdmin();
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/restore")->assertOk()->assertJsonPath('data.archived_at', null);
@@ -140,7 +140,7 @@ final class RestaurantManagementTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['action' => 'restaurant.restored', 'restaurant_id' => $restaurant->id]);
 
         Sanctum::actingAs($owner->fresh(), ['*']);
-        $this->getJson('/api/v1/cards')->assertOk()->assertJsonPath('data.0.id', $card->id)->assertJsonPath('data.0.balance', 2500);
+        $this->getJson('/api/v1/vouchers')->assertOk()->assertJsonPath('data.0.id', $voucher->id)->assertJsonPath('data.0.balance', 2500);
     }
 
     public function test_delete_requires_typed_confirmation(): void
@@ -165,7 +165,7 @@ final class RestaurantManagementTest extends TestCase
         $waiter->createToken('app');
         DB::table('sessions')->insert(['id' => 'sess-1', 'user_id' => $owner->id, 'payload' => '', 'last_activity' => time()]);
         NotificationTemplate::query()->create([
-            'restaurant_id' => $restaurant->id, 'key' => 'card_issued', 'channel' => 'mail', 'locale' => 'en',
+            'restaurant_id' => $restaurant->id, 'key' => 'voucher_issued', 'channel' => 'mail', 'locale' => 'en',
             'subject' => 'S', 'body' => 'B', 'is_active' => true,
         ]);
 
@@ -178,15 +178,16 @@ final class RestaurantManagementTest extends TestCase
         $this->assertDatabaseMissing('devices', ['id' => $device->id]);
         $this->assertDatabaseMissing('personal_access_tokens', ['tokenable_id' => $waiter->id]);
         $this->assertDatabaseMissing('sessions', ['id' => 'sess-1']);
-        $this->assertDatabaseMissing('password_reset_tokens', ['email' => $owner->email]);
+        $this->assertDatabaseMissing('invitation_tokens', ['email' => $owner->email]);
         $this->assertSame(0, RestaurantSetting::query()->where('restaurant_id', $restaurant->id)->count());
         $this->assertSame(0, NotificationTemplate::query()->withoutGlobalScopes()->where('restaurant_id', $restaurant->id)->count());
 
-        // The trail stays: earlier entries lose only their restaurant reference, and the deletion itself is logged.
+        // The append-only trail stays untouched, with the deleted restaurant's id, and the deletion itself is logged.
         $deleted = AuditLog::query()->withoutGlobalScopes()->where('action', 'restaurant.deleted')->firstOrFail();
         $this->assertSame($restaurant->id, $deleted->metadata['restaurant_id']);
         $this->assertSame(2, $deleted->metadata['users_deleted']);
-        $this->assertTrue(AuditLog::query()->withoutGlobalScopes()->where('action', 'restaurant.created')->whereNull('restaurant_id')->exists());
+        $this->assertTrue(AuditLog::query()->withoutGlobalScopes()->where('action', 'restaurant.created')->where('restaurant_id', $restaurant->id)->exists());
+        $this->artisan('giftcard:verify-chains')->assertSuccessful();
         $this->assertTrue(NotificationLog::query()->where('recipient', 'owner@central.test')->whereNull('restaurant_id')->exists());
 
         // The e-mail address is free again.

@@ -38,18 +38,16 @@ return new class extends Migration
         Schema::create('restaurant_settings', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->foreignUuid('restaurant_id')->unique()->constrained()->restrictOnDelete();
-            $table->string('card_number_prefix', 6)->default('');
-            $table->unsignedSmallInteger('default_validity_months')->default(36);
-            $table->unsignedBigInteger('min_card_value')->default(500);
-            $table->unsignedBigInteger('max_card_value')->default(100000);
-            $table->unsignedBigInteger('max_card_balance')->default(200000);
-            $table->unsignedBigInteger('max_single_redemption')->nullable();
-            $table->unsignedSmallInteger('max_redemptions_per_card_per_hour')->default(10);
+            // No expiry unless the restaurant sets one; a set validity is at least 36 months (architecture §5.2).
+            $table->unsignedSmallInteger('validity_months')->nullable();
+            // Limits in minor units (architecture §6.3), within the platform ceilings of config/giftcard.php.
+            $table->unsignedBigInteger('min_voucher_value')->default(500);
+            $table->unsignedBigInteger('max_voucher_balance')->default(50000);
+            $table->unsignedBigInteger('max_debit_per_transaction')->default(25000);
+            $table->unsignedBigInteger('max_debit_per_voucher_per_day')->default(50000);
+            $table->unsignedSmallInteger('max_redemptions_per_voucher_per_hour')->default(10);
             $table->boolean('allow_reload')->default(true);
             $table->boolean('allow_partial_redemption')->default(true);
-            $table->boolean('public_balance_check')->default(true);
-            $table->boolean('enforce_nfc_uid_binding')->default(true);
-            $table->boolean('lock_nfc_tags_after_write')->default(false);
             $table->boolean('send_customer_emails')->default(true);
             $table->string('brand_color', 7)->default('#0F172A');
             $table->string('receipt_footer', 500)->nullable();

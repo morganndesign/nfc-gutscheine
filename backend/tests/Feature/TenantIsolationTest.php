@@ -13,57 +13,45 @@ use Tests\TestCase;
  */
 final class TenantIsolationTest extends TestCase
 {
-    public function test_cards_of_other_restaurants_are_invisible(): void
+    public function test_vouchers_of_other_restaurants_are_invisible(): void
     {
         $mine = $this->restaurant();
         $theirs = $this->restaurant();
-        $myCard = $this->issueCard($mine);
-        $foreignCard = $this->issueCard($theirs);
+        $myVoucher = $this->issueVoucher($mine);
+        $foreign = $this->sell($theirs);
 
         $this->actingAsStaff($mine, RoleSlug::Owner);
 
-        $this->getJson('/api/v1/cards')
+        $this->getJson('/api/v1/vouchers')
             ->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $myCard->id);
+            ->assertJsonPath('data.0.id', $myVoucher->id);
 
-        $this->getJson("/api/v1/cards/{$foreignCard->id}")->assertNotFound();
-        $this->patchJson("/api/v1/cards/{$foreignCard->id}", ['notes' => 'hacked'])->assertNotFound();
-        $this->postJson("/api/v1/cards/{$foreignCard->id}/redeem", ['amount' => 100], $this->idempotency())->assertNotFound();
-        $this->postJson("/api/v1/cards/{$foreignCard->id}/block", ['reason' => 'test'])->assertNotFound();
+        $id = $foreign->voucher->id;
+        $this->getJson("/api/v1/vouchers/{$id}")->assertNotFound();
+        $this->patchJson("/api/v1/vouchers/{$id}", ['notes' => 'hacked'])->assertNotFound();
+        $this->postJson("/api/v1/vouchers/{$id}/redemptions", ['amount' => 100, 'presentment_id' => $myVoucher->id], $this->idempotency())->assertNotFound();
+        $this->postJson("/api/v1/vouchers/{$id}/reloads", ['amount' => 100, 'payment' => $this->cashPayment()], $this->idempotency())->assertNotFound();
+        $this->postJson("/api/v1/vouchers/{$id}/block", ['reason' => 'test'])->assertNotFound();
+        $this->getJson("/api/v1/vouchers/{$id}/history")->assertNotFound();
+        $this->getJson("/api/v1/transactions/{$foreign->transaction->id}")->assertNotFound();
+        $this->postJson("/api/v1/transactions/{$foreign->transaction->id}/reverse", ['reason' => 'test'])->assertNotFound();
     }
 
-    public function test_foreign_card_scan_is_rejected_and_logged(): void
+    public function test_a_foreign_voucher_qr_is_not_recognized_and_logged(): void
     {
         $mine = $this->restaurant();
         $theirs = $this->restaurant();
-        $foreignCard = $this->issueCard($theirs);
+        $foreign = $this->sell($theirs);
 
         $this->actingAsStaff($mine, RoleSlug::Waiter);
 
-        $this->postJson('/api/v1/scan', ['method' => 'nfc', 'token' => 'https://app.giftcardpro.test/c/'.$foreignCard->public_token])
-            ->assertForbidden()
-            ->assertJsonPath('code', 'CARD_FOREIGN_RESTAURANT')
+        $this->present($foreign->printable->payload)
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'MEDIUM_NOT_RECOGNIZED')
             ->assertJsonMissingPath('data');
 
-        $this->assertDatabaseHas('nfc_scans', ['restaurant_id' => $mine->id, 'result' => 'foreign_restaurant', 'gift_card_id' => null]);
-    }
-
-    public function test_transfer_to_foreign_card_is_impossible(): void
-    {
-        $mine = $this->restaurant();
-        $theirs = $this->restaurant();
-        $myCard = $this->issueCard($mine);
-        $foreignCard = $this->issueCard($theirs);
-
-        $this->actingAsStaff($mine, RoleSlug::Owner);
-
-        $this->postJson("/api/v1/cards/{$myCard->id}/transfer", ['target_card_id' => $foreignCard->id], $this->idempotency())
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('target_card_id');
-
-        $this->postJson("/api/v1/cards/{$myCard->id}/transfer", ['target_card_number' => $foreignCard->card_number], $this->idempotency())
-            ->assertNotFound();
+        $this->assertDatabaseHas('audit_logs', ['restaurant_id' => $mine->id, 'action' => 'presentment.failed']);
     }
 
     public function test_customers_and_users_are_isolated(): void
@@ -80,19 +68,22 @@ final class TenantIsolationTest extends TestCase
         $this->getJson("/api/v1/users/{$foreignUser->id}")->assertNotFound();
         $this->postJson("/api/v1/users/{$foreignUser->id}/deactivate")->assertNotFound();
 
-        $this->postJson('/api/v1/cards', ['value' => 5000, 'customer_id' => $foreignCustomer->id])
+        $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer_id' => $foreignCustomer->id], $this->idempotency())
             ->assertStatus(422)->assertJsonValidationErrors('customer_id');
     }
 
-    public function test_cards_cannot_be_looked_up_by_number_across_restaurants(): void
+    public function test_idempotency_keys_are_scoped_per_restaurant(): void
     {
         $mine = $this->restaurant();
         $theirs = $this->restaurant();
-        $foreignCard = $this->issueCard($theirs);
+        $key = $this->idempotency();
+        $body = ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment()];
 
-        $this->actingAsStaff($mine, RoleSlug::Waiter);
+        $this->actingAsStaff($theirs, RoleSlug::Manager);
+        $foreignId = $this->postJson('/api/v1/vouchers', $body, $key)->assertCreated()->json('data.id');
 
-        $this->postJson('/api/v1/scan', ['method' => 'manual', 'card_number' => $foreignCard->card_number])
-            ->assertNotFound()->assertJsonPath('code', 'CARD_NOT_FOUND');
+        $this->actingAsStaff($mine, RoleSlug::Manager);
+        $mineId = $this->postJson('/api/v1/vouchers', $body, $key)->assertCreated()->assertJsonPath('replayed', false)->json('data.id');
+        $this->assertNotSame($foreignId, $mineId);
     }
 }

@@ -40,7 +40,6 @@ case "$url" in http://*|https://*) ;; *) url="https://$url" ;; esac
 host="${url#*://}"; host="${host%%/*}"; hostname="${host%%:*}"
 export APP_URL="$url"
 export FRONTEND_URL="${FRONTEND_URL:-$url}"
-export CARD_BASE_URL="${CARD_BASE_URL:-$url}"
 export SESSION_DOMAIN="${SESSION_DOMAIN:-$hostname}"
 export SANCTUM_STATEFUL_DOMAINS="${SANCTUM_STATEFUL_DOMAINS:-$host}"
 export MAIL_FROM_ADDRESS="${MAIL_FROM_ADDRESS:-no-reply@$hostname}"

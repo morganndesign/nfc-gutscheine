@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Enums\Permission;
-use App\Models\GiftCard;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
+use App\Models\Voucher;
 use App\Services\Nfc\Ntag424SunVerifier;
+use App\Services\Presentments\PresentmentService;
+use App\Services\Presentments\PresentmentVerifier;
+use App\Services\Presentments\PrintableQrVerifier;
 use App\Support\EnvironmentGuard;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -30,6 +33,12 @@ final class AppServiceProvider extends ServiceProvider
         // Request-scoped: reset for every request / queued job (safe under Octane and queue workers).
         $this->app->scoped(TenantContext::class);
         $this->app->singleton(Ntag424SunVerifier::class, static fn (): Ntag424SunVerifier => Ntag424SunVerifier::fromConfig());
+
+        // One verifier per presentment method (architecture §10.1). live_auth joins with the crypto service.
+        $this->app->tag([PrintableQrVerifier::class], PresentmentVerifier::class);
+        $this->app->when(PresentmentService::class)
+            ->needs('$verifiers')
+            ->giveTagged(PresentmentVerifier::class);
     }
 
     public function boot(): void
@@ -37,7 +46,6 @@ final class AppServiceProvider extends ServiceProvider
         EnvironmentGuard::assertPublicUrls((string) $this->app->environment(), [
             'app.url' => config('app.url'),
             'giftcard.frontend_url' => config('giftcard.frontend_url'),
-            'giftcard.card_base_url' => config('giftcard.card_base_url'),
         ]);
 
         Model::preventLazyLoading(! $this->app->isProduction());
@@ -57,7 +65,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         $permissions = array_flip(Permission::values());
 
-        // Permission strings ("cards.redeem") are resolved against the user's role (and token abilities).
+        // Permission strings ("vouchers.redeem") are resolved against the user's role (and token abilities).
         Gate::before(static function (User $user, string $ability) use ($permissions): ?bool {
             if (! isset($permissions[$ability])) {
                 return null;
@@ -97,23 +105,18 @@ final class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('app-config', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
 
-        RateLimiter::for('public-card', static fn (Request $request): Limit => Limit::perMinute(20)->by($request->ip()));
-
         // Per user *and* terminal: several phones may share one waiter login during a busy service.
         $perTerminal = static fn (Request $request): string => ($request->user()?->getAuthIdentifier() ?? $request->ip()).'|'.substr((string) $request->header('X-Device-Id'), 0, 64);
 
-        RateLimiter::for('card-scan', static fn (Request $request): Limit => Limit::perMinute(90)->by($perTerminal($request)));
+        RateLimiter::for('presentment', static fn (Request $request): Limit => Limit::perMinute(90)->by($perTerminal($request)));
 
-        // NFC programming station: ~5 requests per card; generous for fast operators, stops scripted UID probing.
-        RateLimiter::for('nfc-programming', static fn (Request $request): Limit => Limit::perMinute(180)->by($perTerminal($request)));
-
-        RateLimiter::for('card-operation', static fn (Request $request): Limit => Limit::perMinute(90)->by($perTerminal($request)));
+        RateLimiter::for('voucher-operation', static fn (Request $request): Limit => Limit::perMinute(90)->by($perTerminal($request)));
     }
 
     private function configureRouteBindings(): void
     {
-        Route::bind('card', static fn (string $value): GiftCard => Str::isUuid($value)
-            ? GiftCard::query()->findOrFail($value)
+        Route::bind('voucher', static fn (string $value): Voucher => Str::isUuid($value)
+            ? Voucher::query()->findOrFail($value)
             : abort(404));
 
         // Staff can only ever be resolved within the current restaurant.

@@ -9,7 +9,7 @@ use RuntimeException;
 /**
  * Refuses to boot a staging or production API whose public URLs are missing or point at a
  * development machine (the config files fall back to http://localhost when a variable is unset).
- * Without this, a forgotten FRONTEND_URL / CARD_BASE_URL would silently print localhost links on
+ * Without this, a forgotten FRONTEND_URL would silently print localhost links on
  * gift cards and in e-mails. The container then fails its start and the deploy stops.
  */
 final class EnvironmentGuard
@@ -31,7 +31,7 @@ final class EnvironmentGuard
             if (! str_starts_with($value, 'https://') || preg_match('/^[a-z0-9.-]+$/', $host) !== 1 || in_array($host, self::LOCAL_HOSTS, true)
                 || str_ends_with($host, '.test') || str_ends_with($host, '.local')) {
                 throw new RuntimeException(sprintf(
-                    '%s must be the https URL of this %s server, got "%s". In Coolify: give the gateway service an https domain (or set APP_URL, FRONTEND_URL and CARD_BASE_URL).',
+                    '%s must be the https URL of this %s server, got "%s". In Coolify: give the gateway service an https domain (or set APP_URL and FRONTEND_URL).',
                     $key,
                     $environment,
                     $value,

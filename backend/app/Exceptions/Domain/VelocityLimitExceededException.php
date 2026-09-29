@@ -18,6 +18,6 @@ final class VelocityLimitExceededException extends DomainException
 
     protected function defaultMessage(): string
     {
-        return 'Too many redemptions on this card in a short period. Please contact a manager.';
+        return 'Too many redemptions on this voucher in a short period. Please contact a manager.';
     }
 }

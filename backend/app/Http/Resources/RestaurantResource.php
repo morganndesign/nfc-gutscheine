@@ -42,7 +42,7 @@ final class RestaurantResource extends JsonResource
             'suspension_reason' => $restaurant->suspension_reason,
             'settings' => RestaurantSettingsResource::make($this->whenLoaded('settings')),
             'users_count' => $this->whenCounted('users'),
-            'gift_cards_count' => $this->whenCounted('giftCards'),
+            'vouchers_count' => $this->whenCounted('vouchers'),
             'outstanding_balance' => $this->when(isset($restaurant->outstanding_balance), static fn (): int => (int) $restaurant->getAttribute('outstanding_balance')),
             'archived_at' => $restaurant->deleted_at?->toIso8601String(),
             'owner' => $this->whenLoaded('owner', static fn (): ?array => $restaurant->owner === null ? null : [

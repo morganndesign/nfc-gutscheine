@@ -8,20 +8,19 @@ enum Permission: string
 {
     case DashboardView = 'dashboard.view';
 
-    case CardsView = 'cards.view';
-    case CardsScan = 'cards.scan';
-    case CardsCreate = 'cards.create';
-    case CardsUpdate = 'cards.update';
-    case CardsActivate = 'cards.activate';
-    case CardsRedeem = 'cards.redeem';
-    case CardsReload = 'cards.reload';
-    case CardsBlock = 'cards.block';
-    case CardsUnblock = 'cards.unblock';
-    case CardsExpire = 'cards.expire';
-    case CardsTransfer = 'cards.transfer';
-    case CardsReplace = 'cards.replace';
-    case CardsWriteNfc = 'cards.write_nfc';
-    case CardsExport = 'cards.export';
+    case VouchersView = 'vouchers.view';
+    case VouchersSell = 'vouchers.sell';
+    /** Sell without payment (marketing). Owner only; four-eyes for others arrives with authorizations. */
+    case VouchersSellComplimentary = 'vouchers.sell_complimentary';
+    case VouchersUpdate = 'vouchers.update';
+    case VouchersRedeem = 'vouchers.redeem';
+    case VouchersReload = 'vouchers.reload';
+    case VouchersBlock = 'vouchers.block';
+    case VouchersUnblock = 'vouchers.unblock';
+    /** Expiry keeps the balance; still owner only, with a reason (audit P7). */
+    case VouchersExpire = 'vouchers.expire';
+    case VouchersReinstate = 'vouchers.reinstate';
+    case VouchersExport = 'vouchers.export';
 
     case TransactionsView = 'transactions.view';
     case TransactionsReverse = 'transactions.reverse';

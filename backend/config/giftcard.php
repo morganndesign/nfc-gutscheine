@@ -3,29 +3,22 @@
 declare(strict_types=1);
 
 return [
-    /*
-    |--------------------------------------------------------------------------
-    | Public card URL
-    |--------------------------------------------------------------------------
-    | The URL written to NFC tags and encoded in QR codes is
-    | "{card_base_url}/c/{public_token}". It must point at the frontend so that
-    | phones opening the link natively (iOS background tag reading, camera QR
-    | scans) land in the waiter app or the public balance page.
-    */
-    'card_base_url' => rtrim((string) env('CARD_BASE_URL', env('FRONTEND_URL', 'http://localhost:3000')), '/'),
-
     'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
 
-    'card_number' => [
+    'voucher_number' => [
         // Total digits including the Luhn check digit.
         'length' => 16,
         'max_generation_attempts' => 10,
     ],
 
     'security' => [
-        // Failed card lookups (not found / foreign) allowed per user or IP before throttling.
-        'scan_failure_limit' => (int) env('SCAN_FAILURE_LIMIT', 10),
-        'scan_failure_decay_seconds' => (int) env('SCAN_FAILURE_DECAY', 300),
+        // Presentments (architecture §10.1): lifetime of a verified presentment, and failed presentments allowed
+        // per restaurant, user and device before a short lockout (audit S7: never per IP).
+        'presentment_lifetime_seconds' => 60,
+        'presentment_failure_limit' => (int) env('PRESENTMENT_FAILURE_LIMIT', 10),
+        'presentment_failure_decay_seconds' => (int) env('PRESENTMENT_FAILURE_DECAY', 300),
+        // A retried sale (same idempotency key, user and device) may show a fresh printable QR within this window.
+        'sale_replay_window_minutes' => 15,
         // Consecutive failed logins before the account is temporarily locked.
         'login_lockout_threshold' => (int) env('LOGIN_LOCKOUT_THRESHOLD', 10),
         'login_lockout_minutes' => (int) env('LOGIN_LOCKOUT_MINUTES', 15),
@@ -34,6 +27,15 @@ return [
         // Sign-in tokens of the native waiter app: rolling lifetime in days, renewed while the phone is in use.
         'device_token_days' => (int) env('DEVICE_TOKEN_DAYS', 30),
         'idempotency_key_max_length' => 96,
+    ],
+
+    // Platform ceilings for the restaurant limits (architecture §6.3, R22), in minor units.
+    'limits' => [
+        'max_voucher_balance' => (int) env('LIMIT_MAX_VOUCHER_BALANCE', 50000),
+        'max_debit_per_transaction' => (int) env('LIMIT_MAX_DEBIT_PER_TRANSACTION', 25000),
+        'max_debit_per_voucher_per_day' => (int) env('LIMIT_MAX_DEBIT_PER_VOUCHER_PER_DAY', 50000),
+        // A voucher validity, when a restaurant sets one, is at least three years (audit P6).
+        'min_validity_months' => 36,
     ],
 
     'nfc' => [
@@ -48,8 +50,7 @@ return [
     ],
 
     'notifications' => [
-        'expiring_days_before' => (int) env('CARD_EXPIRING_NOTICE_DAYS', 30),
-        'low_balance_threshold' => (int) env('CARD_LOW_BALANCE_THRESHOLD', 500),
+        'expiring_days_before' => (int) env('VOUCHER_EXPIRING_NOTICE_DAYS', 30),
     ],
 
     // Seed the demo restaurant outside local/staging (never in production).

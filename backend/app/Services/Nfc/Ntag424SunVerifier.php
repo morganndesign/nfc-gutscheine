@@ -4,21 +4,22 @@ declare(strict_types=1);
 
 namespace App\Services\Nfc;
 
-use App\Exceptions\Domain\NfcSignatureInvalidException;
+use App\Exceptions\Domain\SunVerificationFailedException;
 use Throwable;
 
 /**
  * Verifies NTAG 424 DNA SUN messages (NXP AN12196, "SDM with encrypted PICC data").
  *
- * The tag is configured to mirror into its NDEF URL:
- *   https://app.example.com/c/{public_token}?picc={32 hex chars}&cmac={16 hex chars}
+ * The card mirrors into its NDEF URL (architecture §9.1):
+ *   https://t.giftcardpro.at/{k}?e={32 hex chars: encrypted PICC data}&m={16 hex chars: CMAC}
  *
  * - PICCData is AES-128-CBC encrypted with the SDM Meta Read key and contains the 7-byte
  *   UID and the 24-bit SDM read counter, which increments on every tap.
  * - The CMAC is computed with a session key derived from the SDM File Read key, UID and counter.
  *
  * A valid MAC proves the read came from the genuine chip; a strictly increasing counter
- * (checked by the caller) proves it is not a replayed URL.
+ * (checked by the caller) proves it is not a replayed URL. SUN alone never spends (architecture §10.3).
+ * The keys move into the crypto service and Google Cloud HSM in Phase 1.
  */
 final class Ntag424SunVerifier
 {
@@ -53,24 +54,24 @@ final class Ntag424SunVerifier
     public function verify(string $piccHex, string $cmacHex, string $macInput = ''): SunMessage
     {
         if (! $this->isConfigured()) {
-            throw new NfcSignatureInvalidException('Secure NFC (NTAG 424 DNA) keys are not configured on the server.');
+            throw new SunVerificationFailedException('Secure NFC (NTAG 424 DNA) keys are not configured on the server.');
         }
 
         if (! preg_match('/^[0-9A-Fa-f]{32}$/', $piccHex) || ! preg_match('/^[0-9A-Fa-f]{16}$/', $cmacHex)) {
-            throw new NfcSignatureInvalidException;
+            throw new SunVerificationFailedException;
         }
 
         try {
             $picc = AesCmac::decryptCbc((string) hex2bin((string) $this->metaReadKeyHex), (string) hex2bin($piccHex));
         } catch (Throwable) {
-            throw new NfcSignatureInvalidException;
+            throw new SunVerificationFailedException;
         }
 
         $tag = ord($picc[0]);
         $uidLength = $tag & 0x0F;
 
         if (($tag & self::PICC_TAG_UID_MIRROR) === 0 || ($tag & self::PICC_TAG_COUNTER_MIRROR) === 0 || $uidLength !== 7) {
-            throw new NfcSignatureInvalidException;
+            throw new SunVerificationFailedException;
         }
 
         $uid = substr($picc, 1, 7);
@@ -80,7 +81,7 @@ final class Ntag424SunVerifier
         $expected = $this->computeMac($uid, $counterBytes, $macInput);
 
         if (! hash_equals(strtoupper($expected), strtoupper($cmacHex))) {
-            throw new NfcSignatureInvalidException;
+            throw new SunVerificationFailedException;
         }
 
         return new SunMessage(strtoupper(bin2hex($uid)), $counter);

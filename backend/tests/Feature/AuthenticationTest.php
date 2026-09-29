@@ -28,7 +28,7 @@ final class AuthenticationTest extends TestCase
             ->assertJsonPath('data.id', $user->id)
             ->assertJsonPath('data.role.slug', 'waiter')
             ->assertJsonPath('data.restaurant.id', $restaurant->id)
-            ->assertJsonPath('data.permissions', ['cards.scan', 'cards.redeem']);
+            ->assertJsonPath('data.permissions', ['vouchers.redeem']);
 
         $this->assertNotNull($user->refresh()->last_login_at);
         $this->assertDatabaseHas('audit_logs', ['action' => 'auth.login', 'user_id' => $user->id]);
@@ -88,7 +88,7 @@ final class AuthenticationTest extends TestCase
     public function test_guests_receive_401_on_protected_routes(): void
     {
         $this->getJson('/api/v1/auth/me')->assertUnauthorized()->assertJsonPath('code', 'UNAUTHENTICATED');
-        $this->getJson('/api/v1/cards')->assertUnauthorized();
+        $this->getJson('/api/v1/vouchers')->assertUnauthorized();
     }
 
     public function test_user_can_change_password(): void

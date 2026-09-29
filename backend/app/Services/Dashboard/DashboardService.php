@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Dashboard;
 
-use App\Enums\GiftCardStatus;
+use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
-use App\Models\GiftCard;
-use App\Models\GiftCardTransaction;
+use App\Enums\VoucherStatus;
 use App\Models\Restaurant;
+use App\Models\Voucher;
+use App\Models\VoucherTransaction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class DashboardService
 {
+    private const NOT_REVERSED = 'NOT EXISTS (SELECT 1 FROM voucher_transactions r WHERE r.related_transaction_id = voucher_transactions.id)';
+
+    private const PAID = 'NOT EXISTS (SELECT 1 FROM payments p WHERE p.id = voucher_transactions.payment_id AND p.method = ?)';
+
     /**
      * @return array<string, int|string>
      */
@@ -30,50 +35,44 @@ final class DashboardService
         $monthStart = $now->copy()->startOfMonth()->utc();
         $previousMonthStart = $now->copy()->subMonthNoOverflow()->startOfMonth()->utc();
 
-        $statusCounts = GiftCard::query()
+        $statusCounts = Voucher::query()
             ->select('status', DB::raw('COUNT(*) as aggregate'))
             ->groupBy('status')
             ->pluck('aggregate', 'status')
             ->map(static fn ($v): int => (int) $v);
 
-        $outstanding = GiftCard::query()->outstanding()->where('balance', '>', 0)
-            ->selectRaw('COUNT(*) as cards, COALESCE(SUM(balance), 0) as balance')
+        // Liability towards guests: every voucher with a balance, expired and blocked ones included.
+        $outstanding = Voucher::query()->outstanding()
+            ->selectRaw('COUNT(*) as vouchers, COALESCE(SUM(balance), 0) as balance')
             ->toBase()->first();
 
-        $cardsSold = GiftCard::query()->whereNull('replaces_id')->count();
-        $cardsSoldThisMonth = GiftCard::query()->whereNull('replaces_id')->where('created_at', '>=', $monthStart)->count();
-
-        $today = GiftCardTransaction::query()->where('created_at', '>=', $todayStart);
+        $today = VoucherTransaction::query()->where('created_at', '>=', $todayStart);
         $todayCount = (clone $today)->count();
-        $todayRedeemed = (int) -(clone $today)->ofType(TransactionType::Redemption)->whereNull('reversed_at')->sum('amount');
+        $todayRedeemed = (int) -(clone $today)->ofType(TransactionType::Redemption)->notReversed()->sum('amount');
 
-        $monthlyRevenue = $this->salesBetween($monthStart, null);
-        $previousMonthRevenue = $this->salesBetween($previousMonthStart, $monthStart);
-
-        $monthlyRedeemed = (int) -GiftCardTransaction::query()
+        $monthlyRedeemed = (int) -VoucherTransaction::query()
             ->ofType(TransactionType::Redemption)
-            ->whereNull('reversed_at')
+            ->notReversed()
             ->where('created_at', '>=', $monthStart)
             ->sum('amount');
 
         return [
             'currency' => $restaurant->currency,
-            'cards_sold' => $cardsSold,
-            'cards_sold_this_month' => $cardsSoldThisMonth,
-            'cards_active' => $statusCounts->get(GiftCardStatus::Active->value, 0),
-            'cards_inactive' => $statusCounts->get(GiftCardStatus::Inactive->value, 0),
-            'cards_redeemed' => $statusCounts->get(GiftCardStatus::Redeemed->value, 0),
-            'cards_blocked' => $statusCounts->get(GiftCardStatus::Blocked->value, 0),
-            'cards_expired' => $statusCounts->get(GiftCardStatus::Expired->value, 0),
+            'vouchers_sold' => Voucher::query()->count(),
+            'vouchers_sold_this_month' => Voucher::query()->where('created_at', '>=', $monthStart)->count(),
+            'vouchers_active' => $statusCounts->get(VoucherStatus::Active->value, 0),
+            'vouchers_empty' => Voucher::query()->where('status', VoucherStatus::Active->value)->where('balance', 0)->count(),
+            'vouchers_blocked' => $statusCounts->get(VoucherStatus::Blocked->value, 0),
+            'vouchers_expired' => $statusCounts->get(VoucherStatus::Expired->value, 0),
             'outstanding_balance' => (int) ($outstanding->balance ?? 0),
-            'outstanding_cards' => (int) ($outstanding->cards ?? 0),
+            'outstanding_vouchers' => (int) ($outstanding->vouchers ?? 0),
             'today_transactions' => $todayCount,
             'today_redeemed' => $todayRedeemed,
-            'monthly_revenue' => $monthlyRevenue,
-            'previous_month_revenue' => $previousMonthRevenue,
+            'monthly_revenue' => $this->salesBetween($monthStart, null),
+            'previous_month_revenue' => $this->salesBetween($previousMonthStart, $monthStart),
             'monthly_redeemed' => $monthlyRedeemed,
-            'expiring_soon' => GiftCard::query()
-                ->where('status', GiftCardStatus::Active->value)
+            'expiring_soon' => Voucher::query()
+                ->where('status', VoucherStatus::Active->value)
                 ->where('balance', '>', 0)
                 ->whereBetween('expires_at', [Carbon::now(), Carbon::now()->addDays(30)])
                 ->count(),
@@ -94,10 +93,10 @@ final class DashboardService
 
         $bucket = $this->dateBucket('created_at', $offsetMinutes);
 
-        $rows = GiftCardTransaction::query()
+        $rows = VoucherTransaction::query()
             ->selectRaw("{$bucket} as bucket")
-            ->selectRaw('SUM(CASE WHEN type IN (?, ?) AND reversed_at IS NULL THEN amount ELSE 0 END) as sold', [TransactionType::Issue->value, TransactionType::Reload->value])
-            ->selectRaw('SUM(CASE WHEN type = ? AND reversed_at IS NULL THEN -amount ELSE 0 END) as redeemed', [TransactionType::Redemption->value])
+            ->selectRaw('SUM(CASE WHEN type IN (?, ?) AND '.self::NOT_REVERSED.' AND '.self::PAID.' THEN amount ELSE 0 END) as sold', [TransactionType::Issue->value, TransactionType::Reload->value, PaymentMethod::Complimentary->value])
+            ->selectRaw('SUM(CASE WHEN type = ? AND '.self::NOT_REVERSED.' THEN -amount ELSE 0 END) as redeemed', [TransactionType::Redemption->value])
             ->selectRaw('COUNT(*) as transactions')
             ->where('created_at', '>=', $start->copy()->utc())
             ->where('created_at', '<=', $end->copy()->utc())
@@ -132,10 +131,10 @@ final class DashboardService
         $offsetMinutes = Carbon::now($tz)->utcOffset();
         $bucket = $this->dateBucket('created_at', $offsetMinutes, 'month');
 
-        $rows = GiftCardTransaction::query()
+        $rows = VoucherTransaction::query()
             ->selectRaw("{$bucket} as bucket")
-            ->selectRaw('SUM(CASE WHEN type IN (?, ?) AND reversed_at IS NULL THEN amount ELSE 0 END) as revenue', [TransactionType::Issue->value, TransactionType::Reload->value])
-            ->selectRaw('SUM(CASE WHEN type = ? AND reversed_at IS NULL THEN -amount ELSE 0 END) as redeemed', [TransactionType::Redemption->value])
+            ->selectRaw('SUM(CASE WHEN type IN (?, ?) AND '.self::NOT_REVERSED.' AND '.self::PAID.' THEN amount ELSE 0 END) as revenue', [TransactionType::Issue->value, TransactionType::Reload->value, PaymentMethod::Complimentary->value])
+            ->selectRaw('SUM(CASE WHEN type = ? AND '.self::NOT_REVERSED.' THEN -amount ELSE 0 END) as redeemed', [TransactionType::Redemption->value])
             ->where('created_at', '>=', $start->copy()->utc())
             ->groupBy('bucket')
             ->get()
@@ -157,23 +156,25 @@ final class DashboardService
     /** @return list<array{status: string, count: int, balance: int}> */
     public function statusDistribution(): array
     {
-        return array_values(GiftCard::query()
+        return array_values(Voucher::query()
             ->select('status', DB::raw('COUNT(*) as count'), DB::raw('COALESCE(SUM(balance), 0) as balance'))
             ->groupBy('status')
             ->get()
             ->map(static fn ($row): array => [
-                'status' => $row->status instanceof GiftCardStatus ? $row->status->value : (string) $row->status,
+                'status' => $row->status instanceof VoucherStatus ? $row->status->value : (string) $row->status,
                 'count' => (int) $row->getAttribute('count'),
                 'balance' => (int) $row->getAttribute('balance'),
             ])
             ->all());
     }
 
+    /** Money received: sales and reloads that were paid (not complimentary) and not reversed. */
     private function salesBetween(Carbon $from, ?Carbon $to): int
     {
-        return (int) GiftCardTransaction::query()
+        return (int) VoucherTransaction::query()
             ->ofType(TransactionType::Issue, TransactionType::Reload)
-            ->whereNull('reversed_at')
+            ->notReversed()
+            ->whereHas('payment', static fn (Builder $p) => $p->where('method', '!=', PaymentMethod::Complimentary->value))
             ->where('created_at', '>=', $from)
             ->when($to !== null, static fn (Builder $q) => $q->where('created_at', '<', $to))
             ->sum('amount');

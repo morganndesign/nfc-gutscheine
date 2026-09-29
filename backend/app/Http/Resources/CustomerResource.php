@@ -29,8 +29,8 @@ final class CustomerResource extends JsonResource
             'notes' => $customer->notes,
             'marketing_consent' => $customer->marketing_consent,
             'anonymized' => $customer->anonymized_at !== null,
-            'gift_cards_count' => $this->whenCounted('giftCards'),
-            'gift_cards_balance' => $this->whenAggregated('giftCards', 'balance', 'sum', static fn ($v): int => (int) $v),
+            'vouchers_count' => $this->whenCounted('vouchers'),
+            'vouchers_balance' => $this->whenAggregated('vouchers', 'balance', 'sum', static fn ($v): int => (int) $v),
             'created_at' => $customer->created_at->toIso8601String(),
         ];
     }

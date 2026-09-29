@@ -6,7 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TransactionResource;
-use App\Models\GiftCardTransaction;
+use App\Models\VoucherTransaction;
 use App\Services\Dashboard\DashboardService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -36,8 +36,8 @@ final class DashboardController extends Controller
     {
         $limit = max(1, min(50, $request->integer('limit', 10)));
 
-        $transactions = GiftCardTransaction::query()
-            ->with(['giftCard', 'user', 'device'])
+        $transactions = VoucherTransaction::query()
+            ->with(['voucher', 'user', 'device'])
             ->latest('created_at')
             ->limit($limit)
             ->get();

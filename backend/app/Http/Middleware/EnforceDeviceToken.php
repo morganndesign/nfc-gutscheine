@@ -23,14 +23,10 @@ final class EnforceDeviceToken
     private const ALLOWED = [
         'api/v1/auth/me',
         'api/v1/auth/logout',
-        'api/v1/scan',
-        'api/v1/cards/*/redeem',
-        // Managers and owners: sell a card and program its tag (the token's abilities and the role decide).
-        'api/v1/cards',
-        'api/v1/cards/*/nfc',
-        'api/v1/cards/*/nfc/check',
-        'api/v1/cards/*/nfc/lock',
-        'api/v1/cards/*/nfc/attempts',
+        'api/v1/presentments',
+        'api/v1/vouchers/*/redemptions',
+        // Managers and owners: sell a voucher (the token's abilities and the role decide).
+        'api/v1/vouchers',
         'api/v1/devices/current',
     ];
 

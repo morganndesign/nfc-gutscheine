@@ -11,7 +11,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property string $id
  * @property string|null $restaurant_id
- * @property string|null $gift_card_id
+ * @property string|null $voucher_id
  * @property string $template_key
  * @property string $channel
  * @property string $recipient

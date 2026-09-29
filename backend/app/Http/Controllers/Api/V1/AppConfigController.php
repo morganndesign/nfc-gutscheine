@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 /**
  * Public start-up configuration for the native waiter app: minimum supported versions, the platform
- * maintenance notice and the card domains the app accepts. Read on launch and on resume; cacheable.
+ * maintenance notice and the support contact. Read on launch and on resume; cacheable.
  */
 final class AppConfigController extends Controller
 {
@@ -38,7 +38,6 @@ final class AppConfigController extends Controller
                 'update_required' => $platform !== null && $version !== null ? AppVersion::isBelow($version, $minimum[$platform]) : null,
                 'maintenance_notice' => is_string($notice) && trim($notice) !== '' ? trim($notice) : null,
                 'support_email' => SystemSetting::get('platform.support_email'),
-                'card_domains' => array_values(array_filter([parse_url((string) config('giftcard.card_base_url'), PHP_URL_HOST)])),
             ],
         ])->header('Cache-Control', 'public, max-age=60');
     }

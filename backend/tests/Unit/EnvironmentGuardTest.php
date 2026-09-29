@@ -15,7 +15,7 @@ final class EnvironmentGuardTest extends TestCase
     {
         EnvironmentGuard::assertPublicUrls('production', [
             'app.url' => 'https://app.giftcardpro.at',
-            'giftcard.card_base_url' => 'https://app.giftcardpro.at',
+            'giftcard.frontend_url' => 'https://app.giftcardpro.at',
         ]);
         $this->addToAssertionCount(1);
     }
@@ -46,7 +46,7 @@ final class EnvironmentGuardTest extends TestCase
     public function test_staging_and_production_refuse_development_urls(string $environment, mixed $url): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('giftcard.card_base_url');
-        EnvironmentGuard::assertPublicUrls($environment, ['giftcard.card_base_url' => $url]);
+        $this->expectExceptionMessage('giftcard.frontend_url');
+        EnvironmentGuard::assertPublicUrls($environment, ['giftcard.frontend_url' => $url]);
     }
 }

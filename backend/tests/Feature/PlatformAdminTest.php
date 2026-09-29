@@ -47,11 +47,11 @@ final class PlatformAdminTest extends TestCase
     {
         $this->actingAsAdmin();
         $restaurant = $this->restaurant();
-        $this->issueCard($restaurant, 5000);
+        $this->issueVoucher($restaurant, 5000);
 
         $this->getJson('/api/v1/admin/restaurants')
             ->assertOk()
-            ->assertJsonPath('data.0.gift_cards_count', 1)
+            ->assertJsonPath('data.0.vouchers_count', 1)
             ->assertJsonPath('data.0.outstanding_balance', 5000);
 
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/suspend", ['reason' => 'Contract ended'])
@@ -59,42 +59,44 @@ final class PlatformAdminTest extends TestCase
 
         $owner = $this->staff($restaurant, RoleSlug::Owner);
         Sanctum::actingAs($owner, ['*']);
-        $this->getJson('/api/v1/cards')->assertForbidden()->assertJsonPath('code', 'RESTAURANT_SUSPENDED');
+        $this->getJson('/api/v1/vouchers')->assertForbidden()->assertJsonPath('code', 'RESTAURANT_SUSPENDED');
 
         $this->actingAsAdmin();
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/reactivate")->assertOk()->assertJsonPath('data.status', 'active');
     }
 
-    public function test_admin_can_act_inside_a_restaurant_explicitly(): void
+    /** Architecture §13.1: platform staff operate the platform, never vouchers, in no restaurant. */
+    public function test_admin_never_acts_inside_a_restaurant(): void
     {
         $this->actingAsAdmin();
         $restaurant = $this->restaurant();
-        $card = $this->issueCard($restaurant);
+        $voucher = $this->issueVoucher($restaurant);
 
-        $this->getJson('/api/v1/cards')->assertForbidden()->assertJsonPath('code', 'TENANT_NOT_RESOLVED');
-        $this->withHeader('X-Restaurant-Id', $restaurant->id)->getJson('/api/v1/cards')
-            ->assertOk()->assertJsonPath('data.0.id', $card->id);
+        $this->getJson('/api/v1/vouchers')->assertForbidden();
+        $this->withHeader('X-Restaurant-Id', $restaurant->id)->getJson('/api/v1/vouchers')->assertForbidden();
+        $this->withHeader('X-Restaurant-Id', $restaurant->id)->getJson("/api/v1/vouchers/{$voucher->id}")->assertForbidden();
+        $this->withHeader('X-Restaurant-Id', $restaurant->id)->postJson('/api/v1/presentments', ['purpose' => 'spend', 'method' => 'printable_qr', 'credential' => 'x'])->assertForbidden();
     }
 
     public function test_platform_stats_and_audit(): void
     {
         $this->actingAsAdmin();
-        $this->issueCard($this->restaurant(), 5000);
+        $this->issueVoucher($this->restaurant(), 5000);
 
-        $this->getJson('/api/v1/admin/stats')->assertOk()->assertJsonPath('data.cards_total', 1)->assertJsonPath('data.volume_sold_this_month', 5000);
-        $this->getJson('/api/v1/admin/audit-logs')->assertOk()->assertJsonPath('data.0.action', 'gift_card.issued');
+        $this->getJson('/api/v1/admin/stats')->assertOk()->assertJsonPath('data.vouchers_total', 1)->assertJsonPath('data.volume_sold_this_month', 5000);
+        $this->assertContains('voucher.sold', array_column($this->getJson('/api/v1/admin/audit-logs')->assertOk()->json('data'), 'action'));
     }
 
     public function test_restaurant_business_data_is_never_deleted(): void
     {
         $this->actingAsAdmin();
         $restaurant = $this->restaurant();
-        $this->issueCard($restaurant, 5000);
+        $this->issueVoucher($restaurant, 5000);
 
         $this->deleteJson("/api/v1/admin/restaurants/{$restaurant->id}", ['confirm' => $restaurant->slug])
             ->assertStatus(409)
             ->assertJsonPath('code', 'RESTAURANT_NOT_DELETABLE')
-            ->assertJsonPath('context.gift_cards', 1)
+            ->assertJsonPath('context.vouchers', 1)
             ->assertJsonPath('context.transactions', 1);
         $this->assertTrue(Restaurant::query()->whereKey($restaurant->id)->exists());
     }

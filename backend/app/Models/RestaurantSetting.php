@@ -9,20 +9,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
+ * Voucher rules of one restaurant. All limits are in minor units and stay within the platform ceilings
+ * (config giftcard.limits).
+ *
  * @property string $id
  * @property string $restaurant_id
- * @property string $card_number_prefix
- * @property int $default_validity_months
- * @property int $min_card_value
- * @property int $max_card_value
- * @property int $max_card_balance
- * @property int|null $max_single_redemption
- * @property int $max_redemptions_per_card_per_hour
+ * @property int|null $validity_months Null: vouchers do not expire (the default; Austrian law, architecture §5.2).
+ * @property int $min_voucher_value
+ * @property int $max_voucher_balance
+ * @property int $max_debit_per_transaction
+ * @property int $max_debit_per_voucher_per_day
+ * @property int $max_redemptions_per_voucher_per_hour
  * @property bool $allow_reload
  * @property bool $allow_partial_redemption
- * @property bool $public_balance_check
- * @property bool $enforce_nfc_uid_binding
- * @property bool $lock_nfc_tags_after_write
  * @property bool $send_customer_emails
  * @property string $brand_color
  * @property string|null $receipt_footer
@@ -32,25 +31,20 @@ class RestaurantSetting extends Model
     use HasUuids;
 
     protected $fillable = [
-        'card_number_prefix', 'default_validity_months', 'min_card_value', 'max_card_value',
-        'max_card_balance', 'max_single_redemption', 'max_redemptions_per_card_per_hour',
-        'allow_reload', 'allow_partial_redemption', 'public_balance_check',
-        'enforce_nfc_uid_binding', 'lock_nfc_tags_after_write', 'send_customer_emails',
-        'brand_color', 'receipt_footer',
+        'validity_months', 'min_voucher_value', 'max_voucher_balance', 'max_debit_per_transaction',
+        'max_debit_per_voucher_per_day', 'max_redemptions_per_voucher_per_hour', 'allow_reload',
+        'allow_partial_redemption', 'send_customer_emails', 'brand_color', 'receipt_footer',
     ];
 
     protected $attributes = [
-        'card_number_prefix' => '',
-        'default_validity_months' => 36,
-        'min_card_value' => 500,
-        'max_card_value' => 100000,
-        'max_card_balance' => 200000,
-        'max_redemptions_per_card_per_hour' => 10,
+        'validity_months' => null,
+        'min_voucher_value' => 500,
+        'max_voucher_balance' => 50000,
+        'max_debit_per_transaction' => 25000,
+        'max_debit_per_voucher_per_day' => 50000,
+        'max_redemptions_per_voucher_per_hour' => 10,
         'allow_reload' => true,
         'allow_partial_redemption' => true,
-        'public_balance_check' => true,
-        'enforce_nfc_uid_binding' => true,
-        'lock_nfc_tags_after_write' => false,
         'send_customer_emails' => true,
         'brand_color' => '#0F172A',
     ];
@@ -58,17 +52,14 @@ class RestaurantSetting extends Model
     protected function casts(): array
     {
         return [
-            'default_validity_months' => 'integer',
-            'min_card_value' => 'integer',
-            'max_card_value' => 'integer',
-            'max_card_balance' => 'integer',
-            'max_single_redemption' => 'integer',
-            'max_redemptions_per_card_per_hour' => 'integer',
+            'validity_months' => 'integer',
+            'min_voucher_value' => 'integer',
+            'max_voucher_balance' => 'integer',
+            'max_debit_per_transaction' => 'integer',
+            'max_debit_per_voucher_per_day' => 'integer',
+            'max_redemptions_per_voucher_per_hour' => 'integer',
             'allow_reload' => 'boolean',
             'allow_partial_redemption' => 'boolean',
-            'public_balance_check' => 'boolean',
-            'enforce_nfc_uid_binding' => 'boolean',
-            'lock_nfc_tags_after_write' => 'boolean',
             'send_customer_emails' => 'boolean',
         ];
     }

@@ -7,7 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Customers\StoreCustomerRequest;
 use App\Http\Resources\CustomerResource;
-use App\Http\Resources\GiftCardResource;
+use App\Http\Resources\VoucherResource;
 use App\Models\Customer;
 use App\Models\NotificationLog;
 use App\Services\Audit\AuditLogger;
@@ -29,8 +29,8 @@ final class CustomerController extends Controller
         $customers = Customer::query()
             ->search($request->string('search')->toString() ?: null)
             ->whereNull('anonymized_at')
-            ->withCount('giftCards')
-            ->withSum('giftCards', 'balance')
+            ->withCount('vouchers')
+            ->withSum('vouchers', 'balance')
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->paginate($this->perPage($request))
@@ -51,11 +51,11 @@ final class CustomerController extends Controller
 
     public function show(Customer $customer): JsonResponse
     {
-        $customer->loadCount('giftCards')->loadSum('giftCards', 'balance');
+        $customer->loadCount('vouchers')->loadSum('vouchers', 'balance');
 
         return response()->json([
             'data' => CustomerResource::make($customer)->resolve(),
-            'gift_cards' => GiftCardResource::collection($customer->giftCards()->latest()->limit(100)->get())->resolve(),
+            'vouchers' => VoucherResource::collection($customer->vouchers()->latest()->limit(100)->get())->resolve(),
         ]);
     }
 
@@ -90,11 +90,11 @@ final class CustomerController extends Controller
                 'anonymized_at' => Carbon::now(),
             ])->save();
 
-            $customer->giftCards()->update(['recipient_name' => null]);
+            $customer->vouchers()->update(['recipient_name' => null]);
 
             // The e-mail address also lives in the delivery log of notifications sent to this customer.
             NotificationLog::query()
-                ->whereIn('gift_card_id', $customer->giftCards()->select('id'))
+                ->whereIn('voucher_id', $customer->vouchers()->select('id'))
                 ->update(['recipient' => '[anonymized]']);
 
             $this->audit->log('customer.anonymized', Actor::fromRequest($request), $customer);
