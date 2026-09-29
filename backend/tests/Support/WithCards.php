@@ -6,6 +6,9 @@ namespace Tests\Support;
 
 use App\Crypto\CryptoProvider;
 use App\Crypto\Local\LocalKeystore;
+use App\Crypto\Ntag424\CardKeys;
+use App\Crypto\Ntag424\SunVerifier;
+use App\Crypto\Primitives\Aes;
 use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
 use App\Enums\MediumRole;
@@ -165,6 +168,22 @@ trait WithCards
         $answer = $chip->transceive((string) hex2bin((string) $begun->json('data.command')));
 
         return $this->postJson('/api/v1/presentments/cards/'.$begun->json('data.authentication'), ['response' => bin2hex($answer)]);
+    }
+
+    /**
+     * The tap URL a card writes for read counter `$counter` (what an attacker sees on the air), with optional
+     * forgeries: another UID inside the encrypted part, or the MAC of another UID.
+     */
+    protected function sunUrl(Card $card, int $counter, ?string $encryptedUid = null, ?string $macUid = null): string
+    {
+        $batch = CardBatch::query()->withoutGlobalScopes()->findOrFail($card->batch_id);
+        $keySet = KeySet::query()->findOrFail($batch->key_set_id)->version;
+        $keys = new CardKeys(app(CryptoProvider::class), $keySet, $card->batch_id);
+        $ctr = chr($counter & 0xFF).chr(($counter >> 8) & 0xFF).chr(($counter >> 16) & 0xFF);
+        $e = bin2hex(Aes::encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, "\xC7".($encryptedUid ?? $card->uid).$ctr.random_bytes(5)));
+        $m = SunVerifier::mac($keys->sdmMacKey($macUid ?? $card->uid), $macUid ?? $card->uid, $ctr);
+
+        return config('giftcard.tap_url')."/{$keySet}?e={$e}&m={$m}";
     }
 
     /** The simulated chip personalised for a card. */

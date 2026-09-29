@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cards;
 
-use App\Crypto\CryptoProvider;
-use App\Crypto\Ntag424\CardKeys;
-use App\Crypto\Ntag424\SunVerifier;
-use App\Crypto\Primitives\Aes;
 use App\Enums\CardState;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
@@ -55,17 +51,12 @@ final class TapPageTest extends TestCase
         return $this->availableCard($this->restaurant);
     }
 
-    /** What the card writes into its NDEF URL on a tap with read counter `$counter`. */
-    private function tapUrl(int $counter, string $keySet = 'ks-2026-01'): string
+    /** The guest page path of the card's tap with read counter `$counter`. */
+    private function tapUrl(int $counter): string
     {
-        $provider = $this->app->make(CryptoProvider::class);
-        $keys = new CardKeys($provider, $keySet === 'ks-2026-01' ? $keySet : 'ks-2026-01', $this->card->batch_id);
-        $uid = $this->card->uid;
-        $ctr = chr($counter & 0xFF).chr(($counter >> 8) & 0xFF).chr(($counter >> 16) & 0xFF);
-        $e = bin2hex(Aes::encryptCbc($keys->metaReadKey(), Aes::ZERO_IV, "\xC7".$uid.$ctr.random_bytes(5)));
-        $m = SunVerifier::mac($keys->sdmMacKey($uid), $uid, $ctr);
+        $url = $this->sunUrl($this->card, $counter);
 
-        return "/t/{$keySet}?e={$e}&m={$m}";
+        return parse_url($url, PHP_URL_PATH).'?'.parse_url($url, PHP_URL_QUERY);
     }
 
     private function activate(int $balance = 4250): Voucher
