@@ -16,7 +16,9 @@ use Illuminate\Support\Carbon;
 
 /**
  * One restaurant order = one print run = one shipment (architecture §8.1). Its status changes move its cards
- * ({@see CardBatchLifecycle}). The batch code is never on a card or in its URL.
+ * ({@see CardBatchLifecycle}). Cards are generic: the artwork (`card_design_ref`) is restaurant branding only,
+ * never an amount, voucher number or QR code; a card's value is assigned at activation. The batch code is never on
+ * a card or in its URL.
  *
  * @property string $id
  * @property string $batch_code
