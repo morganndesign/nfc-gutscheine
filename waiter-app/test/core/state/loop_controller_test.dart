@@ -238,20 +238,45 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('A gateway answer after an unanswered request never closes the attempt', (WidgetTester tester) async {
+  for (final (int status, String code) in <(int, String)>[
+    (429, 'TOO_MANY_REQUESTS'),
+    (409, 'HTTP_409'),
+    (400, 'BAD_REQUEST'),
+    (404, 'NOT_FOUND'),
+  ]) {
+    testWidgets('A $status ($code) after an unanswered request never closes the attempt', (WidgetTester tester) async {
+      await started(tester);
+      app.backend
+        ..on('POST', '/presentments', FakeReply(201, Payloads.presentment()))
+        ..on('POST', redeemPath, FakeReply.transport())
+        ..on('POST', redeemPath, FakeReply(status, Payloads.error(code)));
+      await scan(tester);
+      typeAmount(1200);
+      unawaited(app.loop.redeem());
+      await settle(tester);
+      await tester.pump(const Duration(seconds: 1));
+      await settle(tester);
+      expect(charge().phase, RedeemPhase.uncertainFinal);
+      expect(app.pending.entries, hasLength(1));
+      await finish(tester);
+    });
+  }
+
+  testWidgets('A redemption code after an unanswered request is definitive', (WidgetTester tester) async {
     await started(tester);
     app.backend
       ..on('POST', '/presentments', FakeReply(201, Payloads.presentment()))
       ..on('POST', redeemPath, FakeReply.transport())
-      ..on('POST', redeemPath, FakeReply(429, Payloads.error('TOO_MANY_REQUESTS')));
+      ..on('POST', redeemPath, FakeReply(422, Payloads.error('INSUFFICIENT_BALANCE', <String, Object?>{'balance': 900})));
     await scan(tester);
     typeAmount(1200);
     unawaited(app.loop.redeem());
     await settle(tester);
     await tester.pump(const Duration(seconds: 1));
     await settle(tester);
-    expect(charge().phase, RedeemPhase.uncertainFinal);
-    expect(app.pending.entries, hasLength(1));
+    expect(charge().phase, RedeemPhase.entering);
+    expect(charge().voucher.balance, 900);
+    expect(app.pending.entries, isEmpty);
     await finish(tester);
   });
 

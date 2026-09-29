@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:giftcard_waiter/core/state/clock.dart';
 import 'package:giftcard_waiter/core/storage/pending_redemptions.dart';
 import 'package:giftcard_waiter/core/storage/secure_store.dart';
 
@@ -8,13 +10,15 @@ import 'package:giftcard_waiter/core/storage/secure_store.dart';
 /// request, kept per user across sign-out and restart, one per voucher.
 void main() {
   DateTime now = DateTime.utc(2026, 9, 26, 12);
+  Duration running = Duration.zero;
   late MemorySecretStore secrets;
   late PendingRedemptionStore store;
 
   setUp(() {
     now = DateTime.utc(2026, 9, 26, 12);
+    running = Duration.zero;
     secrets = MemorySecretStore();
-    store = PendingRedemptionStore(secrets, now: () => now);
+    store = PendingRedemptionStore(secrets, now: () => now, monotonic: _Monotonic(() => running));
   });
 
   Future<PendingRedemption> open(String voucher, int amount) =>
@@ -44,7 +48,11 @@ void main() {
     store.detach();
     expect(store.entries, isEmpty, reason: 'signed out: nothing shown');
 
-    final PendingRedemptionStore restarted = PendingRedemptionStore(secrets, now: () => now);
+    final PendingRedemptionStore restarted = PendingRedemptionStore(
+      secrets,
+      now: () => now,
+      monotonic: _Monotonic(() => running),
+    );
     await restarted.load('u-2');
     expect(restarted.entries, isEmpty, reason: 'another waiter never sees it');
     await restarted.load('u-1');
@@ -55,12 +63,39 @@ void main() {
     await store.load('u-1');
     PendingRedemption p = await open('v-1', 1000);
     expect(store.notBookedIsFinal(p), isFalse);
-    now = now.add(const Duration(seconds: 45));
+    void pass(int seconds) {
+      now = now.add(Duration(seconds: seconds));
+      running += Duration(seconds: seconds);
+    }
+
+    pass(45);
     p = await store.resend(p);
-    now = now.add(const Duration(seconds: 59));
+    pass(59);
     expect(store.notBookedIsFinal(p), isFalse, reason: 'counted from the last request');
-    now = now.add(const Duration(seconds: 1));
+    pass(1);
     expect(store.notBookedIsFinal(p), isTrue);
+  });
+
+  test('a wall clock set ahead does not shorten the wait in this app run', () async {
+    await store.load('u-1');
+    final PendingRedemption p = await open('v-1', 1000);
+    now = now.add(const Duration(hours: 1));
+    running += const Duration(seconds: 5);
+    expect(store.notBookedIsFinal(p), isFalse);
+    running += const Duration(seconds: 55);
+    expect(store.notBookedIsFinal(p), isTrue);
+
+    final PendingRedemptionStore restarted = PendingRedemptionStore(
+      secrets,
+      now: () => now,
+      monotonic: _Monotonic(() => Duration.zero),
+    );
+    await restarted.load('u-1');
+    expect(
+      restarted.notBookedIsFinal(restarted.entries.single),
+      isTrue,
+      reason: 'after a restart only the stored time is left',
+    );
   });
 
   test('resolving removes it and clears the storage key when empty', () async {
@@ -76,4 +111,16 @@ void main() {
     await store.load('u-1');
     expect(store.entries, isEmpty);
   });
+}
+
+class _Monotonic implements MonotonicClock {
+  _Monotonic(this._now);
+
+  final Duration Function() _now;
+
+  @override
+  Duration now() => _now();
+
+  @override
+  Timer timer(Duration after, void Function() callback) => Timer(after, callback);
 }

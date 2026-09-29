@@ -787,6 +787,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleLeaveConfirm => 'Close anyway';
 
   @override
+  String get saleLeaveUncertainTitle => 'Sale open – close anyway?';
+
+  @override
+  String get saleLeaveUncertainBody =>
+      'The voucher may already have been sold. Only “Try again” finds out without selling it twice.';
+
+  @override
+  String get saleNoQrTitle => 'Voucher already sold';
+
+  @override
+  String get saleNoQrBody =>
+      'Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one.';
+
+  @override
   String get saleQrA11y => 'QR code of the voucher';
 
   @override

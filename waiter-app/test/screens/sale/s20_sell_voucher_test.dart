@@ -7,7 +7,7 @@ import 'package:giftcard_waiter/screens/s20_sell_voucher.dart';
 
 import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
-import '../charge/charge_harness.dart' show key, typeDigits;
+import '../charge/charge_harness.dart' show clearAmount, key, typeDigits;
 
 /// S20 · Sell voucher: value → payment → sale → print, identical on Android
 /// and iPhone; one idempotency key per sale; the QR only in memory.
@@ -148,6 +148,105 @@ void main() {
     expect(sales, hasLength(2));
     expect(sales.first.header('Idempotency-Key'), sales.last.header('Idempotency-Key'));
     expect(text(en.saleDoneTitle), findsOneWidget);
+    await finishApp(tester, app);
+  });
+
+  for (final (int status, String code) in <(int, String)>[
+    (403, 'FORBIDDEN'),
+    (429, 'RATE_LIMITED'),
+    (409, 'HTTP_409'),
+  ]) {
+    testWidgets('no answer, then $status: still unconfirmed with the same key', (WidgetTester tester) async {
+      final TestApp app = await openSale(tester);
+      app.backend
+        ..on('POST', '/vouchers', FakeReply.transport())
+        ..on('POST', '/vouchers', FakeReply(status, Payloads.error(code)))
+        ..on('POST', '/vouchers', FakeReply(200, Payloads.sold(replayed: true)));
+      await continueWith(tester, '5000');
+      await submit(tester);
+      await tester.tap(text(en.commonTryAgain));
+      await settle(tester);
+      expect(text(en.saleUncertainTitle), findsOneWidget, reason: '$status says nothing about the first request');
+      expect(text(en.saleNotAllowedTitle), findsNothing);
+
+      await tester.tap(text(en.commonTryAgain));
+      await settle(tester);
+      final List<RecordedRequest> sales = app.backend.to('POST', '/vouchers');
+      expect(sales, hasLength(3));
+      expect(sales.map((RecordedRequest r) => r.header('Idempotency-Key')).toSet(), hasLength(1));
+      expect(text(en.saleDoneTitle), findsOneWidget);
+      await finishApp(tester, app);
+    });
+  }
+
+  testWidgets('no answer, then a sale code: definitive, a new sale gets a new key', (WidgetTester tester) async {
+    final TestApp app = await openSale(tester);
+    app.backend
+      ..on('POST', '/vouchers', FakeReply.transport())
+      ..on(
+        'POST',
+        '/vouchers',
+        FakeReply(422, Payloads.error('INVALID_AMOUNT', <String, Object?>{'min': 500, 'max': 50000})),
+      )
+      ..on('POST', '/vouchers', FakeReply(201, Payloads.sold(value: 4000)));
+    await continueWith(tester, '5000');
+    await submit(tester);
+    await tester.tap(text(en.commonTryAgain));
+    await settle(tester);
+    expect(text(en.saleAmountRange('€\u00A05,00', '€\u00A0500,00')), findsOneWidget);
+
+    await clearAmount(tester);
+    await continueWith(tester, '4000');
+    await submit(tester);
+    final List<RecordedRequest> sales = app.backend.to('POST', '/vouchers');
+    expect(sales, hasLength(3));
+    expect(sales[2].header('Idempotency-Key'), isNot(sales[0].header('Idempotency-Key')));
+    await finishApp(tester, app);
+  });
+
+  testWidgets('closing while unconfirmed asks first', (WidgetTester tester) async {
+    final TestApp app = await openSale(tester);
+    app.backend.on('POST', '/vouchers', FakeReply.transport());
+    await continueWith(tester, '5000');
+    await submit(tester);
+    expect(text(en.saleUncertainTitle), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel(en.commonClose).first);
+    await settle(tester);
+    expect(text(en.saleLeaveUncertainTitle), findsOneWidget);
+    await tester.tap(text(en.commonCancel));
+    await settle(tester);
+    expect(find.byType(SellVoucherScreen), findsOneWidget);
+    expect(text(en.saleUncertainTitle), findsOneWidget);
+
+    await tester.tap(find.bySemanticsLabel(en.commonClose).first);
+    await settle(tester);
+    await tester.tap(text(en.saleLeaveConfirm));
+    await settle(tester, 20);
+    expect(find.byType(SellVoucherScreen), findsNothing);
+    await finishApp(tester, app);
+  });
+
+  testWidgets('a retry answered without a QR says how to proceed', (WidgetTester tester) async {
+    final TestApp app = await openSale(tester);
+    app.backend
+      ..on('POST', '/vouchers', FakeReply.transport())
+      ..on('POST', '/vouchers', FakeReply(200, Payloads.sold(replayed: true, withQr: false)));
+    await continueWith(tester, '5000');
+    await submit(tester);
+    await tester.tap(text(en.commonTryAgain));
+    await settle(tester);
+
+    expect(text(en.saleNoQrTitle), findsOneWidget);
+    expect(text(en.saleNoQrBody), findsOneWidget);
+    expect(find.bySemanticsLabel(en.saleQrA11y), findsNothing);
+    expect(primary(en.salePrint), findsNothing);
+
+    await tester.tap(primary(en.commonDone));
+    await settle(tester, 20);
+    expect(text(en.saleLeaveTitle), findsNothing, reason: 'nothing left to print');
+    expect(find.byType(SellVoucherScreen), findsNothing);
+    expect(app.printer.jobs, isEmpty);
     await finishApp(tester, app);
   });
 

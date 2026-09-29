@@ -779,6 +779,20 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleLeaveConfirm => pseudoLocalize(base.saleLeaveConfirm);
 
   @override
+  String get saleLeaveUncertainTitle =>
+      pseudoLocalize(base.saleLeaveUncertainTitle);
+
+  @override
+  String get saleLeaveUncertainBody =>
+      pseudoLocalize(base.saleLeaveUncertainBody);
+
+  @override
+  String get saleNoQrTitle => pseudoLocalize(base.saleNoQrTitle);
+
+  @override
+  String get saleNoQrBody => pseudoLocalize(base.saleNoQrBody);
+
+  @override
   String get saleQrA11y => pseudoLocalize(base.saleQrA11y);
 
   @override

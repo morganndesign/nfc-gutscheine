@@ -693,6 +693,10 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.leave.title` | Ohne Drucken schließen? | Close without printing? | Zatvoriti bez ispisa? | 28 | ADR-002 · Dialog |
 | `sale.leave.body` | Der QR-Code kann nicht erneut angezeigt werden. Ohne ihn kann der Gast den Gutschein nicht einlösen. | The QR code cannot be shown again. Without it the guest cannot redeem the voucher. | QR kôd se ne može ponovo prikazati. Bez njega gost ne može iskoristiti vaučer. | 120 | ADR-002 · Dialog |
 | `sale.leave.confirm` | Trotzdem schließen | Close anyway | Ipak zatvori | 24 | ADR-002 · DangerButton (cancel = `common.cancel`) |
+| `sale.leaveUncertain.title` | Verkauf offen – trotzdem schließen? | Sale open – close anyway? | Prodaja otvorena – ipak zatvoriti? | 36 | ADR-002 · Dialog · the last request got no answer |
+| `sale.leaveUncertain.body` | Vielleicht wurde der Gutschein bereits verkauft. Nur „Erneut versuchen“ klärt das, ohne doppelt zu verkaufen. | The voucher may already have been sold. Only “Try again” finds out without selling it twice. | Vaučer je možda već prodan. Samo „Pokušaj ponovo“ to provjerava bez dvostruke prodaje. | 120 | ADR-002 · Dialog (confirm = `sale.leave.confirm`, cancel = `common.cancel`) |
+| `sale.noQr.title` | Gutschein bereits verkauft | Voucher already sold | Vaučer je već prodan | 28 | ADR-002 · retry answered with the earlier sale, QR no longer available |
+| `sale.noQr.body` | Der QR-Code kann nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein, im Dashboard sperren und neu verkaufen. | Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one. | QR kôd se više ne može prikazati. Ako gost nema ispisan vaučer, blokirajte ga u dashboardu i prodajte novi. | 140 | ADR-002 · same advice as the dashboard |
 | `sale.qr.a11y` | QR-Code des Gutscheins | QR code of the voucher | QR kôd vaučera | — | ADR-002 · (a11y) |
 
 ### 5.14 S12 QR scan
@@ -824,7 +828,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **300 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **304 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

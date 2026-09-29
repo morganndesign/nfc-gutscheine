@@ -788,6 +788,20 @@ class AppLocalizationsSr extends AppLocalizations {
   String get saleLeaveConfirm => 'Ipak zatvori';
 
   @override
+  String get saleLeaveUncertainTitle => 'Prodaja otvorena – ipak zatvoriti?';
+
+  @override
+  String get saleLeaveUncertainBody =>
+      'Vaučer je možda već prodan. Samo „Pokušaj ponovo“ to provjerava bez dvostruke prodaje.';
+
+  @override
+  String get saleNoQrTitle => 'Vaučer je već prodan';
+
+  @override
+  String get saleNoQrBody =>
+      'QR kôd se više ne može prikazati. Ako gost nema ispisan vaučer, blokirajte ga u dashboardu i prodajte novi.';
+
+  @override
   String get saleQrA11y => 'QR kôd vaučera';
 
   @override

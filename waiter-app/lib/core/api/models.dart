@@ -497,14 +497,18 @@ class SoldVoucher {
 
   factory SoldVoucher.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> data = _map(json['data'], 'data');
-    final Map<String, Object?> printable = _map(json['printable'], 'printable');
+    // A retry answered after the sale window (or from another phone) repeats
+    // the sale without a new QR: `printable` is null then.
+    final Object? printable = json['printable'];
+    final bool replayed = json['replayed'] == true;
+    if (printable == null && !replayed) throw const FormatException('printable missing');
     return SoldVoucher(
       id: _string(data, 'id'),
       value: _int(data, 'balance'),
       currency: _stringOrNull(data, 'currency') ?? 'EUR',
       expiresAt: _dateOrNull(data, 'expires_at'),
-      printablePayload: _string(printable, 'payload'),
-      replayed: json['replayed'] == true,
+      printablePayload: printable == null ? null : _string(_map(printable, 'printable'), 'payload'),
+      replayed: replayed,
     );
   }
 
@@ -516,8 +520,9 @@ class SoldVoucher {
   final DateTime? expiresAt;
 
   /// The QR text (`GCPV1.` + 43 characters). Returned once; it lives in
-  /// memory only until the sale screen closes.
-  final String printablePayload;
+  /// memory only until the sale screen closes. Null only for a [replayed]
+  /// sale whose QR can no longer be issued.
+  final String? printablePayload;
   final bool replayed;
 }
 

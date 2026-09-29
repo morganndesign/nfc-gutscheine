@@ -430,6 +430,20 @@ class LoopController extends ChangeNotifier {
     _go(const ReadyState());
   }
 
+  /// Codes only the redemption answers with, after it looked the key up: a
+  /// booked key is always replayed, so these prove that it was not booked.
+  static const Set<String> _redemptionCodes = <String>{
+    'PRESENTMENT_INVALID',
+    'INSUFFICIENT_BALANCE',
+    'VOUCHER_BLOCKED',
+    'VOUCHER_EXPIRED',
+    'VOUCHER_NOT_REDEEMABLE',
+    'INVALID_VOUCHER_STATE',
+    'DEBIT_LIMIT_EXCEEDED',
+    'VELOCITY_LIMIT_EXCEEDED',
+    'INVALID_AMOUNT',
+  };
+
   Future<void> _runAttempts(int generation, PendingRedemption pending, {bool first = false}) async {
     int retries = 0;
     bool slowRetryUsed = false;
@@ -478,8 +492,9 @@ class LoopController extends ChangeNotifier {
         return;
       } on ApiRejected catch (e) {
         if (_generation != generation) return;
-        if (unanswered && (e.status == 403 || e.status == 429)) {
-          // Refused before the key was looked up: says nothing about the
+        if (unanswered && e.code != 'IDEMPOTENCY_CONFLICT' && !_redemptionCodes.contains(e.code)) {
+          // Not an answer of the redemption itself (sign-in, permission, rate
+          // limit, a gateway or an unknown code): says nothing about the
           // unanswered request. The attempt stays stored.
           if (_session.handleFailure(e, SessionContext.redeem)) {
             _go(const ReadyState());

@@ -1,3 +1,4 @@
+import '../state/clock.dart';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -73,9 +74,10 @@ class PendingRedemption {
 /// survive sign-out and app restarts: only the user who sent an attempt can
 /// ask the server for its outcome, so it is resolved when that user is back.
 class PendingRedemptionStore extends ChangeNotifier {
-  PendingRedemptionStore(this._store, {Uuid uuid = const Uuid(), DateTime Function()? now})
+  PendingRedemptionStore(this._store, {Uuid uuid = const Uuid(), DateTime Function()? now, MonotonicClock? monotonic})
     : _uuid = uuid,
-      _now = now ?? DateTime.now;
+      _now = now ?? DateTime.now,
+      _monotonic = monotonic ?? SystemMonotonicClock();
 
   static const String _key = 'pending_redemptions_v1';
 
@@ -89,6 +91,11 @@ class PendingRedemptionStore extends ChangeNotifier {
   final SecretStore _store;
   final Uuid _uuid;
   final DateTime Function() _now;
+
+  /// Time that only moves forward (not the wall clock, which the user or the
+  /// network may set ahead). Known for requests sent in this app run.
+  final MonotonicClock _monotonic;
+  final Map<String, Duration> _sentThisRun = <String, Duration>{};
 
   Map<String, List<PendingRedemption>> _byUser = <String, List<PendingRedemption>>{};
   String? _userId;
@@ -112,7 +119,13 @@ class PendingRedemptionStore extends ChangeNotifier {
 
   /// Whether a "not booked" answer for [p] is final: its last request can no
   /// longer be running on the server.
-  bool notBookedIsFinal(PendingRedemption p) => now().difference(p.lastSentAt) >= serverCeiling;
+  /// A clock set ahead never shortens the wait for requests sent in this app
+  /// run; after a restart only the stored wall-clock time is left.
+  bool notBookedIsFinal(PendingRedemption p) {
+    if (now().difference(p.lastSentAt) < serverCeiling) return false;
+    final Duration? sent = _sentThisRun[p.key];
+    return sent == null || _monotonic.now() - sent >= serverCeiling;
+  }
 
   Future<void> load(String userId) async {
     _userId = userId;
@@ -162,6 +175,7 @@ class PendingRedemptionStore extends ChangeNotifier {
       restaurantName: restaurantName,
       lastSentAt: now(),
     );
+    _sentThisRun[p.key] = _monotonic.now();
     final List<PendingRedemption> rows = <PendingRedemption>[
       ...(_byUser[user] ?? const <PendingRedemption>[]).where((PendingRedemption e) => e.voucherId != voucherId),
       p,
@@ -172,7 +186,10 @@ class PendingRedemptionStore extends ChangeNotifier {
   }
 
   /// Records that another request of [p] is about to be sent.
-  Future<PendingRedemption> resend(PendingRedemption p) => _replace(p, p.sentAt(now()));
+  Future<PendingRedemption> resend(PendingRedemption p) {
+    _sentThisRun[p.key] = _monotonic.now();
+    return _replace(p, p.sentAt(now()));
+  }
 
   /// A definitive answer arrived: booked, refused or finally not booked.
   Future<void> resolve(PendingRedemption p) async {
@@ -181,6 +198,7 @@ class PendingRedemptionStore extends ChangeNotifier {
     _byUser[user] = (_byUser[user] ?? const <PendingRedemption>[])
         .where((PendingRedemption e) => e.key != p.key)
         .toList();
+    _sentThisRun.remove(p.key);
     await _persist();
   }
 

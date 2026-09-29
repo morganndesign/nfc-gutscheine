@@ -90,12 +90,15 @@ final class SaleProblem extends SaleState {
 }
 
 /// Sold. The QR is printed from here as often as needed while the screen is
-/// open; it cannot be shown again afterwards.
+/// open; it cannot be shown again afterwards. A retry answered after the sale
+/// window carries no QR ([hasQr] false): the screen then says how to proceed.
 final class SaleDone extends SaleState {
   const SaleDone(this.voucher, {this.printing = false, this.printed = false, this.printFailed = false});
 
   final SoldVoucher voucher;
   final bool printing;
+
+  bool get hasQr => voucher.printablePayload != null;
 
   /// At least one print job was handed to a printer.
   final bool printed;
@@ -227,6 +230,27 @@ class SaleController extends ChangeNotifier {
 
   // ------------------------------------------------------------------ sell
 
+  /// Codes only the sale itself answers with. After a request that got no
+  /// answer, only these prove that the key was not booked: the server checks
+  /// the key before the limits and the payment policy, so a booked key is
+  /// always answered with its sale. Anything else — 401, 403, 429, a gateway
+  /// or an unknown code — says nothing about the earlier request.
+  static const Set<String> _saleCodes = <String>{
+    'INVALID_AMOUNT',
+    'BALANCE_LIMIT_EXCEEDED',
+    'VALIDATION_FAILED',
+    'COMPLIMENTARY_NOT_ALLOWED',
+  };
+
+  /// A request with the current key went out and its answer never arrived:
+  /// the voucher may have been sold. Cleared only by a definitive answer.
+  bool _unanswered = false;
+
+  /// True while the outcome of the last sale request is unknown. Leaving then
+  /// asks first: only "Try again" (the same key) finds out without selling
+  /// twice.
+  bool get uncertain => _unanswered;
+
   Future<void> sell() async {
     final SaleState s = _state;
     final SaleDetails? details = switch (s) {
@@ -239,7 +263,7 @@ class SaleController extends ChangeNotifier {
     final PaymentMethod method = details.method;
     final bool referenceMissing = method.needsReference && reference.trim().isEmpty;
     final bool reasonMissing = method.needsReason && reason.trim().length < 3;
-    if (referenceMissing || reasonMissing || !_emailValid) {
+    if (!_unanswered && (referenceMissing || reasonMissing || !_emailValid)) {
       _set(
         details.copyWith(
           submitting: false,
@@ -260,23 +284,32 @@ class SaleController extends ChangeNotifier {
         customerEmail: trimmedEmail.isEmpty ? null : trimmedEmail,
         idempotencyKey: _idempotencyKey,
       );
-      if (_disposed) return;
-      _idempotencyKey = _uuid.v4();
+      _definitive();
       _set(SaleDone(sold));
     } on ApiRejected catch (e) {
       if (_disposed) return;
+      final SaleDetails back = details.copyWith(submitting: false);
+      if (_unanswered && !_saleCodes.contains(e.code)) {
+        // The earlier request may have sold the voucher: keep the key. (A 403
+        // here is about selling, never the app-wide block.)
+        if (e.status != 403) _session.handleFailure(e, SessionContext.lookup);
+        _set(SaleProblem(SaleProblemKind.uncertain, details: back, requestId: e.requestId));
+        return;
+      }
       final bool forbidden = e.status == 403;
       // 403 here means "not allowed to sell" (shown on S20), not the app-wide block.
-      if (!forbidden && _session.handleFailure(e, SessionContext.lookup)) return;
+      if (!forbidden && _session.handleFailure(e, SessionContext.lookup)) {
+        _definitive();
+        return;
+      }
       if (e.code == 'IDEMPOTENCY_CONFLICT') {
         // The key is known with another value: the earlier sale stands; never
         // answered by a new key without the waiter seeing it.
-        _set(SaleProblem(SaleProblemKind.uncertain, details: details.copyWith(submitting: false), requestId: e.requestId));
+        _set(SaleProblem(SaleProblemKind.uncertain, details: back, requestId: e.requestId));
         return;
       }
-      _idempotencyKey = _uuid.v4(); // definitive answer: nothing was sold
-      final SaleDetails back = details.copyWith(submitting: false);
-      if (forbidden) {
+      _definitive(); // nothing was sold
+      if (forbidden || e.code == 'COMPLIMENTARY_NOT_ALLOWED') {
         _set(SaleProblem(SaleProblemKind.notAllowed, details: back, requestId: e.requestId));
       } else if (e.code == 'INVALID_AMOUNT' || e.code == 'BALANCE_LIMIT_EXCEEDED') {
         _set(
@@ -299,16 +332,32 @@ class SaleController extends ChangeNotifier {
         _set(SaleProblem(SaleProblemKind.failed, details: back, requestId: e.requestId));
       }
     } on ApiUnauthorized catch (e) {
-      // Refused before it was handled: nothing was sold.
       _session.handleFailure(e, SessionContext.lookup);
-      if (!_disposed) _set(details.copyWith(submitting: false));
+      if (_disposed) return;
+      final SaleDetails back = details.copyWith(submitting: false);
+      if (_unanswered) {
+        _set(SaleProblem(SaleProblemKind.uncertain, details: back, requestId: e.requestId));
+      } else {
+        // Refused before it was handled: nothing was sold.
+        _set(back);
+      }
     } on ApiFailure catch (e) {
       // Timeout, no connection or 5xx: it may have been sold. The same key
-      // makes "Try again" safe and returns a fresh QR for it.
+      // makes "Try again" safe and returns the sale (with a fresh QR while
+      // the guest is still at the counter).
+      _unanswered = true;
       if (!_disposed) {
-        _set(SaleProblem(SaleProblemKind.uncertain, details: details.copyWith(submitting: false), requestId: e.requestId));
+        _set(
+          SaleProblem(SaleProblemKind.uncertain, details: details.copyWith(submitting: false), requestId: e.requestId),
+        );
       }
     }
+  }
+
+  /// The server answered for the current key: the next sale gets a new one.
+  void _definitive() {
+    _unanswered = false;
+    _idempotencyKey = _uuid.v4();
   }
 
   /// Back from a definitive problem to the details (entry kept).
@@ -321,7 +370,7 @@ class SaleController extends ChangeNotifier {
 
   Future<void> print(PrintableVoucher Function(SoldVoucher sold) sheet) async {
     final SaleState s = _state;
-    if (s is! SaleDone || s.printing) return;
+    if (s is! SaleDone || !s.hasQr || s.printing) return;
     _set(s.copyWith(printing: true, printFailed: false));
     bool printed = false;
     bool failed = false;
@@ -338,6 +387,7 @@ class SaleController extends ChangeNotifier {
 
   /// "Sell another voucher".
   void startOver() {
+    if (_unanswered) return;
     reference = '';
     reason = '';
     email = '';

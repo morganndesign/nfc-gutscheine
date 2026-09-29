@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds GiftCard Waiter for one environment. The server addresses come from
 # config/<environment>.json (nothing is hard-coded in the app); the version from
-# pubspec.yaml (`version: 1.4.1+1` → 1.4.1, build 1). See RUNNING_THE_PROJECT.md.
+# pubspec.yaml (`version: 2.0.0+4` → 2.0.0, build 4). See RUNNING_THE_PROJECT.md.
 #
 #   tool/release.sh android  [environment]   signed APK (install on phones) + AAB (Google Play)
 #   tool/release.sh ios      [environment]   macOS: prepare Xcode (config, CocoaPods) and open it → Archive

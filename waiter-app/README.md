@@ -35,7 +35,9 @@ terminal with receipt number, bank transfer with reference, complimentary with a
 guest e-mail → `POST /vouchers` (`form: printable`). The QR is returned once and printed with the system print dialog
 (AirPrint / Android print service) as an A6 sheet in the restaurant's language, without voucher number or value.
 Leaving before printing asks first. A retry after a lost answer reuses the key: the server returns the same sale with
-a fresh QR.
+a fresh QR (while the guest can still be at the counter, 15 minutes, same waiter and phone; otherwise the screen
+says to block the voucher in the dashboard and sell a new one). While a sale is unconfirmed, only an answer of the
+sale itself closes it, and leaving asks first.
 
 ## Build and run
 
@@ -106,4 +108,4 @@ flutter test                     # unit, component, screen and end-to-end journe
 
 The backend side of the app's API is covered by `backend/tests/Feature/WaiterApp*Test.php` and `backend/tests/Feature/Abuse/PresentmentAbuseTest.php` and, against a running stack, by `e2e/waiter-api.mjs`.
 
-Not verifiable in CI: the camera with real printed and on-screen QR codes, printing on real printers, biometrics and the iOS build (needs Xcode). Test them on the reference devices of spec 09 §11.3 before every release.
+CI builds the iOS app unsigned on macOS, and `.github/workflows/testflight.yml` uploads signed builds to TestFlight once the App Store Connect key is set as repository secrets ([docs/MOBILE_RELEASE.md](../docs/MOBILE_RELEASE.md)). Not verifiable in CI: the camera with real printed and on-screen QR codes, printing on real printers and biometrics. Test them on the reference devices of spec 09 §11.3 before every release.

@@ -1400,6 +1400,30 @@ abstract class AppLocalizations {
   /// **'Close anyway'**
   String get saleLeaveConfirm;
 
+  /// Spec key: sale.leaveUncertain.title (12 §5.13) · Max: 36 · Notes: ADR-002 · Dialog · the last request got no answer
+  ///
+  /// In en, this message translates to:
+  /// **'Sale open – close anyway?'**
+  String get saleLeaveUncertainTitle;
+
+  /// Spec key: sale.leaveUncertain.body (12 §5.13) · Max: 120 · Notes: ADR-002 · Dialog (confirm = sale.leave.confirm, cancel = common.cancel)
+  ///
+  /// In en, this message translates to:
+  /// **'The voucher may already have been sold. Only “Try again” finds out without selling it twice.'**
+  String get saleLeaveUncertainBody;
+
+  /// Spec key: sale.noQr.title (12 §5.13) · Max: 28 · Notes: ADR-002 · retry answered with the earlier sale, QR no longer available
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher already sold'**
+  String get saleNoQrTitle;
+
+  /// Spec key: sale.noQr.body (12 §5.13) · Max: 140 · Notes: ADR-002 · same advice as the dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one.'**
+  String get saleNoQrBody;
+
   /// Spec key: sale.qr.a11y (12 §5.13) · Max: — · Notes: ADR-002 · (a11y)
   ///
   /// In en, this message translates to:

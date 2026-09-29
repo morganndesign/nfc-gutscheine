@@ -86,8 +86,8 @@ Future<AppServices> bootstrap() async {
   final ConnectivityService connectivity = ConnectivityService();
   await connectivity.start();
   final RecentStore recent = RecentStore(secrets);
-  final PendingRedemptionStore pending = PendingRedemptionStore(secrets);
   final MonotonicClock clock = SystemMonotonicClock();
+  final PendingRedemptionStore pending = PendingRedemptionStore(secrets, monotonic: clock);
 
   final SessionController session = SessionController(
     api: api,

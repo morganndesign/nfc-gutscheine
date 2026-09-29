@@ -230,19 +230,20 @@ abstract final class Payloads {
 
   static const String soldId = '0f1e2d3c-4b5a-4968-8776-655443322110';
 
-  static Map<String, Object?> sold({int value = 5000, bool replayed = false, String? payload}) => <String, Object?>{
-    'data': <String, Object?>{
-      'id': soldId,
-      'kind': 'digital',
-      'voucher_number': '1268834313520042',
-      'status': 'active',
-      'currency': 'EUR',
-      'balance': value,
-      'expires_at': null,
-    },
-    'printable': <String, Object?>{'payload': payload ?? qr, 'qr_svg': '<svg/>'},
-    'replayed': replayed,
-  };
+  static Map<String, Object?> sold({int value = 5000, bool replayed = false, String? payload, bool withQr = true}) =>
+      <String, Object?>{
+        'data': <String, Object?>{
+          'id': soldId,
+          'kind': 'digital',
+          'voucher_number': '1268834313520042',
+          'status': 'active',
+          'currency': 'EUR',
+          'balance': value,
+          'expires_at': null,
+        },
+        'printable': withQr ? <String, Object?>{'payload': payload ?? qr, 'qr_svg': '<svg/>'} : null,
+        'replayed': replayed,
+      };
 
   static Map<String, Object?> token() => <String, Object?>{
     'data': <String, Object?>{'token': 'gcp_test', 'expires_at': '2026-10-27T00:00:00Z', 'user': user()},
@@ -429,8 +430,12 @@ class TestApp {
     final SystemService system = SystemService();
     final BiometricsService biometricsService = BiometricsService(system: system, auth: localAuth);
     final RecentStore recent = RecentStore(secrets);
-    final PendingRedemptionStore pending = PendingRedemptionStore(secrets, now: wallClock ?? () => clock.now());
     final TestMonotonicClock monotonic = TestMonotonicClock();
+    final PendingRedemptionStore pending = PendingRedemptionStore(
+      secrets,
+      now: wallClock ?? () => clock.now(),
+      monotonic: monotonic,
+    );
     final FakeVoucherPrinter printer = FakeVoucherPrinter();
     final ConnectivityService connectivity = ConnectivityService.fixed();
 

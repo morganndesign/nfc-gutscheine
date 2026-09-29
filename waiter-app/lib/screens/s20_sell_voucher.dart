@@ -60,15 +60,22 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
 
   SaleController get _c => _controller!;
 
-  /// Leaving an unprinted sale asks first: the QR cannot be shown again.
+  /// Leaving asks first when something would be lost: an unprinted QR (it
+  /// cannot be shown again) or a sale whose answer never arrived (only "Try
+  /// again" with the same key finds out without selling twice).
   Future<void> _close() async {
     final SaleState s = _c.state;
-    if (s is SaleDone && !s.printed) {
-      final AppLocalizations l10n = AppLocalizations.of(context);
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final (String, String)? ask = _c.uncertain
+        ? (l10n.saleLeaveUncertainTitle, l10n.saleLeaveUncertainBody)
+        : (s is SaleDone && s.hasQr && !s.printed)
+        ? (l10n.saleLeaveTitle, l10n.saleLeaveBody)
+        : null;
+    if (ask != null) {
       final DialogChoice choice = await showWaiterDialog(
         context: context,
-        title: l10n.saleLeaveTitle,
-        body: l10n.saleLeaveBody,
+        title: ask.$1,
+        body: ask.$2,
         confirmLabel: l10n.saleLeaveConfirm,
         cancelLabel: l10n.commonCancel,
         destructive: true,
@@ -92,7 +99,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
   PrintableVoucher _sheet(SoldVoucher sold) {
     final Restaurant? restaurant = context.services.session.user?.restaurant;
     return PrintableVoucher(
-      payload: sold.printablePayload,
+      payload: sold.printablePayload!,
       restaurantName: restaurant?.name ?? '',
       restaurantLocale: restaurant?.locale ?? 'de_AT',
       brandColor: restaurant?.settings.brandColor,
@@ -352,6 +359,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
   Widget _done(BuildContext context, AppLocalizations l10n, SaleDone s) {
     final WaiterColors c = context.colors;
     final String value = context.moneyFor(s.voucher.currency).format(s.voucher.value);
+    if (!s.hasQr) return _doneWithoutQr(context, l10n, value);
     return Padding(
       padding: _pagePadding(context.layout),
       child: Center(
@@ -378,7 +386,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: Space.s6),
-                        _VoucherQr(payload: s.voucher.printablePayload, label: l10n.saleQrA11y),
+                        _VoucherQr(payload: s.voucher.printablePayload!, label: l10n.saleQrA11y),
                         const SizedBox(height: Space.s6),
                         ScaledText(
                           s.printFailed
@@ -420,6 +428,54 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                 large: true,
                 onPressed: s.printing || !s.printed ? null : _startOver,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A retry answered with an earlier sale whose QR can no longer be issued
+  /// (sale window passed, or sold on another phone). Same advice as the
+  /// dashboard: block it there and sell a new one if the guest has nothing.
+  Widget _doneWithoutQr(BuildContext context, AppLocalizations l10n, String value) {
+    final WaiterColors c = context.colors;
+    return Padding(
+      padding: _pagePadding(context.layout),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: LayoutTokens.maxForm),
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: Center(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Semantics(
+                          liveRegion: true,
+                          header: true,
+                          child: ScaledText(l10n.saleNoQrTitle, type: TypeTokens.titleL, textAlign: TextAlign.center),
+                        ),
+                        const SizedBox(height: Space.s2),
+                        ScaledText(
+                          l10n.saleDoneValue(value),
+                          type: TypeTokens.bodyL,
+                          color: c.fgSecondary,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: Space.s6),
+                        ScaledText(l10n.saleNoQrBody, type: TypeTokens.bodyM, color: c.warning, textAlign: TextAlign.center),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: Space.s4),
+              PrimaryButton(label: l10n.commonDone, onPressed: () => unawaited(_close())),
+              const SizedBox(height: Space.s2),
+              TertiaryButton(label: l10n.saleAnother, large: true, onPressed: _startOver),
             ],
           ),
         ),

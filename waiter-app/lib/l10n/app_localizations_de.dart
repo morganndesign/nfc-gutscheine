@@ -789,6 +789,20 @@ class AppLocalizationsDe extends AppLocalizations {
   String get saleLeaveConfirm => 'Trotzdem schließen';
 
   @override
+  String get saleLeaveUncertainTitle => 'Verkauf offen – trotzdem schließen?';
+
+  @override
+  String get saleLeaveUncertainBody =>
+      'Vielleicht wurde der Gutschein bereits verkauft. Nur „Erneut versuchen“ klärt das, ohne doppelt zu verkaufen.';
+
+  @override
+  String get saleNoQrTitle => 'Gutschein bereits verkauft';
+
+  @override
+  String get saleNoQrBody =>
+      'Der QR-Code kann nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein, im Dashboard sperren und neu verkaufen.';
+
+  @override
   String get saleQrA11y => 'QR-Code des Gutscheins';
 
   @override
