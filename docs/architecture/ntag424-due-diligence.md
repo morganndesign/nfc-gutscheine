@@ -20,7 +20,7 @@ Prices are not in this document: NXP does not publish them. Ask two card supplie
 ## 1. Recommendation
 
 1. **Standardise every *physical* card on NTAG 424 DNA, in AES mode, with Secure Unique NFC (SUN).**
-   - Stop issuing NTAG21x cards; keep accepting the ones already in circulation.
+   - No NTAG21x cards at all (there is no installed base; ADR-002).
    - Keep QR, card number and (later) wallet passes as additional media of the same voucher.
    - "Standardise the entire platform on NTAG 424" is therefore right for the *chip*. It is not right for the *platform*: iPhones, e-mail vouchers and the web keep working through the other media.
 2. **Do not run key operations in restaurants.**
@@ -96,7 +96,7 @@ Against these we rely on the server-side controls already designed: per-medium m
 
 - **[NXP] AN10922:** derive each card's keys from a master key with **AES-128 CMAC** over `0x01 ‖ UID ‖ application/system identifier ‖ padding`. A broken card key exposes that card only. NXP recommends storing master keys in a **MIFARE SAM AV3**, which also supports NTAG DNA **[NXP]**.
 - **Finding in our code.** `Ntag424SunVerifier::fileKeyFor` diversifies with **HMAC-SHA256(master, UID)**, truncated. That is cryptographically sound, but it is **not** the AN10922 scheme. Card manufacturers, SAMs and NXP tools implement AN10922, so they could not produce our keys.
-- **Change:** use AN10922 for all new keys, with a key version, and keep the HMAC variant only to verify cards already in circulation.
+- **Change:** use AN10922 for all keys, with a key version. The HMAC variant is removed.
 
 | Key | Use | Diversified? |
 |---|---|---|
@@ -326,12 +326,8 @@ Because EV3 SUN is compatible, adding it later is a backend configuration change
    - the medium accepts only verified SUN reads (native NFC or iPhone link);
    - the counter is strictly increasing, updated atomically;
    - scan ticket → redeem.
-7. **Migration:**
-   - existing NTAG21x cards keep working;
-   - new physical cards are NTAG 424 only;
-   - offer exchange of 21x cards for high balances;
-   - remove 21x writing from the dashboard and app after the switch-over date.
-8. **Before the switch, test on hardware:**
+7. **Chip types:** NTAG 424 DNA only; no NTAG21x reading or writing anywhere (ADR-002).
+8. **Before the first batch, test on hardware:**
    - AN12196 test vectors in CI;
    - 10 sacrificial cards per batch;
    - read-time measurement on the reference phones;

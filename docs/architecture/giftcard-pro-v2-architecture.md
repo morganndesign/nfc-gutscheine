@@ -2,9 +2,10 @@
 
 | | |
 |---|---|
-| **Status** | **FROZEN**, v2.1, 28 September 2026 (v2.0 + ADR-001). This is the baseline for implementation. |
+| **Status** | **FROZEN**, v2.2, 29 September 2026 (v2.0 + ADR-001 + ADR-002). This is the baseline for implementation. |
 | **Change control** | After freezing, a change needs a short **architecture decision record** (ADR) appended to §20: what changes, why, the security impact, and approval by the product owner. The code must not diverge silently from this document. |
 | **Supersedes** | The v2 draft (commit `301c551`). For **scope**, it also supersedes `ntag424-platform-architecture.md`, which remains the reference for cryptographic detail (key derivation, APDU sequences, personalisation steps) where §9 and §10 point to it. |
+| **Starting point** | GiftCard Pro has **no production data and no customers**. The platform is built in its final form from day one: no migration, no backwards compatibility, no legacy modes, no transition phases (ADR-002). |
 | **Evidence marks** | **[Code]** repository path:line (code at commit `0493784`, unchanged since); **[Vendor]** official documentation; **[Law]** statute or ruling (not legal advice); **[Assessment]** engineering judgement |
 
 ---
@@ -49,13 +50,21 @@
 **Implementation decisions (ADR-001, 28 September 2026):**
 
 21. **Phase 0 comes first.** It removes every path that spends from a card voucher without a verified NTAG 424 DNA card.
-22. **NTAG21x is migration-only.** A legacy card can prove possession for a swap to a 424 card; it can never spend.
+22. **NTAG21x is discontinued completely** (ADR-002). No NTAG213/215/216 support exists anywhere in the platform.
 23. **The dashboard never programs cards.**
 24. **Card numbers are internal identifiers** for support, inventory and batch management. They never authorise redemption and are never shown to guests.
 25. **Every voucher activation is linked to a payment record** that says how payment was received. GiftCard Pro records the payment; it does not process it.
 26. **A voucher is either a physical-card voucher or a digital QR voucher, never both at once.** Binding a card to a digital voucher converts it.
 27. **Every physical card has a permanent internal identifier** (cryptographically random, never exposed to users), used for lifecycle, security and audit.
 28. **No overrides.** A card voucher is only ever debited with its verified card. An unreadable card is replaced (registered vouchers) or is lost (anonymous vouchers).
+
+**Build decisions (ADR-002, 29 September 2026):**
+
+29. **Final architecture from day one.** No compatibility layers, feature flags for old behaviour, migration code, legacy modes or transition phases. Code that does not belong to the final platform is deleted, not hidden.
+30. **Financial history is immutable.** No historical financial event is ever modified or deleted; every correction is a new event.
+31. **The fraud and risk engine is a core subsystem** (§13.4): rules, per-restaurant, per-employee and per-device baselines, risk scoring, anomaly detection, alerts, investigation cases and an append-only trail. No machine learning in v2, but designed for it.
+32. **Android and iPhone have full feature parity** for everything restaurants and guests use. The only Android-only tool is the internal card-personalisation station, used by GiftCard Pro staff before cards are shipped.
+33. **Quality over speed.** There is no launch date to optimise for. Security, correctness and maintainability come first; UI polish and the commercial launch follow the complete foundation.
 
 ---
 
@@ -164,14 +173,14 @@ All findings are from the code at commit `0493784`.
 | Selling a card (manager) | Create → hold still while writing → read back → verify → lock (optional) → handle 20+ error codes (wrong type, too small, locked, swapped, URL mismatch, …) | Payment → amount → one tap → done. A handful of errors: "not a card from your stock", "hold longer", "no connection". |
 | Programming station | Dashboard page (686 lines) that walks a stack of blank tags against unprogrammed cards | None in restaurants. Personalisation is central. |
 | Lost card | Replace creates a new card number and moves money | Revoke and bind; the guest keeps the same voucher. |
-| Tag types | ntag213/215/216/424/`qr_only`, capacity probing | One chip type for new cards; legacy types only on read. |
+| Tag types | ntag213/215/216/424/`qr_only`, capacity probing | One chip type: NTAG 424 DNA. |
 | iPhone | Reader only; managers need Android | Same features on both platforms. |
 | Support | "Which number is on the card?", "tag won't write", "tag locked by mistake" | "Tap the card." |
 | Testing | Writer matrix per chip type × browser × app × lock state | Relay protocol tests with NXP vectors; one chip type. |
 
 ### 3.4 Code that can be removed
 
-Line counts from `wc -l`, including tests. "Remove" means: delete once v2 binding is live and legacy NTAG21x cards no longer need to be *written*. They are still *read* until the end of their sunset.
+Line counts from `wc -l`, including tests. All of it is deleted in Phase 0 (ADR-002).
 
 | Component | Files | Lines |
 |---|---|---|
@@ -187,9 +196,8 @@ Line counts from `wc -l`, including tests. "Remove" means: delete once v2 bindin
 **Kept and reused:**
 - the S20 screen shell, amount pad, e-mail field and the idempotent create logic (`issue_controller.dart`);
 - `AesCmac`, `Ntag424SunVerifier` (extended with key sets);
-- the legacy UID path of `CardScanService` (for NTAG21x reads during the sunset);
 - the e-mail pipeline;
-- the public balance page (moved to the tap domain).
+- the guest balance page concept (rebuilt on the tap domain with SUN verification).
 
 ### 3.5 Technical debt that disappears
 
@@ -231,7 +239,7 @@ Line counts from `wc -l`, including tests. "Remove" means: delete once v2 bindin
 | **Operational simplicity** | ⚠ Acceptable, with four routines that must exist | 1. **Key ceremony:** once, then yearly or when a custodian leaves. 2. **Batch acceptance** per delivery. 3. **Crypto-service monitoring**: two instances, alerting, and the outage runbook (card transactions pause; §10.3). 4. **The tap domain** registered for 10 years with registrar lock and certificate monitoring: if `t.giftcardpro.at` ever lapses, every card in circulation stops working. Runbooks in §19. Nothing else needs daily attention. |
 | **Security** | ✅ Meets decision 18 | See §13, which maps every principle to concrete controls. Remaining accepted risks are listed there: relay attack, a compromised backend while in control, owner-level fraud, anonymous cards as cash. |
 | **Restaurant workflow** | ✅ Simpler than today | **Sale:** payment → amount → one tap. **Redeem:** one tap → amount. **Lost or unreadable card** (registered): the guest's recovery code, or a voucher-number search plus the contact's e-mail confirmation → tap a new card. **Stock:** confirm a delivery once. There is no programming, writing, locking or tag-type knowledge, and no Chrome-on-Android requirement. iPhone and Android behave the same. |
-| **Future extensibility** | ✅ Additive only | Wallets = new medium types. Chains = an `organization_id` column plus acceptance rules. Double-entry = a migration from the append-only ledger. Offline terminals = a new verifier with SAM AV3. All of these are **additive migrations**: new tables or new nullable columns, with no change to how vouchers, cards, batches or media work (§18). |
+| **Future extensibility** | ✅ Additive only | Wallets = new medium types. Chains = an `organization_id` column plus acceptance rules. Double-entry = derived from the append-only ledger. Offline terminals = a new verifier with SAM AV3. All of these are **additive migrations**: new tables or new nullable columns, with no change to how vouchers, cards, batches or media work (§18). |
 
 ### 4.2 Remaining decisions challenged
 
@@ -247,15 +255,15 @@ Each decision was re-examined against "simplify only without reducing security".
 | R6 | Double-entry ledger, per-organisation hash chain | Needed for chains, not for single-restaurant vouchers. | **Defer.** Keep today's per-voucher ledger (balance before/after, row locks, idempotency). Make it **append-only** (triggers, no UPDATE/DELETE grant), add a **hash chain** and a **unique presentment id**. Tamper evidence is kept, and 14–20 days are saved. |
 | R7 | Organisations, programs, acceptance networks | No chain customer yet. | **Defer.** The restaurant stays the tenant. Adding `organization_id` later is additive (§18). |
 | R8 | Presentments (single-use proof of presence) | — | **Keep.** This is what closes every "spend without the card" path. It is one table and one service. |
-| R9 | Assurance-level limit matrix (per level: per transaction, per day, lifetime, rolling 30 days) | Complex to explain and to configure. | **Simplify.** Card vouchers no longer carry weak media (R10, R13), so a matrix is not needed. **One limit model** (§6.3): a per-transaction and a per-voucher daily ceiling for all media, plus a few fixed caps for specific risks: legacy digital QR links, the first 24 h of online vouchers, and 72 h after a recovery. |
+| R9 | Assurance-level limit matrix (per level: per transaction, per day, lifetime, rolling 30 days) | Complex to explain and to configure. | **Simplify.** Card vouchers no longer carry weak media (R10, R13), so a matrix is not needed. **One limit model** (§6.3): a per-transaction and a per-voucher daily ceiling for all media, plus a few fixed caps for specific risks: the first 24 h of online vouchers, and 72 h after a recovery. |
 | R10 | E-mail voucher on card vouchers: view by default, "enable phone payment" at the counter | An extra role and an extra flow. | **Simplify.** On a card voucher, the e-mail is a **recovery contact** (balance, receipts, recovery). It never spends, so there is no "enable" flow. On a digital voucher, the e-mail voucher spends (rotating QR after device confirmation). |
 | R11 | Self-registration by tapping one's own card | Skimming makes it abusable; it only ever gave view rights. | **Remove.** Registration happens at the sale or later at the counter: a manager taps the card (A3), enters the e-mail, and the guest confirms by e-mail link. Tapping with one's own phone still shows the balance. |
 | R12 | Card reuse and re-keying of returned cards | A rare case that needs a re-keying flow. | **Remove.** Each card serves one voucher for its life. Returned or replaced cards are **destroyed**. |
 | R13 | Printable QR with its own lifetime cap | Decision 14 limits it to digital vouchers. | **Simplify.** It is a bearer voucher by the guest's choice, like the anonymous card. The general limits apply, and a registered contact (if any) is notified of each redemption. There is only one active printable QR per voucher. Re-issuing needs the guest's `select` presentment (for example the e-mail QR or an `email_link`) and kills the old one. It is **revoked automatically when a physical card is bound, and can never be issued on a voucher that has a card**, so card vouchers stay card-strength. |
-| R14 | Key set v0 for 424 cards personalised with external tools | Only needed if such cards exist. | **Conditional.** Count them in production. If there are none, do not build the v0 path. |
+| R14 | Key set for 424 cards personalised with external tools | No such cards exist (ADR-002). | **Removed.** Every card is personalised by the platform. |
 | R15 | Device attestation (Play Integrity / App Attest) | Phones hold no secrets, and the server verifies all card cryptography. | **Defer.** A modified app can only do what its user's permissions allow, and those are enforced server-side. Revisit if abuse is observed. **Keep certificate pinning** to the ISRG roots (cheap, low risk). |
 | R16 | Four-eyes approval | — | **Keep, narrowly:** sales above €300 (adjustable), and recovery of a voucher sold by the same user within 30 days (§11.6). |
-| R17 | Risk engine as a subsystem | — | **Simplify:** about eight synchronous rules in the services plus a nightly report (§13.4). No separate engine. |
+| R17 | Risk engine as a subsystem | — | **Keep and strengthen (ADR-002, reverses the earlier simplification):** rules, baselines per restaurant, employee and device, anomaly detection, scoring, alerts and investigation cases (§13.4). No ML in v2; the model interface allows it later. |
 | R18 | Transactional outbox for media updates | Existed for wallet pushes. | **Remove.** Without wallets, e-mails are queued jobs dispatched after commit. |
 | R19 | Personalisation station as a separate app, including a PC/SC desktop reader | Two more clients to maintain. | **Simplify:** a **station mode inside the existing app**, available only to platform admins on an enrolled station phone. It reuses the relay code. Manufacturer manifest import is added when the first manufacturer batch is ordered. |
 | R20 | Generic GiftCard Pro-branded stock | Stock ownership per chip or shipment. | **Remove.** Every batch is made for one restaurant (decision 17). |
@@ -343,8 +351,6 @@ erDiagram
 | `email_voucher`, digital voucher | Recipient | Link to the voucher page. The rotating QR appears after a one-time e-mail code confirms the device. | **A2**: fresh value from a confirmed device | Yes |
 | `email_voucher`, card voucher | Registered guest | Recovery contact: balance, receipts, suspend, and a recovery code valid only for `select` | A0 | **No** |
 | `printable_qr` | Holder of the paper or PDF | Static QR for **digital vouchers only** (decision 14); one active per voucher | **A1**: bearer | Yes |
-| `legacy_token` on an NTAG21x card voucher | Old NTAG21x card, printed QR, old e-mail link | The old `public_token`; one medium for all three places | — | **No.** It proves possession for a swap only (decision 22). |
-| `legacy_token` on a digital voucher (`qr_only`) | Printed QR or e-mail link of an existing digital voucher | The digital QR product before v2 | A1, capped | Yes, until migrated to an e-mail voucher or the sunset |
 | *future:* `wallet_apple`, `wallet_google` | — | Out of scope (§18) | — | — |
 
 ### 6.2 Allowed combinations
@@ -366,7 +372,6 @@ All limits are restaurant settings, within platform bounds. They are checked in 
 | Maximum voucher value | €500 | Sale and reload |
 | Per transaction | €250 | Every debit, all media |
 | Per voucher per day | €500 | Sum of all debits of a voucher |
-| Legacy digital QR | €50 per transaction, €100 per day | `legacy_token` of digital vouchers, until migrated |
 | Online, first 24 h after payment | €100 in total, **no card binding** | Online vouchers (stolen-card purchases) |
 | New card after recovery without the old card | €100 in total during the first 72 h | Registered vouchers (§11.6) |
 | Overrides | **None** (decision 28) | An unreadable card is replaced (§11.6) |
@@ -541,7 +546,7 @@ A batch status change moves all its cards in one transaction and writes their `c
 - `shipped` → `shipped`;
 - `rejected` → `qa_failed`;
 - `lost` → `lost`;
-- `compromised` → every card not yet with a guest (`in_inventory` to `bound`) `revoked`; `active` and `suspended` cards limited to possession proof and swap (§8.4).
+- `compromised` → every card not yet with a guest (`in_inventory` to `bound`) `revoked`; `active` and `suspended` cards limited to possession proof and replacement (§8.4).
 
 ### 8.3 Counts, always current
 
@@ -570,7 +575,7 @@ Counts are **computed**, not stored (R21): an indexed `GROUP BY batch_id, state`
 - **Acceptance:** the sample test and two approvals are needed before any card leaves central stock (earlier design §8.4).
 - **Compromise playbook:** batch → `compromised`.
   - Its `active` cards can still be tapped to **prove possession**, but they cannot spend.
-  - The manager app offers an immediate swap to a new card (§11.6), and registered guests are invited.
+  - The manager app offers an immediate replacement card (§11.6), and registered guests are invited.
   - Its `available` cards are revoked.
 - **Lost shipment:** its cards go to `lost`, which is final.
 
@@ -648,7 +653,6 @@ A presentment is the server's record that **this medium, or this guest, was genu
 - `live_auth`: card, A3;
 - `rotating_qr`: A2;
 - `printable_qr`: A1;
-- `legacy_token`: A1;
 - `email_link`: a one-time link sent to a confirmed contact. It counts as `select` for recovery and contact changes, and as `resume` or `suspend` for the contact's own card actions.
 
 **Validity and enforcement:**
@@ -692,7 +696,6 @@ The phone never sees a key or RndA. A recording of any earlier exchange cannot a
 - **Printable QR:** a 256-bit random secret, stored as a SHA-256 hash; one active per voucher.
   - Created with the sale. Re-issuing needs a guest `select` presentment.
   - It is refused on any voucher that has a physical card.
-- **Legacy token:** hash lookup of the old `public_token`. It spends only on digital (`qr_only`) vouchers; on NTAG21x card vouchers it only proves possession for a swap.
 
 ### 10.5 No overrides (decision 28)
 
@@ -821,15 +824,13 @@ There is no registration from the guest's own phone (R11).
 
 A card from any other batch or restaurant is refused. Nothing that has not arrived can ever be sold.
 
-### 11.9 Legacy NTAG21x card
-
-It **never spends** (decision 22). A tap proves possession (`select`). The manager then taps a new stock card: new card `active`, the old legacy card `replaced`, its legacy medium revoked, the balance unchanged. The sunset rules are in §16.
-
 ---
 
 ## 12. Applications
 
 ### 12.1 GiftCard Waiter app (Android and iPhone)
+
+**Platform rule (decision 32):** every screen and capability in this table, except station mode, ships on Android **and** iPhone with identical behaviour. A feature is not done until it passes the hardware matrix on both platforms. Station mode is an internal GiftCard Pro tool and is Android-only.
 
 | Screen | Role | Replaces |
 |---|---|---|
@@ -912,20 +913,95 @@ Key sets (metadata and KCVs only), batches (create, approve, import manifest, ac
 | Network attacker (MITM) | Low | Medium | TLS, HSTS, pinning to ISRG roots; nothing reusable in the traffic | — |
 | Compromised web server | Low–Medium | High | Keys not extractable (no cloning); append-only DB grants; off-site chain anchors; crypto-service anomaly alerts | Fake entries while in control, detected afterwards |
 | Leaked database or backup | Medium | Medium | No key material; hashed secrets; encrypted PII; backups encrypted in a separate account | Metadata exposure (GDPR notification) |
-| Manufacturer key leak | Low | High for one key set | Two-level keys; one key set per manufacturer; compromise playbook (§8.4) | Clonable until swapped; clones cannot spend after `compromised` |
+| Manufacturer key leak | Low | High for one key set | Two-level keys; one key set per manufacturer; compromise playbook (§8.4) | Clonable until replaced; clones cannot spend after `compromised` |
 | Tap-domain loss | Low | **Very high** (all cards dead) | 10-year registration, registrar lock, monitoring (§19) | — |
 | Insider at platform | Low | High | Separation of duties; dual control; FIDO2; audit to an off-site sink | Two colluding custodians |
 
-### 13.4 Risk rules (synchronous, plus a nightly report)
+### 13.4 Fraud and risk engine (ADR-002)
 
-1. Velocity: more than 3 debits per voucher per hour.
-2. RF UID mismatch: reject; suspend the card after two occurrences.
-3. SUN counter jump > 50 since the last tap: flag (heavy reading or skimming).
-4. Rebind followed by a debit within 24 h: flag, notify.
-5. Replacements: more than 1 per voucher per 30 days, or more than 3 per employee per week: notify the owner.
-6. Sales without a card-terminal or online reference outside opening hours: flag.
-7. A guest e-mail belonging to a staff user, or used on more than 3 vouchers: flag.
-8. Any tap of a card from a `compromised` batch: possession only, swap prompt.
+The risk engine is a core subsystem and a selling point: **every restaurant sees, in real time, when issuing or redemption behaviour looks wrong, and why.** Machine learning is out of scope for v2, but the design is built so a model can be added later.
+
+```mermaid
+flowchart LR
+    subgraph Producers["Domain services (same DB transaction)"]
+        S[Sale · activation · payment]
+        B[Bind · replace · suspend]
+        R[Redemption · reload · reversal]
+        P[Presentment failures · RF UID mismatch · counter jumps]
+        A[Login · device enrolment · step-up · approvals]
+    end
+    S & B & R & P & A --> E[(risk_events<br/>append-only)]
+    E --> SYNC[Synchronous pre-check<br/>rules + cached baselines]
+    E --> Q[Queue]
+    Q --> AGG[Aggregator<br/>windows per entity]
+    AGG --> F[(risk_aggregates)]
+    F --> BL[Nightly baseline builder]
+    BL --> BS[(risk_baselines)]
+    Q --> SC[Scorer<br/>RuleModel + AnomalyModel<br/>+ future MLModel]
+    BS --> SC
+    SC --> AS[(risk_assessments<br/>append-only)]
+    AS --> AL[Alerts]
+    AL --> C[(risk_cases<br/>+ case events)]
+    C -->|resolution labels| LBL[(training labels)]
+```
+
+**1. Events (what is observed).**
+- Every service that changes money, cards, media, users or devices writes a `risk_events` row **in the same database transaction** as the change. The row holds:
+  - the type;
+  - the actor (user, device, restaurant);
+  - the subject (voucher, card, medium);
+  - the amount;
+  - the context (hour, method, presentment result, IP).
+- The table is append-only and hash-chained like the ledger, so the risk trail itself is tamper-evident. Nothing is sampled.
+
+**2. Two decision paths.**
+- **Synchronous pre-check** (< 20 ms target), for operations that can be stopped:
+  - sale, activation, bind, replacement, redemption, reload, reversal;
+  - it evaluates the hard rules and the cached baseline scores of the actor;
+  - outcome: `allow`, `allow_and_flag`, `require_approval` (step-up or second person) or `block`, each with reasons.
+- **Asynchronous scoring** (queue) for everything, including patterns that only show over time (hours, days).
+
+**3. Models behind one interface.**
+- `RiskModel::score(Event, FeatureVector) → {score 0–100, reasons[], model_version}`, with these implementations:
+
+  | Model | What it detects |
+  |---|---|
+  | `RuleModel` | Known fraud patterns, as versioned, parameterised rules. Examples: redemption velocity per voucher; sales without a terminal or online payment reference outside opening hours; rebind followed by a debit within 24 h; RF UID mismatches; SUN counter jumps; complimentary vouchers above a share of sales; reversals shortly after redemptions by the same employee; a guest contact used on many vouchers or belonging to staff |
+  | `BaselineAnomalyModel` | Deviations from **per-restaurant, per-employee and per-device baselines**: robust statistics (median and median absolute deviation) per metric and per hour-of-week bucket. Metrics include vouchers sold, complimentary share, average value, redemptions, reversals, replacements, failed presentments and active hours. Also **peer comparison**: an employee against the restaurant's other employees, a device against the restaurant's other devices, a restaurant against similar restaurants. Also **novelty**: first activity on a new device, at a new hour, or with a new pattern |
+  | `MLModel` (later) | Trained on the stored feature vectors and case-resolution labels; runs in **shadow mode** first (scores recorded, no decisions) until it proves better than the rules |
+
+- Scores are combined into a **risk score** with severity bands (low, medium, high, critical).
+- The per-restaurant policy maps bands to actions within platform bounds. Restaurants can tighten, never loosen below the platform minimum.
+
+**4. Baselines.**
+- Aggregates per entity and time window (hour, day, week) are updated incrementally.
+- Baselines are rebuilt nightly from the last 8 weeks, with a warm-up period in which new restaurants, employees and devices are compared with platform-wide defaults.
+- Baselines are versioned, so every assessment can be explained against the baseline it used.
+
+**5. Assessments, alerts and cases.**
+- Every score is stored in `risk_assessments`: event, model version, feature snapshot, score and reasons. Append-only.
+- Alerts are sent to the owner (dashboard, e-mail digest; immediate for high and critical) and to the platform for cross-restaurant patterns. They are de-duplicated and rate-limited.
+- **Investigation cases** group related alerts (same employee, device or voucher).
+  - Status: `open` → `investigating` → `resolved`, with the resolution `fraud`, `legitimate` or `inconclusive`.
+  - Every note, assignment and status change is an append-only `risk_case_events` row, and the owner's dashboard shows the complete trail.
+- **Resolutions are the training labels** for the later ML model. This is why cases are structured, not free text.
+
+**6. Explainability and fairness.**
+- Every alert shows its reasons in plain language: "12 vouchers sold after closing time; this employee's usual is 0–1".
+- No decision is based on a model a person cannot inspect.
+
+**7. Law and privacy.**
+- Per-employee baselines are **monitoring of employees**. In Austria, systems that monitor employees may need a works-council agreement or the employees' consent (ArbVG §96, §96a). Under GDPR they need a stated purpose (fraud prevention), transparency to staff, a data-protection impact assessment and retention limits (default 13 months for events, longer only for open or fraud cases) **[Law; confirm with counsel]**.
+- The product ships the staff notice text and a per-restaurant setting that documents the legal basis.
+
+**8. Data model (additions to §14).**
+- Append-only: `risk_events`, `risk_assessments`, `risk_case_events`.
+- `risk_aggregates` (entity, metric, window, value).
+- `risk_baselines` (entity, metric, bucket, median, MAD, sample size, version).
+- `risk_rules` (versioned, parameters, enabled per restaurant within bounds).
+- `risk_alerts`, `risk_cases`.
+
+---
 
 ---
 
@@ -935,12 +1011,12 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `gift_cards` (vouchers) | + `kind` (`card`, `digital`); `card_number` kept as the internal voucher number; status + `awaiting_card`/`cancelled`/`closed`, `customer_id` optional, `lock_version` | Existing money columns stay. The `nfc_*`, `public_token`, `replaced_*` columns are frozen and dropped after the sunset. |
+| `gift_cards` (vouchers) | + `kind` (`card`, `digital`); `card_number` kept as the internal voucher number; status + `awaiting_card`/`cancelled`/`closed`, `customer_id` optional, `lock_version` | Money columns stay. The `nfc_*`, `public_token` and `replaced_*` columns are dropped in Phase 0. |
 | `gift_card_transactions` (ledger) | + `presentment_id` UNIQUE, `payment_id`, `chain_seq`, `prev_hash`, `entry_hash` | Append-only (triggers, grants). Single-entry per voucher (R6). |
 | `payments` | `voucher_id, method (cash, card_terminal, online_psp, bank_transfer, complimentary), approved_by (complimentary), psp, psp_payment_id UNIQUE, amount, status, received_by, device_id, terminal_ref` | Every sale and reload references one |
-| `media` | `voucher_id, type (nfc_card, email_voucher, printable_qr, legacy_token), role (spend, recovery), status (active, suspended, revoked), card_id UNIQUE NULL, secret_hash, secret_ciphertext, created_by, revoked_by/at/reason` | For `nfc_card`, the effective status is the card's state (one source of truth) |
+| `media` | `voucher_id, type (nfc_card, email_voucher, printable_qr), role (spend, recovery), status (active, suspended, revoked), card_id UNIQUE NULL, secret_hash, secret_ciphertext, created_by, revoked_by/at/reason` | For `nfc_card`, the effective status is the card's state (one source of truth) |
 | `media_devices` | `medium_id, device_cookie_hash, confirmed_at, revoked_at` | E-mail voucher device confirmations |
-| `cards` | `id` UUIDv4 (never serialised), `card_number` (inventory, unique), `uid BINARY(7) UNIQUE, chip_type, batch_id NULL, key_set_id NULL, restaurant_id, state, state_changed_at, sdm_counter, originality_sig, successor_card_id` | CHECK constraint on state; index (batch_id, state). `batch_id` and `key_set_id` are NULL only for legacy cards. |
+| `cards` | `id` UUIDv4 (never serialised), `card_number` (inventory, unique), `uid BINARY(7) UNIQUE, chip_type, batch_id, key_set_id, restaurant_id, state, state_changed_at, sdm_counter, originality_sig, successor_card_id` | CHECK constraint on state; index (batch_id, state). |
 | `card_events` | `card_id, from_state, to_state, reason, actor_id, device_id, request_id, ref_type/ref_id, created_at` | Append-only, hash-chained with the audit log |
 | `card_batches` | See §8.1 | — |
 | `key_sets`, `key_references`, `key_ceremonies` | Version, provider label, KCV, status; ceremony minutes | **Never** key material |
@@ -975,85 +1051,30 @@ Only new or changed tables are listed. MySQL 8, UUID keys, amounts in cents, UTC
 | **Public** `GET /v/{token}` | E-mail voucher page |
 | **Admin** `/admin/key-sets`, `/admin/batches/*`, `/admin/stations/*`, `/admin/personalization/*` | Platform operations |
 
-**Deprecated and then removed:**
-- `POST /scan` (legacy only);
-- `POST /cards/{id}/redeem|reload|transfer` without a scan ticket (refused after Phase 0), and transfers entirely in v2;
-- `/cards/{id}/nfc*`, `/cards/{id}/qr`, `/cards/{id}/replace`;
-- `GET /public/cards/{token}` (legacy tokens only, until the sunset).
+**Removed in Phase 0** (ADR-002):
+- `POST /scan`;
+- `POST /cards/{id}/redeem|reload|transfer|replace`;
+- `/cards/{id}/nfc*`, `/cards/{id}/qr`;
+- `GET /public/cards/{token}`.
 
 ---
 
-## 16. Migration, legacy sunset and code removal
+## 16. Removal of superseded code (Phase 0)
 
-### 16.1 Data
-
-| Today | After migration |
-|---|---|
-| `gift_cards` row | The same voucher (same id). `card_number` stays as the internal voucher number. `kind = digital` for `qr_only` vouchers, otherwise `card`. |
-| `public_token` (tag URL, printed QR, e-mail link) | **One** `legacy_token` medium with `secret_hash = SHA-256(token)`. Revoking it kills the tag, the printed QR and old e-mail links together. The plain column is cleared. |
-| NTAG213/215/216 binding | A `cards` row (chip type legacy, no batch, state `active`) linked to that `legacy_token` medium |
-| NTAG 424 personalised with external tools | Only if any exist (R14): a `cards` row with key set v0, spending only through a valid SUN, never with the bare token. Otherwise this path is not built. |
-| Customer e-mail on a voucher | An **unconfirmed** contact. The guest receives a confirmation e-mail. It becomes a recovery contact (card vouchers) or a spending e-mail voucher (vouchers without a tag) only after confirmation. |
-| `nfc_write_attempts`, `nfc_scans`, `replaced_by_id` | Kept read-only as history |
-| `default_validity_months = 36` | The default becomes no expiry for **new** vouchers. Existing expiries wait for the legal review (audit blocker 1). |
-
-### 16.2 Legacy sunset
-
-| When | Rule |
-|---|---|
-| Phase 0 | NTAG21x writing and NTAG21x **spending** off everywhere. Legacy card balances are **preserved, not lost**; they wait for the swap. Digital (`qr_only`) vouchers keep spending by QR (legacy limits apply from Phase 3). |
-| T0: first premium cards live | Every manager tap on a legacy card offers the one-tap swap (§11.9). |
-| T0 + 9 months | Owners get the list of legacy vouchers with a balance; confirmed contacts get a swap invitation. |
-| T0 + 12 months | Legacy digital QR links become view-only unless migrated to an e-mail voucher. A legacy card swap remains possible, and **no balance is ever forfeited**. |
-
-### 16.3 Code removal order
-
-1. **Phase 0 (flags, on today's model):**
-   - a minimal `scan_tickets` table: `/scan` returns a single-use 60-second ticket, and redeem, reload and transfer require it;
-   - the ledger stores the ticket id under a unique index;
-   - no waiter manual lookup;
-   - `bindUnverified` off.
-
-   Phases 2–3 generalise the tickets into presentments.
-2. **When binding by tap is live:** hide the dashboard writer, the programming station, the print page and the app writer.
-3. **One stable release later:** delete about 6 700 lines (§3.4). Migrations stay.
-4. **After the sunset:** delete the legacy scan paths and the frozen voucher columns.
+There is no data to migrate. Development and staging databases are rebuilt from the v2 schema. Phase 0 deletes everything that does not belong to the final platform:
+- the NTAG213/215/216 writer and programming workflows (backend, dashboard, app), including the programming station and `nfc_write_attempts`;
+- NFC state on the voucher row (`nfc_*` columns), binding at scan time, and `bindUnverified`;
+- `public_token` as a bearer credential, the `/c/{token}` page and the QR payload endpoint;
+- transfers between vouchers and replace-by-transfer;
+- redemption by typed card number (the app screen and the dashboard terminal field);
+- the print page's card number;
+- `.env` card keys (moved to the crypto service in Phase 1).
 
 ---
 
 ## 17. Implementation phases and effort
 
-> **ADR-001:** the detailed plan, schedule and current estimates are in `docs/implementation/v2-implementation-plan.md`: pilot scope **85–119** engineer-days, with the online shop **100–139**, plus Track B (audit blockers, 4–6 days). The table below is the v2.0 estimate, kept for reference.
-
-For one experienced engineer who knows the code base, including tests **[Assessment]**.
-
-| Phase | Content | Days |
-|---|---|---|
-| **0** | Close today's bypasses on the current model (§16.3 step 1) | 6–8 |
-| **1** | Crypto service, Google Cloud HSM, AN10922 + AN12196 with NXP vectors, key sets, ceremony tooling; remove `.env` keys | 10–14 |
-| **2** | Schema: references, media, cards + lifecycle, card events, batches, presentments, payments, append-only + hash chain; backfill and verification | 9–12 |
-| **3** | Presentment service, SUN v2 on the tap domain, guest balance page, limit model, risk rules | 7–10 |
-| **4** | Live authentication: server protocol, Android `IsoDep` and iOS ISO 7816 relay, latency tests | 12–16 |
-| **5** | App: sell, add card, replace, register, receive, card info; step-up; contacts and e-mail confirmations; authorizations. Dashboard: vouchers and media, batches and stock, owner reports | 14–18 |
-| **6** | Station mode (personalisation + per-card QA), batch acceptance, platform batch admin; manifest import when needed | 10–14 |
-| **7** | Legacy migration and sunset tooling; removal of the writer, card numbers, print page, replace-by-transfer | 4–6 |
-| **8** | E-mail voucher v2 (device confirmation, rotating QR, recovery code), printable QR, rewritten e-mail templates without balances | 4–6 |
-| **9** | Pilot readiness: pinning, off-site audit anchors, reconciliation report, penetration-test fixes, runbooks, owner documentation | 10–14 |
-| | **Pilot scope (0–9)** | **86–118** |
-| **10** | Online shop: PSP connected accounts, checkout, webhooks, refunds, disputes, fraud rules | 15–20 |
-| | **Total** | **101–138** |
-
-- **Compared with the draft:** 143–199 days including wallets, the double-entry ledger and the enterprise controls. The simplifications in §4.3 (44–64 days, wallets included) minus about 2–3 days for the lifecycle, batch and receipt additions give **42–61 days less**, without weakening any control in §13.
-- **Calendar:**
-  - with two engineers, about 2–3 months of engineering. Allow **3–4 months calendar** to the pilot, because of HSM setup, card-supplier samples and penetration-test scheduling **[Assessment]**;
-  - the 3 November 2026 launch target is only reachable with **today's model plus Phase 0 and the audit blockers**;
-  - v2 then follows as a migration, which §16 is designed for.
-- **External:**
-  - penetration test before the pilot;
-  - cryptographic review of Phases 1, 4 and 6;
-  - Google Cloud HSM (a few euros per month **[Vendor]**);
-  - card supplier samples and print runs;
-  - legal opinion (§20).
+The phases, stories, estimates and quality gates are in `docs/implementation/v2-implementation-plan.md` (ADR-002 version). There is no launch date; each phase is done when its acceptance criteria and the security gates are met.
 
 ---
 
@@ -1063,7 +1084,7 @@ For one experienced engineer who knows the code base, including tests **[Assessm
 |---|---|
 | Apple Wallet, Google Wallet | New `media.type` values; a queued job updates passes after ledger commits; Google rotating barcodes can reuse the rotating-QR verifier |
 | Restaurant chains, cross-location acceptance | `organization_id` on restaurants and vouchers; acceptance rules on the voucher; batches per organisation |
-| Double-entry ledger, inter-location settlement | Migration from the append-only per-voucher ledger (each entry becomes a balanced pair) |
+| Double-entry ledger, inter-location settlement | Derived from the append-only per-voucher ledger (each entry maps to a balanced pair) |
 | Loyalty, memberships | New account tables using the same media, presentments and cards |
 | Offline terminals | A terminal with NXP SAM AV3 verifying locally within floor limits; phones never |
 | Device attestation | A new `device_keys.attestation` column and per-role enforcement |
@@ -1101,7 +1122,8 @@ For one experienced engineer who knows the code base, including tests **[Assessm
 | ADR | Date | Decision |
 |---|---|---|
 | ADR-000 | 28 Sep 2026 | v2 architecture frozen as this document |
-| ADR-001 | 28 Sep 2026 | Implementation decisions 21–28: Phase 0 first; NTAG21x migration-only (never spends); no dashboard programming; card numbers internal only; payment record for every activation (methods incl. complimentary); card or digital voucher, never both; UUIDv4 internal card id; overrides removed. Sections amended: §1, §3.2, §3.4, §4.1, §4.2 (R1, R9), §5.2, §6, §10, §11, §12, §13, §14, §15, §16, §17, §19. The implementation plan is `docs/implementation/v2-implementation-plan.md`. |
+| ADR-001 | 28 Sep 2026 | *(Partly superseded by ADR-002.)* Implementation decisions 21–28: Phase 0 first; NTAG21x ended; no dashboard programming; card numbers internal only; payment record for every activation (methods incl. complimentary); card or digital voucher, never both; UUIDv4 internal card id; overrides removed. Sections amended: §1, §3.2, §3.4, §4.1, §4.2 (R1, R9), §5.2, §6, §10, §11, §12, §13, §14, §15, §16, §17, §19. The implementation plan is `docs/implementation/v2-implementation-plan.md`. |
+| ADR-002 | 29 Sep 2026 | Decisions 29–33: final architecture from day one (no migration, compatibility layers, legacy modes or transition phases; NTAG21x removed entirely; scan tickets replaced by the final presentment model already in Phase 0); immutable financial history; the fraud and risk engine as a core subsystem (§13.4, reverses R17); full Android/iPhone parity (station Android-only); no launch date. Sections amended: §1, §3.4, §4.2 (R14, R17), §6, §11, §12, §13.4, §14, §15, §16, §17. |
 
 ---
 

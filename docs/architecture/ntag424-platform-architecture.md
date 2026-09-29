@@ -1,6 +1,6 @@
 # GiftCard Pro: physical card platform architecture on NTAG 424 DNA
 
-**Status:** design for review. No code has been changed.
+**Status:** cryptographic reference. The binding architecture is `giftcard-pro-v2-architecture.md` (frozen v2.2). Use this document only for the cryptographic detail that document points to (keys, derivation, APDU sequences, personalisation, threat analysis). Where scope, data model or plan differ, the v2 architecture wins. GiftCard Pro has no production data, so nothing here describes a migration (ADR-002).
 **Date:** 28 September 2026.
 **Product decision (given):** every new physical GiftCard Pro card is an NXP NTAG 424 DNA.
 **Relation to earlier documents:**
@@ -45,15 +45,15 @@
 | D3 | Inventory | `nfc_chips`, `card_batches`, stock ownership per organisation/restaurant. |
 | D4 | Tenancy | New `organizations` (brand/chain) above `restaurants`; `programs` define what a voucher is and where it is accepted. |
 | D5 | Keys on the card | K0 app master, K1 SDM meta-read (per batch), K2 SDM MAC, K3 live authentication, K4 reserved. All except K1 diversified per UID. |
-| D6 | Key derivation | AN10922 AES-CMAC, two levels (root → batch → card), frozen with test vectors. The current HMAC-SHA256 derivation is kept only as `key_set v0` for cards already in circulation. |
+| D6 | Key derivation | AN10922 AES-CMAC, two levels (root → batch → card), frozen with test vectors. The earlier HMAC-SHA256 derivation is removed. |
 | D7 | Key storage | Root keys in an HSM, generated in a dual-control key ceremony. Cloud KMS alone is not enough (no AES-CMAC, §6.6). |
 | D8 | Crypto boundary | Separate crypto service with a narrow API. The Laravel app never holds key material. |
 | D9 | Spending proof | Server-issued, single-use, 60-second presentment, bound to device, user, restaurant and medium. Required by every money-moving endpoint. |
 | D10 | Till verification | Live AES challenge-response (A3) in the waiter app on Android **and** iPhone. SUN (A2) where APDUs are impossible. |
 | D11 | Provisioning | Central only: an in-house personalisation station (server-driven APDU relay) for pilots, a card manufacturer for volume. Batch acceptance testing before stock is released. |
 | D12 | Restaurant workflow | Create voucher → take payment → tap stock card (verify) → activate. No keys, no writing, no locking. |
-| D13 | Ledger | Double-entry journal with per-account sequence numbers and a per-organisation hash chain. The existing `gift_card_transactions` becomes a compatibility view. |
-| D14 | Legacy | NTAG213/215/216 keep working as assurance level A1 with policy limits. They are swapped at the next visit and sunset after a fixed date. |
+| D13 | Ledger | Double-entry journal with per-account sequence numbers and a per-organisation hash chain. *(Deferred in v2; see the v2 architecture R6.)* |
+| D14 | Other chips | NTAG213/215/216 are not supported (ADR-002). |
 | D15 | Offline | Not supported for spending in this version. The model allows it later with SAM-equipped terminals (§19). |
 
 ### 0.3 What changes for a restaurant
@@ -65,7 +65,7 @@
 
 ### 0.4 Effort
 
-About **112–156 engineer-days** for the full design, in ten phases, 0–9 (§17). Phase 0 (closing today's bypasses on the current model, 6–8 days) is independent and should ship first. External costs: HSM, penetration test, cryptographic review, card supplier.
+Estimates and phases: see `docs/implementation/v2-implementation-plan.md`.
 
 ---
 
@@ -167,7 +167,7 @@ What the system does today, and each gap this design closes. Line numbers are fr
 | G2 | Redeem, reload and transfer accept a card id. No proof that a card was presented. | `routes/api.php:79–81`; `GiftCardActionController.php:49` | Any user with `cards.redeem` who knows or lists a card id can spend without any card. Managers can list all cards (`cards.view`). | D9: `presentment_id` required (§7.4, §14). |
 | G3 | Manual lookup by card number is a full credential. | `CardScanService.php:93`; waiters have `cards.scan` + `cards.redeem` (`RoleSlug.php:73–76`) | A number read from a receipt or card photo is enough to spend. | A8; number = reference, override only. |
 | G4 | The URL token is a static bearer secret, stored in clear. It is the same in the tag, the QR and the guest's e-mail. | `gift_cards.public_token` (`…000004_create_gift_card_tables.php:18`) | A database or e-mail leak yields working credentials. | Hashed medium secrets; view-only tokens (§5.4). |
-| G5 | NTAG21x "UID binding" trusts a UID reported by the client. | `ScanCardRequest.php` `nfc_uid`; `CardScanService.php:171` | A modified app or a magic tag passes. NTAG21x is clonable in minutes. | NTAG21x sunset (D14). |
+| G5 | NTAG21x "UID binding" trusts a UID reported by the client. | `ScanCardRequest.php` `nfc_uid`; `CardScanService.php:171` | A modified app or a magic tag passes. NTAG21x is clonable in minutes. | Removed: NTAG21x is not supported (ADR-002). |
 | G6 | 424 master keys come from `.env`: one global meta-read key and one global MAC key. No key version. | `config/giftcard.php:43–44` | A server compromise leaks keys for every card ever made. No rotation possible. | D5–D8 (§6). |
 | G7 | 424 diversification is HMAC-SHA256, not NXP AN10922. | `Ntag424SunVerifier.php:118` | Manufacturers, SAMs and NXP tools cannot personalise compatible cards. | D6. |
 | G8 | The SUN path does not compare the RF-layer UID with the UID inside the PICC data. | `CardScanService.php:116–130` | An Android HCE emulation of a skimmed URL is not detected (HCE uses a random UID). | §7.3 check 4. |
@@ -273,7 +273,7 @@ erDiagram
 
 ## 5. Database redesign
 
-MySQL 8, as today. UUID primary keys, minor units for money, UTC timestamps with microseconds on money tables. **All changes are additive** until the final clean-up migration (§15).
+MySQL 8, as today. UUID primary keys, minor units for money, UTC timestamps with microseconds on money tables. The schema is built in its final form (ADR-002).
 
 ### 5.1 Tenancy
 
@@ -287,7 +287,7 @@ organizations                       NEW
   created_at, updated_at
 
 restaurants                         CHANGED
-  + organization_id uuid fk NOT NULL              -- backfill: one organisation per restaurant
+  + organization_id uuid fk NOT NULL
   (everything else unchanged)
 
 programs                            NEW  (what a voucher "is")
@@ -309,7 +309,6 @@ program_locations                   NEW
   program_id, restaurant_id, pk(program_id, restaurant_id)
 ```
 
-*Backfill:* each restaurant → one organisation + one `stored_value` program built from its current card settings. Every existing card → that program.
 
 ### 5.2 Accounts: the voucher
 
@@ -328,7 +327,7 @@ gift_cards  (= vouchers)            CHANGED
   card_number                                     -- meaning: voucher REFERENCE number (A8), unchanged format
   balance, initial_value, total_*                 -- now a PROJECTION of the ledger account (§5.3)
 
-  deprecated, frozen after backfill, dropped in clean-up:
+  not part of the final schema:
   public_token, nfc_tag_type, nfc_uid, nfc_uid_active, nfc_written_at, nfc_verified_at,
   nfc_locked, nfc_read_counter, replaced_by_id, replaces_id
 ```
@@ -354,7 +353,7 @@ journal_entries                     NEW  (append-only; UPDATE/DELETE revoked at 
   organization_id uuid fk
   restaurant_id uuid fk                           -- where it happened
   type enum(sale, redemption, reload, transfer, reversal, expiry, breakage,
-            settlement, migration_opening)              -- no free-form adjustment (I-1)
+            settlement)                                 -- no free-form adjustment (I-1)
   idempotency_key varchar(100)
   presentment_id uuid fk NULL UNIQUE              -- I-1: one presentment, one debit
   override_id uuid fk NULL UNIQUE
@@ -377,7 +376,7 @@ postings                            NEW  (append-only)
   balance_after bigint
   unique(ledger_account_id, account_seq)          -- no lost update, no double posting
 
-gift_card_transactions              KEPT as a compatibility VIEW over postings of voucher_liability accounts
+gift_card_transactions              the per-voucher ledger (v2 keeps it as the append-only ledger; see the v2 architecture R6)
                                     (same columns the dashboard, exports and history use today)
 ```
 
@@ -399,13 +398,13 @@ MySQL has no deferred constraints. "Σ = 0" is enforced by:
 media                               NEW
   id uuid pk
   organization_id uuid fk
-  type enum(nfc_ntag424, nfc_ntag21x_legacy, qr_static_legacy, qr_rotating,
+  type enum(nfc_ntag424, qr_rotating,
             reference_number, wallet_apple, wallet_google, mobile_credential)
   status enum(provisioned, active, suspended, revoked, retired)
   assurance_max tinyint                           -- highest level this medium can reach (§7.1)
   chip_id uuid fk NULL UNIQUE                     -- nfc_* only
-  secret_hash binary(32) NULL UNIQUE              -- SHA-256 of a 256-bit secret (legacy QR, rotating QR seed id, wallet)
-  secret_version tinyint NULL                     -- 1 = legacy public_token, 2 = new
+  secret_hash binary(32) NULL UNIQUE              -- SHA-256 of a 256-bit secret (printable QR, rotating QR seed id, wallet)
+  secret_version tinyint NULL                     -- format version of the secret
   label varchar(60)                               -- "Card ••42A1", "Apple Wallet"
   created_by, created_at
   revoked_by, revoked_at, revoke_reason enum(lost, stolen, damaged, replaced, fraud, closed, other), revoke_note
@@ -450,7 +449,7 @@ nfc_chips                           NEW
   id uuid pk
   uid binary(7) UNIQUE                            -- globally unique; the physical identity
   chip_type enum(ntag424_dna, ntag213, ntag215, ntag216)
-  batch_id uuid fk NULL                           -- NULL for legacy NTAG21x
+  batch_id uuid fk
   key_set_id uuid fk NULL
   personalization_status enum(blank, in_progress, personalized, failed, quarantined, destroyed)
   originality_sig varbinary(56) NULL              -- NXP ECC signature (secp224r1), verified at intake
@@ -482,7 +481,7 @@ personalization_sessions            NEW  (journal that makes interrupted persona
 key_sets                            NEW
   id uuid pk
   version smallint UNIQUE                         -- also written as the key version byte on the card
-  derivation enum(an10922_v1, legacy_hmac_sha256)
+  derivation enum(an10922_v1)
   status enum(pending_ceremony, active, verify_only, retired, compromised)
   provider enum(aws_cloudhsm, azure_managed_hsm, gcp_cloud_hsm, onprem_hsm, envelope_kms)
   created_at, activated_at, retired_at, compromised_at, ceremony_id
@@ -509,7 +508,7 @@ presentments                        NEW
   id uuid pk
   organization_id, restaurant_id, device_id, user_id
   purpose enum(spend, bind, verify, view)
-  method enum(live_auth, sun, rotating_qr, static_qr, reference_number, wallet_barcode, legacy_ntag21x)
+  method enum(live_auth, sun, rotating_qr, static_qr, wallet_barcode)
   assurance tinyint                               -- achieved level (§7.1)
   medium_id uuid fk NULL, chip_id uuid fk NULL
   rf_uid binary(7) NULL                           -- what the phone's RF layer saw
@@ -622,10 +621,7 @@ Card_slot            (K0, K2, K3, K4 on the chip; K1 = Batch_K1 directly)
 - **Test vectors.** The implementation must reproduce the AN10922 example vectors before any other test, and AN12196's SUN vectors for the verification path. Both become CI tests.
 - **Specification for manufacturers.** M1 and M2 go into a one-page "GiftCard Pro diversification profile", with our own test vectors, so any AN10922-capable personaliser (SAM AV3 included) produces identical keys.
 - **No per-card key storage.** Keys are recomputed on demand. The database never holds them, so a leaked database or backup contains nothing to clone with. Interrupted personalisation is also recoverable, because both the old and the new key of any chip can be recomputed (§8.7).
-- **Legacy 424 cards.** Existing 424 cards (if any) become `key_set v0`, `derivation = legacy_hmac_sha256`, status `verify_only`. The current `.env` keys are imported once into the key store and then deleted from `.env` (G6, G7).
-  - These cards have **no batch** and carry today's URL format, `/c/{public_token}?picc=…&cmac=…`.
-  - Their K3 was set by external tools and is unknown, so they can reach **A2 at most** (SUN with the v0 keys, resolved through the hashed token → medium → chip).
-  - Their vouchers get `min_spend_assurance = 2` until swapped. They join the same swap campaign and sunset as NTAG21x (§15.4), with the difference that they keep A2, not A1, until the sunset date.
+- **No earlier cards exist.** Every card is personalised with AN10922 keys by the platform (ADR-002). The `.env` keys used during development are removed in Phase 1.
 
 ### 6.5 Key versions and rotation
 
@@ -645,7 +641,7 @@ Card_slot            (K0, K2, K3, K4 on the chip; K1 = Batch_K1 directly)
 **Operations it offers, the only ones:**
 
 ```text
-sun.verify(batch_code | key_set, e, m, mac_input)     → {uid, counter} | invalid   (key_set for legacy v0 cards)
+sun.verify(key_set, e, m, mac_input)                  → {uid, counter} | invalid
 auth.begin(uid, key_set, e_rndb)                      → {challenge_ref, apdu}        (RndA stays inside)
 auth.finish(challenge_ref, card_response)             → ok | invalid                 (single use, 30 s)
 perso.*   (separate identity: personalisation stations only, per approved batch job)
@@ -704,7 +700,7 @@ export.batch_keys(batch, recipient_key)               (ceremony only; two approv
 |---|---|---|---|
 | **A3** | Live chip | A genuine, correctly personalised chip answered a **server-chosen** random challenge in the last seconds, on this device | NTAG 424 live authentication (K3) via the waiter app on **Android and iPhone**. Future: mobile credential with a device key. |
 | **A2** | Dynamic | A genuine chip (or the holder's session) produced a **fresh, never-used** value, but the reader did not choose it | NTAG 424 SUN with RF-UID match (Web NFC dashboard, fallbacks); rotating QR (guest page, Google Wallet rotating barcode **[Google]**) |
-| **A1** | Static | Someone knows or copied a value | Legacy NTAG21x, legacy static QR/link, Apple Wallet barcode (static), reference number |
+| **A1** | Static | Someone knows or copied a value | Static printable QR, Apple Wallet barcode (static) |
 | **A0** | View | Nothing; may only view | Guest view links (`voucher_views`), a SUN tap on a guest's phone |
 
 **Default policy** (per program; stricter per voucher possible, looser only with owner rights and an audit entry):
@@ -713,7 +709,6 @@ export.batch_keys(batch, recipient_key)               (ceremony only; two approv
 |---|---|---|---|
 | NTAG 424 card | **A3**, up to €250 per transaction and €500 per voucher per day (policy) | A2, up to €50 per transaction and **€100 per voucher per day** | A0 |
 | Digital (e-mail/wallet) | A2 (rotating QR) | A2 | A0 plus the rotating QR |
-| Legacy NTAG21x (during sunset) | A1 with limits (default €100/day per voucher), with a swap prompt | A1 with limits | A0 |
 
 ### 7.2 Live authentication (A3): the protocol
 
@@ -930,7 +925,6 @@ This replaces trust on first use (G9): a card is never bound implicitly by a fir
 2. Enter the amount → `POST /v1/vouchers/{id}/redemptions` with the presentment.
 3. Success.
 
-On a legacy NTAG21x card, a banner reads "Old card, please swap it" when a manager is present (§15.4).
 
 ### 9.3 Replace a lost, stolen or damaged card
 
@@ -944,7 +938,7 @@ On a legacy NTAG21x card, a banner reads "Old card, please swap it" when a manag
 
 | Situation | Rule |
 |---|---|
-| Old card present and readable (damaged, legacy, compromised batch) | Its presentment (any level) proves possession. The swap is immediate. |
+| Old card present and readable (damaged, compromised batch) | Its presentment (any level) proves possession. The replacement is immediate. |
 | Old card absent, voucher has a guest e-mail | The guest confirms via a one-time link sent to that e-mail. Until then the new card is `provisioned` but cannot spend. |
 | Old card absent, no e-mail | An owner (not the same person) approves with step-up. The new card spends only up to €50 in its first 72 h. |
 | Always | The guest is notified (if an e-mail exists). A risk rule fires for "rebind followed by a debit within 24 h". |
@@ -1327,12 +1321,12 @@ Every arrow into the platform is untrusted input. The crypto zone trusts only au
 
 | Gap asked about | How it is closed | Residual |
 |---|---|---|
-| **QR bypass** (G1) | A static QR is A1. Card vouchers need A3 (A2 on the web). A photo of a card's QR (424 cards have no spending QR) or of a legacy tag URL cannot reach the spending minimum. | Legacy NTAG21x vouchers during the sunset, capped by limits |
+| **QR bypass** (G1) | A static QR is A1. Card vouchers need A3 (A2 on the web). A photo of a card's QR (424 cards have no spending QR) cannot reach the spending minimum. | None |
 | **API bypass** (G2) | Every debit endpoint requires `presentment_id` or `override_id`, validated and consumed in the ledger transaction. The unique index enforces it even if code is wrong. There is no "card id only" debit path left, including for platform admins. | A compromised backend (T-11) |
-| **NFC verification bypass** (G1, G5, G8, G9) | Verification happens only on the server. The client reports bytes, never results. The RF UID is cross-checked. Binding is explicit. NTAG21x is sunset. | Live relay (T-6) |
+| **NFC verification bypass** (G1, G5, G8, G9) | Verification happens only on the server. The client reports bytes, never results. The RF UID is cross-checked. Binding is explicit. NTAG21x is not supported. | Live relay (T-6) |
 | **Replay** | SUN counter compare-and-set; live-auth challenges are single-use and expire in 30 s; presentments are single-use; idempotency keys | None known |
 | **Duplicated requests** | Idempotency key per organisation (unique index) plus the presentment's unique index. A duplicate returns the original result, and a second debit is impossible. | None known |
-| **Cloned media** | 424: keys are not readable (EAL4) and differ per card; a clone fails A3 and A2. Legacy media are capped and sunset. QR and wallet: rotating or A1-limited. | Laboratory key extraction from one card (T-1) |
+| **Cloned media** | 424: keys are not readable (EAL4) and differ per card; a clone fails A3 and A2. QR and wallet: rotating or A1-limited. | Laboratory key extraction from one card (T-1) |
 | **Race conditions** | Row locks on the presentment and the ledger account; per-account sequence unique index; counter compare-and-set; unique active-binding index | None known |
 | **Offline abuse** | No offline spending. The app refuses to queue debits when offline (as today). | Not applicable until offline mode is designed (§19) |
 | **Insider fraud** | See T-8, T-9, T-10: presentment for debits, payment records for sales, four-eyes, overrides limited and reported, separation of duties for keys and personalisation, hash-chained ledger and audit | Collusion and owner-level fraud (T-9) |
@@ -1455,17 +1449,9 @@ All under `/v1`. Money endpoints keep the `Idempotency-Key` header rule. Error c
 | `POST /admin/stock/shipments` | Ship chips or packs to organisations or restaurants |
 | `GET /admin/ledger/verification` | Latest nightly verifier result and chain heads |
 
-### 14.3 Changed or deprecated
+### 14.3 Removed endpoints
 
-| Today | Change | Sunset |
-|---|---|---|
-| `POST /scan` | Kept for legacy NTAG21x and old app versions only; returns an A1 presentment. For 424 cards it answers `USE_LIVE_AUTH`. | Removed when the app minimum version includes live auth and the NTAG21x sunset ends |
-| `POST /cards/{card}/redeem`, `/transfer` | **Refused** (`PRESENTMENT_REQUIRED`) unless the restaurant has the temporary `legacy_redeem_without_presentment` flag (Phase 0, off by default for new restaurants) | Phase 0 + 90 days |
-| `POST /cards/{card}/reload` | Requires a payment object | Phase 5 |
-| `POST /cards/{card}/replace` | Implemented as revoke + bind for new clients; the old behaviour (new card + transfer) stays only for API clients until sunset | Phase 5 + 90 days |
-| `GET/POST /cards/{card}/nfc`, `/nfc/check`, `/nfc/lock`, `/nfc/attempts` | Writer flow for NTAG21x. **Disabled for new vouchers** once NTAG21x issuing stops. Read-only history remains. | End of NTAG21x issuing |
-| `GET /public/cards/{token}` | Accepts legacy tokens via hash lookup; new links use `/v/{view_token}` | Keeps working for printed legacy QRs |
-| Permission `cards.write_nfc` | Split into `cards.bind` (restaurants) and `platform.personalize` (stations) | Phase 5 |
+The v2 architecture §15 lists the endpoints removed in Phase 0. There is no deprecation period (ADR-002).
 
 ### 14.4 New error codes
 
@@ -1473,124 +1459,9 @@ All under `/v1`. Money endpoints keep the `Idempotency-Key` header rule. Error c
 
 ---
 
-## 15. Migration strategy
+## 15–17. Plan
 
-**Principles:**
-- additive schema first;
-- backfill with verification;
-- dual read, then switch;
-- remove last.
-
-Every step is reversible until the clean-up. There is no big-bang switch and no downtime beyond normal deploys.
-
-### 15.1 Phase 0: close the bypasses on today's model (before any redesign)
-
-This is independent, ships in days, and removes the most serious findings now.
-
-1. **Scan tickets.** `POST /scan` returns a signed, 60-second, single-use `presentment_id` (a table `presentments` with the minimal columns). The ticket records the method and a provisional assurance:
-   - verified 424 SUN = A2;
-   - NTAG21x with UID = A1;
-   - QR, manual, API = A1.
-2. **Money endpoints require the ticket** (feature flag per restaurant; on by default for new restaurants; existing restaurants move within 90 days with an in-app notice).
-3. **Waiters lose manual lookup by number** (manager-only, with a reason).
-4. **Per-medium method rules** for 424 cards: `qr`/`manual`/`api` never resolve a 424 card for spending (S8).
-5. **RF UID vs SUN UID check** (G8).
-6. **Unique `presentment_id` on today's `gift_card_transactions`** (nullable, unique). This makes "one presentment, one debit" a database guarantee from Phase 0, long before the new ledger (Phase 7).
-
-Removing the `.env` 424 keys is the **first deliverable of Phase 1**, because the key store is built there.
-
-### 15.2 Schema and backfill (Phases 2–3)
-
-| Existing data | Becomes |
-|---|---|
-| each `restaurants` row | + an `organizations` row + a default `programs` row |
-| each `gift_cards` row | + `organization_id`, `program_id`; + a `ledger_accounts` row with an opening `migration_opening` entry equal to the current balance (the historic `gift_card_transactions` stay as they are and are reachable from the voucher) |
-| `public_token` | a `qr_static_legacy` medium with `secret_hash = SHA-256(public_token)`, `secret_version = 1`, bound `role = spend` for digital vouchers or `view` for card vouchers (per program default, owner-adjustable) |
-| `nfc_uid` + NTAG21x type | an `nfc_chips` row (chip type ntag21x, no batch) + an `nfc_ntag21x_legacy` medium, bound |
-| `nfc_uid` + `ntag424_dna` | an `nfc_chips` row with `key_set v0` (legacy HMAC), no batch + an `nfc_ntag424` medium with `assurance_max = 2`; `sdm_counter` = `nfc_read_counter`; voucher `min_spend_assurance = 2` (§6.4) |
-| `card_number` | stays on the voucher as the reference number, plus a `reference_number` medium (override-only) |
-| `replaced_by_id` chains | kept for history; no new ones created |
-
-**Verification:** a migration check compares counts, sums of balances, and that each card resolves to the same voucher through the new resolver. The switch waits until it has run cleanly on a production copy.
-
-### 15.3 Dual read and switch (Phase 3)
-
-1. The new resolver (media + chips) runs **in shadow** next to the old one for two weeks and logs any differences.
-2. Then it becomes primary.
-3. Old columns are frozen by a trigger that rejects writes.
-
-### 15.4 NTAG21x sunset
-
-| Date (relative) | Rule |
-|---|---|
-| T0 (424 cards available to the restaurant) | No new NTAG21x media. The writer flow is disabled for new vouchers. |
-| T0 → T0 + 12 months | Legacy cards work at A1 with limits. At every tap by a manager, the app offers **"Swap card"**: one tap on a 424 stock card binds it, and the old medium is revoked (reason `replaced`). Waiters see a "please ask a manager to swap" hint. |
-| T0 + 9 months | The owner gets a list of remaining legacy cards with balances; guests with an e-mail get a swap invitation. |
-| T0 + 12 months | Legacy NFC media become view-only. Spending needs a swap (one tap) or an override. **No balance is ever lost**: the voucher is untouched. |
-
-Printed legacy QR codes keep working as view links forever. They spend only if their program allows A1, for digital vouchers during the same period.
-
-### 15.5 Ledger switch (Phase 6)
-
-1. Dual-write: every money operation writes both `gift_card_transactions` and journal/postings for four weeks.
-2. The nightly verifier compares them.
-3. Switch reads to the ledger.
-4. `gift_card_transactions` becomes a view.
-
-The existing ledger code (idempotency, locking) is reused inside `Ledger::post()`.
-
-### 15.6 Clean-up (last)
-
-Drop the deprecated `gift_cards` columns, the old endpoints and the `.env` keys. Rename the table, optionally. Only after the sunset dates and a full backup.
-
----
-
-## 16. Rollout plan
-
-| Stage | Scope | Entry gate | Exit gate |
-|---|---|---|---|
-| 0. Hardening | Phase 0 on all restaurants (flag) | Tests green; owners notified | No increase in support tickets for two weeks; zero debits without a ticket in the logs |
-| 1. Lab | 200 in-house personalised cards; staging with T2 keys; internal devices | Ceremony done; AN10922/AN12196 vectors pass | Personalisation success > 99 %; A3 p95 < 0.8 s on 5 Android and 3 iPhone models; recovery tested by pulling cards mid-personalisation |
-| 2. Pilot | 1 restaurant (friendly), 200 cards, live money | External penetration test of Phases 0–6 plus the Phase 8 controls the pilot uses: no open high findings | 4 weeks; tap success ≥ 99 %; zero ledger verifier differences; manager bind flow ≤ 10 s median |
-| 3. Early adopters | 3–5 restaurants incl. one multi-location; first manufacturer batch (≤ 2 000) | Batch acceptance passed with two approvals | 8 weeks; swap campaign running; incident drill done (simulated batch compromise) |
-| 4. General availability | All restaurants; NTAG21x issuing off (T0) | Runbooks, support training, owner docs | — |
-| 5. Enterprise | Chains, T3 keys, ledger settlement | CloudHSM spike passed; legal opinion on multi-location programs | — |
-
-**Kill switches:**
-- per restaurant, fall back from A3 to A2 for spending (for example when an app bug breaks live auth), with a lower limit;
-- per batch, stop binding;
-- global, freeze overrides.
-
----
-
-## 17. Implementation phases and effort
-
-Estimates are for one experienced full-stack engineer who knows this code base, including tests and documentation **[Assessment]**. Parallel work by two engineers shortens the calendar time by roughly 40 %, not 50 %.
-
-| Phase | Content | Engineer-days |
-|---|---|---|
-| **0** | Close bypasses on today's model (§15.1) | 6–8 |
-| **1** | Crypto service + key store abstraction (T1/T2), AN10922 + AN12196 with NXP vectors, key sets, KCVs, ceremony scripts; **CloudHSM T3 spike** (3–5 days, separate) | 12–16 (+3–5) |
-| **2** | Schema: organisations, programs, media, bindings, chips, batches, key tables, presentments; backfill + verification | 10–14 |
-| **3** | New resolver, presentment service, SUN v2 (MAC input, batch URL, RF UID), shadow mode, switch | 8–12 |
-| **4** | Live authentication: server protocol, Android `IsoDep` + iOS ISO 7816 relay in the waiter app, UX, performance measurement | 12–16 |
-| **5** | Manager flows (create, pay, bind, activate; revoke, replace, override) in app and dashboard; stock receiving; permissions split | 12–16 |
-| **6** | Personalisation: `perso.*` secure-messaging engine, station app (Android + PC/SC), job approvals, recovery journal, manifest import, batch acceptance | 16–22 |
-| **7** | Double-entry ledger, hash chains, nightly verifier, payment evidence, reports | 14–20 |
-| **8** | Security controls from the 20-point document that this design depends on: device keys and attestation, step-up, four-eyes, risk engine rules, pinning | 14–20 |
-| **9** | Migration execution, NTAG21x sunset tooling, runbooks, owner documentation, pen-test fixes | 8–12 |
-| | **Total** | **112–156** (+ spike) |
-
-**External, not in engineer-days:**
-- penetration test (the Stage 2 gate in §16);
-- independent cryptographic review of Phases 1, 4 and 6 (strongly recommended);
-- HSM running costs;
-- card supplier samples and batches;
-- legal opinion (A11, A12).
-
-**Order and dependencies:** 0 → 1 → 2 → 3 → (4 ∥ 6) → 5 → 7; 8 alongside from Phase 3.
-- The pilot needs 0–6 and the parts of 8 used by bind and override. Until Phase 7, the payment record (Phase 5, table `payments`) is linked from today's `gift_card_transactions`, and the unique presentment constraint comes from Phase 0.
-- Phase 7 (the ledger) is needed before chains, not before the pilot.
+Superseded by `docs/implementation/v2-implementation-plan.md` (ADR-002).
 
 ---
 
@@ -1639,7 +1510,7 @@ Estimates are for one experienced full-stack engineer who knows this code base, 
 2. **Key tier for production:** T2 on Google Cloud HSM (recommended), or go directly to T3 on AWS CloudHSM, which requires moving the crypto service into AWS.
 3. **Tap domain:** approve `t.giftcardpro.at` (permanent) or choose another.
 4. **Personalisation route for the pilot:** in-house station (recommended), or a manufacturer from the start.
-5. **Phase 0 now:** ship the bypass fixes on today's model before the redesign (recommended; 6–8 days).
+5. **Phase 0 now:** decided (ADR-002): Phase 0 builds the final presentment model and removes every insecure path.
 6. **Legal opinion** on expiry defaults and on chain or multi-location programs.
 7. **Custodians:** name three people for the key ceremony.
 

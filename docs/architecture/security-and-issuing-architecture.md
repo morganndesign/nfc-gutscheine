@@ -1,6 +1,6 @@
 # GiftCard Pro: security and issuing architecture
 
-**Status:** decision document; not yet implemented. It is the single source for this work; implementation will follow it in phases (§6).
+**Status:** design input, superseded for scope and plan by `giftcard-pro-v2-architecture.md` (frozen v2.2) and `docs/implementation/v2-implementation-plan.md`. Its controls (device enrolment, step-up, four-eyes, audit, risk) are carried into the v2 architecture. GiftCard Pro has no production data; nothing here describes a migration (ADR-002).
 **Date:** 28 September 2026.
 **Baseline:** repository at `40fb84a`, version 1.4.3 in development.
 **Scope:** the 20 requirements of the *Enterprise Security & Issuing Architecture* brief. For each one this document records:
@@ -104,7 +104,7 @@ Voucher (gift_cards, renamed in code only: App\Models\Voucher alias)
        type: nfc_ntag21x | nfc_ntag424 | qr | number | apple_wallet | google_wallet | link
        status: created | writing | verifying | active | write_failed | revoked
        secret_hash (SHA-256 of the 256-bit secret; null for `number`)
-       secret_version (1 = legacy public_token, 2 = new format)
+       secret_version (format version of the secret)
        nfc_uid, nfc_tag_type, nfc_locked, sun_counter, key_version    (NFC only)
        allowed_methods: e.g. {nfc} for NFC media, {qr, link} for QR  (closes S8)
        created_by, activated_by, activated_at, revoked_by, revoked_at, revoke_reason
@@ -127,7 +127,7 @@ Voucher (gift_cards, renamed in code only: App\Models\Voucher alias)
 | Number | 16-digit random Luhn number (existing `CardNumberGenerator`). | — |
 
 - **Never on a medium:** balance, value, owner, expiry, PIN.
-- **Why no separate UUID in the URL.** The secret is 256 bits and is looked up by its hash (unique index). A UUID beside it adds nothing but length. The version prefix allows format changes and a clean migration.
+- **Why no separate UUID in the URL.** The secret is 256 bits and is looked up by its hash (unique index). A UUID beside it adds nothing but length. The version prefix allows future format changes.
 - **The secret is shown once.** It exists in clear only in the issuing response (to write it or print it). The server stores `SHA-256(secret)`. A database leak therefore does not let anyone produce working cards. Rewriting or reprinting a medium creates a **new** secret.
 
 ### 2.3 Separate the guest's view link from the spending credential
@@ -136,16 +136,6 @@ Today the link e-mailed to the guest and the URL on the tag are the same bearer 
 
 - Guest e-mails and the balance page use a **view-only** token (`voucher_views`, 128-bit, read-only scope). It is never accepted by `POST /scan`.
 - A tag URL opened in a browser (a guest tapping their own card with their phone) shows the balance. The same URL sent to `POST /scan` is accepted only with that medium's `allowed_methods` (§16.2).
-
-### 2.4 Migration of existing cards
-
-1. Create one `voucher_media` row per existing card:
-   - an `nfc_ntag21x` or `nfc_ntag424` medium when `nfc_uid` or `nfc_tag_type` is set;
-   - a `qr` medium for the `public_token`, `secret_version = 1`, `secret_hash = SHA-256(public_token)`;
-   - a `number` medium.
-2. Accept version-1 URLs (`/c/<uuid>`) forever for existing tags; programme only version 2.
-3. After the migration, clear `gift_cards.public_token` so no clear credential is left in the DB. The public balance page resolves via the hash.
-4. Keep the `gift_cards` table name and ledger. Only add the voucher status values and the new columns. This keeps a rewrite of the proven ledger code out of scope.
 
 ---
 
@@ -410,12 +400,12 @@ The design is in §4.2. **New entities:**
 
 ## 6. Plan
 
-Effort is in engineer-days, including tests. Phase 0 is required before the first paying restaurant; it overlaps the audit's launch blockers.
+Superseded by `docs/implementation/v2-implementation-plan.md`; the table below is the original estimate.
 
 | Phase | Content | Requirements | Effort |
 |---|---|---|---|
 | **0: close the gaps** | Scan method rules per chip type (S8); scan ticket; admin tokens (S2); step-up = server PIN (fast path) with policy `issuing_auth`; hard issuing limits; audit append-only triggers + DB grants; hashed `public_token` lookup; FLAG_SECURE on issuing screens. | 16, 8 (PIN), 11 (part), 9 (part), 3 (part), 19 | 8–10 |
-| **1: voucher and media** | `voucher_media` + migration; version-2 secrets hashed at rest; medium lifecycle (created/writing/verifying/active/write_failed); replace = revoke + attach; view-only guest links; dashboard + app programming on media endpoints. | 1, 2, 3, 5, 6, 15 (base) | 10–12 |
+| **1: voucher and media** | `voucher_media`; version-2 secrets hashed at rest; medium lifecycle (created/writing/verifying/active/write_failed); replace = revoke + attach; view-only guest links; dashboard + app programming on media endpoints. | 1, 2, 3, 5, 6, 15 (base) | 10–12 |
 | **2: trusted devices** | Hardware keys, attestation (Play Integrity / App Attest), owner approval, signed issuing requests, biometric step-up via key; certificate pinning. | 7, 8, 17, 18 | 10–12 |
 | **3: risk and approval** | Policies screen; four-eyes; rule engine, `risk_events`, alerts, *Risk* view; reconciliation report; hash chain + anchor; optional location signals (after the legal check). | 9, 10, 11, 12, 13 | 12–15 |
 | **4: channels** | Online shop + PSP + fulfilment queue + shipping; Apple/Google Wallet; NTAG 424 provisioning relay. | 14, 15, 16 | 20–30 |
@@ -446,7 +436,6 @@ Effort is in engineer-days, including tests. Phase 0 is required before the firs
 | `GET /risk-events` · `POST /risk-events/{id}/ack` | Risk view | `audit.view` |
 | `POST /webhooks/psp` | Payment events (signature-verified) | PSP signature |
 
-**Compatibility.** The existing card endpoints (`/cards/*`) remain as aliases during the migration. Waiter app 1.4.x keeps working; the new app versions switch per feature.
 
 ---
 

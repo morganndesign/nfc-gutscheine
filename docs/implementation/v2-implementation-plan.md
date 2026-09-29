@@ -2,543 +2,308 @@
 
 | | |
 |---|---|
-| **Date** | 28 September 2026 |
-| **Baseline** | `docs/architecture/giftcard-pro-v2-architecture.md`, **frozen v2.1** (ADR-000 + ADR-001) |
-| **Rule** | This plan implements the frozen architecture. It adds no architecture. Anything that would change a table, a flow, a trust boundary or a security control needs an ADR first (architecture §20). |
-| **Code base** | Code at commit `0493784` (unchanged since); file:line references below are to that version. |
+| **Date** | 29 September 2026 (ADR-002 version) |
+| **Baseline** | `docs/architecture/giftcard-pro-v2-architecture.md`, **frozen v2.2** (ADR-000, ADR-001, ADR-002) |
+| **Starting point** | No production data, no customers. The platform is built in its final form from day one: no migration, compatibility layers, feature flags for old behaviour, legacy modes or transition phases. Code that does not belong to the final platform is deleted. |
+| **Priorities** | Security, correctness and maintainability over speed. There is no launch date. The UI/UX polish and the commercial launch follow the complete foundation. |
+| **Change rule** | This plan implements the architecture. If a significantly better architecture, security model or workflow appears during implementation, it is proposed with its reasons **before** it is built, and then recorded as an ADR (architecture §20). |
 
 ---
 
-## 1. What this plan delivers
+## 1. Platforms
 
-1. **Phase 0 (highest priority):** within about two weeks, no path remains that spends from a card voucher without a verified NTAG 424 DNA card.
-2. **Phase 0B:** every activation is linked to a payment record, and audit logs become append-only and tamper-evident.
-3. **Phases 1–9:** the v2 physical-card platform:
-   - Google Cloud HSM;
-   - central personalisation;
-   - bind by tap;
-   - live authentication;
-   - lifecycle and batches;
-   - digital QR vouchers as a separate product;
-   - pilot readiness.
-4. **Phase 10:** the online shop (after the pilot).
+- **Android and iPhone are both production platforms**, with full feature parity for everything restaurants and guests use: waiters, managers and owners can do the same on both.
+- A customer-facing feature is done only when it passes the hardware matrix (§6.3) **on both platforms**.
+- The only Android-only tool is the **internal card-personalisation station**, used by GiftCard Pro staff before cards are shipped.
+- Android remains the fastest platform for day-to-day NFC debugging. iOS builds run in CI from Phase 0 on (P0-12), so parity problems appear early, not at the end.
 
-### 1.1 What the product can and cannot do in between
+---
 
-This follows directly from decisions 21–23, and it must be communicated to pilot restaurants **before** Phase 0 goes live:
+## 2. Working rules
 
-| Period | Selling | Redeeming |
+**Definition of done** (every story):
+1. Code, unit and feature tests. For every security rule, an **abuse test** that tries the forbidden path and must be refused (`tests/Feature/Abuse/`).
+2. Audit events for every privileged action; no secret, token or UID in logs.
+3. API and error codes documented (`docs/API.md`); owner or staff documentation where a workflow changes.
+4. Schema changes are forward migrations that build the final schema. There are no compatibility columns and no data backfills (there is no data).
+5. Reviewed by a second person. Crypto code is additionally checked against NXP test vectors and listed for the external cryptographic review.
+6. App features: Android and iPhone both pass.
+
+**Environments:**
+
+| Environment | Keys | Purpose |
 |---|---|---|
-| **After Phase 0, before Phase 5** | **Digital QR vouchers only.** No new physical cards can be sold, because NTAG21x issuing is off and 424 binding does not exist yet. | Digital vouchers by QR. Existing NTAG 424 cards (if any) by verified tap. **Existing NTAG21x card balances are frozen, not lost**, until the swap exists. |
-| **After Phase 5–6** (lab cards) and the first accepted batch | Premium NTAG 424 cards + digital vouchers | Cards by live tap; digital by QR; legacy cards swapped at the counter |
+| Local | Test keys (NXP application-note values) | Development, vectors |
+| Staging | Separate Google Cloud project and HSM key ring; staging key set | Integration, lab cards, hardware tests, penetration test |
+| Production | Production key ring after the key ceremony | Pilot and launch |
 
-**Consequence for the 3 November 2026 launch target:**
-- If the launch goes ahead on that date, it is a **digital-voucher launch** (after Phase 0 and the audit blockers).
-- Premium physical cards follow when Phases 1–6 and the first batch are done (§8: about 16–17 weeks after start with two engineers).
-- **Decision needed (§13, item 1):** how many real vouchers with a balance sit on NTAG21x cards in production today. If there are any, their holders must be told that the balance is safe and will be moved to a premium card.
+Lab cards personalised with the staging key set can never work in production.
 
 ---
 
-## 2. Team, environments and working rules
+## 3. Phase 0: security foundation
 
-### 2.1 Team
+**Goal.** Build the final core of vouchers, money and proof of presence, and delete everything that does not belong to the final platform. After Phase 0:
+- no path exists that spends without cryptographic proof;
+- financial history is immutable;
+- every known security finding from the audit is closed.
 
-The plan assumes **two engineers**. More people shorten the phases in parallel tracks only; the critical path (§8) is sequential.
-- **Engineer A:** backend and crypto service.
-- **Engineer B:** Flutter app, native NFC and dashboard.
-- **Product owner:** long-lead items, legal, supplier, pilot restaurant.
+**Effort:** 26–35 engineer-days.
 
-### 2.2 Environments
+### 3.1 Deleted (not hidden)
 
-| Environment | Keys | Data | Purpose |
-|---|---|---|---|
-| Local | Software keys (T1 envelope, test values from NXP application notes) | Seeded | Development, NXP test vectors |
-| **Staging** | **Separate Google Cloud project + HSM key ring**, staging key set (never used for real cards) | Anonymised production copy for migration rehearsals | Integration, hardware tests with lab cards, penetration test |
-| Production | Production key ring after the key ceremony; production key set | Live | Pilot |
-
-Lab cards personalised with the staging key set can **never** work in production (different key set, different roots). They are marked with a sticker, and the production batch acceptance refuses them.
-
-### 2.3 Working rules
-
-- **Feature flags per restaurant** for every behaviour change (list in §9.4). Defaults are secure; the pilot is enabled explicitly.
-- **Migrations are additive** until the removal steps (architecture §16.3). Every migration has a tested rollback, or is declared forward-only with a reason.
-- **No secrets in `.env` for card keys** from Phase 1 on. CI fails if an `NTAG424_*` variable is set in any non-local environment file.
-- **Every security rule has an abuse test.** It tries the forbidden path and must be refused. Abuse tests live in `tests/Feature/Abuse/` and run in CI.
-
-### 2.4 Definition of done (every story)
-
-1. Code, unit and feature tests; abuse tests for any security rule.
-2. Audit events for every privileged action; no secret or UID in logs.
-3. API and error codes documented (`docs/API.md`), plus the owner or staff documentation where the workflow changes.
-4. Migration forward and rollback tested on a production copy (stories with schema changes).
-5. The feature flag works in both states.
-6. Reviewed by the second engineer. Crypto code is additionally checked against the NXP test vectors and listed for the external cryptographic review.
-
----
-
-## 3. Long-lead items: start in week 1
-
-| # | Item | Owner | Needed by | Notes |
-|---|---|---|---|---|
-| L1 | **Production data check:** vouchers with balance > 0 per `nfc_tag_type` (ntag21x / ntag424 / qr_only / null) | Engineer A | Before Phase 0 go-live | One read-only query; decides the communication in §1.1 |
-| L2 | Google Cloud organisation, **two projects** (staging, production), EU region, Cloud KMS + HSM enabled, IAM with least privilege, billing | Product owner + A | Week 3 | Service account only for the crypto service |
-| L3 | **Key ceremony** preparation: three custodians named, air-gapped laptop, script, safes, witness | Product owner | Week 6 (production ceremony before the pilot batch) | Staging uses a lighter ceremony |
-| L4 | Register **`t.giftcardpro.at`** tap subdomain; the parent domain on 10-year auto-renewal with registrar lock; TLS and uptime monitoring | Product owner | Week 4 | Permanent: cards carry it for life |
-| L5 | **Blank NTAG 424 DNA cards for the lab** (100, with genuine NXP chips) and a **premium card supplier** (quote, artwork, minimum quantity, lead time, personalisation capability for later) | Product owner | Lab cards week 4; supplier contract week 8 | Lead time is the biggest schedule risk |
-| L6 | **Test devices:** 5 Android models (including a low-end one) and 3 iPhone models (XS or newer) | Product owner | Week 4 | NFC antenna positions vary; the hardware matrix is in §9.3 |
-| L7 | **Apple Developer account**, iOS signing, NFC tag-reading capability, TestFlight | B | Week 3 | **The app has never been built for iOS**; first build and review are a risk |
-| L8 | **Legal opinion:** anonymous cards as cash (T&C wording), expiry (including existing 36-month vouchers), VAT (single-purpose voucher), maximum value, withdrawal (online, Phase 10) | Product owner | Before the pilot | Blocker 1 and 11 of the audit |
-| L9 | Payment-provider choice (Stripe or Mollie Connect) | Product owner | Week 10 (Phase 10 only) | Not on the pilot's critical path |
-| L10 | **Pilot restaurant** and its first branded batch (quantity, artwork) | Product owner | Week 8 | — |
-| L11 | External **penetration test** booked | Product owner | Slot in weeks 14–16 | — |
-| L12 | External **cryptographic review** booked (Phases 1, 4, 6) | Product owner | Slot in weeks 11–13 | — |
-
----
-
-## 4. Phase 0: no spending without a verified NTAG 424 DNA card
-
-**Goal.** From go-live of Phase 0, a card voucher can only be debited after its genuine NTAG 424 DNA chip was verified by the server in the same minute, on the same device, by the same user. Digital QR vouchers keep working as the separate product. Everything else is refused.
-
-**Effort:** 6–8 engineer-days (≈ 1 calendar week with two engineers).
-
-### 4.1 Every current path to money, and its fix
-
-| # | Path today | Evidence **[Code]** | Phase 0 fix |
-|---|---|---|---|
-| P1 | `POST /cards/{card}/redeem` with any known card id, no proof of presence | `routes/api.php:79`, `GiftCardActionController.php:49` | Requires `scan_ticket_id` (§4.3). No ticket, no debit. |
-| P2 | `POST /cards/{card}/transfer` moves value to another card | `routes/api.php:81`, `GiftCardService.php:278` | **Disabled** (`FEATURE_DISABLED`). v2 has no transfers (architecture R25). |
-| P3 | `POST /cards/{card}/replace` creates a new card with a new QR token and moves the balance there, turning a card voucher into a QR-spendable one | `routes/api.php:87`, `GiftCardService.php:367–431` | **Disabled.** Replacement returns in Phase 5 as bind-by-tap. |
-| P4 | `POST /scan` with `method: qr`, `link`, `manual` or `api` resolves a card voucher without its chip | `CardScanService.php:73`, `:84–93` | Lookup may still work (managers only for `manual`), but the ticket is **never spend-enabled** for a card voucher unless the method was a verified 424 tap (§4.2). |
-| P5 | NTAG21x tap: static URL + UID reported by the client | `CardScanService.php:161–177` | **Never spend-enabled** (decision 22). The response says "legacy card: balance safe, swap required". |
-| P6 | Waiter types the card number | `ScanCardRequest.php:23`; waiter permissions `RoleSlug.php:73–76`; app `s11_manual_entry.dart` | Waiters: `manual` refused. Managers: lookup only, never spend-enabled. The app hides manual entry for waiters. |
-| P7 | A 424 voucher "marked as provisioned" is bound to the first chip that taps it (trust on first use); today all 424 cards share one global key pair from `.env` | `NfcProgrammingService.php:231–250`, `CardScanService.php:139`, `config/giftcard.php:43–44` | `bindUnverified` **off**. **Binding at scan time is removed** (the `?? $message->uid` in the counter update), so a 424 voucher without a bound UID stays unbound. It is neither spend- nor reload-enabled; L1 finds such vouchers and they are handled individually. |
-| P8 | NFC programming endpoints (write, check, lock, attempts, QR payload) | `routes/api.php:88–97` | **Disabled** (decision 23); read-only history stays. |
-| P9 | New vouchers created active with any tag type | `IssueGiftCardData.php:23–24, 43–44`; `GiftCardService.php:103` | `POST /cards` accepts only `nfc_tag_type = qr_only` (digital) until Phase 5. Activation needs payment (Phase 0B). |
-| P10 | Platform admin acting in a tenant (`X-Restaurant-Id`) | `ResolveTenant.php:44–45` | Same rules, no exception. Every tenant action by a platform admin is audited with the real user. |
-| P11 | API tokens with `cards.redeem` (POS integrations) | `ApiTokenService.php` | Same rules: they need a spend-enabled ticket, which needs a verified 424 tap or a digital QR. |
-| P12 | Web terminal in the dashboard (Web NFC, QR, manual) | `dashboard/src/components/waiter/terminal.tsx:79–392` | Manual entry removed; carries the ticket; NTAG21x shows "swap required". |
-| P13 | `link` method (an iPhone opened the tag URL) | `CardScanService.php:73` | For card vouchers, **not spend-enabled**, because there is no RF UID. Spending requires the app's NFC session. |
-| P14 | Reversals: of a redemption (a credit back to the voucher), or of a reload (an **administrative debit**) | `routes/api.php:103`, `GiftCardService.php:433–457`, `TransactionType.php:38–41` | Not a customer spend path. It stays manager/owner-only with a reason, becomes append-only in Phase 0B (§5.3), and appears in the owner report. It is excluded from the "debit needs a ticket" check, which applies to **redemptions**. |
-| P15 | A card-number lookup sent with another method (e.g. `method: qr` + `card_number`) is resolved as if it were that method | `CardScanService.php:84–93`, `ScanCardRequest.php:22–23` | **Spend permission is decided by how the card was found, not by the declared method.** A number lookup is never spend-enabled, and `card_number` is refused unless `method = manual`. |
-| P16 | Expiry write-offs: `POST /cards/{card}/expire` and the nightly job debit the balance as `expiration` | `routes/api.php:86`, `routes/console.php:27`, `GiftCardService.php:531–553, 696–723` | Not a customer spend path, but audit blocker 1: **the automatic write-off is paused for all vouchers** until the legal opinion (L8). Manual `expire` becomes owner-only with a reason, behind the flag. |
-| P17 | Reload onto a legacy or unbound 424 voucher (value added to a balance that cannot be spent) | `GiftCardService.php:215–271` | Refused in Phase 0 (`LEGACY_CARD_SWAP_REQUIRED`) |
-
-### 4.2 Spend rules (the only allowed combinations)
-
-A voucher's kind is derived from today's data until Phase 2 introduces `gift_cards.kind`. Spend permission is decided by **how the card was found** (a verified tap, a QR token or a number lookup), never by the `method` the client declares (P15):
-- `nfc_tag_type = ntag424_dna` with a bound UID → **card (424)**; without a bound UID → **unbound 424**, which is neither spendable nor reloadable (P7);
-- `ntag213/215/216` → **legacy card**;
-- `qr_only`, or no tag type and no UID → **digital**. `POST /cards` normalises a missing tag type to `qr_only`.
-
-| Voucher kind \ scan method | `nfc` with valid SUN + RF UID | `nfc` without SUN | `link` | `qr` | `manual` | `api` |
-|---|---|---|---|---|---|---|
-| Card (424) | ✅ spend | ❌ | ❌ lookup only | ❌ | ❌ (managers: lookup) | ❌ |
-| Legacy card | — | ❌ swap required | ❌ | ❌ | ❌ (managers: lookup) | ❌ |
-| Digital | — | — | ✅ spend | ✅ spend | ❌ (managers: lookup) | ❌ |
-
-**"Valid SUN" in Phase 0** means everything today's code checks, plus the RF UID rule:
-- MAC verified;
-- counter strictly greater (compare-and-set, `CardScanService.php:134–139`);
-- PICC UID = bound UID;
-- **and new:** RF UID reported by the reader = PICC UID (gap G8 in `ntag424-platform-architecture.md` §2).
-
-Live AES authentication replaces this as the card rule in Phase 4.
-
-### 4.3 Scan tickets (the Phase 0 form of presentments)
-
-- **Table `scan_tickets`:**
-  - `id` UUIDv4, `restaurant_id`, `gift_card_id`, `user_id`, `device_id`;
-  - `method`, `verification (sun, qr)`, `sdm_counter`, `spend_allowed`;
-  - `created_at`, `expires_at` (60 s), `consumed_at`, `consumed_by_transaction_id`.
-- **`POST /scan`** returns `scan_ticket: {id, expires_at, spend_allowed}` next to the card.
-- **Redeem** requires `scan_ticket_id`. In one transaction:
-  1. existing idempotency lookup first, so a retry after success returns the original result;
-  2. `UPDATE scan_tickets SET consumed_at = now() WHERE id = ? AND consumed_at IS NULL AND expires_at > now() AND spend_allowed AND user_id = ? AND device_id <=> ? AND restaurant_id = ? AND gift_card_id = ?` (null-safe device comparison, so API tokens and sessions without a device header behave consistently). Zero rows → `TICKET_INVALID`;
-  3. ledger entry with `scan_ticket_id` (new nullable column on `gift_card_transactions`, **unique**);
-  4. commit.
-- In Phase 2–3 tickets are generalised into `presentments`; the column and the rule stay.
-
-### 4.4 Changes per component
-
-| Component | Changes |
+| Removed | Where **[Code, commit `0493784`]** |
 |---|---|
-| Backend | `scan_tickets` migration and model; `ScanTicketService`; ticket issuance in `CardScanService` (rules of §4.2, RF UID check); a new `RedeemRequest` (split from `MoneyOperationRequest`, which reload keeps) requires `scan_ticket_id`; transfer, replace, NFC-programming and QR-payload routes behind the `v2_phase0_spend_rules` flag returning `FEATURE_DISABLED`; `manual` scans refused for waiters; `POST /cards` digital-only; new error codes `TICKET_REQUIRED`, `TICKET_INVALID`, `SPEND_REQUIRES_VERIFIED_CARD`, `LEGACY_CARD_SWAP_REQUIRED`, `FEATURE_DISABLED` |
-| Waiter app 1.5.0 | Carries the ticket into redeem. Manual entry hidden for waiters (lookup-only for managers). Legacy card message: "balance safe, swap coming". S20 (sell + NTAG21x programming) hidden behind the flag. New error texts (copy document §5). |
-| Dashboard | Programming station, NFC writer and QR payload hidden. New-card form: digital voucher only. Print page: digital vouchers only, **no card number printed**. Web terminal: no manual entry, carries the ticket, legacy message. |
-| Configuration | `app.min_version.android` = 1.5.0 at go-live, so older apps must update. The server enforces the rules either way. |
+| NTAG213/215/216 support and every writer or programming flow | Backend `NfcProgrammingService`, the four NFC requests, `NfcWriteAttempt` + resource + enums, the `nfc_write_attempts` table, the NFC routes (`routes/api.php:88–97`); dashboard `lib/nfc-programming.ts`, `nfc-writer.tsx`, `nfc-program-steps.tsx`, `nfc-attempts.tsx`, `nfc-error.tsx`, `use-nfc-programmer.ts`, `cards/program/page.tsx`, `e2e/nfc-programming.mjs`; app `card_programmer.dart`, `tag_writer.dart`, writer paths in `WaiterNfc.kt`, S20 programming |
+| NFC state on the voucher and binding at scan time | `gift_cards.nfc_*` columns; `CardScanService.php:139` |
+| `public_token` as a bearer credential; the `/c/{token}` page; the QR payload endpoint | `gift_cards.public_token`, `PublicCardController`, `dashboard/src/app/c/[token]`, `routes/api.php:97` |
+| `POST /scan` and every lookup that led to spending (QR, link, manual, API methods) | `CardScanService`, `ScanCardRequest`, `routes/api.php:69` |
+| Redemption by typed number | App `s11_manual_entry.dart`, `card_number_field.dart`; dashboard terminal manual field |
+| Transfers between vouchers; replace-by-transfer | `routes/api.php:81, 87`, `GiftCardService.php:278–431`, `transfer-dialog.tsx` |
+| Card number on printouts | `dashboard/src/app/print/cards/[id]/page.tsx` (replaced by the printable voucher sheet, P0-03) |
+| `replaced_by_id`, `replaces_id` | Voucher columns |
 
-**Phase 0 stories:**
+The existing SUN verification (`Ntag424SunVerifier`, `AesCmac`) stays: it is part of the final platform (Phases 3–4). Its keys move to the crypto service in Phase 1.
+
+### 3.2 Built (final code)
+
+| ID | Story | Accepted when |
+|---|---|---|
+| P0-01 | **Deletions** of §3.1, with a schema migration dropping the removed tables and columns | No reference to NTAG21x, writer, transfer, replace, `/scan` or `public_token` remains (checked in CI with a grep test) |
+| P0-02 | **API resources named as in the architecture:** `/vouchers` replaces `/cards` for every endpoint (list, show, update, activate, block, unblock, expire, history), in the backend, dashboard and app. `card_number` is the internal voucher number, shown to staff only. | The dashboard and app work end to end on `/vouchers` |
+| P0-03 | **Voucher kind and digital vouchers:** `gift_cards.kind` (`card`, `digital`). `media` table (final shape; type `printable_qr` now, `nfc_card` and `email_voucher` added in their phases). A printable QR carries a 256-bit secret, stored only as a SHA-256 hash, returned once at issue. The dashboard prints the voucher sheet from that response (QR + restaurant branding, **no number**). | A digital voucher can be sold, printed and redeemed; the secret is never stored in clear or logged |
+| P0-04 | **Presentments (final model):** `presentments` table and `PresentmentService` with purposes and methods as in architecture §10.1. Methods are implemented by verifier classes behind one interface: `printable_qr` now, `live_auth` in Phase 4, `rotating_qr` and `email_link` in Phase 7. 60 s validity, single use (atomic `verified → consumed`), bound to user, device (null-safe), restaurant and voucher. `POST /presentments` | Abuse tests: expired, reused, other user, other device, other voucher, card number sent as a credential |
+| P0-05 | **Redemption:** `POST /vouchers/{voucher}/redemptions {amount, presentment_id}` + `Idempotency-Key` (required). The idempotency key is looked up again **after** the row lock (audit P2). Strict integer amounts (P9). Kind rule: digital vouchers only with QR methods; card vouchers only with `live_auth` (none can exist before Phase 5). | Parallel and retry tests; a retry after a lost response returns the original result |
+| P0-06 | **Payments:** `payments` table (`cash`, `card_terminal`, `online_psp`, `bank_transfer`, `complimentary`). Sale, activation and reload require a payment whose amount matches. `complimentary` requires the owner role and a reason; four-eyes for non-owner sellers arrives with authorizations in Phase 5. | No activation or reload without a payment (tests) |
+| P0-07 | **Immutable financial history:** `gift_card_transactions` and `audit_logs` append-only (triggers rejecting UPDATE/DELETE). Reversal is a new event; "reversed" is derived from the reversal entry (unique per original), no column is updated. Hash chains per restaurant for both tables; `giftcard:verify-chains` nightly. Reversal respects the balance cap (P8a). | A direct UPDATE/DELETE fails in tests; the verifier detects a tampered row |
+| P0-08 | **Expiry without write-off** (audit P6, P7): no default expiry. At expiry the voucher is `expired` and **keeps its balance**; reinstatement is a new event. Manual expiry is owner-only, with a reason. Blocked vouchers are skipped by the job. | Tests for each path |
+| P0-09 | **Authentication and session findings:** S1 (device revocation rotates the remember token; the recaller is bound to the device; "remember me" off by default), S2 (no API tokens for platform admins; admin list and revoke), S3 (password reset or change revokes device and API tokens), S4 (uniform locked-account response), S5 (constant reset response), S6 (invitation and reset tokens separated) | The audit's probes (`S4S6AuthTest`, etc.) turned into passing tests |
+| P0-10 | **Availability and logging findings:** S7 (lockouts keyed by user + device + restaurant; a higher per-IP ceiling only for public endpoints), F3/F3b (mail always queued, `MAIL_TIMEOUT=10`, reset answers 200 on transport errors), L1 (gateway log redaction, log rotation), D1 (`next` update) | Tests and a configuration review |
+| P0-11 | **Waiter app:** redeem by scanning a digital voucher's QR (presentment → redemption). Uncertain outcomes (audit M1, M2, M6) handled with the same idempotency key and a "checking…" state, never "nothing was booked" when the result is unknown. The NFC path is prepared for Phase 4 (no `/scan` calls remain). S20 becomes "Sell digital voucher" (payment method, amount, e-mail, printable). | Flutter tests; Android and iOS builds green |
+| P0-12 | **iOS build pipeline:** CI builds, signs and uploads the app to TestFlight (GitHub Actions macOS runner or Codemagic), using the existing Apple Developer account | Every merge to `main` produces a TestFlight build |
+| P0-13 | **Abuse suite** covering every removed path and every presentment rule, running in CI | Green |
+
+### 3.3 Order inside Phase 0
+
+1. Deletions and the schema: P0-01 and P0-03.
+2. Presentments and redemption: P0-04 and P0-05.
+3. Money integrity: P0-06, P0-07, P0-08.
+4. Security findings: P0-09, P0-10.
+5. API naming and clients: P0-02, P0-11.
+6. iOS pipeline and abuse suite: P0-12, P0-13.
+
+The backend is done first, then dashboard and app, so the clients are written once against the final API.
+
+---
+
+## 4. Phases 1–10
+
+Effort is for one engineer **[Assessment]**. Dependencies are listed; phases without a dependency between them run in parallel.
+
+### Phase 1: crypto service and Google Cloud HSM (10–14 days) · depends on Phase 0
 
 | ID | Story |
 |---|---|
-| P0-01 | `scan_tickets` + `ScanTicketService`; spend rules by how the card was found (§4.2, P15); RF UID check |
-| P0-02 | Redeem requires a ticket (`RedeemRequest`); `scan_ticket_id` unique on the ledger |
-| P0-03 | Disable transfer, replace, NFC programming and QR payload (flag); `bindUnverified` off; no binding at scan time |
-| P0-04 | `POST /cards` digital-only; reload refused on legacy/unbound vouchers; manual `expire` owner-only; automatic write-off paused |
-| P0-05 | Waiter app 1.5.0 (ticket, no manual entry for waiters, legacy message, S20 hidden) |
-| P0-06 | Dashboard (no programming, digital-only sale, print page without number, web terminal) |
-| P0-07 | Idempotency key re-checked under the row lock (audit blocker 2) |
-| P0-08 | App uncertain-outcome handling (audit blocker 3) |
-| P0-09 | Scan lockout keyed per restaurant + IP + user (audit blocker 7) |
-| P0-10 | Abuse suite (§4.5) |
+| P1-01 | Crypto service: its own container, mTLS to the API, its own service account, no database, audit log to a separate sink |
+| P1-02 | AES-CMAC, AN10922 (32-byte padding, subkey K2), AN12196 SUN session keys, with NXP vectors in CI |
+| P1-03 | Google Cloud HSM adapter: imported roots, CMAC composed from raw AES-CBC with caller IV |
+| P1-04 | Operations `sun.verify`, `auth.begin` / `auth.finish` (RndA inside, 30 s, single use), `perso.*` (station identity, approved batch); rate limits |
+| P1-05 | Key sets and key references (metadata + KCV), ceremony script, staging ceremony |
+| P1-06 | `.env` card keys removed; CI check that no `NTAG424_*` variable exists outside local |
+| P1-07 | Two instances, health checks, alerting |
 
-### 4.5 Abuse tests (all must be refused; `tests/Feature/Abuse/Phase0Test.php`)
-
-1. Redeem without ticket, with an expired ticket, with a consumed ticket, with another user's or device's ticket, and with a ticket for another card.
-2. Redeem after `scan` with `qr`, `link`, `manual` and `api` on a 424 card voucher.
-3. Redeem after an NTAG21x tap.
-4. 424 tap with a valid SUN but an RF UID different from the PICC UID (HCE emulation); replayed SUN URL (counter not greater).
-5. Waiter `manual` scan; manager `manual` scan followed by redeem.
-6. Transfer, replace, NFC bind/check/lock/attempts, QR payload: all `FEATURE_DISABLED`.
-7. `POST /cards` with `nfc_tag_type = ntag215` or `ntag424_dna`; reload on a legacy card; `method: qr` with a `card_number`; first SUN tap on an unbound 424 voucher (must not bind).
-8. Platform admin with `X-Restaurant-Id` and an API token with `cards.redeem`: same refusals.
-9. Two parallel redeems with the same ticket: exactly one succeeds (concurrency test, like the existing ledger tests).
-10. **Positive:** digital voucher by QR; 424 card by verified tap; idempotent retry after a lost response returns the original result.
-
-### 4.6 Rollout and acceptance
-
-1. L1 data check; communication to restaurants (§1.1).
-2. Deploy with the flag off. Enable on staging and run the abuse suite plus a manual test with a real NTAG 424 card and an NTAG215 card.
-3. Enable in production for all restaurants (pre-launch, so no gradual rollout is needed). Raise the minimum app version.
-4. **Accepted when:**
-   - the abuse suite is green in CI;
-   - a manual retest by the second engineer is done;
-   - in production, **zero redemption** entries without `scan_ticket_id` for 14 days (a daily query, then the nightly verifier from 0B; administrative entries such as reversals are reported separately);
-   - no increase in support tickets beyond legacy-card questions.
-
----
-
-## 5. Phase 0B: payment records and immutable audit (4–6 days)
-
-**Phase 0B stories:**
-- P0B-01: payments;
-- P0B-02: append-only + chains + verifier;
-- P0B-03: no default expiry.
-
-### 5.1 Payment record for every activation (decision 25)
-
-- **Table `payments`:**
-  - `id`, `restaurant_id`, `gift_card_id`;
-  - `method (cash, card_terminal, online_psp, bank_transfer, complimentary, legacy_unrecorded)`;
-  - `amount`, `currency`, `reference` (terminal receipt number, provider payment id or transfer reference);
-  - `received_by`, `device_id`, `approved_by` (complimentary), `created_at`.
-- **Rules:**
-  - `POST /cards` with `activate = true`, `POST /cards/{card}/activate` and `POST /cards/{card}/reload` require a payment object; the amount must equal the value or reload;
-  - `complimentary` requires the owner role and a reason (four-eyes when the seller is not the owner);
-  - backfill: every existing voucher gets one `legacy_unrecorded` payment, reported separately and never creatable by the API.
-- **UI:** a payment-method selector in the dashboard sale and reload forms (the app's S20 is hidden until Phase 5).
-- **Report:** sales by payment method per day, which feeds the cash reconciliation in Phase 9.
-
-### 5.2 No default expiry (audit blocker 1)
-
-New vouchers get **no expiry** by default (today: 36 months, `RestaurantSetting.php:44`). Existing expiries stay unchanged until the legal opinion (L8) says how to handle them. The nightly expiry job is paused for vouchers sold after this change.
-
-### 5.3 Audit logs and ledger: append-only and tamper-evident
-
-- **Triggers** that reject `UPDATE` and `DELETE` on `audit_logs` and `gift_card_transactions`. Today `reverse()` sets `reversed_at` on the original entry (`GiftCardService.php:474`). Instead, "reversed" becomes derived from the reversal entry (`related_transaction_id`, **unique** for reversal entries), and `reversed_at` is frozen.
-- **Hash chain** per restaurant on both tables: `chain_seq`, `prev_hash`, `entry_hash = SHA-256(canonical row ‖ prev_hash)`, serialised by a row lock on a `chain_heads` row.
-- **`giftcard:verify-chains` command** (nightly): recomputes chains and balances, and checks that no redemption exists without a ticket or presentment. Any difference raises a critical alert.
-- **Database users:** separating the migrator user from the application user (so the app user has no UPDATE/DELETE grant on these tables and no DDL) needs a change to the Coolify start-up, which runs migrations with the app user today. **Scheduled in Phase 9** (P9-03). Until then, the triggers plus the chain make tampering detectable, not impossible.
-
----
-
-## 6. Phases 1–10
-
-Effort is for one engineer **[Assessment]**. IDs are used for tracking.
-
-### Phase 1: crypto service and Google Cloud HSM (10–14 days, engineer A)
-
-**Depends on:** L2.
-
-| ID | Story | Accepted when |
-|---|---|---|
-| P1-01 | Crypto service skeleton: its own container in the Coolify stack, mTLS to the API, its own service account, no database, structured audit log to a separate sink | Deployed on staging; the API reaches it only with its client certificate |
-| P1-02 | AES-CMAC and AN10922 (32-byte padding + subkey K2) and AN12196 SUN session keys: pure functions with NXP's published vectors | All NXP vectors pass in CI |
-| P1-03 | HSM adapter: imported AES roots; CMAC composed from raw AES-CBC with caller IV (Google raw encryption, imported keys only) | Derived test keys equal the software reference for 1 000 random UIDs |
-| P1-04 | Operations `sun.verify`, `auth.begin` / `auth.finish` (RndA inside the service, 30 s, single use), `perso.*` (station identity, approved batch only); rate limits per caller and chip | Contract tests; abuse tests (reuse of a challenge, wrong identity for `perso.*`) |
-| P1-05 | Key sets and key references (metadata + KCV only), ceremony script, and the **staging** ceremony | Staging key set active; KCVs match the HSM |
-| P1-06 | Remove the 424 keys from `.env`; import the legacy key pair as key set v0 **only if** L1 found 424 cards in circulation (architecture R14) | CI check that no `NTAG424_*` variable is set; v0 path built or explicitly skipped |
-| P1-07 | Two instances, health checks, alerting on error rate and unusual volume | Alert fires in a staging drill |
-
-### Phase 2: schema and backfill (7–10 days, engineer A)
-
-**Depends on:** Phase 0B. **Parallel to:** Phase 1.
-
-| ID | Story | Accepted when |
-|---|---|---|
-| P2-01 | `gift_cards.kind` (`card`, `digital`), statuses `awaiting_card`, `cancelled`, `closed`; `card_number` documented as the internal voucher number | Backfill per §4.2 rules; counts reconcile |
-| P2-02 | `cards` (id **UUIDv4 via `HasVersion4Uuids`**, never serialised; `card_number` inventory number; uid; chip_type; batch; key set; state; counters) with a CHECK constraint on state; `card_events` append-only | A model test proves `id` is not in any API resource (global serialisation test) |
-| P2-03 | `card_batches` with the fields of architecture §8.1, and the counts view | View returns the §8.3 buckets; reconciliation check |
-| P2-04 | `media` (nfc_card, email_voucher, printable_qr, legacy_token), `contacts`, `contact_confirmations`, `authorizations` | Migration of existing tokens into `legacy_token` (hash only), plain column cleared behind a flag |
-| P2-05 | `presentments` (generalises `scan_tickets`; the unique link on ledger rows stays) | Phase 0 abuse suite still green |
-| P2-06 | Migration rehearsal on an anonymised production copy, with forward, rollback and timings | Report attached to the release |
-
-### Phase 3: presentment service, SUN v2 and tap domain (7–10 days, engineer A)
-
-**Depends on:** Phases 1 and 2.
-
-| ID | Story | Accepted when |
-|---|---|---|
-| P3-01 | `PresentmentService` with purposes (`spend`, `bind`, `select`, `receive`, `resume`, `verify`), methods, voucher-kind rules, 60 s single use | Unit and abuse tests per purpose |
-| P3-02 | SUN v2 URL `https://t.giftcardpro.at/{k}?e=…&m=…`, MAC over the URL part (architecture §9) | Lab card verifies; a tampered URL fails |
-| P3-03 | Guest balance page on the tap domain (SUN verified, throttled, restaurant can disable) | iPhone background read and Android open it |
-| P3-04 | Limit model (§6.3 of the architecture) and risk rules 1–8 (synchronous) + nightly report | Tests at every boundary value |
-| P3-05 | `CardLifecycle` service with the transition table (architecture §7.2); the only writer of `cards.state` | A static check forbids direct updates of `state`; transition tests |
-
-### Phase 4: live authentication and native relay (12–16 days, engineer B, with A for the server part)
-
-**Depends on:** Phase 1. It is split so that the station (Phase 6) can start early:
-
-| ID | Story | Accepted when |
-|---|---|---|
-| P4-01 | **Android relay:** `IsoDep` channel `relayOpen` / `transceive` / `relayClose`; the four fixed commands; nothing stored | Instrumented test on a real card |
-| P4-02 | **iPhone relay:** first iOS build (L7), `NFCTagReaderSession` ISO 14443 → `NFCISO7816Tag.sendCommand` | TestFlight build reads a lab card |
-| P4-03 | Server protocol `POST /presentments` + `/complete` with `auth.begin` / `auth.finish` | End-to-end on staging with lab cards |
-| P4-04 | Latency measurement on the device matrix (§9.3) | p95 card-in-field < 0.8 s on all devices, or a documented exception |
-| P4-05 | Card spending switches from the Phase 0 SUN rule to **live authentication only** (flag per restaurant, default on for new restaurants) | Abuse test: SUN-only spend is refused once the flag is on |
-
-### Phase 5: restaurant workflows (13–17 days, engineer B + A)
-
-**Depends on:** Phases 3 and 4.
-
-| ID | Story | Accepted when |
-|---|---|---|
-| P5-01 | **Sell voucher** (app): payment method → amount → optional e-mail → tap an available card → active. Also "digital voucher" and "printable" forms. Reuses the S20 `IssueController`. | E2E: the voucher is active only with a payment and a bound card |
-| P5-02 | **Add card to voucher** (select + bind; converts a digital voucher, decision 26) | The QR media of the voucher are revoked in the same transaction (test) |
-| P5-03 | **Replace card** (lost, damaged or unreadable): old-card `select`, or recovery code / `email_link`; 72 h cap; owner approval when the seller is the same user | Abuse tests: no recovery for anonymous vouchers; staff cannot replace the guest's proof |
-| P5-04 | **Register card** at the counter (card tap + e-mail confirmation), change of contact | Old address notified; tap required |
-| P5-05 | **Receive cards** (count + tap, `on_hold` with per-card check-in) and **Card info** | A mismatch never makes missing cards `available` |
-| P5-06 | Step-up: device-bound biometric key (Android Keystore / Secure Enclave), or server-verified PIN on shared phones | Server rejects step-up proofs that are replayed or come from another device |
-| P5-07 | Four-eyes approvals (sales above the threshold, complimentary vouchers, recovery approvals) | Approval and rejection paths |
-| P5-08 | Dashboard: vouchers with media and card lifecycle, batches and stock, owner reports (replacements, risk events, payments by method) | Owner and manager views; no card `id` visible anywhere |
-
-### Phase 6: central personalisation and batches (10–14 days, engineer A + B)
-
-**Depends on:** P1-04 and P4-01. **Starts before P4-03**, so that lab cards exist for the live-authentication tests.
-
-| ID | Story | Accepted when |
-|---|---|---|
-| P6-01 | Station mode in the app (`station_operator` role, enrolled station device only): intake (originality signature), personalisation steps, per-card outsider QA | 100 lab cards personalised; failures go to `qa_failed` |
-| P6-02 | Recovery of interrupted personalisation (deterministic keys, step journal) | Pulling the card mid-process and retrying works in 20 of 20 attempts |
-| P6-03 | Platform admin: batches (create, approve with two people, ship, deliver, compromise playbook) | Batch state changes move all cards (§8.2 mapping) |
-| P6-04 | Manufacturer manifest import and sample acceptance | **Deferred** until the first manufacturer batch; in-house for the pilot |
-
-### Phase 7: legacy migration and code removal (4–6 days)
+### Phase 2: physical card model (8–11 days) · depends on Phase 0
 
 | ID | Story |
 |---|---|
-| P7-01 | Legacy card swap (tap the old NTAG21x card as `select`, bind a new 424 card); owner list of legacy balances; guest invitations |
-| P7-02 | Delete the writer code (≈ 6 700 lines, architecture §3.4), the print page's card-number output, and replace-by-transfer, one stable release after P5 |
-| P7-03 | Sunset jobs (T0 + 9 months notice, T0 + 12 months legacy digital links view-only) |
+| P2-01 | `cards` (id **UUIDv4 via `HasVersion4Uuids`**, never serialised; `card_number` inventory number; uid; chip type; batch; key set; state; SDM counter) with a CHECK constraint on state |
+| P2-02 | `card_events` (append-only, hash-chained) and `CardLifecycle` as the only writer of card state (architecture §7.2); a static check forbids other writers |
+| P2-03 | `card_batches` (architecture §8.1), the counts view, and the reconciliation check |
+| P2-04 | `media` types `nfc_card` and `email_voucher`; `contacts`, `contact_confirmations`, `authorizations` |
+| P2-05 | A global serialisation test proves that no API resource exposes a card `id` or UID |
 
-### Phase 8: digital vouchers v2 (4–6 days)
-
-| ID | Story |
-|---|---|
-| P8-01 | E-mail voucher page, device confirmation code, rotating QR (spending, digital vouchers only) |
-| P8-02 | Recovery-contact page for card vouchers: balance, receipts, suspend, recovery code (`select` only) |
-| P8-03 | Printable QR (digital only, one active, re-issue with a guest `select`) |
-| P8-04 | Rewritten e-mail templates: no balances, no voucher numbers, no bearer links (architecture C13) |
-
-### Phase 9: pilot readiness (8–12 days)
+### Phase 3: tap verification, limits and risk events (7–10 days) · depends on Phases 1 and 2
 
 | ID | Story |
 |---|---|
-| P9-01 | Certificate pinning to the ISRG roots with a backup pin (app) |
+| P3-01 | SUN v2 URL `https://t.giftcardpro.at/{k}?e=…&m=…` via the crypto service; RF UID check; counter compare-and-set on `cards.sdm_counter` |
+| P3-02 | Guest balance page on the tap domain (SUN-verified, throttled, restaurant can disable) |
+| P3-03 | Limit model (architecture §6.3) |
+| P3-04 | **Risk event capture:** every money, card, medium, user and device service writes `risk_events` in its own transaction (append-only, hash-chained). This is the foundation of Phase 8. |
+
+### Phase 4: live authentication on Android and iPhone (12–16 days) · depends on Phase 1
+
+| ID | Story |
+|---|---|
+| P4-01 | Android relay (`IsoDep`): open, the four fixed commands, byte-for-byte forwarding, nothing stored |
+| P4-02 | iPhone relay (`NFCTagReaderSession` ISO 14443 → `NFCISO7816Tag.sendCommand`); entitlements and AID list verified in TestFlight |
+| P4-03 | `live_auth` verifier: `POST /presentments` + `/complete` with `auth.begin` / `auth.finish` |
+| P4-04 | Latency on the device matrix: p95 time the card must stay on the phone < 0.8 s on both platforms, or a documented exception |
+
+### Phase 5: restaurant workflows on both platforms (16–20 days) · depends on Phases 3 and 4
+
+| ID | Story |
+|---|---|
+| P5-01 | Sell card voucher: payment → amount → optional e-mail → tap an available card → active |
+| P5-02 | Add card to an existing voucher (guest `select` + bind; converts a digital voucher, decision 26) |
+| P5-03 | Replace card (lost, damaged or unreadable; recovery rules; 72 h cap) |
+| P5-04 | Register card at the counter; change of contact (old address confirms or is notified) |
+| P5-05 | Receive cards (count + tap; `on_hold` with per-card check-in) and card info |
+| P5-06 | Step-up: device-bound biometric key (Keystore / Secure Enclave) or server-verified PIN |
+| P5-07 | Authorizations: four-eyes for sales above the threshold, complimentary vouchers by non-owners, recovery approvals, owner resumes |
+| P5-08 | Dashboard: vouchers with media and card lifecycle, batches and stock, reports (payments by method, replacements) |
+
+### Phase 6: central personalisation and batches (10–14 days) · depends on P1-04 and P4-01
+
+| ID | Story |
+|---|---|
+| P6-01 | Station mode (Android, `station_operator` role, enrolled station device only): intake with the originality signature, personalisation, per-card outsider QA |
+| P6-02 | Recovery of interrupted personalisation (deterministic keys, step journal) |
+| P6-03 | Platform batch administration: create, two-person approval, ship, deliver, compromise playbook |
+| P6-04 | Manufacturer manifest import and sample acceptance (built when the first manufacturer batch is ordered) |
+
+**Scheduling note:** P6-01 starts as soon as P1-04 and P4-01 exist, so lab cards are ready for the P4-03 tests.
+
+### Phase 7: digital vouchers (6–8 days) · depends on Phase 2
+
+| ID | Story |
+|---|---|
+| P7-01 | E-mail voucher page, device confirmation code, rotating QR (spending, digital vouchers only) |
+| P7-02 | Recovery-contact page for card vouchers: balance, receipts, suspend, recovery code (`select` only) |
+| P7-03 | Printable QR re-issue with a guest `select` |
+| P7-04 | E-mail templates without balances, voucher numbers or bearer links |
+
+### Phase 8: fraud and risk engine (20–28 days) · depends on P3-04
+
+| ID | Story |
+|---|---|
+| P8-01 | Aggregator: incremental windows (hour, day, week) per restaurant, employee, device, voucher and card |
+| P8-02 | Baseline builder: nightly robust statistics (median, MAD) per metric and hour-of-week bucket; warm-up defaults; versioned baselines |
+| P8-03 | `RiskModel` interface; `RuleModel` (versioned, parameterised rules, per-restaurant tightening within platform bounds); `BaselineAnomalyModel` (deviation, peer comparison, novelty) |
+| P8-04 | Synchronous pre-check (< 20 ms target) on sale, activation, bind, replacement, redemption, reload and reversal: allow, flag, require approval, or block, with reasons |
+| P8-05 | Asynchronous scoring; `risk_assessments` (append-only: model version, feature snapshot, score, reasons) |
+| P8-06 | Alerts (dashboard, immediate e-mail for high and critical, digests), de-duplication, platform-level alerts for cross-restaurant patterns |
+| P8-07 | Investigation cases: grouping, assignment, notes, resolution labels (`fraud`, `legitimate`, `inconclusive`); append-only case events; owner dashboard with the complete trail |
+| P8-08 | Explainability: plain-language reasons on every alert and case |
+| P8-09 | Staff notice text and the legal-basis setting per restaurant (works council / consent, GDPR purpose and retention); retention jobs |
+| P8-10 | Shadow-mode hook for a later ML model: feature vectors and labels exported for training; model registry entry with version |
+
+### Phase 9: production readiness (12–16 days)
+
+| ID | Story |
+|---|---|
+| P9-01 | Certificate pinning to the ISRG roots with a backup pin (both platforms) |
 | P9-02 | Nightly off-site anchor of the chain heads (object-lock bucket + owner e-mail) |
-| P9-03 | **Separate database users:** migrator (DDL) vs application (no UPDATE/DELETE on append-only tables); Coolify start-up changed accordingly |
-| P9-04 | Cash reconciliation report (declared cash vs cash sales per day) |
-| P9-05 | Runbooks (architecture §19) |
-| P9-06 | Penetration-test fixes (the test runs in weeks 13–15) |
-| P9-07 | Restaurant onboarding guide, staff training material, guest T&C wording (L8) |
+| P9-03 | Separate database users: migrator (DDL) vs application (no UPDATE/DELETE on append-only tables); Coolify start-up changed accordingly |
+| P9-04 | Operations findings from the audit: backups (B2: prune only after success, off-site encrypted copy, heartbeat), failed-migration safety (D3), real worker health checks (D4), external monitoring (D5), graceful deploys (D6), 4 GB + swap |
+| P9-05 | Cash reconciliation report |
+| P9-06 | Runbooks (architecture §19) |
+| P9-07 | Penetration test and its fixes; cryptographic review and its fixes |
+| P9-08 | Restaurant onboarding guide, staff training material, guest terms (anonymous card = cash) |
 
-### Phase 10: online shop (15–20 days, after the pilot)
+### Phase 10: online shop (15–20 days)
 
-The architecture §11.3 as specified:
+As specified in architecture §11.3:
 - connected accounts (restaurant = merchant of record);
 - signed webhooks with account, amount and currency checks;
-- refunds (block first), disputes;
-- the 24-hour cap and no card binding in that window;
-- fraud rules.
+- refunds (block first) and disputes;
+- the 24-hour cap without card binding;
+- fraud rules through the risk engine.
 
 ### Effort summary
 
 | Phases | Days |
 |---|---|
-| 0 + 0B | 10–14 |
-| 1–9 (pilot scope) | 75–105 |
-| **Pilot total** | **85–119** |
-| 10 (online shop) | 15–20 |
-| **Total** | **100–139** |
+| 0 Security foundation | 26–35 |
+| 1–9 | 101–137 |
+| **Complete platform** | **127–172** |
+| 10 Online shop | 15–20 |
+| **With online shop** | **142–192** |
 
-The architecture's §17 points to these figures (ADR-001): the override work is gone, and payments and audit immutability moved forward into 0B. Track B (§7) comes on top.
-
----
-
-## 7. Launch blockers from the audit
-
-The investor-grade audit (`docs/reports/2026-09-28-investor-grade-audit.md`) listed 11 blockers. Each has a home:
-
-| # | Blocker | Where it is fixed |
-|---|---|---|
-| 1 | 36-month expiry unlawful for paid vouchers | **Phase 0B** (P0B-03: default "no expiry" for new vouchers) + L8 for existing ones |
-| 2 | Idempotency not re-checked under the row lock | **Phase 0** (the redeem path is rewritten anyway; P0-07) |
-| 3 | Waiter app uncertain-outcome handling (double charge) | **Phase 0** app 1.5.0 (P0-08) |
-| 4 | Platform-admin API tokens cross-tenant and unrevocable (S2) | **Track B** |
-| 5 | Remember-me beats device revoke; password reset does not revoke tokens (S1, S3) | **Track B** |
-| 6 | NTAG 424 check bypass via `method: qr/api` (S8) | **Phase 0** (the core of it) |
-| 7 | Scan lockout per IP blocks all tenants behind one NAT (S7) | **Phase 0** (P0-09: throttle key per restaurant + IP + user) |
-| 8 | Slow SMTP blocks php-fpm workers (F3) | **Track B** (mail always queued) |
-| 9 | Backup failure prunes good dumps; no off-site copy (B2) | **Track B** (operations) |
-| 10 | 2 GB server without swap; no health monitoring | **Track B** (operations) |
-| 11 | Austrian lawyer review | **L8** |
-
-**Track B** is 4–6 engineer-days (estimated from the audit's own hours for items 4, 5, 8, 9, 10). It is **not included** in §6's totals, and it runs in weeks 2–5 (§8).
-
-**Phase 0 stories added by this mapping:**
-- P0-07: idempotency key re-checked under the lock;
-- P0-08: app uncertain-outcome handling;
-- P0-09: per-tenant scan lockout;
-- P0B-03: no default expiry.
-
-They fit in the Phase 0/0B estimates because they touch the same code.
+These are engineer-days, not calendar time. With two engineers, the complete platform takes about 7–9 months of calendar time, including reviews, supplier lead times and the penetration test **[Assessment]**. There is no date to meet. Phases end when their acceptance criteria are met.
 
 ---
 
-## 8. Schedule (two engineers)
+## 5. Items outside engineering (start now)
 
-| Week | Engineer A (backend, crypto) | Engineer B (app, dashboard) | Milestone |
+| # | Item | Owner | Needed before |
 |---|---|---|---|
-| 1 | Phase 0 backend (tickets, rules, disabled routes, abuse suite) | Phase 0 app 1.5.0 + dashboard | — |
-| 2 | Phase 0B (payments, append-only, chains, verifier) | 0B UI; Track B (tokens, sessions) | **M0: Phase 0 + 0B in production** |
-| 3–5 | Phase 1 (crypto service, HSM, vectors, staging ceremony); Track B ops items (to week 5) | P4-01 Android relay; P4-02 first iOS build + relay | **M1 (wk 5):** crypto service on staging, vectors green, iOS TestFlight build |
-| 5–6 | Phase 2 (schema, backfill, rehearsal) | P6-01/02 station mode (with A for `perso.*`) | — |
-| 7–8 | Phase 3 (presentments, SUN v2, tap domain, lifecycle) | Personalise 100 lab cards; P4-03 client side | **M2 (wk 7):** lab cards personalised |
-| 9–10 | P4-03 server, P3-04 limits and risk rules | P4-04 latency matrix, P4-05 | **M3 (wk 10):** live authentication end-to-end on Android + iPhone |
-| 11–12 | Phase 5 server (bind, replace, register, receive, approvals); P6-03 batch admin | Phase 5 app + dashboard | Cryptographic review (L12) |
-| 13 | P7-01 legacy swap; Phase 8 server | Phase 8 pages; P5-06 step-up polish | **M4 (wk 13):** feature-complete on staging |
-| 14 | **Production key ceremony** (L3); pilot batch personalised and accepted | P9-01 pinning; P9-07 material | **M5 (wk 14):** pilot batch accepted |
-| 14–16 | Penetration test (L11); P9 fixes, P9-02/03 | P9 fixes | — |
-| 16–17 | Pilot go-live; P7-02 code removal one release later | Pilot support | **M6: pilot live with premium cards** |
-| after | Phase 10 online shop | Phase 10 shop UI | — |
-
-- **Critical path:**
-  - L5 (branded blank cards on time);
-  - P1-04 (personalisation operations) → P6-01 (station) → P4-03 (live auth);
-  - then Phase 5 → penetration test → pilot.
-- **About 16–17 weeks** from start to a pilot with premium cards, if L5 and L7 hold.
-- **Slack:** none on the critical path. A two-week supplier delay moves the pilot by two weeks.
+| L2 | Google Cloud organisation, staging and production projects, EU region, HSM, IAM | Product owner + engineering | Phase 1 |
+| L3 | Key ceremony: three custodians, air-gapped laptop, script, safes, witness | Product owner | Production ceremony before the first real batch |
+| L4 | Tap domain `t.giftcardpro.at`: 10-year renewal, registrar lock, TLS and uptime monitoring | Product owner | Phase 3 |
+| L5 | 100 blank NTAG 424 DNA lab cards (genuine NXP); premium card supplier (quote, artwork, minimum quantity, lead time) | Product owner | Lab cards before Phase 4; supplier before the first batch |
+| L6 | Test devices: 5 Android (including a low-end one), 3 iPhone (XS or newer) | Product owner | Phase 4 |
+| L7 | Apple: signing certificates and App Store Connect API key for CI (account exists) | Product owner | P0-12 |
+| L8 | Legal opinion: anonymous cards as cash, expiry, VAT, maximum value, online withdrawal, **employee monitoring by the risk engine** (works council / consent, GDPR impact assessment) | Product owner | Phase 8 and before the first restaurant |
+| L10 | First restaurant and its branded batch | Product owner | After Phase 9 |
+| L11 | External penetration test | Product owner | Phase 9 |
+| L12 | External cryptographic review | Product owner | After Phases 1, 4 and 6 |
 
 ---
 
-## 9. Quality
+## 6. Quality
 
-### 9.1 Test levels
+### 6.1 Test levels
 
 | Level | Content |
 |---|---|
-| Unit | Crypto primitives with NXP vectors; limit and rule boundaries; lifecycle transitions (every allowed one, and a sample of forbidden ones) |
-| Feature and abuse | Every endpoint; every forbidden path (`tests/Feature/Abuse/`); invariants of architecture §13.2 as named tests |
-| Concurrency | Parallel redeems on one voucher/ticket; parallel binds of one card; parallel batch transitions (extends the audit's ledger stress test) |
-| End-to-end | Dashboard (existing e2e scripts, extended); Flutter integration tests against staging |
-| Hardware | §9.3 matrix, with real lab cards |
-| Security | External penetration test; external cryptographic review; dependency and secret scanning in CI |
-| Load | Staging with the real HSM: 20 taps per second sustained for 10 minutes, p95 server time < 300 ms **[target]** |
-| Migration | Rehearsal on an anonymised production copy (P2-06), including rollback |
-| Resilience | Crypto service killed during taps: card transactions refused cleanly, QR vouchers unaffected, no half-written state |
+| Unit | Crypto with NXP vectors; limits; lifecycle transitions; risk rules and baseline statistics |
+| Feature and abuse | Every endpoint; every forbidden path; every invariant of architecture §13.2 as a named test |
+| Concurrency | Parallel redemptions; parallel binds; parallel batch transitions; chain serialisation |
+| End-to-end | Dashboard scripts; Flutter integration tests on both platforms |
+| Hardware | §6.3 matrix with lab cards |
+| Security | Penetration test; cryptographic review; dependency and secret scanning in CI |
+| Load | Staging with the real HSM: 20 taps per second for 10 minutes, p95 server time < 300 ms; risk pre-check p95 < 20 ms **[targets]** |
+| Resilience | Crypto service or HSM down; database restart; mail down: clean refusals, nothing half-written |
 
-### 9.2 Release gates
+### 6.2 Release gates
 
 | Gate | Condition |
 |---|---|
-| Every merge | CI green (tests, abuse suite, vectors, static analysis, no `NTAG424_*` in env files, no card `id` in resources) |
-| Staging release | Migration rehearsal passed; flags documented |
-| Production release | Second-engineer sign-off; rollback plan; release notes for owners where workflows change |
-| Pilot go-live | §10 checklist complete |
+| Every merge | CI green: tests, abuse suite, vectors, static analysis, grep checks (no removed concepts, no `NTAG424_*` env, no card `id` in resources), Android and iOS builds |
+| Staging release | Schema migrations applied on a fresh database and on staging |
+| Production | Second sign-off; rollback plan; release notes |
+| First restaurant | §7 checklist |
 
-### 9.3 Hardware matrix (minimum)
+### 6.3 Hardware matrix
 
 | Actions \ devices | 5 Android models (incl. low-end) | 3 iPhones (XS or newer) |
 |---|---|---|
-| Live authentication (spend) | ✓ | ✓ |
-| Bind, replace, register, receive | ✓ | ✓ |
-| Station personalisation | 1 designated station phone | — |
+| Redeem (live authentication), QR redeem | ✓ | ✓ |
+| Sell, bind, add card, replace, register, receive, card info | ✓ | ✓ |
 | Guest tap (balance page) | ✓ (Chrome) | ✓ (background reading) |
 | Card lifted early, retry | ✓ | ✓ |
-| Legacy NTAG215 swap | ✓ | ✓ |
-
-### 9.4 Feature flags
-
-| Flag | Default after rollout |
-|---|---|
-| `v2_phase0_spend_rules` | on (all restaurants) |
-| `v2_payments_required` | on |
-| `v2_live_auth_required` | on per restaurant once its devices are on app ≥ 2.0 |
-| `v2_card_binding`, `v2_legacy_swap` | on for the pilot restaurant first |
-| `v2_email_voucher` | on with Phase 8 |
-| `v2_station_mode` | platform only |
-| `v2_writer_removed` | on one release after P5 |
+| Station personalisation | Station phone only | — (internal tool) |
 
 ---
 
-## 10. Pilot go-live checklist
+## 7. First-restaurant checklist
 
 **Security**
-- [ ] Phase 0 abuse suite green; zero debits without a presentment in 14 days of production data
-- [ ] Penetration test: no open high or critical findings
-- [ ] Cryptographic review done; findings closed
-- [ ] Production key ceremony done; KCVs recorded; components in two safes; minutes filed
-- [ ] HSM IAM: only the crypto service account can use the keys; admin access with two people
-- [ ] Append-only triggers, separate DB users, nightly chain verification and off-site anchor running
+- [ ] Abuse suite green; penetration test without open high or critical findings; cryptographic review closed
+- [ ] Production key ceremony done; KCVs recorded; components in two safes
+- [ ] HSM IAM least privilege; append-only enforcement with separate DB users; nightly verification and off-site anchors running
+- [ ] Risk engine live with baselines in warm-up; alerts reach the owner; staff notice given (L8)
 
 **Product**
-- [ ] Pilot batch accepted (two approvals); delivery received in the restaurant by count + tap
-- [ ] App ≥ 2.0 on all pilot devices; minimum version enforced
-- [ ] Guest T&C: anonymous card = cash; recovery only with registration (L8)
-- [ ] Staff trained: sell, bind, replace, register, receive; "no override" explained
+- [ ] First batch accepted by two people and received by count + tap
+- [ ] Android and iPhone apps in the stores (or TestFlight / internal testing for the first restaurant), feature parity verified on the matrix
+- [ ] Guest terms (anonymous card = cash); staff trained
 
 **Operations**
-- [ ] Runbooks 1–9 written and the crypto-outage drill done
-- [ ] Backups off-site, restore tested this month; 4 GB + swap; health monitoring and alerting
-- [ ] Tap domain on 10-year renewal with registrar lock; certificate monitoring
-- [ ] Support contact and escalation path for the pilot restaurant
+- [ ] Runbooks and the crypto-outage drill; backups off-site with a tested restore; monitoring and alerting; tap domain protected
 
 ---
 
-## 11. Risks for the implementation
+## 8. Risks
 
-| Risk | Likelihood | Impact | Mitigation |
-|---|---|---|---|
-| Premium card supply late (artwork, minimum quantity, lead time) | Medium | Pilot delay | L5 in week 1; lab cards from stock; pilot batch can be small |
-| First iOS build, NFC capability or App Review delays | Medium | iPhone features late | L7 early; Android-first pilot is possible without an architecture change |
-| Google raw-encryption import procedure harder than expected | Low–Medium | Phase 1 +3–5 days | Staging ceremony in week 4 as a rehearsal |
-| Personalisation bugs lock lab cards | Medium | Lost cards, delay | 100 lab cards; deterministic keys; recovery journal (P6-02) |
-| Relay latency on weak restaurant networks | Medium | Waiter UX | Measure in P4-04; the Wi-Fi check at onboarding |
-| Knowledge concentrated in one engineer (crypto) | Medium | Bus factor | Second-engineer review of every crypto change; external review |
-| Legacy balances larger than expected (L1) | Low | Communication, support | Balances are frozen, never lost; swap in Phase 7 |
-| Pressure to add features before the pilot | High | Delay | Change control: ADR required; §6 scope is the pilot scope |
-
----
-
-## 12. Change control during implementation
-
-- **Allowed without an ADR:** bug fixes, performance work, UI copy, test additions, operational tooling, and anything the architecture already specifies.
-- **Needs an ADR** (architecture §20):
-  - a new table or column not in the architecture;
-  - a changed state or transition;
-  - a new way to spend, bind or identify a voucher;
-  - any change to keys, the crypto service's operations or trust boundaries;
-  - any relaxed limit or rule.
-- The plan's phase content can be re-ordered without an ADR. Its scope cannot be extended.
-
----
-
-## 13. Decisions needed from the product owner
-
-1. **L1 result and the message** to restaurants and guests about frozen NTAG21x balances.
-2. **Launch date:** confirm that 3 November 2026 would be a digital-voucher launch (§1.1), or move the launch to the pilot date with premium cards (≈ week 17).
-3. **Supplier and pilot restaurant** (L5, L10).
-4. **Three key custodians** (L3).
-5. **Legal opinion** commissioned (L8).
-6. **Apple Developer account** (L7).
-7. **Payment provider** (L9, needed only for Phase 10).
+| Risk | Mitigation |
+|---|---|
+| Card supply (artwork, minimum quantity, lead time) | L5 early; lab cards from stock |
+| iOS NFC or App Review surprises | iOS CI from Phase 0; iOS relay built together with Android (P4-01/02) |
+| Google raw-encryption import procedure | Staging ceremony as a rehearsal in Phase 1 |
+| Personalisation bugs lock lab cards | 100 lab cards; deterministic keys; recovery journal |
+| Relay latency on weak networks | Measured in P4-04 on both platforms |
+| Crypto knowledge in one person | Second review of every crypto change; external review |
+| Employee-monitoring law for the risk engine | L8 before Phase 8 goes live; staff notice and legal-basis setting in the product |
+| Scope growth | Change rule: proposals first, then an ADR |
