@@ -1,6 +1,9 @@
 import {
   ArrowLeftRight,
   Building2,
+  CreditCard,
+  Package,
+  ShieldAlert,
   QrCode,
   Ticket,
   LayoutDashboard,
@@ -28,6 +31,7 @@ export const RESTAURANT_NAV: NavItem[] = [
   { href: "/vouchers", label: "Vouchers", icon: Ticket, permission: "vouchers.view", requiresRestaurant: true },
   { href: "/transactions", label: "Transactions", icon: ArrowLeftRight, permission: "transactions.view", requiresRestaurant: true },
   { href: "/customers", label: "Customers", icon: UserSquare2, permission: "customers.view", requiresRestaurant: true },
+  { href: "/cards", label: "Cards", icon: CreditCard, permission: "cards.view", requiresRestaurant: true },
   { href: "/waiter", label: "Redeem", icon: QrCode, permission: "vouchers.redeem", requiresRestaurant: true },
 ]
 
@@ -40,6 +44,8 @@ export const MANAGE_NAV: NavItem[] = [
 
 export const PLATFORM_NAV: NavItem[] = [
   { href: "/admin", label: "Restaurants", icon: Building2, permission: "platform.restaurants.manage" },
+  { href: "/admin/card-batches", label: "Card batches", icon: Package, permission: "platform.cards.manage" },
+  { href: "/admin/security", label: "Security alerts", icon: ShieldAlert, permission: "platform.audit.view" },
   { href: "/admin/audit", label: "Platform audit", icon: ShieldCheck, permission: "platform.audit.view" },
   { href: "/admin/settings", label: "System settings", icon: SlidersHorizontal, permission: "platform.settings.manage" },
 ]

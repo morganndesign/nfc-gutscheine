@@ -10,6 +10,15 @@ use Illuminate\Validation\Rule;
 
 final class CardIndexRequest extends ApiRequest
 {
+    /** `state[]=a&state[]=b` or `state=a,b`. */
+    protected function prepareForValidation(): void
+    {
+        $state = $this->input('state');
+        if (is_string($state)) {
+            $this->merge(['state' => array_values(array_filter(explode(',', $state)))]);
+        }
+    }
+
     /** @return array<string, mixed> */
     public function rules(): array
     {

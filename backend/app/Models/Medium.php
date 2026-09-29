@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Voucher $voucher
+ * @property-read Card|null $card
  */
 class Medium extends Model
 {
@@ -55,6 +56,12 @@ class Medium extends Model
     public function isActive(): bool
     {
         return $this->status === MediumStatus::Active;
+    }
+
+    /** @return BelongsTo<Card, $this> The physical card of an `nfc_card` medium. */
+    public function card(): BelongsTo
+    {
+        return $this->belongsTo(Card::class)->withoutGlobalScopes();
     }
 
     /** @return BelongsTo<Voucher, $this> */

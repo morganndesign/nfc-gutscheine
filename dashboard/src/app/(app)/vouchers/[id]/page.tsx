@@ -103,6 +103,8 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
   }
 
   const activeQr = voucher.media?.find((m) => m.type === "printable_qr" && m.status === "active")
+  const activeCard = voucher.media?.find((m) => m.type === "nfc_card" && m.status === "active")
+  const earlierCards = voucher.media?.filter((m) => m.type === "nfc_card" && m.status === "revoked") ?? []
 
   return (
     <div className="space-y-6">
@@ -205,9 +207,22 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
                 <Detail label="Reloaded">{formatMoney(voucher.total_loaded - voucher.initial_value, voucher.currency)}</Detail>
                 <Detail label="Redeemed">{formatMoney(voucher.total_redeemed, voucher.currency)}</Detail>
                 <Detail label="Kind">{voucher.kind === "digital" ? "Digital (QR)" : "Card"}</Detail>
-                <Detail label="QR code">
-                  {voucher.kind === "digital" ? (activeQr ? `Active since ${formatDate(activeQr.created_at)}` : "No active QR") : "—"}
-                </Detail>
+                {voucher.kind === "digital" ? (
+                  <Detail label="QR code">{activeQr ? `Active since ${formatDate(activeQr.created_at)}` : "No active QR"}</Detail>
+                ) : (
+                  <Detail label="Card">
+                    {activeCard?.card_number ? (
+                      <Link href={`/cards?search=${encodeURIComponent(activeCard.card_number)}`} className="font-mono underline-offset-4 hover:underline">
+                        {activeCard.card_number}
+                      </Link>
+                    ) : (
+                      "No active card"
+                    )}
+                    {earlierCards.length ? (
+                      <span className="text-muted-foreground block text-xs">Replaced: {earlierCards.map((m) => m.card_number).join(", ")}</span>
+                    ) : null}
+                  </Detail>
+                )}
                 <Detail label="Valid until">
                   <span className={voucher.is_expired ? "text-amber-700 dark:text-amber-400" : undefined}>
                     {voucher.expires_at ? formatDate(voucher.expires_at) : "No expiry"}

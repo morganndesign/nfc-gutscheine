@@ -115,11 +115,109 @@ export interface Payment {
 
 export interface Medium {
   id: string
-  type: "printable_qr"
+  type: "printable_qr" | "nfc_card"
   role: "spend"
   status: "active" | "revoked"
+  /** The inventory number of a physical card (`nfc_card`). */
+  card_number: string | null
   created_at: string
   revoked_at: string | null
+}
+
+export type CardState =
+  | "manufactured"
+  | "personalized"
+  | "qa_passed"
+  | "qa_failed"
+  | "in_inventory"
+  | "assigned"
+  | "shipped"
+  | "delivered"
+  | "available"
+  | "bound"
+  | "active"
+  | "suspended"
+  | "replaced"
+  | "revoked"
+  | "lost"
+  | "destroyed"
+
+export interface Card {
+  card_number: string
+  state: CardState
+  state_changed_at: string
+  batch_code: string | null
+  voucher: { id: string; voucher_number: string; status: VoucherStatus; balance: number; currency: string } | null
+  successor: string | null
+  history?: { from_state: CardState | null; to_state: CardState; reason: string; at: string | null }[]
+}
+
+export type CardBatchStatus =
+  | "ordered"
+  | "in_production"
+  | "personalized"
+  | "qa_testing"
+  | "accepted"
+  | "rejected"
+  | "assigned"
+  | "shipped"
+  | "delivered"
+  | "on_hold"
+  | "in_service"
+  | "depleted"
+  | "compromised"
+  | "lost"
+  | "closed"
+
+export interface CardBatchCounts {
+  in_production: number
+  qa_failed: number
+  central_stock: number
+  in_transit: number
+  available: number
+  activated: number
+  replaced: number
+  revoked: number
+  lost: number
+  destroyed: number
+  registered: number
+}
+
+export interface CardBatch {
+  id: string
+  batch_code: string
+  status: CardBatchStatus
+  quantity_ordered: number
+  counts: CardBatchCounts
+  card_design_ref: string | null
+  ordered_at: string | null
+  shipped_at: string | null
+  delivered_at: string | null
+  received_at: string | null
+  tracking_ref: string | null
+  /** Platform view only. */
+  restaurant?: { id: string; name: string }
+  key_set?: string
+  manufacturer?: string
+  accepted_at?: string | null
+  approvals?: string[]
+  qa_report?: Record<string, unknown> | null
+}
+
+export interface SecurityAlert {
+  id: string
+  rule: string
+  severity: "warning" | "high" | "critical"
+  restaurant_id: string | null
+  subject: string | null
+  occurrences: number
+  first_event_seq: number
+  last_event_seq: number
+  first_seen_at: string
+  last_seen_at: string
+  status: "open" | "acknowledged"
+  acknowledged_at: string | null
+  note: string | null
 }
 
 export interface Voucher {

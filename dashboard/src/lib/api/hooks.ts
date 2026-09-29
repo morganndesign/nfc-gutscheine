@@ -4,6 +4,11 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api } from "@/lib/api/client"
 import type {
   ApiToken,
+  Card,
+  CardBatch,
+  CardBatchStatus,
+  CardState,
+  SecurityAlert,
   AuditLog,
   Customer,
   DashboardCharts,
@@ -46,6 +51,10 @@ export const keys = {
   tokens: ["api-tokens"] as const,
   audit: ["audit"] as const,
   admin: ["admin"] as const,
+  cards: ["cards"] as const,
+  cardBatches: ["card-batches"] as const,
+  adminCardBatches: ["admin", "card-batches"] as const,
+  securityAlerts: ["admin", "security-alerts"] as const,
 }
 
 // ---------------------------------------------------------------- dashboard
@@ -605,5 +614,97 @@ export function useUpdateSystemSettings() {
   return useMutation({
     mutationFn: (settings: { key: string; value: unknown }[]) => api("/admin/system-settings", { method: "PUT", body: { settings } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: [...keys.admin, "system-settings"] }),
+  })
+}
+
+// ---------------------------------------------------------------- cards
+
+export function useCards(page: number, filters: { state?: CardState[]; search?: string }) {
+  return useQuery({
+    queryKey: [...keys.cards, page, filters],
+    queryFn: () => api<Paginated<Card>>("/cards", { query: { page, per_page: 50, state: filters.state, search: filters.search || undefined } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useCard(number: string | null) {
+  return useQuery({
+    queryKey: [...keys.cards, "one", number],
+    queryFn: async () => (await api<{ data: Card }>(`/cards/${encodeURIComponent(number ?? "")}`)).data,
+    enabled: number !== null,
+  })
+}
+
+export function useCardAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ number, action, reason }: { number: string; action: "suspend" | "resume" | "revoke"; reason: string }) =>
+      api<{ data: Card }>(`/cards/${encodeURIComponent(number)}/${action}`, { method: "POST", body: { reason } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.cards })
+      void qc.invalidateQueries({ queryKey: keys.vouchers })
+    },
+  })
+}
+
+export function useCardBatches() {
+  return useQuery({
+    queryKey: keys.cardBatches,
+    queryFn: async () => (await api<{ data: CardBatch[] }>("/card-batches")).data,
+  })
+}
+
+// ---------------------------------------------------------------- card batches (platform)
+
+export function useAdminCardBatches(page: number, status?: CardBatchStatus) {
+  return useQuery({
+    queryKey: [...keys.adminCardBatches, page, status],
+    queryFn: () => api<Paginated<CardBatch>>("/admin/card-batches", { query: { page, status } }),
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useOrderCardBatch() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { restaurant_id: string; manufacturer: string; quantity: number; card_design_ref?: string }) =>
+      api<{ data: CardBatch }>("/admin/card-batches", { method: "POST", body: input }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.adminCardBatches }),
+  })
+}
+
+export function useCardBatchAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & (
+      | { kind: "status"; status: CardBatchStatus; reason: string; tracking_ref?: string }
+      | { kind: "approval" }
+      | { kind: "hold-resolution"; missing: string[] }
+    )) =>
+      input.kind === "status"
+        ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/status`, { method: "POST", body: { status: input.status, reason: input.reason, tracking_ref: input.tracking_ref } })
+        : input.kind === "approval"
+          ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/approval`, { method: "POST" })
+          : api<{ data: CardBatch }>(`/admin/card-batches/${id}/hold-resolution`, { method: "POST", body: { missing: input.missing } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.adminCardBatches }),
+  })
+}
+
+// ---------------------------------------------------------------- security alerts (platform)
+
+export function useSecurityAlerts(page: number, status?: "open" | "acknowledged") {
+  return useQuery({
+    queryKey: [...keys.securityAlerts, page, status],
+    queryFn: () => api<Paginated<SecurityAlert>>("/admin/security-alerts", { query: { page, status } }),
+    placeholderData: keepPreviousData,
+    refetchInterval: 60_000,
+  })
+}
+
+export function useAcknowledgeAlert() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) => api<{ data: SecurityAlert }>(`/admin/security-alerts/${id}/acknowledge`, { method: "POST", body: { note } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.securityAlerts }),
   })
 }

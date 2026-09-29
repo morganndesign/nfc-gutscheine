@@ -48,6 +48,8 @@ final class VoucherResource extends JsonResource
                 'type' => $m->type->value,
                 'role' => $m->role->value,
                 'status' => $m->status->value,
+                // A card's inventory number (never its id or UID); staff look it up under Cards.
+                'card_number' => $m->relationLoaded('card') ? $m->card?->card_number : null,
                 'created_at' => $m->created_at->toIso8601String(),
                 'revoked_at' => $m->revoked_at?->toIso8601String(),
             ])->values()->all()),

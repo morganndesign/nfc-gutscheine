@@ -94,7 +94,7 @@ final class VoucherController extends Controller
 
     public function show(Voucher $voucher): VoucherResource
     {
-        return VoucherResource::make($voucher->load(['customer', 'issuer', 'media', 'payments']));
+        return VoucherResource::make($voucher->load(['customer', 'issuer', 'media.card', 'payments']));
     }
 
     public function update(UpdateVoucherRequest $request, Voucher $voucher): VoucherResource

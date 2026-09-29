@@ -10,12 +10,14 @@ use App\Services\Audit\AuditLogger;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Carbon;
 
 /** Fraud and attack alerts for the platform: newest first, open ones on top; acknowledged with a note. */
 final class SecurityAlertController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request): AnonymousResourceCollection
     {
         $status = $request->query('status');
         $severity = $request->query('severity');
@@ -26,10 +28,7 @@ final class SecurityAlertController extends Controller
             ->orderByDesc('last_seen_at')
             ->paginate($this->perPage($request, 50));
 
-        return response()->json([
-            'data' => collect($page->items())->map(static fn (SecurityAlert $a): array => self::present($a))->all(),
-            'meta' => ['current_page' => $page->currentPage(), 'last_page' => $page->lastPage(), 'total' => $page->total()],
-        ]);
+        return JsonResource::collection($page->through(static fn (SecurityAlert $a): array => self::present($a)));
     }
 
     public function acknowledge(Request $request, AuditLogger $audit, string $alert): JsonResponse
