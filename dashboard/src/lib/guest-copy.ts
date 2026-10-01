@@ -7,6 +7,8 @@
 const COPY = {
   de: {
     voucher: "Gutschein",
+    headline: "Ein Geschenk für Sie",
+    scan: "Einlösbar mit diesem Code",
     value: "Wert",
     for: "für",
     howTo: "Bitte zeigen Sie diesen Code beim Bezahlen vor.",
@@ -16,6 +18,8 @@ const COPY = {
   },
   en: {
     voucher: "Voucher",
+    headline: "A gift for you",
+    scan: "Redeem with this code",
     value: "Value",
     for: "for",
     howTo: "Please show this code when you pay.",
@@ -25,6 +29,8 @@ const COPY = {
   },
   bhs: {
     voucher: "Vaučer",
+    headline: "Poklon za vas",
+    scan: "Iskoristite uz ovaj kôd",
     value: "Vrijednost",
     for: "za",
     howTo: "Molimo pokažite ovaj kôd prilikom plaćanja.",

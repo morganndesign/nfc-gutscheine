@@ -28,6 +28,11 @@ final class UpdateVoucherSettingsRequest extends ApiRequest
             'public_balance' => ['sometimes', 'boolean:strict'],
             'brand_color' => ['sometimes', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'receipt_footer' => ['sometimes', 'nullable', 'string', 'max:500'],
+            'voucher_template' => ['sometimes', 'string', 'in:classic,minimal,bold,elegant'],
+            'voucher_format' => ['sometimes', 'string', 'in:a4,a5,a6'],
+            'accent_color' => ['sometimes', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'voucher_headline' => ['sometimes', 'nullable', 'string', 'max:60'],
+            'voucher_message' => ['sometimes', 'nullable', 'string', 'max:240'],
         ];
     }
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { api, newIdempotencyKey } from "@/lib/api/client"
+import { api, apiRaw, newIdempotencyKey } from "@/lib/api/client"
 import type {
   ApiToken,
   Card,
@@ -33,6 +33,8 @@ import type {
   Voucher,
   VoucherKind,
   VoucherStatus,
+  VoucherFormat,
+  VoucherTemplate,
 } from "@/lib/api/types"
 
 export const keys = {
@@ -439,14 +441,62 @@ export function useUpdateRestaurantProfile() {
   })
 }
 
+/** The writable voucher rules and design (PUT /settings/vouchers; every field optional). */
+export type VoucherSettingsInput = Partial<Omit<RestaurantSettings, "platform_limits" | "voucher_design" | "logo_url">> &
+  Partial<{
+    voucher_template: VoucherTemplate
+    voucher_format: VoucherFormat
+    accent_color: string
+    voucher_headline: string | null
+    voucher_message: string | null
+  }>
+
 export function useUpdateVoucherSettings() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: Partial<Omit<RestaurantSettings, "platform_limits">>) =>
-      api<{ data: RestaurantSettings }>("/settings/vouchers", { method: "PUT", body: input }),
+    mutationFn: (input: VoucherSettingsInput) => api<{ data: RestaurantSettings }>("/settings/vouchers", { method: "PUT", body: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.settings })
       void qc.invalidateQueries({ queryKey: ["session"] })
+    },
+  })
+}
+
+/** Upload (a PNG or JPEG file) or remove (null) the restaurant's logo. */
+export function useRestaurantLogo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (file: File | null) => {
+      if (file === null) return api<{ data: RestaurantSettings }>("/settings/logo", { method: "DELETE" })
+      const body = new FormData()
+      body.append("logo", file)
+      return api<{ data: RestaurantSettings }>("/settings/logo", { method: "POST", body })
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.settings })
+      void qc.invalidateQueries({ queryKey: ["session"] })
+    },
+  })
+}
+
+/**
+ * The logo as a data: URL (for screen and print). Fetched with the session's headers — an <img> pointing at the API
+ * would lack the device header and end the session.
+ */
+export function useLogoImage(path: string | null | undefined) {
+  return useQuery({
+    queryKey: ["logo", path],
+    enabled: !!path,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const response = await apiRaw((path ?? "").replace(/^\/api\/v1/, ""))
+      const blob = await response.blob()
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(String(reader.result))
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(blob)
+      })
     },
   })
 }

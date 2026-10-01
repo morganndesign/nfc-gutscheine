@@ -1,4 +1,5 @@
 import { common } from "@/lib/i18n/messages/common"
+import { design } from "@/lib/i18n/messages/design"
 import { errors } from "@/lib/i18n/messages/errors"
 import { admin } from "@/lib/i18n/messages/admin"
 import { layout } from "@/lib/i18n/messages/layout"
@@ -10,7 +11,7 @@ import { vouchers } from "@/lib/i18n/messages/vouchers"
  * Every area's texts. Add an area here when you create `messages/<area>.ts`; keys are `<area>.<name>` and must be
  * unique across areas.
  */
-const AREAS = [common, errors, layout, vouchers, operations, admin, manage] as const
+const AREAS = [common, errors, design, layout, vouchers, operations, admin, manage] as const
 
 type Area = (typeof AREAS)[number]
 type Union<T> = T extends unknown ? keyof T : never

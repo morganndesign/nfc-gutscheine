@@ -26,6 +26,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $public_balance
  * @property string $brand_color
  * @property string|null $receipt_footer
+ * @property string $voucher_template classic | minimal | bold | elegant
+ * @property string $voucher_format a4 | a5 | a6
+ * @property string $accent_color
+ * @property string|null $voucher_headline Guest-facing headline on the printed voucher.
+ * @property string|null $voucher_message Guest-facing message on the printed voucher.
+ * @property string|null $logo_version SHA-256 of the logo (cache key), null without a logo.
  */
 class RestaurantSetting extends Model
 {
@@ -35,6 +41,7 @@ class RestaurantSetting extends Model
         'validity_months', 'min_voucher_value', 'max_voucher_balance', 'max_debit_per_transaction',
         'max_debit_per_voucher_per_day', 'max_redemptions_per_voucher_per_hour', 'allow_reload',
         'allow_partial_redemption', 'send_customer_emails', 'public_balance', 'brand_color', 'receipt_footer',
+        'voucher_template', 'voucher_format', 'accent_color', 'voucher_headline', 'voucher_message',
     ];
 
     protected $attributes = [
@@ -49,6 +56,9 @@ class RestaurantSetting extends Model
         'send_customer_emails' => true,
         'public_balance' => true,
         'brand_color' => '#0F172A',
+        'voucher_template' => 'classic',
+        'voucher_format' => 'a5',
+        'accent_color' => '#C9A86A',
     ];
 
     protected function casts(): array

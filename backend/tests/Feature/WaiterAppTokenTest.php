@@ -119,6 +119,10 @@ final class WaiterAppTokenTest extends TestCase
         $this->bearer($token)->getJson("/api/v1/vouchers/{$voucher->id}")->assertForbidden();
         $this->bearer($token)->getJson('/api/v1/dashboard/stats')->assertForbidden();
         $this->bearer($token)->putJson('/api/v1/auth/profile', ['name' => 'Mallory'])->assertForbidden()->assertJsonPath('code', 'FORBIDDEN');
+        // Only the language may be changed from the app.
+        $this->bearer($token)->putJson('/api/v1/auth/language', ['locale' => 'bs'])->assertOk()->assertJsonPath('data.locale', 'bs');
+        $this->bearer($token)->putJson('/api/v1/auth/language', ['locale' => 'fr'])->assertUnprocessable();
+        $this->bearer($token)->getJson('/api/v1/auth/me')->assertJsonPath('data.locale', 'bs');
         $this->bearer($token)->getJson('/api/v1/devices/current')->assertOk();
         // Method and path both count: the app never edits a voucher or reads its history.
         $this->bearer($token)->patchJson("/api/v1/vouchers/{$voucher->id}", ['notes' => 'x'])->assertForbidden();

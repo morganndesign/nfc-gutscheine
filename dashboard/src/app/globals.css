@@ -158,6 +158,16 @@
   }
 }
 
+/* The print copy of a voucher exists only on paper; on screen it is laid out off-screen (so it can fit itself to the
+   page) but never seen. */
+.voucher-print-root {
+  position: fixed;
+  top: 0;
+  left: -100000px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media print {
   .no-print {
     display: none !important;
@@ -165,19 +175,13 @@
   body {
     background: white !important;
   }
-  /* A page with a printable voucher prints the voucher sheet only, never the staff screen around it. */
-  body:has(.print-sheet) * {
-    visibility: hidden;
+  /* A page with a voucher prints the voucher only: the page-sized artwork, edge to edge, in colour. */
+  body:has(.voucher-print-root) > *:not(.voucher-print-root) {
+    display: none !important;
   }
-  body:has(.print-sheet) .print-sheet,
-  body:has(.print-sheet) .print-sheet * {
+  body:has(.voucher-print-root) .voucher-print-root {
+    display: block !important;
+    position: static;
     visibility: visible;
-  }
-  body:has(.print-sheet) .print-sheet {
-    position: absolute;
-    inset: 0;
-    margin: 0;
-    border: 0;
-    box-shadow: none;
   }
 }

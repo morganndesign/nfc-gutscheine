@@ -101,6 +101,20 @@ final class AuthController extends Controller
         return response()->json(['message' => 'Logged out.']);
     }
 
+    /** The user's language for the dashboard and the waiter app (de, en, bs). */
+    public function language(Request $request): JsonResponse
+    {
+        $locale = (string) $request->validate(['locale' => ['required', 'string', 'in:de,en,bs']])['locale'];
+        $user = $this->user($request);
+        if ($user->locale !== $locale) {
+            $old = $user->locale;
+            $user->forceFill(['locale' => $locale])->save();
+            $this->audit->log('user.profile_updated', Actor::fromRequest($request), $user, ['locale' => $old], ['locale' => $locale], restaurantId: $user->restaurant_id);
+        }
+
+        return response()->json(['data' => ['locale' => $user->locale]]);
+    }
+
     public function me(Request $request): JsonResponse
     {
         return response()->json(['data' => $this->profile($this->user($request))]);

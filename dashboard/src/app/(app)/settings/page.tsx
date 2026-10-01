@@ -3,6 +3,7 @@
 import { PageHeader } from "@/components/common/page-header"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { ApiTokens } from "@/components/settings/api-tokens"
+import { VoucherDesignForm } from "@/components/settings/voucher-design-form"
 import { VoucherSettingsForm } from "@/components/settings/voucher-settings-form"
 import { NotificationTemplates } from "@/components/settings/notification-templates"
 import { RestaurantProfileForm } from "@/components/settings/restaurant-profile-form"
@@ -18,7 +19,7 @@ function SettingsContent() {
   const { data } = useRestaurantSettings()
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader title={t("settingsPage.title")} />
       {!data ? (
         <Skeleton className="h-96 w-full rounded-2xl" />
@@ -26,11 +27,13 @@ function SettingsContent() {
         <Tabs defaultValue="vouchers" className="space-y-4">
           <TabsList>
             <TabsTrigger value="vouchers">{t("settingsPage.tabVouchers")}</TabsTrigger>
+            <TabsTrigger value="design">{t("design.tab")}</TabsTrigger>
             <TabsTrigger value="restaurant">{t("settingsPage.tabRestaurant")}</TabsTrigger>
             <TabsTrigger value="emails">{t("settingsPage.tabEmails")}</TabsTrigger>
             {can("api_tokens.manage") ? <TabsTrigger value="api">{t("settingsPage.tabApi")}</TabsTrigger> : null}
           </TabsList>
           <TabsContent value="vouchers">{data.settings ? <VoucherSettingsForm settings={data.settings} /> : null}</TabsContent>
+          <TabsContent value="design">{data.settings ? <VoucherDesignForm settings={data.settings} /> : null}</TabsContent>
           <TabsContent value="restaurant">
             <RestaurantProfileForm restaurant={data} />
           </TabsContent>

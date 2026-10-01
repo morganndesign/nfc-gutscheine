@@ -47,6 +47,17 @@ export type Permission =
   | "platform.cards.personalize"
   | "platform.cards.manage"
 
+export type VoucherTemplate = "classic" | "minimal" | "bold" | "elegant"
+export type VoucherFormat = "a4" | "a5" | "a6"
+
+export interface VoucherDesignSettings {
+  template: VoucherTemplate
+  format: VoucherFormat
+  accent_color: string
+  headline: string | null
+  message: string | null
+}
+
 export interface RestaurantSettings {
   /** null: vouchers do not expire (the default). */
   validity_months: number | null
@@ -61,6 +72,9 @@ export interface RestaurantSettings {
   public_balance: boolean
   brand_color: string
   receipt_footer: string | null
+  voucher_design: VoucherDesignSettings
+  /** Versioned API path of the logo (fetch it with the session: it needs the device header), null without a logo. */
+  logo_url: string | null
   platform_limits: {
     max_voucher_balance: number
     max_debit_per_transaction: number

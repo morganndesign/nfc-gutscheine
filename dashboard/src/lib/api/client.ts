@@ -99,7 +99,8 @@ async function send(path: string, options: RequestOptions, retry: boolean): Prom
     // Validation messages come back in the user's language.
     "Accept-Language": currentLanguage(),
   }
-  if (options.body !== undefined) headers["Content-Type"] = "application/json"
+  const form = options.body instanceof FormData
+  if (options.body !== undefined && !form) headers["Content-Type"] = "application/json"
   const xsrf = readCookie("XSRF-TOKEN")
   if (xsrf) headers["X-XSRF-TOKEN"] = xsrf
   const deviceId = getDeviceId()
@@ -110,7 +111,7 @@ async function send(path: string, options: RequestOptions, retry: boolean): Prom
     method,
     headers,
     credentials: "include",
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body: form ? (options.body as FormData) : options.body !== undefined ? JSON.stringify(options.body) : undefined,
     signal: options.signal,
   })
 

@@ -11,4 +11,6 @@ return [
     'invalid_link' => 'Ovaj link nije važeći ili je istekao. Zatražite novi.',
     'min_above_max' => 'Najmanja vrijednost vaučera ne smije biti veća od najvećeg stanja.',
     'debit_above_daily' => 'Limit po naplati ne smije biti veći od dnevnog limita po vaučeru.',
+    'logo_unreadable' => 'Slika se ne može pročitati. Učitajte PNG ili JPEG datoteku.',
+    'logo_too_small' => 'Logo mora biti najmanje :min piksela širok i visok.',
 ];

@@ -11,4 +11,6 @@ return [
     'invalid_link' => 'Dieser Link ist ungültig oder abgelaufen. Bitte fordern Sie einen neuen an.',
     'min_above_max' => 'Der Mindestwert eines Gutscheins darf das maximale Guthaben nicht übersteigen.',
     'debit_above_daily' => 'Das Limit pro Einlösung darf das Tageslimit pro Gutschein nicht übersteigen.',
+    'logo_unreadable' => 'Das Bild konnte nicht gelesen werden. Laden Sie eine PNG- oder JPEG-Datei hoch.',
+    'logo_too_small' => 'Das Logo muss mindestens :min Pixel breit und hoch sein.',
 ];

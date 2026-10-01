@@ -71,7 +71,6 @@ export function VoucherSettingsForm({ settings }: { settings: RestaurantSettings
               ...amounts,
               validity_months: limitedValidity ? state.validity_months : null,
               max_redemptions_per_voucher_per_hour: state.max_redemptions_per_voucher_per_hour,
-              brand_color: state.brand_color,
               receipt_footer: state.receipt_footer,
               ...Object.fromEntries(TOGGLES.map((toggle) => [toggle.key, state[toggle.key]])),
             })
@@ -129,19 +128,6 @@ export function VoucherSettingsForm({ settings }: { settings: RestaurantSettings
                 />
               ) : null}
               <p className="text-muted-foreground text-xs">{t("voucherRules.validityHint", { years: limits.min_validity_months / 12 })}</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="brand">{t("voucherRules.brandColor")}</Label>
-              <div className="flex gap-2">
-                <input
-                  type="color"
-                  aria-label={t("voucherRules.pickBrandColor")}
-                  value={state.brand_color}
-                  onChange={(e) => setState((s) => ({ ...s, brand_color: e.target.value.toUpperCase() }))}
-                  className="h-9 w-12 cursor-pointer rounded-lg border bg-transparent p-1"
-                />
-                <Input id="brand" value={state.brand_color} onChange={(e) => setState((s) => ({ ...s, brand_color: e.target.value }))} className="font-mono" />
-              </div>
             </div>
           </div>
           <div className="divide-y rounded-2xl border">

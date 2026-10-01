@@ -166,8 +166,6 @@ export const manage = defineMessages({
     "voucherRules.validityMonths": "Validity in months",
     "voucherRules.validityHint":
       "Recommended: no expiry. In Austria paid vouchers are valid for 30 years unless validly limited, and limits under {years, plural, one {# year} other {# years}} are not admissible. An expired voucher keeps its balance and can be reinstated.",
-    "voucherRules.brandColor": "Brand color",
-    "voucherRules.pickBrandColor": "Pick brand color",
     "voucherRules.footer": "E-mail footer",
     "voucherRules.footerPlaceholder": "e.g. company register, address, terms",
     "voucherRules.save": "Save rules",
@@ -406,8 +404,6 @@ export const manage = defineMessages({
     "voucherRules.validityMonths": "Gültigkeit in Monaten",
     "voucherRules.validityHint":
       "Empfohlen: ohne Ablauf. In Österreich gelten bezahlte Gutscheine 30 Jahre, sofern sie nicht wirksam befristet sind, und Befristungen unter {years, plural, one {# Jahr} other {# Jahren}} sind unzulässig. Ein abgelaufener Gutschein behält sein Guthaben und kann reaktiviert werden.",
-    "voucherRules.brandColor": "Markenfarbe",
-    "voucherRules.pickBrandColor": "Markenfarbe wählen",
     "voucherRules.footer": "E-Mail-Fußzeile",
     "voucherRules.footerPlaceholder": "z. B. Firmenbuch, Adresse, AGB",
     "voucherRules.save": "Regeln speichern",
@@ -642,8 +638,6 @@ export const manage = defineMessages({
     "voucherRules.validityMonths": "Važenje u mjesecima",
     "voucherRules.validityHint":
       "Preporuka: bez isteka. U Austriji plaćeni vaučeri važe 30 godina ako nisu valjano ograničeni, a ograničenja kraća od {years, plural, one {# godine} few {# godine} other {# godina}} nisu dozvoljena. Istekli vaučer zadržava stanje i može se ponovo aktivirati.",
-    "voucherRules.brandColor": "Boja brenda",
-    "voucherRules.pickBrandColor": "Odaberi boju brenda",
     "voucherRules.footer": "Podnožje e-maila",
     "voucherRules.footerPlaceholder": "npr. sudski registar, adresa, uslovi",
     "voucherRules.save": "Sačuvaj pravila",

@@ -62,6 +62,8 @@ Send the token as `Authorization: Bearer …` together with the same `X-Device-I
   | GET | `/auth/me` |
   | POST | `/auth/logout` |
   | GET | `/devices/current` |
+  | PUT | `/auth/language` (`{locale: de\|en\|bs}`; the rest of the profile is not reachable) |
+  | GET | `/restaurant/logo` |
   | POST | `/presentments` |
   | POST | `/vouchers/{voucher}/redemptions` |
   | GET | `/vouchers/{voucher}/redemptions/{idempotencyKey}` |
@@ -447,7 +449,10 @@ ever changed. `Payment`: `id, method, method_label, amount, currency, reference,
 |---|---|---|
 | GET | `/settings` | Restaurant and voucher settings (with the platform ceilings) |
 | PUT | `/settings/restaurant` | Profile, address, `country`, `timezone`, `locale` (`de-AT`, `de-DE`, `de-CH`, `en-GB`, `en-US`) |
-| PUT | `/settings/vouchers` | `validity_months` (`null` = no expiry, otherwise 36–360), `min_voucher_value`, `max_voucher_balance`, `max_debit_per_transaction`, `max_debit_per_voucher_per_day` (each at most the platform ceiling), `max_redemptions_per_voucher_per_hour` (0 = off), `allow_reload`, `allow_partial_redemption`, `send_customer_emails`, `brand_color`, `receipt_footer` |
+| GET | `/restaurant/logo?v=` | any signed-in staff of the restaurant: the logo PNG (`ETag`, `Cache-Control: private, immutable`; the version in `settings.logo_url`). Fetch it with the session's headers — browsers must not use it as a bare `<img src>` (no device header) |
+| PUT | `/settings/vouchers` | `validity_months` (`null` = no expiry, otherwise 36–360), `min_voucher_value`, `max_voucher_balance`, `max_debit_per_transaction`, `max_debit_per_voucher_per_day` (each at most the platform ceiling), `max_redemptions_per_voucher_per_hour` (0 = off), `allow_reload`, `allow_partial_redemption`, `send_customer_emails`, `brand_color`, `receipt_footer`; voucher design: `voucher_template` (`classic`, `minimal`, `bold`, `elegant`), `voucher_format` (`a4`, `a5`, `a6`), `accent_color`, `voucher_headline` (≤ 60), `voucher_message` (≤ 240). Read back as `settings.voucher_design` and `settings.logo_url` |
+| POST | `/settings/logo` | multipart `logo` (PNG or JPEG, ≤ 2 MB, ≥ 32 px): re-encoded as PNG (≤ 1200 px) and stored with the restaurant → settings |
+| DELETE | `/settings/logo` | → settings (`logo_url` null) |
 | GET | `/settings/notification-templates` | Effective guest e-mail templates (`voucher_issued`, `voucher_reloaded`, `voucher_expiring`) |
 | PUT | `/settings/notification-templates/{key}` | `{subject, body, is_active?, locale? (en \| de)}` — creates a restaurant override |
 

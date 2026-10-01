@@ -32,6 +32,15 @@ final class RestaurantSettingsResource extends JsonResource
             'public_balance' => $s->public_balance,
             'brand_color' => $s->brand_color,
             'receipt_footer' => $s->receipt_footer,
+            'voucher_design' => [
+                'template' => $s->voucher_template,
+                'format' => $s->voucher_format,
+                'accent_color' => $s->accent_color,
+                'headline' => $s->voucher_headline,
+                'message' => $s->voucher_message,
+            ],
+            // Versioned: the URL changes when the logo does, so clients may cache it for good.
+            'logo_url' => $s->logo_version !== null ? '/api/v1/restaurant/logo?v='.substr($s->logo_version, 0, 16) : null,
             'platform_limits' => [
                 'max_voucher_balance' => (int) config('giftcard.limits.max_voucher_balance'),
                 'max_debit_per_transaction' => (int) config('giftcard.limits.max_debit_per_transaction'),

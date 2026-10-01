@@ -12,7 +12,7 @@ import { MoneyInput } from "@/components/common/money-input"
 import { Segmented } from "@/components/common/segmented"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { PAYMENT_METHOD_LABELS, PaymentFields, paymentComplete } from "@/components/vouchers/payment-fields"
-import { PrintableVoucherSheet } from "@/components/vouchers/printable-voucher-sheet"
+import { PrintableVoucherSheet, useVoucherLook } from "@/components/vouchers/printable-voucher-sheet"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -30,10 +30,9 @@ import { cn } from "@/lib/utils"
 const PRESETS = [2500, 5000, 7500, 10000, 15000]
 
 function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }) {
-  const { user } = useAuth()
   const t = useT()
-  const restaurant = user?.restaurant
   const [printed, setPrinted] = useState(false)
+  const { ready } = useVoucherLook()
   const printable = sale.printable
 
   // The QR exists only in this response: warn before the page is left without printing it.
@@ -57,9 +56,6 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
         <div className="grid gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
           <PrintableVoucherSheet
             qrSvg={printable.qr_svg}
-            restaurantName={restaurant?.name ?? ""}
-            brandColor={restaurant?.settings.brand_color}
-            locale={restaurant?.locale}
             recipientName={sale.data.recipient_name}
             expiresAt={sale.data.expires_at}
             value={sale.data.initial_value}
@@ -73,6 +69,7 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
             <Button
               size="lg"
               className="w-full"
+              disabled={!ready}
               onClick={() => {
                 window.print()
                 setPrinted(true)

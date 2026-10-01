@@ -35,6 +35,10 @@ final class EnforceDeviceToken
         ['GET', 'api/v1/auth/me'],
         ['POST', 'api/v1/auth/logout'],
         ['GET', 'api/v1/devices/current'],
+        // The user's own language (shared with the dashboard); nothing else of the profile.
+        ['PUT', 'api/v1/auth/language'],
+        // The restaurant's logo on the guest's card.
+        ['GET', 'api/v1/restaurant/logo'],
         ['POST', 'api/v1/presentments'],
         // A physical card: live authentication relayed by the phone.
         ['POST', 'api/v1/presentments/cards'],

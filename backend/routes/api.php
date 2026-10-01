@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\CardController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeviceController;
+use App\Http\Controllers\Api\V1\LogoController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PresentmentController;
@@ -58,6 +59,7 @@ Route::prefix('v1')->group(function (): void {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
             Route::put('profile', [PasswordController::class, 'updateProfile']);
+            Route::put('language', [AuthController::class, 'language']);
             Route::put('password', [PasswordController::class, 'change']);
         });
 
@@ -137,6 +139,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('users/{user}/activate', [UserController::class, 'activate'])->middleware('can:users.manage');
             Route::post('users/{user}/password-reset', [UserController::class, 'sendPasswordReset'])->middleware('can:users.manage');
 
+            Route::get('restaurant/logo', [LogoController::class, 'show']);
             Route::get('devices/current', [DeviceController::class, 'current']);
             Route::get('devices', [DeviceController::class, 'index'])->middleware('can:devices.view');
             Route::patch('devices/{device}', [DeviceController::class, 'update'])->middleware('can:devices.manage');
@@ -147,6 +150,8 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/', [SettingsController::class, 'show']);
                 Route::put('restaurant', [SettingsController::class, 'updateRestaurant']);
                 Route::put('vouchers', [SettingsController::class, 'updateVoucherSettings']);
+                Route::post('logo', [LogoController::class, 'store']);
+                Route::delete('logo', [LogoController::class, 'destroy']);
                 Route::get('notification-templates', [NotificationTemplateController::class, 'index']);
                 Route::put('notification-templates/{key}', [NotificationTemplateController::class, 'update'])->where('key', '[a-z_]+');
             });

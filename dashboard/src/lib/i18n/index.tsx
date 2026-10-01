@@ -70,7 +70,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
       setLocal(next)
       if (user) {
-        await api("/auth/profile", { method: "PUT", body: { locale: next } })
+        await api("/auth/language", { method: "PUT", body: { locale: next } })
         await refresh()
       }
     },

@@ -6,24 +6,22 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { PrintableVoucherSheet } from "@/components/vouchers/printable-voucher-sheet"
+import { PrintableVoucherSheet, useVoucherLook } from "@/components/vouchers/printable-voucher-sheet"
 import { useReissueQr } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { Voucher } from "@/lib/api/types"
-import { useAuth } from "@/lib/auth"
 import { useConfirm } from "@/components/common/confirm"
 import { useT } from "@/lib/i18n"
 
 /** A new QR for a lost or unprinted sheet: the old QR stops at once; the new one is shown once, to print. */
 export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Voucher; open: boolean; onOpenChange: (open: boolean) => void }) {
-  const { user } = useAuth()
   const t = useT()
   const confirm = useConfirm()
-  const restaurant = user?.restaurant
   const [reason, setReason] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [qrSvg, setQrSvg] = useState<string | null>(null)
   const [printed, setPrinted] = useState(false)
+  const { ready } = useVoucherLook()
   const mutation = useReissueQr()
 
   const close = async (o: boolean) => {
@@ -60,9 +58,6 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
           <div className="space-y-4">
             <PrintableVoucherSheet
               qrSvg={qrSvg}
-              restaurantName={restaurant?.name ?? ""}
-              brandColor={restaurant?.settings.brand_color}
-              locale={restaurant?.locale}
               recipientName={voucher.recipient_name}
               expiresAt={voucher.expires_at}
               value={voucher.initial_value}
@@ -74,6 +69,7 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
             </div>
             <DialogFooter>
               <Button
+                disabled={!ready}
                 onClick={() => {
                   window.print()
                   setPrinted(true)
