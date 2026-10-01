@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { useAuth } from "@/lib/auth"
 import { api, errorMessage } from "@/lib/api/client"
 
 /**
@@ -29,6 +30,7 @@ function ResetForm() {
   const linkParams = useLinkParams()
   const params = linkParams ?? new URLSearchParams()
   const router = useRouter()
+  const { user, logout } = useAuth()
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
   const [pending, setPending] = useState(false)
@@ -64,6 +66,9 @@ function ResetForm() {
         setPending(true)
         try {
           await api("/auth/reset-password", { method: "POST", body: { token, email, password, password_confirmation: confirmation } })
+          // Someone else may still be signed in in this browser (e.g. the platform admin who just onboarded this
+          // owner): sign that session out, otherwise the login page would forward straight into their account.
+          if (user) await logout().catch(() => undefined)
           toast.success(invite ? "Your account is ready. Sign in with your new password." : "Password saved. You can sign in now.")
           router.replace("/login")
         } catch (err) {
