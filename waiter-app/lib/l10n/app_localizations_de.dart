@@ -916,6 +916,84 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen.';
 
   @override
+  String get reloadReady => 'Karte aufladen';
+
+  @override
+  String get reloadTitle => 'Karte aufladen';
+
+  @override
+  String get reloadTap => 'Die Karte des Gastes ans Handy halten.';
+
+  @override
+  String get reloadTapAgain =>
+      'Zum Bestätigen die Karte noch einmal ans Handy halten.';
+
+  @override
+  String reloadBalance(String amount) {
+    return 'Guthaben jetzt $amount';
+  }
+
+  @override
+  String get reloadAmountLabel => 'Aufladebetrag';
+
+  @override
+  String reloadAmountMax(String max) {
+    return 'Höchstens $max, sonst wird das Guthabenlimit überschritten.';
+  }
+
+  @override
+  String reloadSubmit(String amount) {
+    return '$amount aufladen';
+  }
+
+  @override
+  String get reloadSubmitting => 'Wird aufgeladen …';
+
+  @override
+  String get reloadDoneTitle => 'Karte aufgeladen';
+
+  @override
+  String reloadDoneBody(String amount, String balance) {
+    return '+$amount · neues Guthaben $balance';
+  }
+
+  @override
+  String get reloadAnother => 'Weitere Karte aufladen';
+
+  @override
+  String get reloadFailedTitle => 'Nicht aufgeladen';
+
+  @override
+  String get reloadFailedBody =>
+      'Es wurde nichts gebucht. Bitte erneut versuchen.';
+
+  @override
+  String get reloadUncertainTitle => 'Aufladung unklar';
+
+  @override
+  String get reloadUncertainBody =>
+      'Keine Antwort vom Server. „Erneut versuchen“ klärt, ob aufgeladen wurde, ohne doppelt zu buchen.';
+
+  @override
+  String get reloadNotAllowedTitle => 'Aufladen nicht möglich';
+
+  @override
+  String get reloadNotAllowedBody =>
+      'Diese Anmeldung darf keine Karten aufladen, oder das Restaurant erlaubt kein Aufladen.';
+
+  @override
+  String get reloadCardNotUsable =>
+      'Diese Karte kann nicht aufgeladen werden (gesperrt oder nicht verkauft).';
+
+  @override
+  String get reloadLeaveUncertainTitle =>
+      'Aufladung offen – trotzdem schließen?';
+
+  @override
+  String get reloadLeaveUncertainBody =>
+      'Vielleicht wurde bereits aufgeladen. Nur „Erneut versuchen“ klärt das, ohne doppelt zu buchen.';
+
+  @override
   String get qrTitle => 'Gutschein scannen';
 
   @override

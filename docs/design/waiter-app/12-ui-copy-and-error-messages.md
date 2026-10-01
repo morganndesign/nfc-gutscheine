@@ -730,6 +730,27 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.card.done.body` | Karte {number} ist aktiv. | Card {number} is active. | Kartica {number} je aktivna. | 48 | Cards · inventory number |
 | `sale.card.failed.title` | Karte nicht aktiviert | Card not activated | Kartica nije aktivirana | 32 | Cards · nothing was sold |
 | `sale.card.notUsable` | Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen. | This card cannot be sold. Take another card from stock. | Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe. | 90 | Cards · not in stock, other restaurant |
+| `reload.ready` | Karte aufladen | Top up card | Dopuni karticu | 24 | Reload · S05 button; only with `vouchers.reload` and a card reader |
+| `reload.title` | Karte aufladen | Top up card | Dopuna kartice | 28 | Reload · TopBar |
+| `reload.tap` | Die Karte des Gastes ans Handy halten. | Hold the guest's card to the phone. | Prislonite gostovu karticu uz telefon. | 64 | Reload · step 1, also the iPhone sheet |
+| `reload.tapAgain` | Zum Bestätigen die Karte noch einmal ans Handy halten. | Hold the card to the phone again to confirm. | Ponovo prislonite karticu da potvrdite. | 64 | Reload · the first tap is older than its 60 s validity |
+| `reload.balance` | Guthaben jetzt {amount} | Balance now {amount} | Trenutno stanje {amount} | 32 | Reload · above the keypad |
+| `reload.amount.label` | Aufladebetrag | Top-up amount | Iznos dopune | 24 | Reload · above the amount |
+| `reload.amount.max` | Höchstens {max}, sonst wird das Guthabenlimit überschritten. | At most {max}, or the balance limit is exceeded. | Najviše {max}, inače se prekoračuje limit stanja. | 60 | Reload · BALANCE_LIMIT_EXCEEDED |
+| `reload.submit` | {amount} aufladen | Top up {amount} | Dopuni {amount} | 32 | Reload · PrimaryButton |
+| `reload.submitting` | Wird aufgeladen … | Topping up … | Dopunjava se … | 32 | Reload · loading label |
+| `reload.done.title` | Karte aufgeladen | Card topped up | Kartica dopunjena | 28 | Reload · also the iPhone sheet after the tap |
+| `reload.done.body` | +{amount} · neues Guthaben {balance} | +{amount} · new balance {balance} | +{amount} · novo stanje {balance} | 48 | Reload |
+| `reload.another` | Weitere Karte aufladen | Top up another card | Dopuni drugu karticu | 32 | Reload · TertiaryButton |
+| `reload.failed.title` | Nicht aufgeladen | Not topped up | Nije dopunjeno | 32 | Reload · nothing was booked; also the iPhone sheet |
+| `reload.failed.body` | Es wurde nichts gebucht. Bitte erneut versuchen. | Nothing was booked. Please try again. | Ništa nije knjiženo. Pokušajte ponovo. | 90 | Reload |
+| `reload.uncertain.title` | Aufladung unklar | Top-up unclear | Dopuna nejasna | 32 | Reload · no answer |
+| `reload.uncertain.body` | Keine Antwort vom Server. „Erneut versuchen“ klärt, ob aufgeladen wurde, ohne doppelt zu buchen. | No answer from the server. “Try again” finds out whether it was topped up without booking twice. | Nema odgovora servera. „Pokušaj ponovo“ provjerava je li dopunjeno, bez dvostrukog knjiženja. | 140 | Reload · the same key |
+| `reload.notAllowed.title` | Aufladen nicht möglich | Cannot top up | Dopuna nije moguća | 32 | Reload · 403 or RELOAD_NOT_ALLOWED |
+| `reload.notAllowed.body` | Diese Anmeldung darf keine Karten aufladen, oder das Restaurant erlaubt kein Aufladen. | This sign-in may not top up cards, or the restaurant does not allow top-ups. | Ova prijava ne smije dopunjavati kartice ili restoran ne dozvoljava dopunu. | 120 | Reload |
+| `reload.card.notUsable` | Diese Karte kann nicht aufgeladen werden (gesperrt oder nicht verkauft). | This card cannot be topped up (suspended or not sold). | Ova kartica se ne može dopuniti (blokirana ili nije prodana). | 90 | Reload · CARD_NOT_USABLE, card_not_active |
+| `reload.leaveUncertain.title` | Aufladung offen – trotzdem schließen? | Top-up open – close anyway? | Dopuna otvorena – ipak zatvoriti? | 36 | Reload · Dialog |
+| `reload.leaveUncertain.body` | Vielleicht wurde bereits aufgeladen. Nur „Erneut versuchen“ klärt das, ohne doppelt zu buchen. | It may already have been topped up. Only “Try again” finds out without booking twice. | Možda je već dopunjeno. Samo „Pokušaj ponovo“ to provjerava bez dvostrukog knjiženja. | 120 | Reload · Dialog (confirm = `sale.leave.confirm`) |
 
 ### 5.14 S12 QR scan
 
@@ -919,7 +940,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **385 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **406 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

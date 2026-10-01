@@ -346,6 +346,22 @@ abstract final class Payloads {
     'permissions': <String>['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'],
   };
 
+  /// A manager who may also top up guests' cards.
+  static Map<String, Object?> reloadManager() => <String, Object?>{
+    ...cardManager(),
+    'permissions': <String>[...(cardManager()['permissions']! as List<String>), 'vouchers.reload'],
+  };
+
+  /// `POST /vouchers/{id}/reloads` → 201 (200 replayed).
+  static Map<String, Object?> reloaded({int amount = 3000, int balance = 5000, bool replayed = false}) =>
+      <String, Object?>{
+        'data': <String, Object?>{
+          'voucher': <String, Object?>{'id': voucherId, 'kind': 'card', 'balance': balance, 'currency': 'EUR'},
+          'transaction': <String, Object?>{'id': 'tx-1', 'type': 'reload', 'amount': amount, 'balance_after': balance},
+        },
+        'replayed': replayed,
+      };
+
   static const String bindPresentmentId = '01a0f000-0000-7000-8000-00000000b1d0';
 
   /// The answer to step 2 of a `bind` or `receive` tap: the card, no voucher.

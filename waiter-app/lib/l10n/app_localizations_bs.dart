@@ -914,6 +914,81 @@ class AppLocalizationsBs extends AppLocalizations {
       'Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe.';
 
   @override
+  String get reloadReady => 'Dopuni karticu';
+
+  @override
+  String get reloadTitle => 'Dopuna kartice';
+
+  @override
+  String get reloadTap => 'Prislonite gostovu karticu uz telefon.';
+
+  @override
+  String get reloadTapAgain => 'Ponovo prislonite karticu da potvrdite.';
+
+  @override
+  String reloadBalance(String amount) {
+    return 'Trenutno stanje $amount';
+  }
+
+  @override
+  String get reloadAmountLabel => 'Iznos dopune';
+
+  @override
+  String reloadAmountMax(String max) {
+    return 'Najviše $max, inače se prekoračuje limit stanja.';
+  }
+
+  @override
+  String reloadSubmit(String amount) {
+    return 'Dopuni $amount';
+  }
+
+  @override
+  String get reloadSubmitting => 'Dopunjava se …';
+
+  @override
+  String get reloadDoneTitle => 'Kartica dopunjena';
+
+  @override
+  String reloadDoneBody(String amount, String balance) {
+    return '+$amount · novo stanje $balance';
+  }
+
+  @override
+  String get reloadAnother => 'Dopuni drugu karticu';
+
+  @override
+  String get reloadFailedTitle => 'Nije dopunjeno';
+
+  @override
+  String get reloadFailedBody => 'Ništa nije knjiženo. Pokušajte ponovo.';
+
+  @override
+  String get reloadUncertainTitle => 'Dopuna nejasna';
+
+  @override
+  String get reloadUncertainBody =>
+      'Nema odgovora servera. „Pokušaj ponovo“ provjerava je li dopunjeno, bez dvostrukog knjiženja.';
+
+  @override
+  String get reloadNotAllowedTitle => 'Dopuna nije moguća';
+
+  @override
+  String get reloadNotAllowedBody =>
+      'Ova prijava ne smije dopunjavati kartice ili restoran ne dozvoljava dopunu.';
+
+  @override
+  String get reloadCardNotUsable =>
+      'Ova kartica se ne može dopuniti (blokirana ili nije prodana).';
+
+  @override
+  String get reloadLeaveUncertainTitle => 'Dopuna otvorena – ipak zatvoriti?';
+
+  @override
+  String get reloadLeaveUncertainBody =>
+      'Možda je već dopunjeno. Samo „Pokušaj ponovo“ to provjerava bez dvostrukog knjiženja.';
+
+  @override
   String get qrTitle => 'Skeniraj vaučer';
 
   @override

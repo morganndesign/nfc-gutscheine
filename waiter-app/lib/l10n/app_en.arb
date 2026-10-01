@@ -1293,6 +1293,113 @@
   "@saleCardNotUsable": {
     "description": "Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · not in stock, other restaurant"
   },
+  "reloadReady": "Top up card",
+  "@reloadReady": {
+    "description": "Spec key: reload.ready (12 §5.13) · Max: 24 · Notes: Reload · S05 button; only with vouchers.reload and a card reader"
+  },
+  "reloadTitle": "Top up card",
+  "@reloadTitle": {
+    "description": "Spec key: reload.title (12 §5.13) · Max: 28 · Notes: Reload · TopBar"
+  },
+  "reloadTap": "Hold the guest's card to the phone.",
+  "@reloadTap": {
+    "description": "Spec key: reload.tap (12 §5.13) · Max: 64 · Notes: Reload · step 1, also the iPhone sheet"
+  },
+  "reloadTapAgain": "Hold the card to the phone again to confirm.",
+  "@reloadTapAgain": {
+    "description": "Spec key: reload.tapAgain (12 §5.13) · Max: 64 · Notes: Reload · the first tap is older than its 60 s validity"
+  },
+  "reloadBalance": "Balance now {amount}",
+  "@reloadBalance": {
+    "description": "Spec key: reload.balance (12 §5.13) · Max: 32 · Notes: Reload · above the keypad",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "reloadAmountLabel": "Top-up amount",
+  "@reloadAmountLabel": {
+    "description": "Spec key: reload.amount.label (12 §5.13) · Max: 24 · Notes: Reload · above the amount"
+  },
+  "reloadAmountMax": "At most {max}, or the balance limit is exceeded.",
+  "@reloadAmountMax": {
+    "description": "Spec key: reload.amount.max (12 §5.13) · Max: 60 · Notes: Reload · BALANCE_LIMIT_EXCEEDED",
+    "placeholders": {
+      "max": {
+        "type": "String"
+      }
+    }
+  },
+  "reloadSubmit": "Top up {amount}",
+  "@reloadSubmit": {
+    "description": "Spec key: reload.submit (12 §5.13) · Max: 32 · Notes: Reload · PrimaryButton",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
+  "reloadSubmitting": "Topping up\u00a0…",
+  "@reloadSubmitting": {
+    "description": "Spec key: reload.submitting (12 §5.13) · Max: 32 · Notes: Reload · loading label"
+  },
+  "reloadDoneTitle": "Card topped up",
+  "@reloadDoneTitle": {
+    "description": "Spec key: reload.done.title (12 §5.13) · Max: 28 · Notes: Reload · also the iPhone sheet after the tap"
+  },
+  "reloadDoneBody": "+{amount} · new balance {balance}",
+  "@reloadDoneBody": {
+    "description": "Spec key: reload.done.body (12 §5.13) · Max: 48 · Notes: Reload",
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "reloadAnother": "Top up another card",
+  "@reloadAnother": {
+    "description": "Spec key: reload.another (12 §5.13) · Max: 32 · Notes: Reload · TertiaryButton"
+  },
+  "reloadFailedTitle": "Not topped up",
+  "@reloadFailedTitle": {
+    "description": "Spec key: reload.failed.title (12 §5.13) · Max: 32 · Notes: Reload · nothing was booked; also the iPhone sheet"
+  },
+  "reloadFailedBody": "Nothing was booked. Please try again.",
+  "@reloadFailedBody": {
+    "description": "Spec key: reload.failed.body (12 §5.13) · Max: 90 · Notes: Reload"
+  },
+  "reloadUncertainTitle": "Top-up unclear",
+  "@reloadUncertainTitle": {
+    "description": "Spec key: reload.uncertain.title (12 §5.13) · Max: 32 · Notes: Reload · no answer"
+  },
+  "reloadUncertainBody": "No answer from the server. “Try again” finds out whether it was topped up without booking twice.",
+  "@reloadUncertainBody": {
+    "description": "Spec key: reload.uncertain.body (12 §5.13) · Max: 140 · Notes: Reload · the same key"
+  },
+  "reloadNotAllowedTitle": "Cannot top up",
+  "@reloadNotAllowedTitle": {
+    "description": "Spec key: reload.notAllowed.title (12 §5.13) · Max: 32 · Notes: Reload · 403 or RELOAD_NOT_ALLOWED"
+  },
+  "reloadNotAllowedBody": "This sign-in may not top up cards, or the restaurant does not allow top-ups.",
+  "@reloadNotAllowedBody": {
+    "description": "Spec key: reload.notAllowed.body (12 §5.13) · Max: 120 · Notes: Reload"
+  },
+  "reloadCardNotUsable": "This card cannot be topped up (suspended or not sold).",
+  "@reloadCardNotUsable": {
+    "description": "Spec key: reload.card.notUsable (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE, card_not_active"
+  },
+  "reloadLeaveUncertainTitle": "Top-up open – close anyway?",
+  "@reloadLeaveUncertainTitle": {
+    "description": "Spec key: reload.leaveUncertain.title (12 §5.13) · Max: 36 · Notes: Reload · Dialog"
+  },
+  "reloadLeaveUncertainBody": "It may already have been topped up. Only “Try again” finds out without booking twice.",
+  "@reloadLeaveUncertainBody": {
+    "description": "Spec key: reload.leaveUncertain.body (12 §5.13) · Max: 120 · Notes: Reload · Dialog (confirm = sale.leave.confirm)"
+  },
   "qrTitle": "Scan voucher",
   "@qrTitle": {
     "description": "Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a"

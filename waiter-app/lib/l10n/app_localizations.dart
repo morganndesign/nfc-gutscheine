@@ -1622,6 +1622,132 @@ abstract class AppLocalizations {
   /// **'This card cannot be sold. Take another card from stock.'**
   String get saleCardNotUsable;
 
+  /// Spec key: reload.ready (12 §5.13) · Max: 24 · Notes: Reload · S05 button; only with vouchers.reload and a card reader
+  ///
+  /// In en, this message translates to:
+  /// **'Top up card'**
+  String get reloadReady;
+
+  /// Spec key: reload.title (12 §5.13) · Max: 28 · Notes: Reload · TopBar
+  ///
+  /// In en, this message translates to:
+  /// **'Top up card'**
+  String get reloadTitle;
+
+  /// Spec key: reload.tap (12 §5.13) · Max: 64 · Notes: Reload · step 1, also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the guest\'s card to the phone.'**
+  String get reloadTap;
+
+  /// Spec key: reload.tapAgain (12 §5.13) · Max: 64 · Notes: Reload · the first tap is older than its 60 s validity
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the card to the phone again to confirm.'**
+  String get reloadTapAgain;
+
+  /// Spec key: reload.balance (12 §5.13) · Max: 32 · Notes: Reload · above the keypad
+  ///
+  /// In en, this message translates to:
+  /// **'Balance now {amount}'**
+  String reloadBalance(String amount);
+
+  /// Spec key: reload.amount.label (12 §5.13) · Max: 24 · Notes: Reload · above the amount
+  ///
+  /// In en, this message translates to:
+  /// **'Top-up amount'**
+  String get reloadAmountLabel;
+
+  /// Spec key: reload.amount.max (12 §5.13) · Max: 60 · Notes: Reload · BALANCE_LIMIT_EXCEEDED
+  ///
+  /// In en, this message translates to:
+  /// **'At most {max}, or the balance limit is exceeded.'**
+  String reloadAmountMax(String max);
+
+  /// Spec key: reload.submit (12 §5.13) · Max: 32 · Notes: Reload · PrimaryButton
+  ///
+  /// In en, this message translates to:
+  /// **'Top up {amount}'**
+  String reloadSubmit(String amount);
+
+  /// Spec key: reload.submitting (12 §5.13) · Max: 32 · Notes: Reload · loading label
+  ///
+  /// In en, this message translates to:
+  /// **'Topping up …'**
+  String get reloadSubmitting;
+
+  /// Spec key: reload.done.title (12 §5.13) · Max: 28 · Notes: Reload · also the iPhone sheet after the tap
+  ///
+  /// In en, this message translates to:
+  /// **'Card topped up'**
+  String get reloadDoneTitle;
+
+  /// Spec key: reload.done.body (12 §5.13) · Max: 48 · Notes: Reload
+  ///
+  /// In en, this message translates to:
+  /// **'+{amount} · new balance {balance}'**
+  String reloadDoneBody(String amount, String balance);
+
+  /// Spec key: reload.another (12 §5.13) · Max: 32 · Notes: Reload · TertiaryButton
+  ///
+  /// In en, this message translates to:
+  /// **'Top up another card'**
+  String get reloadAnother;
+
+  /// Spec key: reload.failed.title (12 §5.13) · Max: 32 · Notes: Reload · nothing was booked; also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Not topped up'**
+  String get reloadFailedTitle;
+
+  /// Spec key: reload.failed.body (12 §5.13) · Max: 90 · Notes: Reload
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was booked. Please try again.'**
+  String get reloadFailedBody;
+
+  /// Spec key: reload.uncertain.title (12 §5.13) · Max: 32 · Notes: Reload · no answer
+  ///
+  /// In en, this message translates to:
+  /// **'Top-up unclear'**
+  String get reloadUncertainTitle;
+
+  /// Spec key: reload.uncertain.body (12 §5.13) · Max: 140 · Notes: Reload · the same key
+  ///
+  /// In en, this message translates to:
+  /// **'No answer from the server. “Try again” finds out whether it was topped up without booking twice.'**
+  String get reloadUncertainBody;
+
+  /// Spec key: reload.notAllowed.title (12 §5.13) · Max: 32 · Notes: Reload · 403 or RELOAD_NOT_ALLOWED
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot top up'**
+  String get reloadNotAllowedTitle;
+
+  /// Spec key: reload.notAllowed.body (12 §5.13) · Max: 120 · Notes: Reload
+  ///
+  /// In en, this message translates to:
+  /// **'This sign-in may not top up cards, or the restaurant does not allow top-ups.'**
+  String get reloadNotAllowedBody;
+
+  /// Spec key: reload.card.notUsable (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE, card_not_active
+  ///
+  /// In en, this message translates to:
+  /// **'This card cannot be topped up (suspended or not sold).'**
+  String get reloadCardNotUsable;
+
+  /// Spec key: reload.leaveUncertain.title (12 §5.13) · Max: 36 · Notes: Reload · Dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Top-up open – close anyway?'**
+  String get reloadLeaveUncertainTitle;
+
+  /// Spec key: reload.leaveUncertain.body (12 §5.13) · Max: 120 · Notes: Reload · Dialog (confirm = sale.leave.confirm)
+  ///
+  /// In en, this message translates to:
+  /// **'It may already have been topped up. Only “Try again” finds out without booking twice.'**
+  String get reloadLeaveUncertainBody;
+
   /// Spec key: qr.title (12 §5.14) · Max: 28 · Notes: 03a
   ///
   /// In en, this message translates to:

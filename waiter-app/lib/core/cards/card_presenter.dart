@@ -50,8 +50,7 @@ class CardPresentException implements Exception {
   String toString() => 'CardPresentException(${failure.name})';
 }
 
-/// A card held to the phone for a purpose that needs no voucher yet — `bind` (sale, replacement) or `receive`
-/// (delivery): the phone reads the card's URL, starts AuthenticateEV2First with K3 and relays the server's
+/// A card held to the phone — `bind` (sale, replacement), `receive` (delivery), `surrender` or `reload`: the phone reads the card's URL, starts AuthenticateEV2First with K3 and relays the server's
 /// challenge. The server answers with a single-use, 60-second presentment. Android and iPhone alike; the phone
 /// never holds a key.
 class CardPresenter {
@@ -65,7 +64,21 @@ class CardPresenter {
     String purpose, {
     required ({String prompt, String checking, String done, String failed}) texts,
     void Function()? onDetected,
-  }) async {
+  }) => _present(purpose, texts, onDetected, _api.completeCardPresentmentForCard);
+
+  /// A guest's card for a purpose that names its voucher (`reload`): the presentment carries the voucher.
+  Future<Presentment> presentVoucher(
+    String purpose, {
+    required ({String prompt, String checking, String done, String failed}) texts,
+    void Function()? onDetected,
+  }) => _present(purpose, texts, onDetected, _api.completeCardPresentment);
+
+  Future<T> _present<T>(
+    String purpose,
+    ({String prompt, String checking, String done, String failed}) texts,
+    void Function()? onDetected,
+    Future<T> Function(String authentication, String answer) complete,
+  ) async {
     CardLink? card;
     try {
       card = await _nfc.start(prompt: texts.prompt);
@@ -73,7 +86,7 @@ class CardPresenter {
       final CardTap tap = await Ntag424Session.read(card);
       final CardChallenge challenge = await _api.beginCardPresentment(tap, purpose: purpose);
       final String answer = await Ntag424Session.answer(card, challenge.commandHex);
-      final CardPresented presented = await _api.completeCardPresentmentForCard(challenge.authentication, answer);
+      final T presented = await complete(challenge.authentication, answer);
       await card.close(message: texts.done);
       return presented;
     } on NfcRelayException catch (e) {

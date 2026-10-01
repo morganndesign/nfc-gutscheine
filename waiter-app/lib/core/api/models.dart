@@ -162,6 +162,9 @@ abstract final class Permissions {
   static const String sell = 'vouchers.sell';
   static const String sellComplimentary = 'vouchers.sell_complimentary';
 
+  /// Top up a guest's card at the till (managers and owners).
+  static const String reload = 'vouchers.reload';
+
   /// Platform staff: the personalisation station (station token).
   static const String personalize = 'platform.cards.personalize';
 
@@ -245,6 +248,9 @@ class SessionUser {
   bool get canSellCards => canSell && permissions.contains(Permissions.cardsBind);
 
   bool get canReceiveCards => permissions.contains(Permissions.cardsReceive);
+
+  /// "Top up card": tap the guest's card, enter the amount, book the payment.
+  bool get canReload => permissions.contains(Permissions.reload);
 
   /// Look up a card, suspend, resume and replace it.
   bool get canManageCards => permissions.contains(Permissions.cardsManage) && permissions.contains(Permissions.cardsView);
@@ -593,6 +599,31 @@ class PaymentInput {
     if (method.needsReference) 'reference': reference,
     if (method.needsReason) 'reason': reason,
   };
+}
+
+/// `POST /vouchers/{id}/reloads` → 201, or 200 with `replayed: true` (a retry answered with the booking).
+@immutable
+class ReloadResult {
+  const ReloadResult({required this.amount, required this.balance, required this.currency, required this.replayed});
+
+  factory ReloadResult.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Map<String, Object?> voucher = _map(data['voucher'], 'voucher');
+    return ReloadResult(
+      amount: _int(_map(data['transaction'], 'transaction'), 'amount'),
+      balance: _int(voucher, 'balance'),
+      currency: _stringOrNull(voucher, 'currency') ?? 'EUR',
+      replayed: json['replayed'] == true,
+    );
+  }
+
+  /// The credited amount (positive).
+  final int amount;
+
+  /// The voucher's balance after the top-up.
+  final int balance;
+  final String currency;
+  final bool replayed;
 }
 
 /// `POST /vouchers` → 201, or 200 with `replayed: true` (a retry within the

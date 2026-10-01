@@ -905,6 +905,78 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleCardNotUsable => pseudoLocalize(base.saleCardNotUsable);
 
   @override
+  String get reloadReady => pseudoLocalize(base.reloadReady);
+
+  @override
+  String get reloadTitle => pseudoLocalize(base.reloadTitle);
+
+  @override
+  String get reloadTap => pseudoLocalize(base.reloadTap);
+
+  @override
+  String get reloadTapAgain => pseudoLocalize(base.reloadTapAgain);
+
+  @override
+  String reloadBalance(String amount) =>
+      pseudoLocalize(base.reloadBalance(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get reloadAmountLabel => pseudoLocalize(base.reloadAmountLabel);
+
+  @override
+  String reloadAmountMax(String max) =>
+      pseudoLocalize(base.reloadAmountMax(pseudoMarker(0)), <String>[max]);
+
+  @override
+  String reloadSubmit(String amount) =>
+      pseudoLocalize(base.reloadSubmit(pseudoMarker(0)), <String>[amount]);
+
+  @override
+  String get reloadSubmitting => pseudoLocalize(base.reloadSubmitting);
+
+  @override
+  String get reloadDoneTitle => pseudoLocalize(base.reloadDoneTitle);
+
+  @override
+  String reloadDoneBody(String amount, String balance) => pseudoLocalize(
+    base.reloadDoneBody(pseudoMarker(0), pseudoMarker(1)),
+    <String>[amount, balance],
+  );
+
+  @override
+  String get reloadAnother => pseudoLocalize(base.reloadAnother);
+
+  @override
+  String get reloadFailedTitle => pseudoLocalize(base.reloadFailedTitle);
+
+  @override
+  String get reloadFailedBody => pseudoLocalize(base.reloadFailedBody);
+
+  @override
+  String get reloadUncertainTitle => pseudoLocalize(base.reloadUncertainTitle);
+
+  @override
+  String get reloadUncertainBody => pseudoLocalize(base.reloadUncertainBody);
+
+  @override
+  String get reloadNotAllowedTitle =>
+      pseudoLocalize(base.reloadNotAllowedTitle);
+
+  @override
+  String get reloadNotAllowedBody => pseudoLocalize(base.reloadNotAllowedBody);
+
+  @override
+  String get reloadCardNotUsable => pseudoLocalize(base.reloadCardNotUsable);
+
+  @override
+  String get reloadLeaveUncertainTitle =>
+      pseudoLocalize(base.reloadLeaveUncertainTitle);
+
+  @override
+  String get reloadLeaveUncertainBody =>
+      pseudoLocalize(base.reloadLeaveUncertainBody);
+
+  @override
   String get qrTitle => pseudoLocalize(base.qrTitle);
 
   @override

@@ -16,6 +16,7 @@ import '../core/storage/pending_redemptions.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'card_texts.dart';
+import 'cards/s24_reload.dart';
 import 's13_recent.dart';
 import 's14_menu.dart';
 import 's20_sell_voucher.dart';
@@ -233,6 +234,14 @@ class _ReadyScreenState extends State<ReadyScreen> {
             label: l10n.readySell,
             icon: WaiterIcon.ticket,
             onPressed: _offline ? null : () => unawaited(openSellVoucher(context, cards: _cardReader && (user?.canSellCards ?? false))),
+            disabledReason: offlineReason,
+          ),
+        // S24: top up a guest's card (managers and owners, a phone that reads cards).
+        if (_cardReader && (user?.canReload ?? false))
+          SecondaryButton(
+            label: l10n.reloadReady,
+            icon: WaiterIcon.nfcArcs,
+            onPressed: _offline ? null : () => unawaited(openReload(context)),
             disabledReason: offlineReason,
           ),
       ],

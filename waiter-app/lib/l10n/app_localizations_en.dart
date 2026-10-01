@@ -912,6 +912,81 @@ class AppLocalizationsEn extends AppLocalizations {
       'This card cannot be sold. Take another card from stock.';
 
   @override
+  String get reloadReady => 'Top up card';
+
+  @override
+  String get reloadTitle => 'Top up card';
+
+  @override
+  String get reloadTap => 'Hold the guest\'s card to the phone.';
+
+  @override
+  String get reloadTapAgain => 'Hold the card to the phone again to confirm.';
+
+  @override
+  String reloadBalance(String amount) {
+    return 'Balance now $amount';
+  }
+
+  @override
+  String get reloadAmountLabel => 'Top-up amount';
+
+  @override
+  String reloadAmountMax(String max) {
+    return 'At most $max, or the balance limit is exceeded.';
+  }
+
+  @override
+  String reloadSubmit(String amount) {
+    return 'Top up $amount';
+  }
+
+  @override
+  String get reloadSubmitting => 'Topping up …';
+
+  @override
+  String get reloadDoneTitle => 'Card topped up';
+
+  @override
+  String reloadDoneBody(String amount, String balance) {
+    return '+$amount · new balance $balance';
+  }
+
+  @override
+  String get reloadAnother => 'Top up another card';
+
+  @override
+  String get reloadFailedTitle => 'Not topped up';
+
+  @override
+  String get reloadFailedBody => 'Nothing was booked. Please try again.';
+
+  @override
+  String get reloadUncertainTitle => 'Top-up unclear';
+
+  @override
+  String get reloadUncertainBody =>
+      'No answer from the server. “Try again” finds out whether it was topped up without booking twice.';
+
+  @override
+  String get reloadNotAllowedTitle => 'Cannot top up';
+
+  @override
+  String get reloadNotAllowedBody =>
+      'This sign-in may not top up cards, or the restaurant does not allow top-ups.';
+
+  @override
+  String get reloadCardNotUsable =>
+      'This card cannot be topped up (suspended or not sold).';
+
+  @override
+  String get reloadLeaveUncertainTitle => 'Top-up open – close anyway?';
+
+  @override
+  String get reloadLeaveUncertainBody =>
+      'It may already have been topped up. Only “Try again” finds out without booking twice.';
+
+  @override
   String get qrTitle => 'Scan voucher';
 
   @override

@@ -18,6 +18,7 @@ import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'cards/card_tap_view.dart';
 import 'charge/voucher_data.dart';
+import 'payment_method_row.dart';
 import 'scan/sheet_rows.dart';
 
 /// S20 · Sell voucher — managers and owners (`vouchers.sell`), on Android and
@@ -272,8 +273,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                       ),
                       const SizedBox(height: Space.s2),
                       for (final PaymentMethod m in _c.methods)
-                        _MethodRow(
-                          label: _methodLabel(l10n, m),
+                        PaymentMethodRow(
+                          label: paymentMethodLabel(l10n, m),
                           selected: m == s.method,
                           enabled: !s.submitting,
                           onSelected: () => _c.chooseMethod(m),
@@ -333,13 +334,6 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
       ),
     );
   }
-
-  static String _methodLabel(AppLocalizations l10n, PaymentMethod m) => switch (m) {
-    PaymentMethod.cash => l10n.salePaymentCash,
-    PaymentMethod.cardTerminal => l10n.salePaymentCardTerminal,
-    PaymentMethod.bankTransfer => l10n.salePaymentBankTransfer,
-    PaymentMethod.complimentary => l10n.salePaymentComplimentary,
-  };
 
   // ------------------------------------------------------------------ problem
 
@@ -618,32 +612,6 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// One payment method: a full-width row with a check mark when chosen, read as
-/// a radio button.
-class _MethodRow extends StatelessWidget {
-  const _MethodRow({required this.label, required this.selected, required this.enabled, required this.onSelected});
-
-  final String label;
-  final bool selected;
-  final bool enabled;
-  final VoidCallback onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final WaiterColors c = context.colors;
-    return Semantics(
-      inMutuallyExclusiveGroup: true,
-      checked: selected,
-      child: SheetRow(
-        label: label,
-        emphasised: selected,
-        trailing: selected ? WaiterIconView(WaiterIcon.check, size: IconSize.s20, color: c.fgPrimary) : null,
-        onPressed: enabled ? onSelected : null,
       ),
     );
   }

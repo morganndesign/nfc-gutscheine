@@ -241,6 +241,24 @@ class WaiterApi {
     return _parse(r, SoldVoucher.fromJson);
   }
 
+  /// Tops up the guest's card at the till. [presentmentId]: its `reload` tap. The same [idempotencyKey] on a
+  /// retry replays the booking instead of making a second one.
+  Future<ReloadResult> reload({
+    required String voucherId,
+    required int amount,
+    required PaymentInput payment,
+    required String presentmentId,
+    required String idempotencyKey,
+  }) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/vouchers/$voucherId/reloads',
+      body: <String, Object?>{'amount': amount, 'payment': payment.toJson(), 'presentment_id': presentmentId},
+      headers: <String, String>{'Idempotency-Key': idempotencyKey},
+    );
+    return _parse(r, ReloadResult.fromJson);
+  }
+
   /// A 2xx body that does not parse is a server fault (never half a voucher).
   T _parse<T>(ApiResponse r, T Function(Map<String, Object?> json) parse) {
     try {
