@@ -43,7 +43,7 @@ final class DeviceTokenService
      *
      * @var list<string>
      */
-    public const ISSUING_ABILITIES = [Permission::VouchersSell->value, Permission::VouchersSellComplimentary->value];
+    public const ISSUING_ABILITIES = [Permission::VouchersSell->value, Permission::VouchersSellComplimentary->value, Permission::VouchersReload->value];
 
     /** Physical cards in the app: confirm a delivery, link a card to a voucher (when the role has it). */
     public const CARD_ABILITIES = [Permission::CardsReceive->value, Permission::CardsBind->value, Permission::CardsView->value, Permission::CardsManage->value, Permission::CardsReplaceLost->value];

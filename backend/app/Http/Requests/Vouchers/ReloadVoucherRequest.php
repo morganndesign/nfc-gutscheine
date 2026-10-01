@@ -15,6 +15,8 @@ final class ReloadVoucherRequest extends ApiRequest
             'amount' => ['required', 'integer:strict', 'min:1', 'max:100000000'],
             ...PaymentRules::rules(),
             'note' => ['nullable', 'string', 'max:500'],
+            // The `reload` presentment of the guest's card when it is topped up at the till (the app).
+            'presentment_id' => ['nullable', 'uuid'],
         ];
     }
 }

@@ -86,6 +86,7 @@ final class VoucherActionController extends Controller
             PaymentData::fromArray($payment),
             (string) $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE),
             $request->validated('note'),
+            $request->validated('presentment_id'),
         );
 
         return $this->moneyResponse($request, $result);

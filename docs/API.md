@@ -134,7 +134,7 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 | 422 | `MEDIUM_NOT_RECOGNIZED` | The scanned text is not a valid voucher of this restaurant (unknown, revoked and foreign look the same) |
 | 422 | `PRESENTMENT_METHOD_UNAVAILABLE` | The method has no verifier (`live_auth`) |
 | 422 | `PRESENTMENT_METHOD_NOT_ALLOWED` | The voucher's kind cannot be spent with this method |
-| 422 | `PRESENTMENT_INVALID` | The presentment cannot pay for this redemption; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked` |
+| 422 | `PRESENTMENT_INVALID` | The presentment cannot pay for this redemption; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked`, `card_not_active` |
 | 422 | `VOUCHER_BLOCKED`, `VOUCHER_EXPIRED`, `VOUCHER_NOT_REDEEMABLE` | Voucher status |
 | 422 | `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`, `BALANCE_LIMIT_EXCEEDED`, `RELOAD_NOT_ALLOWED` | Business rules |
 | 422 | `DEBIT_LIMIT_EXCEEDED` | `context.limit`: `per_transaction` or `per_voucher_per_day`, `context.max`, for the daily limit also `context.remaining` |
@@ -240,6 +240,7 @@ POST /presentments/cards/{authentication}
 | Purpose | Permission | Card state | `voucher` |
 |---|---|---|---|
 | `spend` | vouchers.redeem | `active`, linked to a `card` voucher | the voucher |
+| `reload` | vouchers.reload | `active`, linked to a `card` voucher | the voucher |
 | `bind` | cards.bind | `available` | `null` |
 | `receive` | cards.receive | `delivered` | `null` |
 | `surrender` | cards.manage | `active`, `suspended` (the guest's card, handed in for its replacement) | `null` |
@@ -263,7 +264,7 @@ lockout as failed scans (`429 PRESENTMENT_THROTTLED`). A redemption refuses a ca
 | PATCH | `/vouchers/{id}` | vouchers.update | `{customer_id?, recipient_name?, notes?}` |
 | POST | `/vouchers/{id}/redemptions` | vouchers.redeem | **Idempotency-Key** · below |
 | GET | `/vouchers/{id}/redemptions/{idempotencyKey}` | vouchers.redeem | Outcome of one of the caller's own redemption attempts, below |
-| POST | `/vouchers/{id}/reloads` | vouchers.reload | **Idempotency-Key** · `{amount, payment: {method, reference?, reason?}, note?}` → `201 {data: {voucher, transaction}, replayed}` |
+| POST | `/vouchers/{id}/reloads` | vouchers.reload | **Idempotency-Key** · `{amount, payment: {method, reference?, reason?}, note?, presentment_id?}` → `201 {data: {voucher, transaction}, replayed}`. From the app (device token) `presentment_id` is required: a fresh `reload` card presentment of this voucher by the same user and device (`422 PRESENTMENT_INVALID` otherwise, also `card_not_active`); the dashboard reloads without one |
 | POST | `/vouchers/{id}/refund` | vouchers.refund (owners) | **Idempotency-Key** · `{payment: {method: cash\|card_terminal\|bank_transfer, reference?}, reason}` — pays back `min(balance, money received − earlier payouts)` (complimentary value is forfeited), closes the voucher (`refunded`), revokes its QR and card → `201 {data: {voucher, transaction (type refund, payment.direction out)}, replayed}`; `422 VOUCHER_NOT_REFUNDABLE` when nothing was paid for. The voucher detail carries `refundable` for owners |
 | POST | `/vouchers/{id}/cancellation` | vouchers.cancel_sale (managers, owners) | **Idempotency-Key** · `{reason, reference?}` — cancels an unused sale of today: the voucher closes (`refunded`) and the money goes back by the sale's own method (`reference`: the terminal cancellation receipt or bank reference; a complimentary sale pays nothing). The seller alone only within 15 minutes; later another manager or the owner (`409 INVALID_VOUCHER_STATE`, `context.reason` `own_sale` / `not_cancellable`) |
 | POST | `/vouchers/{id}/printable` | vouchers.reissue (managers, owners) | `{reason}` — a new printable QR for a lost or unprinted sheet of a digital voucher; the previous QR stops at once → `201 {data: Voucher, printable: {payload, qr_svg}}` (shown once, `no-store`) |

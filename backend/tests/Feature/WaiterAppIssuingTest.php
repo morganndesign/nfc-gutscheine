@@ -63,8 +63,8 @@ final class WaiterAppIssuingTest extends TestCase
         $this->staff($restaurant, RoleSlug::Waiter, ['email' => 'anna@example.com']);
 
         $expected = [
-            'mia@example.com' => ['manager', ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage']],
-            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage', 'cards.replace_lost']],
+            'mia@example.com' => ['manager', ['vouchers.redeem', 'vouchers.sell', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage']],
+            'otto@example.com' => ['owner', ['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage', 'cards.replace_lost']],
         ];
         foreach ($expected as $email => [$role, $abilities]) {
             $permissions = $this->signIn($email)->assertCreated()
@@ -131,7 +131,10 @@ final class WaiterAppIssuingTest extends TestCase
 
         $this->bearer($token)->getJson('/api/v1/vouchers')->assertForbidden();
         $this->bearer($token)->getJson("/api/v1/vouchers/{$voucher->id}")->assertForbidden();
-        $this->bearer($token)->withHeaders($this->idempotency())->postJson("/api/v1/vouchers/{$voucher->id}/reloads", ['amount' => 100, 'payment' => ['method' => 'cash']])->assertForbidden();
+        // A till tops up only a card it has just tapped.
+        $this->bearer($token)->withHeaders($this->idempotency())->postJson("/api/v1/vouchers/{$voucher->id}/reloads", ['amount' => 100, 'payment' => ['method' => 'cash']])
+            ->assertStatus(422)->assertJsonPath('code', 'PRESENTMENT_INVALID');
+        $this->assertSame(5000, $voucher->refresh()->balance);
         $this->bearer($token)->postJson("/api/v1/vouchers/{$voucher->id}/expire", ['reason' => 'test'])->assertForbidden();
         $this->bearer($token)->getJson('/api/v1/customers')->assertForbidden();
     }
@@ -170,9 +173,9 @@ final class WaiterAppIssuingTest extends TestCase
         $model->forceFill(['expires_at' => Carbon::now()->addDays(3)])->save();
         $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk();
 
-        $this->assertSame(['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'], $model->refresh()->abilities);
+        $this->assertSame(['vouchers.redeem', 'vouchers.sell', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'], $model->refresh()->abilities);
         $this->assertEqualsCanonicalizing(
-            ['vouchers.redeem', 'vouchers.sell', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'],
+            ['vouchers.redeem', 'vouchers.sell', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'],
             $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk()->json('data.permissions'),
         );
     }

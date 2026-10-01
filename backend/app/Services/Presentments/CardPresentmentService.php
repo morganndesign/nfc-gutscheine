@@ -88,7 +88,7 @@ final class CardPresentmentService
             if (! in_array($card->state, $purpose->cardStates(), true)) {
                 throw new CardNotUsableException('', ['reason' => 'state', 'state' => $card->state->value]);
             }
-            $voucher = $purpose === PresentmentPurpose::Spend ? $this->voucherOf($card) : null;
+            $voucher = $purpose->namesVoucher() ? $this->voucherOf($card) : null;
             if (preg_match('/^[0-9A-Fa-f]{32}$/', $encryptedRndBHex) !== 1) {
                 throw new CardAuthenticationFailedException;
             }
@@ -149,7 +149,7 @@ final class CardPresentmentService
             if (! in_array($card->state, $purpose->cardStates(), true)) {
                 throw new CardNotUsableException('', ['reason' => 'state', 'state' => $card->state->value]);
             }
-            $voucher = $purpose === PresentmentPurpose::Spend ? $this->voucherOf($card) : null;
+            $voucher = $purpose->namesVoucher() ? $this->voucherOf($card) : null;
             if ($voucher !== null && $voucher->getKey() !== $context['voucher']) {
                 throw new CardAuthenticationFailedException;
             }

@@ -331,6 +331,11 @@ final class VoucherService
         }
     }
 
+    /**
+     * Credits a voucher against a payment. At a till (a device token) the guest's card must be there:
+     * `$presentmentId` is then a verified, unexpired `reload` presentment of this voucher by the same user and
+     * device. The dashboard reloads without one.
+     */
     public function reload(
         Actor $actor,
         Voucher $voucher,
@@ -338,12 +343,14 @@ final class VoucherService
         PaymentData $payment,
         string $idempotencyKey,
         ?string $note = null,
+        ?string $presentmentId = null,
     ): TransactionResult {
         try {
-            $result = $this->performReload($actor, $voucher, $amount, $payment, $idempotencyKey, $note);
+            $result = $this->performReload($actor, $voucher, $amount, $payment, $idempotencyKey, $note, $presentmentId);
         } catch (DomainException $e) {
             $this->events->refused(SecurityEventType::VoucherReload, $actor, $e, $voucher, $amount, $voucher->currency, data: [
                 'payment_method' => $payment->method,
+                'presentment_id' => $presentmentId,
             ]);
 
             throw $e;
@@ -365,6 +372,7 @@ final class VoucherService
         PaymentData $payment,
         string $idempotencyKey,
         ?string $note,
+        ?string $presentmentId,
     ): TransactionResult {
         $this->assertOwnedByTenant($voucher);
         $this->assertPositive($amount);
@@ -374,45 +382,73 @@ final class VoucherService
             && $tx->amount === $amount
             && $tx->user_id === $actor->userId();
 
-        return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, function () use ($actor, $voucher, $amount, $payment, $idempotencyKey, $note, $matches): TransactionResult {
-            $locked = $this->lock($voucher);
-
-            $replay = $this->findByKey($locked->restaurant_id, $idempotencyKey);
-            if ($replay !== null) {
-                return $this->replay($replay, $matches);
+        try {
+            return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, fn (): TransactionResult => $this->bookReload($actor, $voucher, $amount, $payment, $idempotencyKey, $note, $presentmentId, $matches));
+        } catch (PresentmentInvalidException $e) {
+            if ($presentmentId !== null) {
+                $this->presentments->recordRejection($actor, $voucher, $presentmentId, $e);
             }
 
-            $this->assertPaymentAllowed($actor, $payment);
-            $settings = $this->settings();
-            if (! $settings->allow_reload) {
-                throw new ReloadNotAllowedException;
-            }
-            $this->assertUsable($locked);
-            if ($locked->balance + $amount > $settings->max_voucher_balance) {
-                throw new BalanceLimitExceededException('', ['max_voucher_balance' => $settings->max_voucher_balance, 'balance' => $locked->balance]);
-            }
+            throw $e;
+        }
+    }
 
-            $paymentRow = $this->recordPayment($locked, $amount, $payment, $actor);
-            $tx = $this->record($locked, TransactionType::Reload, $amount, $actor, $idempotencyKey, note: $note, payment: $paymentRow);
-            $locked->total_loaded += $amount;
-            $locked->last_used_at = Carbon::now();
-            $locked->save();
+    /** @param  Closure(VoucherTransaction): bool  $matches */
+    private function bookReload(
+        Actor $actor,
+        Voucher $voucher,
+        int $amount,
+        PaymentData $payment,
+        string $idempotencyKey,
+        ?string $note,
+        ?string $presentmentId,
+        Closure $matches,
+    ): TransactionResult {
+        // Lock order: presentment, then voucher (architecture §10.6).
+        /** @var Presentment|null $presentment */
+        $presentment = $presentmentId === null ? null : Presentment::query()->whereKey($presentmentId)->lockForUpdate()->first();
+        $locked = $this->lock($voucher);
 
-            $this->audit->log('voucher.reloaded', $actor, $locked, null, [
-                'amount' => $amount,
-                'balance' => $locked->balance,
-                'payment_method' => $payment->method,
-            ], ['transaction_id' => $tx->getKey(), 'payment_id' => $paymentRow->getKey()]);
-            $this->events->record(SecurityEventType::VoucherReload, $actor, subject: $locked, amount: $amount, data: [
-                'payment_method' => $payment->method,
-                'replayed' => false,
-                'transaction_id' => $tx->getKey(),
-            ]);
+        $replay = $this->findByKey($locked->restaurant_id, $idempotencyKey);
+        if ($replay !== null) {
+            return $this->replay($replay, $matches);
+        }
 
-            VoucherReloaded::dispatch($locked, $tx);
+        if ($presentmentId !== null || $actor->deviceId() !== null) {
+            // A till never tops up a card it has not seen.
+            $presentment = $this->presentments->consume($presentment, $actor, $locked, PresentmentPurpose::Reload);
+        }
+        $this->assertPaymentAllowed($actor, $payment);
+        $settings = $this->settings();
+        if (! $settings->allow_reload) {
+            throw new ReloadNotAllowedException;
+        }
+        $this->assertUsable($locked);
+        if ($locked->balance + $amount > $settings->max_voucher_balance) {
+            throw new BalanceLimitExceededException('', ['max_voucher_balance' => $settings->max_voucher_balance, 'balance' => $locked->balance]);
+        }
 
-            return new TransactionResult($locked, $tx);
-        });
+        $paymentRow = $this->recordPayment($locked, $amount, $payment, $actor);
+        $tx = $this->record($locked, TransactionType::Reload, $amount, $actor, $idempotencyKey, note: $note, payment: $paymentRow, presentment: $presentment);
+        $locked->total_loaded += $amount;
+        $locked->last_used_at = Carbon::now();
+        $locked->save();
+
+        $this->audit->log('voucher.reloaded', $actor, $locked, null, [
+            'amount' => $amount,
+            'balance' => $locked->balance,
+            'payment_method' => $payment->method,
+        ], ['transaction_id' => $tx->getKey(), 'payment_id' => $paymentRow->getKey(), 'presentment_id' => $presentment?->getKey()]);
+        $this->events->record(SecurityEventType::VoucherReload, $actor, subject: $locked, amount: $amount, data: [
+            'payment_method' => $payment->method,
+            'replayed' => false,
+            'transaction_id' => $tx->getKey(),
+            'presentment_id' => $presentment?->getKey(),
+        ]);
+
+        VoucherReloaded::dispatch($locked, $tx);
+
+        return new TransactionResult($locked, $tx);
     }
 
     /**

@@ -107,7 +107,7 @@ enum SecurityEventType: string
             self::IntegrationTokenRevoke => [],
             self::VoucherScan => ['method', 'purpose', 'presentment_id'],
             self::VoucherIssue => ['kind', 'payment_method', 'replayed', 'transaction_id', 'with_customer'],
-            self::VoucherReload => ['payment_method', 'replayed', 'transaction_id'],
+            self::VoucherReload => ['payment_method', 'replayed', 'transaction_id', 'presentment_id'],
             self::VoucherRedeem => ['replayed', 'transaction_id', 'presentment_id', 'balance_after'],
             self::VoucherReverse => ['transaction_id', 'reversed_transaction_id', 'reversed_type'],
             self::VoucherBlock, self::VoucherExpire, self::VoucherReinstate => ['previous_status'],

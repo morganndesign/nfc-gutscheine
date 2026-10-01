@@ -44,6 +44,8 @@ final class EnforceDeviceToken
         ['GET', 'api/v1/vouchers/*/redemptions/*'],
         // Managers and owners: sell a voucher (the role and permissions decide).
         ['POST', 'api/v1/vouchers'],
+        // Managers and owners: top up a guest's card (tapped at the till).
+        ['POST', 'api/v1/vouchers/*/reloads'],
         // Physical cards: confirm a delivery, look up, suspend, resume and replace a guest's card.
         ['GET', 'api/v1/card-batches'],
         ['POST', 'api/v1/card-batches/*/receipt'],
