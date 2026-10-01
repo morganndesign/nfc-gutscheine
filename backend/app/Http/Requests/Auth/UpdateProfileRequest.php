@@ -13,7 +13,7 @@ final class UpdateProfileRequest extends ApiRequest
     {
         return [
             'name' => ['sometimes', 'required', 'string', 'max:160'],
-            'locale' => ['sometimes', 'required', 'string', 'in:en,de'],
+            'locale' => ['sometimes', 'required', 'string', 'in:de,en,bs'],
         ];
     }
 }

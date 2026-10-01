@@ -38,7 +38,7 @@ final class CreatePlatformAdmin extends Command
         }
 
         $user = new User;
-        $user->fill(['name' => (string) $this->option('name'), 'email' => $email, 'password' => $password]);
+        $user->fill(['name' => (string) $this->option('name'), 'email' => $email, 'password' => $password, 'locale' => 'de']);
         $user->forceFill([
             'role_id' => Role::findBySlug(RoleSlug::PlatformAdmin)->getKey(),
             'status' => UserStatus::Active,

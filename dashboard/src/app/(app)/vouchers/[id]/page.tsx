@@ -5,6 +5,8 @@ import Link from "next/link"
 import { ArrowDownLeft, ArrowLeft, Ban, CheckCircle2, Clock, Loader2, MoreHorizontal, Pencil, QrCode, RotateCcw, Undo2 } from "lucide-react"
 import { toast } from "sonner"
 import { StatusBadge, displayStatus } from "@/components/common/status-badge"
+import { useConfirm } from "@/components/common/confirm"
+import { PAYMENT_METHOD_LABELS } from "@/components/vouchers/payment-fields"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { VoucherVisual } from "@/components/vouchers/voucher-visual"
 import { VoucherHistory } from "@/components/vouchers/voucher-history"
@@ -26,6 +28,7 @@ import type { Voucher } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate, formatDateTime, formatRelative, todayInput } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 
 type DialogName = "reload" | "block" | "expire" | "reinstate" | "edit" | "refund" | "cancel" | "reissue" | null
 
@@ -40,6 +43,7 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
 
 /** Owner only: an expired voucher becomes usable again with its full balance (it was never written off). */
 function ReinstateDialog({ voucher, open, onOpenChange }: { voucher: Voucher; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useT()
   const reinstate = useReinstateVoucher(voucher.id)
   const [reason, setReason] = useState("")
   const [expiresOn, setExpiresOn] = useState("")
@@ -48,8 +52,8 @@ function ReinstateDialog({ voucher, open, onOpenChange }: { voucher: Voucher; op
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reinstate voucher</DialogTitle>
-          <DialogDescription>The voucher becomes usable again with its balance of {formatMoney(voucher.balance, voucher.currency)}.</DialogDescription>
+          <DialogTitle>{t("vouchers.reinstate.title")}</DialogTitle>
+          <DialogDescription>{t("vouchers.reinstate.description", { amount: formatMoney(voucher.balance, voucher.currency) })}</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -57,7 +61,7 @@ function ReinstateDialog({ voucher, open, onOpenChange }: { voucher: Voucher; op
             e.preventDefault()
             try {
               await reinstate.mutateAsync({ reason, expires_on: expiresOn || null })
-              toast.success("Voucher reinstated")
+              toast.success(t("vouchers.reinstate.done"))
               onOpenChange(false)
             } catch (err) {
               toast.error(errorMessage(err))
@@ -65,20 +69,20 @@ function ReinstateDialog({ voucher, open, onOpenChange }: { voucher: Voucher; op
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="reinstate-reason">Reason</Label>
+            <Label htmlFor="reinstate-reason">{t("vouchers.field.reason")}</Label>
             <Input id="reinstate-reason" required minLength={3} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="reinstate-expiry">New last valid day</Label>
+            <Label htmlFor="reinstate-expiry">{t("vouchers.reinstate.newLastDay")}</Label>
             <Input id="reinstate-expiry" type="date" min={todayInput(1)} value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} />
-            <p className="text-muted-foreground text-xs">Leave empty for no expiry.</p>
+            <p className="text-muted-foreground text-xs">{t("vouchers.reinstate.leaveEmpty")}</p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={reason.trim().length < 3 || reinstate.isPending}>
-              {reinstate.isPending ? <Loader2 className="animate-spin" /> : null} Reinstate
+              {reinstate.isPending ? <Loader2 className="animate-spin" /> : null} {t("vouchers.detail.reinstate")}
             </Button>
           </DialogFooter>
         </form>
@@ -89,6 +93,8 @@ function ReinstateDialog({ voucher, open, onOpenChange }: { voucher: Voucher; op
 
 function VoucherDetail({ voucher }: { voucher: Voucher }) {
   const { user, can } = useAuth()
+  const t = useT()
+  const confirm = useConfirm()
   const [dialog, setDialog] = useState<DialogName>(null)
   const action = useVoucherAction(voucher.id)
   const settings = user?.restaurant?.settings
@@ -97,7 +103,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
   const run = async (name: "unblock" | "block" | "expire", reason?: string, message?: string) => {
     try {
       await action.mutateAsync({ action: name, reason })
-      toast.success(message ?? "Voucher updated")
+      toast.success(message ?? t("vouchers.updated"))
       setDialog(null)
     } catch (e) {
       toast.error(errorMessage(e))
@@ -126,7 +132,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
       <div className="space-y-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/vouchers">
-            <ArrowLeft /> Vouchers
+            <ArrowLeft /> {t("vouchers.title")}
           </Link>
         </Button>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -137,55 +143,64 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
           <div className="flex flex-wrap gap-2">
             {canReload ? (
               <Button variant="outline" onClick={() => setDialog("reload")}>
-                <ArrowDownLeft /> Reload
+                <ArrowDownLeft /> {t("vouchers.detail.reload")}
               </Button>
             ) : null}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" aria-label="More actions">
+                <Button variant="outline" size="icon" aria-label={t("vouchers.detail.moreActions")}>
                   <MoreHorizontal />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
                 {can("vouchers.update") ? (
                   <DropdownMenuItem onSelect={() => setDialog("edit")}>
-                    <Pencil /> Edit details
+                    <Pencil /> {t("vouchers.detail.editDetails")}
                   </DropdownMenuItem>
                 ) : null}
                 {can("vouchers.reissue") && voucher.kind === "digital" && voucher.status !== "refunded" ? (
                   <DropdownMenuItem onSelect={() => setDialog("reissue")}>
-                    <QrCode /> New QR code…
+                    <QrCode /> {t("vouchers.detail.newQr")}
                   </DropdownMenuItem>
                 ) : null}
                 <DropdownMenuSeparator />
                 {can("vouchers.unblock") && voucher.status === "blocked" ? (
-                  <DropdownMenuItem onSelect={() => run("unblock", undefined, "Voucher unblocked")}>
-                    <CheckCircle2 /> Unblock
+                  <DropdownMenuItem
+                    onSelect={async () => {
+                      const ok = await confirm({
+                        title: t("vouchers.unblock.title"),
+                        description: t("vouchers.unblock.description"),
+                        confirmLabel: t("vouchers.detail.unblock"),
+                      })
+                      if (ok) await run("unblock", undefined, t("vouchers.unblock.done"))
+                    }}
+                  >
+                    <CheckCircle2 /> {t("vouchers.detail.unblock")}
                   </DropdownMenuItem>
                 ) : null}
                 {can("vouchers.reinstate") && voucher.status === "expired" ? (
                   <DropdownMenuItem onSelect={() => setDialog("reinstate")}>
-                    <RotateCcw /> Reinstate
+                    <RotateCcw /> {t("vouchers.detail.reinstate")}
                   </DropdownMenuItem>
                 ) : null}
                 {cancellable ? (
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog("cancel")}>
-                    <Undo2 /> Cancel sale…
+                    <Undo2 /> {t("vouchers.detail.cancelSaleMenu")}
                   </DropdownMenuItem>
                 ) : null}
                 {(voucher.refundable ?? 0) > 0 ? (
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog("refund")}>
-                    <Undo2 /> Refund…
+                    <Undo2 /> {t("vouchers.detail.refundMenu")}
                   </DropdownMenuItem>
                 ) : null}
                 {can("vouchers.block") && voucher.status !== "blocked" && voucher.status !== "refunded" ? (
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog("block")}>
-                    <Ban /> Block voucher
+                    <Ban /> {t("vouchers.detail.block")}
                   </DropdownMenuItem>
                 ) : null}
                 {can("vouchers.expire") && voucher.status === "active" ? (
                   <DropdownMenuItem variant="destructive" onSelect={() => setDialog("expire")}>
-                    <Clock /> Expire now
+                    <Clock /> {t("vouchers.detail.expireNow")}
                   </DropdownMenuItem>
                 ) : null}
               </DropdownMenuContent>
@@ -196,13 +211,15 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
 
       {voucher.status === "blocked" && voucher.blocked_reason ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
-          Blocked {formatRelative(voucher.blocked_at)}: {voucher.blocked_reason}
+          {t("vouchers.detail.blockedBanner", { when: formatRelative(voucher.blocked_at), reason: voucher.blocked_reason })}
         </div>
       ) : null}
       {voucher.status === "expired" ? (
         <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-          Expired {formatRelative(voucher.expired_at)}. The balance of {formatMoney(voucher.balance, voucher.currency)} is kept
-          {can("vouchers.reinstate") ? " and the voucher can be reinstated." : "; the owner can reinstate the voucher."}
+          {t(can("vouchers.reinstate") ? "vouchers.detail.expiredBanner" : "vouchers.detail.expiredBannerOwner", {
+            when: formatRelative(voucher.expired_at),
+            amount: formatMoney(voucher.balance, voucher.currency),
+          })}
         </div>
       ) : null}
 
@@ -221,58 +238,64 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
           </div>
           <Card>
             <CardHeader>
-              <CardTitle>Details</CardTitle>
+              <CardTitle>{t("vouchers.detail.details")}</CardTitle>
               {can("vouchers.update") ? (
                 <CardAction>
                   <Button variant="ghost" size="sm" onClick={() => setDialog("edit")}>
-                    <Pencil /> Edit
+                    <Pencil /> {t("common.edit")}
                   </Button>
                 </CardAction>
               ) : null}
             </CardHeader>
             <CardContent>
               <dl className="divide-y">
-                <Detail label="Balance">{formatMoney(voucher.balance, voucher.currency)}</Detail>
-                <Detail label="Initial value">{formatMoney(voucher.initial_value, voucher.currency)}</Detail>
-                <Detail label="Reloaded">{formatMoney(voucher.total_loaded - voucher.initial_value, voucher.currency)}</Detail>
-                <Detail label="Redeemed">{formatMoney(voucher.total_redeemed, voucher.currency)}</Detail>
-                <Detail label="Kind">{voucher.kind === "digital" ? "Digital (QR)" : "Card"}</Detail>
+                <Detail label={t("vouchers.col.balance")}>{formatMoney(voucher.balance, voucher.currency)}</Detail>
+                <Detail label={t("vouchers.detail.initialValue")}>{formatMoney(voucher.initial_value, voucher.currency)}</Detail>
+                <Detail label={t("vouchers.detail.reloaded")}>{formatMoney(voucher.total_loaded - voucher.initial_value, voucher.currency)}</Detail>
+                <Detail label={t("vouchers.detail.redeemed")}>{formatMoney(voucher.total_redeemed, voucher.currency)}</Detail>
+                <Detail label={t("vouchers.detail.kind")}>{voucher.kind === "digital" ? t("vouchers.detail.kindDigital") : t("vouchers.detail.card")}</Detail>
                 {voucher.kind === "digital" ? (
-                  <Detail label="QR code">{activeQr ? `Active since ${formatDate(activeQr.created_at)}` : "No active QR"}</Detail>
+                  <Detail label={t("vouchers.detail.qrCode")}>
+                    {activeQr ? t("vouchers.detail.qrActiveSince", { date: formatDate(activeQr.created_at) }) : t("vouchers.detail.noActiveQr")}
+                  </Detail>
                 ) : (
-                  <Detail label="Card">
+                  <Detail label={t("vouchers.detail.card")}>
                     {activeCard?.card_number ? (
                       <Link href={`/cards?search=${encodeURIComponent(activeCard.card_number)}`} className="font-mono underline-offset-4 hover:underline">
                         {activeCard.card_number}
                       </Link>
                     ) : (
-                      "No active card"
+                      t("vouchers.detail.noActiveCard")
                     )}
                     {earlierCards.length ? (
-                      <span className="text-muted-foreground block text-xs">Replaced: {earlierCards.map((m) => m.card_number).join(", ")}</span>
+                      <span className="text-muted-foreground block text-xs">
+                        {t("vouchers.detail.replaced", { cards: earlierCards.map((m) => m.card_number).join(", ") })}
+                      </span>
                     ) : null}
                   </Detail>
                 )}
-                <Detail label="Valid until">
+                <Detail label={t("vouchers.detail.validUntil")}>
                   <span className={voucher.is_expired ? "text-amber-700 dark:text-amber-400" : undefined}>
-                    {voucher.expires_at ? formatDate(voucher.expires_at) : "No expiry"}
+                    {voucher.expires_at ? formatDate(voucher.expires_at) : t("vouchers.noExpiry")}
                   </span>
                 </Detail>
-                <Detail label="Customer">
+                <Detail label={t("vouchers.col.customer")}>
                   {voucher.customer ? (
                     <Link href={`/customers/${voucher.customer.id}`} className="hover:underline">
                       {voucher.customer.full_name}
                     </Link>
                   ) : (
-                    "Anonymous"
+                    t("vouchers.anonymous")
                   )}
                 </Detail>
-                <Detail label="Recipient">{voucher.recipient_name ?? "—"}</Detail>
-                <Detail label="Sold">
+                <Detail label={t("vouchers.field.recipient")}>{voucher.recipient_name ?? t("common.none")}</Detail>
+                <Detail label={t("vouchers.detail.sold")}>
                   {formatDateTime(voucher.created_at)}
-                  {voucher.issued_by ? <span className="text-muted-foreground block text-xs font-normal">by {voucher.issued_by.name}</span> : null}
+                  {voucher.issued_by ? (
+                    <span className="text-muted-foreground block text-xs font-normal">{t("vouchers.detail.soldBy", { name: voucher.issued_by.name })}</span>
+                  ) : null}
                 </Detail>
-                <Detail label="Last used">{voucher.last_used_at ? formatRelative(voucher.last_used_at) : "Never"}</Detail>
+                <Detail label={t("vouchers.detail.lastUsed")}>{voucher.last_used_at ? formatRelative(voucher.last_used_at) : t("common.never")}</Detail>
               </dl>
               {voucher.notes ? <p className="bg-surface text-muted-foreground mt-3 rounded-xl p-3 text-sm whitespace-pre-line">{voucher.notes}</p> : null}
             </CardContent>
@@ -280,14 +303,16 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
           {voucher.payments?.length ? (
             <Card>
               <CardHeader>
-                <CardTitle>Payments</CardTitle>
+                <CardTitle>{t("vouchers.detail.payments")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl className="divide-y">
                   {voucher.payments.map((p) => (
-                    <Detail key={p.id} label={`${formatDateTime(p.created_at)} · ${p.method_label}`}>
+                    <Detail key={p.id} label={`${formatDateTime(p.created_at)} · ${t(PAYMENT_METHOD_LABELS[p.method])}`}>
                       {formatMoney(p.amount, p.currency)}
-                      {p.reference ? <span className="text-muted-foreground block text-xs font-normal">Ref. {p.reference}</span> : null}
+                      {p.reference ? (
+                        <span className="text-muted-foreground block text-xs font-normal">{t("vouchers.ref", { reference: p.reference })}</span>
+                      ) : null}
                       {p.reason ? <span className="text-muted-foreground block text-xs font-normal">{p.reason}</span> : null}
                     </Detail>
                   ))}
@@ -299,7 +324,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
 
         <Card className="self-start">
           <CardHeader>
-            <CardTitle>History</CardTitle>
+            <CardTitle>{t("vouchers.history.title")}</CardTitle>
           </CardHeader>
           <CardContent className="px-3">
             <VoucherHistory voucherId={voucher.id} currency={voucher.currency} />
@@ -322,20 +347,27 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
       <ReasonDialog
         open={dialog === "cancel"}
         onOpenChange={(o) => setDialog(o ? "cancel" : null)}
-        title="Cancel sale"
-        description={`The voucher is closed and ${formatMoney(voucher.balance, voucher.currency)} goes back the way it was paid${salePayment?.method === "complimentary" ? " (complimentary: nothing is paid out)" : ` (${salePayment?.method_label ?? ""})`}.`}
-        suggestions={["Wrong amount", "Wrong voucher type", "Guest changed their mind"]}
-        confirmLabel="Cancel sale"
+        title={t("vouchers.cancelSale.title")}
+        description={
+          salePayment?.method === "complimentary"
+            ? t("vouchers.cancelSale.descriptionComplimentary", { amount: formatMoney(voucher.balance, voucher.currency) })
+            : t("vouchers.cancelSale.description", {
+                amount: formatMoney(voucher.balance, voucher.currency),
+                method: salePayment ? t(PAYMENT_METHOD_LABELS[salePayment.method]) : "",
+              })
+        }
+        suggestions={[t("vouchers.reason.wrongAmount"), t("vouchers.reason.wrongVoucherType"), t("vouchers.reason.guestChangedMind")]}
+        confirmLabel={t("vouchers.cancelSale.title")}
         destructive
         pending={cancelSale.isPending}
         onConfirm={async (reason) => {
           if (needsStornoReference && stornoReference.trim() === "") {
-            toast.error("Enter the cancellation receipt or bank reference.")
+            toast.error(t("vouchers.cancelSale.referenceMissing"))
             return
           }
           try {
             await cancelSale.mutateAsync({ voucherId: voucher.id, reason, reference: needsStornoReference ? stornoReference.trim() : null })
-            toast.success("Sale cancelled · voucher closed")
+            toast.success(t("vouchers.cancelSale.done"))
             setDialog(null)
           } catch (e) {
             toast.error(errorMessage(e))
@@ -344,7 +376,9 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
       >
         {needsStornoReference ? (
           <div className="space-y-2">
-            <Label htmlFor="storno-reference">{salePayment?.method === "card_terminal" ? "Terminal cancellation receipt" : "Bank reference of the repayment"}</Label>
+            <Label htmlFor="storno-reference">
+              {salePayment?.method === "card_terminal" ? t("vouchers.cancelSale.terminalReceipt") : t("vouchers.cancelSale.bankReference")}
+            </Label>
             <Input id="storno-reference" value={stornoReference} onChange={(e) => setStornoReference(e.target.value)} maxLength={120} />
           </div>
         ) : null}
@@ -352,29 +386,30 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
       <ReasonDialog
         open={dialog === "block"}
         onOpenChange={(o) => setDialog(o ? "block" : null)}
-        title="Block voucher"
-        suggestions={["Reported stolen", "Reported lost", "Suspicious use"]}
-        description="A blocked voucher cannot be redeemed or reloaded until it is unblocked. Its balance is kept."
-        confirmLabel="Block voucher"
+        title={t("vouchers.detail.block")}
+        suggestions={[t("vouchers.reason.reportedStolen"), t("vouchers.reason.reportedLost"), t("vouchers.reason.suspiciousUse")]}
+        description={t("vouchers.block.description")}
+        confirmLabel={t("vouchers.detail.block")}
         destructive
         pending={action.isPending}
-        onConfirm={(reason) => run("block", reason, "Voucher blocked")}
+        onConfirm={(reason) => run("block", reason, t("vouchers.block.done"))}
       />
       <ReasonDialog
         open={dialog === "expire"}
         onOpenChange={(o) => setDialog(o ? "expire" : null)}
-        title="Expire voucher now"
-        description={`The voucher can no longer be redeemed. Its balance of ${formatMoney(voucher.balance, voucher.currency)} is kept, and you can reinstate it later.`}
-        confirmLabel="Expire voucher"
+        title={t("vouchers.expire.title")}
+        description={t("vouchers.expire.description", { amount: formatMoney(voucher.balance, voucher.currency) })}
+        confirmLabel={t("vouchers.expire.confirm")}
         destructive
         pending={action.isPending}
-        onConfirm={(reason) => run("expire", reason, "Voucher expired")}
+        onConfirm={(reason) => run("expire", reason, t("vouchers.expire.done"))}
       />
     </div>
   )
 }
 
 function VoucherPageContent({ id }: { id: string }) {
+  const t = useT()
   const { data, isLoading, error } = useVoucher(id)
   if (isLoading) {
     return (
@@ -387,7 +422,7 @@ function VoucherPageContent({ id }: { id: string }) {
       </div>
     )
   }
-  if (error || !data) return <p className="text-muted-foreground py-16 text-center">{errorMessage(error, "Voucher not found.")}</p>
+  if (error || !data) return <p className="text-muted-foreground py-16 text-center">{errorMessage(error, t("vouchers.notFound"))}</p>
   return <VoucherDetail voucher={data} />
 }
 

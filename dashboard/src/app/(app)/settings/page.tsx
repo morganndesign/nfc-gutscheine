@@ -10,23 +10,25 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useRestaurantSettings } from "@/lib/api/hooks"
 import { useAuth } from "@/lib/auth"
+import { useT } from "@/lib/i18n"
 
 function SettingsContent() {
+  const t = useT()
   const { can } = useAuth()
   const { data } = useRestaurantSettings()
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title="Settings" />
+      <PageHeader title={t("settingsPage.title")} />
       {!data ? (
         <Skeleton className="h-96 w-full rounded-2xl" />
       ) : (
         <Tabs defaultValue="vouchers" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="vouchers">Vouchers</TabsTrigger>
-            <TabsTrigger value="restaurant">Restaurant</TabsTrigger>
-            <TabsTrigger value="emails">E-mails</TabsTrigger>
-            {can("api_tokens.manage") ? <TabsTrigger value="api">API</TabsTrigger> : null}
+            <TabsTrigger value="vouchers">{t("settingsPage.tabVouchers")}</TabsTrigger>
+            <TabsTrigger value="restaurant">{t("settingsPage.tabRestaurant")}</TabsTrigger>
+            <TabsTrigger value="emails">{t("settingsPage.tabEmails")}</TabsTrigger>
+            {can("api_tokens.manage") ? <TabsTrigger value="api">{t("settingsPage.tabApi")}</TabsTrigger> : null}
           </TabsList>
           <TabsContent value="vouchers">{data.settings ? <VoucherSettingsForm settings={data.settings} /> : null}</TabsContent>
           <TabsContent value="restaurant">

@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import type { Permission } from "@/lib/api/types"
+import { useT } from "@/lib/i18n"
 
 export function FullScreenLoader() {
+  const t = useT()
   return (
-    <div className="flex min-h-dvh items-center justify-center" role="status" aria-label="Loading">
+    <div className="flex min-h-dvh items-center justify-center" role="status" aria-label={t("common.loading")}>
       <Loader2 className="text-muted-foreground size-6 animate-spin" />
     </div>
   )
@@ -31,10 +33,11 @@ export function AuthGuard({ children, permission }: { children: ReactNode; permi
 }
 
 export function Forbidden() {
+  const t = useT()
   return (
     <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 text-center">
-      <p className="text-lg font-semibold">No access</p>
-      <p className="text-muted-foreground max-w-sm text-sm">Your role does not include this area. Ask the restaurant owner if you need access.</p>
+      <p className="text-lg font-semibold">{t("accessGuard.title")}</p>
+      <p className="text-muted-foreground max-w-sm text-sm">{t("accessGuard.text")}</p>
     </div>
   )
 }

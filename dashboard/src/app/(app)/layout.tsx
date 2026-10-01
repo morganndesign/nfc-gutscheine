@@ -7,14 +7,16 @@ import { PlatformNotice } from "@/components/layout/platform-notice"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { useAuth } from "@/lib/auth"
+import { useT } from "@/lib/i18n"
 
 function TopBar() {
   const { user } = useAuth()
+  const t = useT()
   return (
     <header className="bg-background/80 supports-[backdrop-filter]:bg-background/70 sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b px-4 backdrop-blur">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="mr-2 h-4" />
-      <span className="text-muted-foreground truncate text-sm">{user?.restaurant?.name ?? "Platform"}</span>
+      <span className="text-muted-foreground truncate text-sm">{user?.restaurant?.name ?? t("nav.groupPlatform")}</span>
     </header>
   )
 }

@@ -16,6 +16,7 @@ import { formatDate } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
 import { REDEMPTION_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 
 type Mode = "ready" | "qr" | "voucher" | "success"
 
@@ -48,6 +49,7 @@ export function WaiterTerminal() {
   const [success, setSuccess] = useState<SuccessInfo | null>(null)
 
   const { can } = useAuth()
+  const t = useT()
   const present = usePresent()
   const redeem = useRedeemVoucher()
   const idempotencyKey = useRef(newIdempotencyKey())
@@ -79,22 +81,22 @@ export function WaiterTerminal() {
       } catch (e) {
         setScanError(
           e instanceof ApiError && e.code === "MEDIUM_NOT_RECOGNIZED"
-            ? "This code is not a valid voucher of this restaurant."
+            ? t("waiter.error.notRecognized")
             : e instanceof ApiError && e.code === "PRESENTMENT_METHOD_NOT_ALLOWED"
-              ? "This voucher is on a card and cannot be redeemed with a QR code."
-              : errorMessage(e, "The code could not be checked. Please try again."),
+              ? t("waiter.error.cardOnly")
+              : errorMessage(e, t("waiter.error.checkFailed")),
         )
         if ("vibrate" in navigator) navigator.vibrate?.([60, 40, 60])
         setMode("ready")
       }
     },
-    [presentVoucher],
+    [presentVoucher, t],
   )
 
   useEffect(() => {
     if (mode !== "success") return
-    const t = setTimeout(reset, AUTO_RESET_MS)
-    return () => clearTimeout(t)
+    const timer = setTimeout(reset, AUTO_RESET_MS)
+    return () => clearTimeout(timer)
   }, [mode, reset])
 
   // Leaving while the outcome is unknown asks first (the key survives in this tab either way).
@@ -128,16 +130,16 @@ export function WaiterTerminal() {
         // Keep key, amount and presentment: the retry replays the booking if it was made.
         rememberPendingKey(scope, idempotencyKey.current)
         setUncertain(true)
-        setRedeemError("No answer from the server. It is not known yet whether the amount was booked. Press “Check again” — it is never booked twice.")
+        setRedeemError(t("waiter.error.uncertain"))
         return
       }
       forgetPendingKey(scope)
       setUncertain(false)
       idempotencyKey.current = newIdempotencyKey()
       if (e instanceof ApiError && e.code === "PRESENTMENT_INVALID") {
-        setRedeemError("The scan is no longer valid (after 60 seconds or when used). Nothing was booked. Please scan the voucher again.")
+        setRedeemError(t("waiter.error.presentmentInvalid"))
       } else {
-        setRedeemError(`${errorMessage(e)} Nothing was booked.`)
+        setRedeemError(t("waiter.error.nothingBooked", { message: errorMessage(e) }))
       }
     }
   }
@@ -150,15 +152,15 @@ export function WaiterTerminal() {
           <Check className="size-12" strokeWidth={3} />
         </div>
         <div className="space-y-1">
-          <p className="text-muted-foreground text-sm">{success.replayed ? "Was already booked" : "Redeemed"}</p>
+          <p className="text-muted-foreground text-sm">{success.replayed ? t("waiter.alreadyBooked") : t("waiter.redeemed")}</p>
           <p className="tabular text-5xl font-semibold tracking-tight">{formatMoney(success.amount, success.currency)}</p>
         </div>
         <div className="bg-muted rounded-2xl px-6 py-3">
-          <p className="text-muted-foreground text-sm">Remaining balance</p>
+          <p className="text-muted-foreground text-sm">{t("waiter.remaining")}</p>
           <p className="tabular text-2xl font-semibold">{formatMoney(success.balance, success.currency)}</p>
         </div>
         <Button size="lg" className="h-14 w-full max-w-xs rounded-2xl text-lg" onClick={reset} autoFocus>
-          Next voucher
+          {t("waiter.next")}
         </Button>
       </div>
     )
@@ -176,21 +178,24 @@ export function WaiterTerminal() {
       <div className="short:gap-2.5 flex flex-1 flex-col gap-4">
         <div className="bg-muted short:py-2 rounded-3xl py-3 pr-2 pl-5">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-muted-foreground truncate text-sm">Digital voucher · {voucher.restaurant_name}</p>
+            <p className="text-muted-foreground truncate text-sm">{t("waiter.digitalVoucher", { restaurant: voucher.restaurant_name })}</p>
             <div className="flex shrink-0 items-center gap-1">
               <StatusBadge status={voucher.is_expired && voucher.status === "active" ? "expired" : displayStatus(voucher)} />
               {!uncertain ? (
-                <Button variant="ghost" size="icon" className="rounded-full" onClick={reset} aria-label="Close voucher">
+                <Button variant="ghost" size="icon" className="rounded-full" onClick={reset} aria-label={t("waiter.closeVoucher")}>
                   <X />
                 </Button>
               ) : null}
             </div>
           </div>
-          <p className="tabular short:text-3xl text-4xl font-semibold tracking-tight" aria-label={`Balance ${formatMoney(voucher.balance, voucher.currency)}`}>
+          <p
+            className="tabular short:text-3xl text-4xl font-semibold tracking-tight"
+            aria-label={t("waiter.balanceA11y", { amount: formatMoney(voucher.balance, voucher.currency) })}
+          >
             {formatMoney(voucher.balance, voucher.currency)}
           </p>
           <p className="text-muted-foreground mt-0.5 pb-1 text-xs">
-            Balance · {voucher.expires_at ? `valid until ${formatDate(voucher.expires_at)}` : "no expiry"}
+            {voucher.expires_at ? t("waiter.validUntil", { date: formatDate(voucher.expires_at) }) : t("waiter.noExpiry")}
           </p>
         </div>
 
@@ -207,12 +212,14 @@ export function WaiterTerminal() {
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
             <span>
               {voucher.status === "blocked"
-                ? `This voucher is blocked${voucher.blocked_reason ? `: ${voucher.blocked_reason}` : "."}`
+                ? voucher.blocked_reason
+                  ? t("waiter.blockedReason", { reason: voucher.blocked_reason })
+                  : t("waiter.blocked")
                 : voucher.is_expired || voucher.status === "expired"
-                  ? "This voucher has expired. Its balance is kept: the owner can reinstate it."
+                  ? t("waiter.expired")
                   : voucher.balance === 0
-                    ? "This voucher has no balance left."
-                    : "This voucher cannot be redeemed."}
+                    ? t("waiter.empty")
+                    : t("waiter.notRedeemable")}
             </span>
           </div>
         ) : null}
@@ -222,7 +229,7 @@ export function WaiterTerminal() {
             <div className="flex items-end justify-between px-1">
               <span
                 aria-live="polite"
-                aria-label={`Amount ${formatMoney(amount, voucher.currency)}`}
+                aria-label={t("waiter.amountA11y", { amount: formatMoney(amount, voucher.currency) })}
                 className={cn(
                   "tabular short:text-4xl text-5xl font-semibold tracking-tight",
                   amount === 0 && "text-muted-foreground/50",
@@ -233,17 +240,17 @@ export function WaiterTerminal() {
               </span>
               {!uncertain ? (
                 <Button variant="outline" className="rounded-xl" onClick={() => setAmount(Math.min(voucher.balance, voucher.max_debit_per_transaction))}>
-                  Full balance
+                  {t("waiter.fullBalance")}
                 </Button>
               ) : null}
             </div>
             {tooMuch ? (
               <p role="alert" className="text-destructive -mt-2 px-1 text-sm">
-                More than the balance. Redeem {formatMoney(voucher.balance, voucher.currency)} and collect the rest otherwise.
+                {t("waiter.tooMuch", { amount: formatMoney(voucher.balance, voucher.currency) })}
               </p>
             ) : overLimit ? (
               <p role="alert" className="text-destructive -mt-2 px-1 text-sm">
-                At most {formatMoney(voucher.max_debit_per_transaction, voucher.currency)} per redemption in this restaurant.
+                {t("waiter.overLimit", { amount: formatMoney(voucher.max_debit_per_transaction, voucher.currency) })}
               </p>
             ) : null}
             {redeemError ? (
@@ -265,22 +272,22 @@ export function WaiterTerminal() {
               onClick={submit}
             >
               {redeem.isPending ? <Loader2 className="animate-spin" /> : uncertain ? <RefreshCw /> : null}
-              {uncertain ? "Check again" : "Redeem"} {amount > 0 ? formatMoney(amount, voucher.currency) : ""}
+              {amount > 0
+                ? t(uncertain ? "waiter.checkAgainAmount" : "waiter.redeemAmount", { amount: formatMoney(amount, voucher.currency) })
+                : t(uncertain ? "waiter.checkAgain" : "waiter.redeem")}
             </Button>
-            {!voucher.allow_partial_redemption ? (
-              <p className="text-muted-foreground text-center text-xs">This restaurant only allows redeeming the full balance.</p>
-            ) : null}
+            {!voucher.allow_partial_redemption ? <p className="text-muted-foreground text-center text-xs">{t("waiter.fullOnly")}</p> : null}
           </>
         ) : (
           <Button size="lg" className="h-14 rounded-2xl text-lg" onClick={reset} autoFocus>
-            Next voucher
+            {t("waiter.next")}
           </Button>
         )}
 
         {can("vouchers.view") && !uncertain ? (
           <Button variant="outline" className="mt-auto h-12 rounded-2xl" asChild>
             <Link href={`/vouchers/${voucher.id}`}>
-              <History /> Voucher details
+              <History /> {t("waiter.details")}
             </Link>
           </Button>
         ) : null}
@@ -303,7 +310,7 @@ export function WaiterTerminal() {
           }}
         />
         <Button variant="outline" size="lg" className="h-12 rounded-2xl" onClick={() => setMode("ready")}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     )
@@ -317,10 +324,10 @@ export function WaiterTerminal() {
         onClick={() => setMode("qr")}
         disabled={present.isPending || !qrSupported}
         className="group bg-primary text-primary-foreground shadow-primary/20 relative flex size-64 flex-col items-center justify-center gap-3 rounded-full shadow-2xl transition active:scale-[0.97] disabled:opacity-80"
-        aria-label="Scan voucher QR code"
+        aria-label={t("waiter.scanA11y")}
       >
         {present.isPending ? <Loader2 className="size-14 animate-spin" /> : <QrCode className="size-16" />}
-        <span className="text-xl font-semibold">{present.isPending ? "Checking…" : "Scan voucher"}</span>
+        <span className="text-xl font-semibold">{present.isPending ? t("waiter.checking") : t("waiter.scan")}</span>
       </button>
 
       {scanError ? (
@@ -328,11 +335,7 @@ export function WaiterTerminal() {
           {scanError}
         </p>
       ) : (
-        <p className="text-muted-foreground max-w-xs text-center text-sm">
-          {qrSupported
-            ? "Scan the QR code of a printed or digital voucher. Vouchers on a card are redeemed with the GiftCard Waiter app."
-            : "This browser cannot use the camera. Use the GiftCard Waiter app on Android or iPhone."}
-        </p>
+        <p className="text-muted-foreground max-w-xs text-center text-sm">{qrSupported ? t("waiter.hint") : t("waiter.noCamera")}</p>
       )}
     </div>
   )

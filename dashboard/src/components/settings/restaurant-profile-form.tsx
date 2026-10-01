@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useUpdateRestaurantProfile } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { Restaurant } from "@/lib/api/types"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
 // European time zones (the markets GiftCard Pro serves); Intl provides the canonical IANA list.
 const TIMEZONES: string[] =
@@ -18,19 +20,20 @@ const TIMEZONES: string[] =
     ? Intl.supportedValuesOf("timeZone").filter((tz) => tz.startsWith("Europe/"))
     : ["Europe/Vienna", "Europe/Berlin", "Europe/Zurich"]
 
-const FIELDS: { key: keyof Restaurant; label: string; type?: string; span?: boolean }[] = [
-  { key: "name", label: "Restaurant name", span: true },
-  { key: "legal_name", label: "Legal name" },
-  { key: "vat_number", label: "VAT number (UID)" },
-  { key: "email", label: "E-mail", type: "email" },
-  { key: "phone", label: "Phone", type: "tel" },
-  { key: "website", label: "Website", type: "url", span: true },
-  { key: "address_line1", label: "Street", span: true },
-  { key: "postal_code", label: "Postal code" },
-  { key: "city", label: "City" },
+const FIELDS: { key: keyof Restaurant; label: MessageKey; type?: string; span?: boolean }[] = [
+  { key: "name", label: "restaurantProfile.name", span: true },
+  { key: "legal_name", label: "restaurantProfile.legalName" },
+  { key: "vat_number", label: "restaurantProfile.vatNumber" },
+  { key: "email", label: "manage.field.email", type: "email" },
+  { key: "phone", label: "restaurantProfile.phone", type: "tel" },
+  { key: "website", label: "restaurantProfile.website", type: "url", span: true },
+  { key: "address_line1", label: "restaurantProfile.street", span: true },
+  { key: "postal_code", label: "restaurantProfile.postalCode" },
+  { key: "city", label: "restaurantProfile.city" },
 ]
 
 export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }) {
+  const t = useT()
   const update = useUpdateRestaurantProfile()
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries([
@@ -44,8 +47,8 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Restaurant</CardTitle>
-        <CardDescription>Shown on cards, e-mails and the public balance page.</CardDescription>
+        <CardTitle>{t("restaurantProfile.title")}</CardTitle>
+        <CardDescription>{t("restaurantProfile.description")}</CardDescription>
       </CardHeader>
       <form
         className="contents"
@@ -54,7 +57,7 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
           try {
             const body = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v === "" ? null : v]))
             await update.mutateAsync(body as Partial<Restaurant>)
-            toast.success("Restaurant saved")
+            toast.success(t("restaurantProfile.saved"))
           } catch (err) {
             toast.error(errorMessage(err))
           }
@@ -63,7 +66,7 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
         <CardContent className="grid gap-4 sm:grid-cols-2">
           {FIELDS.map((f) => (
             <div key={f.key} className={f.span ? "space-y-2 sm:col-span-2" : "space-y-2"}>
-              <Label htmlFor={f.key}>{f.label}</Label>
+              <Label htmlFor={f.key}>{t(f.label)}</Label>
               <Input
                 id={f.key}
                 type={f.type ?? "text"}
@@ -74,7 +77,7 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
             </div>
           ))}
           <div className="space-y-2">
-            <Label htmlFor="locale">Language & number format</Label>
+            <Label htmlFor="locale">{t("restaurantProfile.locale")}</Label>
             <Select value={values.locale} onValueChange={(v) => setValues((s) => ({ ...s, locale: v }))}>
               <SelectTrigger id="locale" className="w-full">
                 <SelectValue />
@@ -89,7 +92,7 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="timezone">Time zone</Label>
+            <Label htmlFor="timezone">{t("restaurantProfile.timezone")}</Label>
             <Select value={values.timezone} onValueChange={(v) => setValues((s) => ({ ...s, timezone: v }))}>
               <SelectTrigger id="timezone" className="w-full">
                 <SelectValue />
@@ -106,7 +109,7 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
         </CardContent>
         <CardFooter className="justify-end">
           <Button type="submit" disabled={update.isPending}>
-            {update.isPending ? <Loader2 className="animate-spin" /> : null} Save
+            {update.isPending ? <Loader2 className="animate-spin" /> : null} {t("common.save")}
           </Button>
         </CardFooter>
       </form>

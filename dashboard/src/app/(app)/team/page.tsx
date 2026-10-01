@@ -20,29 +20,34 @@ import { errorMessage } from "@/lib/api/client"
 import type { StaffUser } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatRelative } from "@/lib/format"
+import { useConfirm } from "@/components/common/confirm"
+import { LANGUAGES, toLanguage, useT, type Language } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
 function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: boolean; onOpenChange: (o: boolean) => void }) {
   const roles = useRoles()
   const save = useSaveUser(user?.id)
   const [name, setName] = useState(user?.name ?? "")
   const [email, setEmail] = useState(user?.email ?? "")
+  const t = useT()
   const [role, setRole] = useState<string>(user?.role?.slug ?? "waiter")
+  const [locale, setLocale] = useState<Language>(user ? toLanguage(user.locale) : "de")
   const assignable = roles.data?.filter((r) => r.assignable) ?? []
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{user ? "Edit team member" : "Invite team member"}</DialogTitle>
-          {!user ? <DialogDescription>They receive an e-mail with a link to set their password.</DialogDescription> : null}
+          <DialogTitle>{user ? t("team.dialog.editTitle") : t("team.dialog.inviteTitle")}</DialogTitle>
+          {!user ? <DialogDescription>{t("team.dialog.inviteDescription")}</DialogDescription> : null}
         </DialogHeader>
         <form
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
             try {
-              await save.mutateAsync({ name, email, role })
-              toast.success(user ? "Team member updated" : `Invitation sent to ${email}`)
+              await save.mutateAsync({ name, email, role, locale })
+              toast.success(user ? t("team.dialog.updated") : t("team.dialog.invited", { email }))
               onOpenChange(false)
             } catch (err) {
               toast.error(errorMessage(err))
@@ -50,15 +55,15 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="u-name">Name</Label>
+            <Label htmlFor="u-name">{t("manage.field.name")}</Label>
             <Input id="u-name" required value={name} onChange={(e) => setName(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="u-email">E-mail</Label>
+            <Label htmlFor="u-email">{t("manage.field.email")}</Label>
             <Input id="u-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="u-role">Role</Label>
+            <Label htmlFor="u-role">{t("team.role")}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger id="u-role" className="w-full">
                 <SelectValue />
@@ -66,19 +71,35 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
               <SelectContent>
                 {assignable.map((r) => (
                   <SelectItem key={r.slug} value={r.slug}>
-                    {r.name}
+                    {t(`roles.${r.slug}` as MessageKey)}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-muted-foreground text-xs">{roles.data?.find((r) => r.slug === role)?.description}</p>
+            <p className="text-muted-foreground text-xs">{t(`team.roleDescription.${role}` as MessageKey)}</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="u-locale">{t("common.language")}</Label>
+            <Select value={locale} onValueChange={(v) => setLocale(toLanguage(v))}>
+              <SelectTrigger id="u-locale" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LANGUAGES.map((l) => (
+                  <SelectItem key={l.code} value={l.code}>
+                    {l.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground text-xs">{t("team.dialog.languageHint")}</p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={save.isPending}>
-              {save.isPending ? <Loader2 className="animate-spin" /> : null} {user ? "Save" : "Send invitation"}
+              {save.isPending ? <Loader2 className="animate-spin" /> : null} {user ? t("common.save") : t("team.dialog.sendInvitation")}
             </Button>
           </DialogFooter>
         </form>
@@ -88,15 +109,52 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
 }
 
 function TeamContent() {
+  const t = useT()
+  const confirm = useConfirm()
   const { user: me, can } = useAuth()
   const { data, isLoading } = useUsers()
   const action = useUserAction()
   const [editing, setEditing] = useState<StaffUser | "new" | null>(null)
   const manage = can("users.manage")
 
-  const run = async (id: string, act: "deactivate" | "activate" | "password-reset", msg: string) => {
+  const run = async (u: StaffUser, act: "deactivate" | "activate" | "password-reset") => {
+    const invited = !u.last_login_at
+    const ask =
+      act === "deactivate"
+        ? {
+            title: t("team.confirmDeactivate.title", { name: u.name }),
+            description: t("team.confirmDeactivate.description", { name: u.name }),
+            confirmLabel: t("team.deactivate"),
+            destructive: true,
+          }
+        : act === "activate"
+          ? {
+              title: t("team.confirmReactivate.title", { name: u.name }),
+              description: t("team.confirmReactivate.description", { name: u.name }),
+              confirmLabel: t("team.reactivate"),
+            }
+          : invited
+            ? {
+                title: t("team.confirmResend.title"),
+                description: t("team.confirmResend.description", { email: u.email }),
+                confirmLabel: t("team.resendInvitation"),
+              }
+            : {
+                title: t("team.confirmReset.title"),
+                description: t("team.confirmReset.description", { email: u.email }),
+                confirmLabel: t("team.confirmReset.confirm"),
+              }
+    if (!(await confirm(ask))) return
+    const msg =
+      act === "deactivate"
+        ? t("team.deactivated", { name: u.name })
+        : act === "activate"
+          ? t("team.reactivated", { name: u.name })
+          : invited
+            ? t("team.invitationResent")
+            : t("team.passwordResetSent")
     try {
-      await action.mutateAsync({ id, action: act })
+      await action.mutateAsync({ id: u.id, action: act })
       toast.success(msg)
     } catch (e) {
       toast.error(errorMessage(e))
@@ -106,12 +164,12 @@ function TeamContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Team"
-        description="Everyone who can sign in to your restaurant."
+        title={t("team.title")}
+        description={t("team.description")}
         actions={
           manage ? (
             <Button onClick={() => setEditing("new")}>
-              <Plus /> Invite
+              <Plus /> {t("team.invite")}
             </Button>
           ) : null
         }
@@ -127,10 +185,10 @@ function TeamContent() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-4">Name</TableHead>
-                <TableHead className="hidden sm:table-cell">Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="hidden md:table-cell">Last sign-in</TableHead>
+                <TableHead className="pl-4">{t("manage.field.name")}</TableHead>
+                <TableHead className="hidden sm:table-cell">{t("team.role")}</TableHead>
+                <TableHead>{t("team.column.status")}</TableHead>
+                <TableHead className="hidden md:table-cell">{t("team.column.lastSignIn")}</TableHead>
                 <TableHead className="w-10 pr-4" />
               </TableRow>
             </TableHeader>
@@ -139,12 +197,12 @@ function TeamContent() {
                 <TableRow key={u.id}>
                   <TableCell className="pl-4">
                     <div className="font-medium">
-                      {u.name} {u.id === me?.id ? <span className="text-muted-foreground text-xs font-normal">(you)</span> : null}
+                      {u.name} {u.id === me?.id ? <span className="text-muted-foreground text-xs font-normal">{t("team.you")}</span> : null}
                     </div>
                     <div className="text-muted-foreground text-xs">{u.email}</div>
-                    <div className="text-muted-foreground text-xs sm:hidden">{u.role?.name}</div>
+                    <div className="text-muted-foreground text-xs sm:hidden">{u.role ? t(`roles.${u.role.slug}` as MessageKey) : null}</div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{u.role?.name}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{u.role ? t(`roles.${u.role.slug}` as MessageKey) : null}</TableCell>
                   <TableCell>
                     <UserStatusBadge user={u} />
                   </TableCell>
@@ -153,26 +211,24 @@ function TeamContent() {
                     {manage && u.id !== me?.id ? (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${u.name}`}>
+                          <Button variant="ghost" size="icon-sm" aria-label={t("team.actionsFor", { name: u.name })}>
                             <MoreHorizontal />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onSelect={() => setEditing(u)}>
-                            <Pencil /> Edit
+                            <Pencil /> {t("common.edit")}
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onSelect={() => run(u.id, "password-reset", u.last_login_at ? "Password reset e-mail sent" : "Invitation sent again")}
-                          >
-                            <KeyRound /> {u.last_login_at ? "Send password reset" : "Resend invitation"}
+                          <DropdownMenuItem onSelect={() => void run(u, "password-reset")}>
+                            <KeyRound /> {u.last_login_at ? t("team.sendPasswordReset") : t("team.resendInvitation")}
                           </DropdownMenuItem>
                           {u.status === "active" ? (
-                            <DropdownMenuItem variant="destructive" onSelect={() => run(u.id, "deactivate", `${u.name} deactivated`)}>
-                              <UserX /> Deactivate
+                            <DropdownMenuItem variant="destructive" onSelect={() => void run(u, "deactivate")}>
+                              <UserX /> {t("team.deactivate")}
                             </DropdownMenuItem>
                           ) : (
-                            <DropdownMenuItem onSelect={() => run(u.id, "activate", `${u.name} reactivated`)}>
-                              <UserCheck /> Reactivate
+                            <DropdownMenuItem onSelect={() => void run(u, "activate")}>
+                              <UserCheck /> {t("team.reactivate")}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -184,7 +240,7 @@ function TeamContent() {
             </TableBody>
           </Table>
         ) : (
-          <EmptyState icon={Users} title="No team members" />
+          <EmptyState icon={Users} title={t("team.empty")} />
         )}
       </div>
       {editing ? (

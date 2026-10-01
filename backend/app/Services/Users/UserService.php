@@ -50,7 +50,7 @@ final class UserService
                 'name' => $data['name'],
                 'email' => Str::lower($data['email']),
                 'password' => $data['password'] ?? Str::password(40),
-                'locale' => $data['locale'] ?? 'en',
+                'locale' => $data['locale'] ?? 'de',
             ]);
             $user->forceFill([
                 'restaurant_id' => $restaurant->getKey(),

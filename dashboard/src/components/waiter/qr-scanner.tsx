@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
+import { tr } from "@/lib/i18n"
 
 interface DetectedBarcode {
   rawValue: string
@@ -40,7 +41,10 @@ export function QrScanner({ onResult, onError }: { onResult: (value: string) => 
     const start = async () => {
       try {
         const Detector = window.BarcodeDetector
-        if (!Detector) throw new Error("QR scanning is not supported on this device.")
+        if (!Detector) {
+          onErrorRef.current(tr("waiter.qr.unsupported"))
+          return
+        }
         const detector = new Detector({ formats: ["qr_code"] })
         const acquired = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false })
         if (stopped) {
@@ -70,7 +74,8 @@ export function QrScanner({ onResult, onError }: { onResult: (value: string) => 
         }, 200)
       } catch (e) {
         if (stopped) return
-        onErrorRef.current(e instanceof Error && e.name === "NotAllowedError" ? "Camera access was denied." : (e as Error).message || "Camera unavailable.")
+        // Browser error texts are English only: show our own.
+        onErrorRef.current(tr(e instanceof Error && e.name === "NotAllowedError" ? "waiter.qr.denied" : "waiter.qr.unavailable"))
       }
     }
 

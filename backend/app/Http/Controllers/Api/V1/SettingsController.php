@@ -36,10 +36,10 @@ final class SettingsController extends Controller
         $settings->fill($request->validated());
 
         if ($settings->min_voucher_value > $settings->max_voucher_balance) {
-            throw ValidationException::withMessages(['min_voucher_value' => 'The minimum voucher value must not exceed the maximum voucher balance.']);
+            throw ValidationException::withMessages(['min_voucher_value' => __('api.min_above_max')]);
         }
         if ($settings->max_debit_per_transaction > $settings->max_debit_per_voucher_per_day) {
-            throw ValidationException::withMessages(['max_debit_per_transaction' => 'The limit per redemption must not exceed the daily limit per voucher.']);
+            throw ValidationException::withMessages(['max_debit_per_transaction' => __('api.debit_above_daily')]);
         }
 
         if ($settings->isDirty()) {

@@ -3,5 +3,8 @@
     "All rights reserved.": "Alle Rechte vorbehalten.",
     "Hello!": "Hallo!",
     "Whoops!": "Hoppla!",
-    "Regards,": "Viele Grüße,"
+    "Regards,": "Viele Grüße,",
+    "The given data was invalid.": "Die eingegebenen Daten sind ungültig.",
+    "(and :count more error)": "(und :count weiterer Fehler)",
+    "(and :count more errors)": "(und :count weitere Fehler)"
 }

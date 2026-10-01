@@ -1,57 +1,34 @@
+"use client"
+
 import { Badge } from "@/components/ui/badge"
 import type { CardBatchStatus, CardState } from "@/lib/api/types"
+import { hasMessage, tr, useT } from "@/lib/i18n"
 
-const LABELS: Record<CardState, string> = {
-  manufactured: "Manufactured",
-  personalized: "Personalised",
-  qa_passed: "QA passed",
-  qa_failed: "QA failed",
-  in_inventory: "Central stock",
-  assigned: "Assigned",
-  shipped: "Shipped",
-  delivered: "Delivered",
-  available: "In stock",
-  bound: "Being sold",
-  active: "Active",
-  suspended: "Suspended",
-  replaced: "Replaced",
-  revoked: "Revoked",
-  lost: "Lost",
-  destroyed: "Destroyed",
-}
-
+/** Card state in the UI language (unknown states from a newer server show their code). */
 export function cardStateLabel(state: CardState): string {
-  return LABELS[state] ?? state
+  const key = `cards.state.${state}`
+  return hasMessage(key) ? tr(key) : state
 }
 
 export function CardStateBadge({ state }: { state: CardState }) {
+  useT() // re-render on a language change
   const variant = state === "active" ? "default" : state === "suspended" || state === "revoked" || state === "lost" ? "destructive" : "secondary"
   return <Badge variant={variant}>{cardStateLabel(state)}</Badge>
 }
 
-const BATCH_LABELS: Record<CardBatchStatus, string> = {
-  ordered: "Ordered",
-  in_production: "In production",
-  personalized: "Personalised",
-  qa_testing: "QA testing",
-  accepted: "Accepted",
-  rejected: "Rejected",
-  assigned: "Assigned",
-  shipped: "Shipped",
-  delivered: "Delivered",
-  on_hold: "On hold",
-  in_service: "In service",
-  depleted: "Depleted",
-  compromised: "Compromised",
-  lost: "Lost",
-  closed: "Closed",
-}
-
+/** Card batch status in the UI language. */
 export function batchStatusLabel(status: CardBatchStatus): string {
-  return BATCH_LABELS[status] ?? status
+  const key = `cards.batch.${status}`
+  return hasMessage(key) ? tr(key) : status
 }
 
 export function BatchStatusBadge({ status }: { status: CardBatchStatus }) {
-  const variant = status === "compromised" || status === "rejected" || status === "lost" || status === "on_hold" ? "destructive" : status === "in_service" ? "default" : "secondary"
+  useT() // re-render on a language change
+  const variant =
+    status === "compromised" || status === "rejected" || status === "lost" || status === "on_hold"
+      ? "destructive"
+      : status === "in_service"
+        ? "default"
+        : "secondary"
   return <Badge variant={variant}>{batchStatusLabel(status)}</Badge>
 }

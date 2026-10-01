@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useEffect } from "react"
+import { Suspense, useEffect, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -13,16 +13,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { errorMessage } from "@/lib/api/client"
 import { homeFor, safeRedirectPath, useAuth } from "@/lib/auth"
+import { useT, type Translate } from "@/lib/i18n"
 
-const schema = z.object({
-  email: z.string().trim().email("Enter a valid e-mail address"),
-  password: z.string().min(1, "Enter your password"),
-  remember: z.boolean(),
-})
-type Values = z.infer<typeof schema>
+function loginSchema(t: Translate) {
+  return z.object({
+    email: z.string().trim().email(t("login.invalidEmail")),
+    password: z.string().min(1, t("login.passwordRequired")),
+    remember: z.boolean(),
+  })
+}
+type Values = z.infer<ReturnType<typeof loginSchema>>
 
 function LoginForm() {
+  const t = useT()
   const { user, login } = useAuth()
+  const schema = useMemo(() => loginSchema(t), [t])
   const router = useRouter()
   const params = useSearchParams()
   const next = params.get("next")
@@ -47,20 +52,20 @@ function LoginForm() {
   return (
     <div className="bg-card rounded-2xl border p-6 shadow-sm sm:p-8">
       <div className="mb-6 space-y-1 text-center">
-        <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-        <p className="text-muted-foreground text-sm">Welcome back. Sign in to your restaurant.</p>
+        <h1 className="text-xl font-semibold tracking-tight">{t("login.title")}</h1>
+        <p className="text-muted-foreground text-sm">{t("login.subtitle")}</p>
       </div>
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
-          <Label htmlFor="email">E-mail</Label>
+          <Label htmlFor="email">{t("manage.field.email")}</Label>
           <Input id="email" type="email" autoComplete="username" autoFocus className="h-10" aria-invalid={!!errors.email} {...form.register("email")} />
           {errors.email ? <p className="text-destructive text-xs">{errors.email.message}</p> : null}
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("login.password")}</Label>
             <Link href="/forgot-password" className="text-muted-foreground hover:text-foreground text-xs">
-              Forgot password?
+              {t("login.forgot")}
             </Link>
           </div>
           <Input
@@ -76,8 +81,8 @@ function LoginForm() {
         <label className="text-muted-foreground flex items-center gap-2 text-sm">
           <Checkbox checked={form.watch("remember")} onCheckedChange={(v) => form.setValue("remember", v === true)} />
           <span>
-            Keep me signed in on this device
-            <span className="block text-xs">Only on your own device, never on a shared one.</span>
+            {t("login.remember")}
+            <span className="block text-xs">{t("login.rememberHint")}</span>
           </span>
         </label>
         {errors.root ? (
@@ -87,7 +92,7 @@ function LoginForm() {
         ) : null}
         <Button type="submit" className="h-10 w-full" disabled={isSubmitting}>
           {isSubmitting ? <Loader2 className="animate-spin" /> : null}
-          Sign in
+          {t("login.submit")}
         </Button>
       </form>
     </div>

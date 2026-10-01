@@ -18,6 +18,7 @@ import { useCustomers } from "@/lib/api/hooks"
 import { useAuth } from "@/lib/auth"
 import { formatDate } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 
 function CustomersContent() {
   const { user, can } = useAuth()
@@ -27,16 +28,17 @@ function CustomersContent() {
   const [creating, setCreating] = useState(false)
   const { data, isLoading } = useCustomers(useDebounce(search), page)
   const currency = user?.restaurant?.currency ?? "EUR"
+  const t = useT()
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Customers"
-        description="Buyers and holders of your vouchers."
+        title={t("nav.customers")}
+        description={t("customers.description")}
         actions={
           can("customers.manage") ? (
             <Button onClick={() => setCreating(true)}>
-              <Plus /> New customer
+              <Plus /> {t("customers.new")}
             </Button>
           ) : null
         }
@@ -48,9 +50,9 @@ function CustomersContent() {
             <Input
               value={search}
               onChange={(e) => (setSearch(e.target.value), setPage(1))}
-              placeholder="Search name, e-mail or phone…"
+              placeholder={t("customers.searchPlaceholder")}
               className="h-9 pl-9"
-              aria-label="Search customers"
+              aria-label={t("customers.searchLabel")}
             />
           </div>
         </div>
@@ -65,12 +67,12 @@ function CustomersContent() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-4">Name</TableHead>
-                  <TableHead className="hidden md:table-cell">E-mail</TableHead>
-                  <TableHead className="hidden lg:table-cell">Phone</TableHead>
-                  <TableHead className="text-right">Cards</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="hidden pr-4 md:table-cell">Since</TableHead>
+                  <TableHead className="pl-4">{t("ops.col.name")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t("ops.col.email")}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t("ops.col.phone")}</TableHead>
+                  <TableHead className="text-right">{t("customers.col.vouchers")}</TableHead>
+                  <TableHead className="text-right">{t("ops.col.balance")}</TableHead>
+                  <TableHead className="hidden pr-4 md:table-cell">{t("customers.col.since")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -97,7 +99,7 @@ function CustomersContent() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={UserSquare2} title="No customers" description="Customers are created when you sell a voucher with customer details." />
+          <EmptyState icon={UserSquare2} title={t("customers.emptyTitle")} description={t("customers.emptyDescription")} />
         )}
       </div>
       <CustomerDialog open={creating} onOpenChange={setCreating} />

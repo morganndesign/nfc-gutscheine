@@ -1,15 +1,19 @@
+"use client"
+
 import { StatusBadge } from "@/components/common/status-badge"
 import { formatMoney } from "@/lib/money"
 import type { VoucherStatus } from "@/lib/api/types"
 import { ChartEmpty } from "@/components/charts/chart-empty"
+import { useT } from "@/lib/i18n"
 
 /** Voucher count per status as labelled bars (single hue — magnitude, not identity). */
 export function StatusBreakdown({ data, currency }: { data: { status: VoucherStatus; count: number; balance: number }[]; currency: string }) {
+  const t = useT()
   const order: VoucherStatus[] = ["active", "blocked", "expired", "refunded"]
   const rows = order.map((s) => data.find((d) => d.status === s) ?? { status: s, count: 0, balance: 0 }).filter((r) => r.count > 0)
   const max = Math.max(1, ...rows.map((r) => r.count))
 
-  if (!rows.length) return <ChartEmpty className="h-48" title="No vouchers yet" description="Sold vouchers appear here grouped by status." />
+  if (!rows.length) return <ChartEmpty className="h-48" title={t("charts.status.emptyTitle")} description={t("charts.status.emptyDescription")} />
 
   return (
     <ul className="space-y-3">

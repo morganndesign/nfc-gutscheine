@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { MoneyInput } from "@/components/common/money-input"
 import { Segmented } from "@/components/common/segmented"
 import { RequirePermission } from "@/components/layout/auth-guard"
-import { PaymentFields, paymentComplete } from "@/components/vouchers/payment-fields"
+import { PAYMENT_METHOD_LABELS, PaymentFields, paymentComplete } from "@/components/vouchers/payment-fields"
 import { PrintableVoucherSheet } from "@/components/vouchers/printable-voucher-sheet"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,12 +24,14 @@ import { useAuth } from "@/lib/auth"
 import { useDebounce } from "@/hooks/use-debounce"
 import { centsToInput, formatMoney, formatMoneyShort, parseMoneyInput } from "@/lib/money"
 import { SALE_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 const PRESETS = [2500, 5000, 7500, 10000, 15000]
 
 function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }) {
   const { user } = useAuth()
+  const t = useT()
   const restaurant = user?.restaurant
   const [printed, setPrinted] = useState(false)
   const printable = sale.printable
@@ -45,8 +47,11 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
-        title={sale.replayed ? "Voucher was already sold" : "Voucher sold"}
-        description={`${formatMoney(sale.data.initial_value, sale.data.currency)} · paid by ${sale.payment.method_label.toLowerCase()}`}
+        title={sale.replayed ? t("vouchers.sale.alreadySold") : t("vouchers.sale.sold")}
+        description={t("vouchers.sale.summary", {
+          amount: formatMoney(sale.data.initial_value, sale.data.currency),
+          method: t(PAYMENT_METHOD_LABELS[sale.payment.method]),
+        })}
       />
       {printable ? (
         <div className="grid gap-6 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
@@ -63,7 +68,7 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
           <div className="space-y-4">
             <div className="flex items-start gap-2 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
               <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>Print or save the voucher now. For security, the QR code is shown only once and cannot be displayed again.</span>
+              <span>{t("vouchers.sale.printWarning")}</span>
             </div>
             <Button
               size="lg"
@@ -73,15 +78,15 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
                 setPrinted(true)
               }}
             >
-              <Printer /> Print voucher
+              <Printer /> {t("vouchers.printVoucher")}
             </Button>
-            <p className="text-muted-foreground text-xs">To send it by e-mail, choose “Save as PDF” in the print dialog.</p>
+            <p className="text-muted-foreground text-xs">{t("vouchers.pdfHint")}</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>
-                <Link href={`/vouchers/${sale.data.id}`}>Open voucher</Link>
+                <Link href={`/vouchers/${sale.data.id}`}>{t("vouchers.openVoucher")}</Link>
               </Button>
               <Button variant="outline" onClick={onNext}>
-                Sell another
+                {t("vouchers.sale.sellAnother")}
               </Button>
             </div>
           </div>
@@ -89,16 +94,13 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
       ) : (
         <Card>
           <CardContent className="space-y-4 pt-6 text-sm">
-            <p>
-              This sale was completed earlier on this or another device, so its QR code can no longer be shown here. If the guest did not receive a printed
-              voucher, open it and choose “New QR code”.
-            </p>
+            <p>{t("vouchers.sale.replayedBody")}</p>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" asChild>
-                <Link href={`/vouchers/${sale.data.id}`}>Open voucher</Link>
+                <Link href={`/vouchers/${sale.data.id}`}>{t("vouchers.openVoucher")}</Link>
               </Button>
               <Button variant="outline" onClick={onNext}>
-                Sell another
+                {t("vouchers.sale.sellAnother")}
               </Button>
             </div>
           </CardContent>
@@ -110,6 +112,7 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
 
 function SellVoucherContent() {
   const { user } = useAuth()
+  const t = useT()
   const settings = user?.restaurant?.settings
   const currency = user?.restaurant?.currency ?? "EUR"
   const sell = useSellVoucher()
@@ -131,17 +134,17 @@ function SellVoucherContent() {
             const cents = parseMoneyInput(v)
             return cents !== null && cents >= min && cents <= max
           },
-          `Enter an amount between ${formatMoney(min, currency)} and ${formatMoney(max, currency)}`,
+          t("vouchers.sale.amountRange", { min: formatMoney(min, currency), max: formatMoney(max, currency) }),
         ),
         customer_id: z.string().optional(),
         first_name: z.string().max(100).optional(),
         last_name: z.string().max(100).optional(),
-        email: z.union([z.literal(""), z.string().email("Invalid e-mail")]).optional(),
+        email: z.union([z.literal(""), z.string().email(t("vouchers.sale.invalidEmail"))]).optional(),
         phone: z.string().max(40).optional(),
         recipient_name: z.string().max(160).optional(),
         notes: z.string().max(2000).optional(),
       }),
-    [min, max, currency],
+    [min, max, currency, t],
   )
   type Values = z.infer<typeof schema>
 
@@ -159,7 +162,7 @@ function SellVoucherContent() {
 
   const onSubmit = form.handleSubmit(async (v) => {
     if (!paymentComplete(payment)) {
-      form.setError("root", { message: "Complete the payment details." })
+      form.setError("root", { message: t("vouchers.sale.completePayment") })
       return
     }
     const scope = `sale:${parseMoneyInput(v.value) ?? 0}:${payment.method}:${payment.reference ?? ""}`
@@ -185,14 +188,14 @@ function SellVoucherContent() {
       forgetPendingKey(scope)
       setUncertain(false)
       setSale(result)
-      toast.success(result.replayed ? "The sale was already booked" : "Voucher sold")
+      toast.success(result.replayed ? t("vouchers.sale.replayedToast") : t("vouchers.sale.sold"))
     } catch (e) {
       if (isUncertainOutcome(e, { unanswered, finalCodes: SALE_CODES })) {
         // The sale may have been booked. Sending the same key again returns it (and a fresh QR) instead of selling twice.
         rememberPendingKey(scope, idempotencyKey.current)
         setUncertain(true)
         form.setError("root", {
-          message: "No answer from the server: it is not known whether the voucher was sold. Press “Check sale” — it is never sold twice.",
+          message: t("vouchers.sale.uncertain"),
         })
         return
       }
@@ -229,19 +232,17 @@ function SellVoucherContent() {
       <div className="space-y-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/vouchers">
-            <ArrowLeft /> Vouchers
+            <ArrowLeft /> {t("vouchers.title")}
           </Link>
         </Button>
-        <PageHeader title="Sell a voucher" description="A printable voucher with a QR code, printed right after the sale." />
+        <PageHeader title={t("vouchers.sale.title")} description={t("vouchers.sale.description")} />
       </div>
 
       <fieldset disabled={uncertain} className="contents">
         <Card>
           <CardHeader>
-            <CardTitle>Value</CardTitle>
-            <CardDescription>
-              Between {formatMoneyShort(min, currency)} and {formatMoneyShort(max, currency)}
-            </CardDescription>
+            <CardTitle>{t("vouchers.sale.value")}</CardTitle>
+            <CardDescription>{t("vouchers.sale.between", { min: formatMoneyShort(min, currency), max: formatMoneyShort(max, currency) })}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap gap-2">
@@ -261,20 +262,20 @@ function SellVoucherContent() {
               ))}
             </div>
             <div className="space-y-2 sm:max-w-xs">
-              <Label htmlFor="value">Amount</Label>
+              <Label htmlFor="value">{t("vouchers.field.amount")}</Label>
               <MoneyInput id="value" className="h-11 text-lg" aria-invalid={!!errors.value} {...form.register("value")} />
               {errors.value ? <p className="text-destructive text-xs">{errors.value.message}</p> : null}
             </div>
             <p className="text-muted-foreground text-xs">
-              {settings?.validity_months ? `Valid for ${settings.validity_months} months.` : "Valid without an expiry date."}
+              {settings?.validity_months ? t("vouchers.sale.validFor", { months: settings.validity_months }) : t("vouchers.sale.noExpiryHint")}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Payment</CardTitle>
-            <CardDescription>How the guest paid. Every sale is recorded with its payment.</CardDescription>
+            <CardTitle>{t("payment.label")}</CardTitle>
+            <CardDescription>{t("vouchers.sale.paymentDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <PaymentFields value={payment} onChange={setPayment} />
@@ -283,24 +284,24 @@ function SellVoucherContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Customer</CardTitle>
-            <CardDescription>Optional. With an e-mail address the customer receives a receipt with the amount (never the QR code or a link).</CardDescription>
+            <CardTitle>{t("vouchers.col.customer")}</CardTitle>
+            <CardDescription>{t("vouchers.sale.customerDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Segmented
-              label="Customer"
+              label={t("vouchers.col.customer")}
               value={customerMode}
               onChange={setCustomerMode}
               className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto"
               options={[
-                { value: "none", label: "Anonymous" },
-                { value: "existing", label: "Existing" },
-                { value: "new", label: "New" },
+                { value: "none", label: t("vouchers.anonymous") },
+                { value: "existing", label: t("vouchers.sale.customerExisting") },
+                { value: "new", label: t("vouchers.sale.customerNew") },
               ]}
             />
             {customerMode === "existing" ? (
               <div className="space-y-2">
-                <Input placeholder="Search customers…" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} />
+                <Input placeholder={t("vouchers.sale.searchCustomers")} value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)} />
                 <div className="max-h-56 overflow-y-auto rounded-xl border">
                   {customers.data?.data.length ? (
                     customers.data.data.map((c) => (
@@ -321,7 +322,7 @@ function SellVoucherContent() {
                       </button>
                     ))
                   ) : (
-                    <p className="text-muted-foreground p-4 text-center text-sm">No customers found.</p>
+                    <p className="text-muted-foreground p-4 text-center text-sm">{t("vouchers.sale.noCustomers")}</p>
                   )}
                 </div>
               </div>
@@ -329,33 +330,33 @@ function SellVoucherContent() {
             {customerMode === "new" ? (
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="first_name">First name</Label>
+                  <Label htmlFor="first_name">{t("vouchers.sale.firstName")}</Label>
                   <Input id="first_name" autoComplete="off" {...form.register("first_name")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="last_name">Last name</Label>
+                  <Label htmlFor="last_name">{t("vouchers.sale.lastName")}</Label>
                   <Input id="last_name" autoComplete="off" {...form.register("last_name")} />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
+                  <Label htmlFor="email">{t("vouchers.sale.email")}</Label>
                   <Input id="email" type="email" autoComplete="off" aria-invalid={!!errors.email} {...form.register("email")} />
                   {errors.email ? <p className="text-destructive text-xs">{errors.email.message}</p> : null}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">{t("vouchers.sale.phone")}</Label>
                   <Input id="phone" type="tel" autoComplete="off" {...form.register("phone")} />
                 </div>
               </div>
             ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="recipient_name">Recipient name (printed on the voucher)</Label>
-                <Input id="recipient_name" placeholder="Optional" {...form.register("recipient_name")} />
+                <Label htmlFor="recipient_name">{t("vouchers.sale.recipientPrinted")}</Label>
+                <Input id="recipient_name" placeholder={t("vouchers.sale.optional")} {...form.register("recipient_name")} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Internal notes</Label>
-              <Textarea id="notes" rows={3} placeholder="Visible to staff only" {...form.register("notes")} />
+              <Label htmlFor="notes">{t("vouchers.field.notes")}</Label>
+              <Textarea id="notes" rows={3} placeholder={t("vouchers.sale.notesPlaceholder")} {...form.register("notes")} />
             </div>
           </CardContent>
         </Card>
@@ -375,10 +376,10 @@ function SellVoucherContent() {
 
       <div className="bg-background/90 sticky bottom-4 flex items-center justify-between gap-4 rounded-2xl border p-3 pl-5 shadow-lg backdrop-blur">
         <span className="text-muted-foreground text-sm">
-          Voucher value <span className="text-foreground tabular ml-1 text-base font-semibold">{formatMoney(valueCents, currency)}</span>
+          {t("vouchers.sale.voucherValue")} <span className="text-foreground tabular ml-1 text-base font-semibold">{formatMoney(valueCents, currency)}</span>
         </span>
         <Button type="submit" size="lg" disabled={isSubmitting}>
-          {isSubmitting ? <Loader2 className="animate-spin" /> : null} {uncertain ? "Check sale" : "Sell voucher"}
+          {isSubmitting ? <Loader2 className="animate-spin" /> : null} {uncertain ? t("vouchers.sale.check") : t("vouchers.sell")}
         </Button>
       </div>
     </form>

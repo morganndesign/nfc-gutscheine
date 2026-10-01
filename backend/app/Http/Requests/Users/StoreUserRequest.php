@@ -19,7 +19,7 @@ final class StoreUserRequest extends ApiRequest
             'email' => ['required', 'email:rfc', 'max:191', Rule::unique('users', 'email')],
             'role' => ['required', Rule::in([RoleSlug::Owner->value, RoleSlug::Manager->value, RoleSlug::Waiter->value])],
             'password' => ['nullable', 'string', Password::defaults()],
-            'locale' => ['nullable', 'in:en,de'],
+            'locale' => ['nullable', 'in:de,en,bs'],
         ];
     }
 }

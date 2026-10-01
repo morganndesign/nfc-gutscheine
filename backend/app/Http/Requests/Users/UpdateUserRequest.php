@@ -21,7 +21,7 @@ final class UpdateUserRequest extends ApiRequest
             'name' => ['sometimes', 'required', 'string', 'max:160'],
             'email' => ['sometimes', 'required', 'email:rfc', 'max:191', Rule::unique('users', 'email')->ignore($user->getKey())],
             'role' => ['sometimes', 'required', Rule::in([RoleSlug::Owner->value, RoleSlug::Manager->value, RoleSlug::Waiter->value])],
-            'locale' => ['sometimes', 'required', 'in:en,de'],
+            'locale' => ['sometimes', 'required', 'in:de,en,bs'],
         ];
     }
 }

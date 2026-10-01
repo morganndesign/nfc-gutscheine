@@ -17,28 +17,34 @@ import { useAcknowledgeAlert, useSecurityAlerts } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { SecurityAlert } from "@/lib/api/types"
 import { formatDateTime } from "@/lib/format"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
-/** What each rule means and what to do, for the person on call. */
-const RULES: Record<string, string> = {
-  "card.clone_attempt": "A card's tap URL was presented on another chip (a copied NDEF). The genuine card is safe; check where it was photographed or read.",
-  "card.url_replay": "The same card URL was replayed several times. Someone collected it; the replays were refused.",
-  "card.counter_gap": "Many reads of this card never reached the server (read elsewhere). Ask the restaurant; suspend and replace if in doubt.",
-  "card.counterfeit": "A chip at the station is not a genuine NXP NTAG 424 DNA. Stop the print run and contact the printer.",
-  "card.unknown_keys": "A chip at the station had keys that are neither factory nor ours.",
-  "device.token_theft": "An app sign-in was used from another phone: the token was copied. Revoke the device and reset the person's password.",
-  "auth.account_locked": "An account was locked after wrong passwords.",
-  "auth.credential_stuffing": "Many wrong passwords from one network across accounts.",
-  "presentment.guessing": "One phone presented many unknown QR codes or cards.",
-  "money.limit_hits": "Redemptions keep hitting the restaurant's limits.",
-  "money.reversals": "One person reversed many bookings today.",
-  "money.complimentary": "One person gave away many complimentary vouchers today.",
-}
+/** Rules with an explanation for the person on call (`admin.security.rule.<rule>`). */
+const RULES = new Set([
+  "card.clone_attempt",
+  "card.url_replay",
+  "card.counter_gap",
+  "card.counterfeit",
+  "card.unknown_keys",
+  "card.replacements",
+  "device.token_theft",
+  "auth.account_locked",
+  "auth.credential_stuffing",
+  "presentment.guessing",
+  "money.limit_hits",
+  "money.reversals",
+  "money.refunds",
+  "money.complimentary",
+])
 
-function severityBadge(s: SecurityAlert["severity"]) {
-  return <Badge variant={s === "warning" ? "secondary" : "destructive"}>{s}</Badge>
+function SeverityBadge({ severity }: { severity: SecurityAlert["severity"] }) {
+  const t = useT()
+  return <Badge variant={severity === "warning" ? "secondary" : "destructive"}>{t(`admin.security.severity.${severity}` as MessageKey)}</Badge>
 }
 
 function Content() {
+  const t = useT()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<"open" | "acknowledged">("open")
   const { data, isLoading } = useSecurityAlerts(page, status)
@@ -47,16 +53,16 @@ function Content() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Security alerts" description="Fraud and attack rules over the security event stream. High and critical alerts are also e-mailed to operations." />
+      <PageHeader title={t("nav.securityAlerts")} description={t("admin.security.description")} />
       <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="border-b p-3">
           <Segmented
-            label="Alert status"
+            label={t("admin.security.alertStatus")}
             value={status}
             onChange={(v) => (setStatus(v), setPage(1))}
             options={[
-              { value: "open", label: "Open" },
-              { value: "acknowledged", label: "Acknowledged" },
+              { value: "open", label: t("admin.security.open") },
+              { value: "acknowledged", label: t("admin.security.acknowledged") },
             ]}
           />
         </div>
@@ -67,11 +73,11 @@ function Content() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Rule</TableHead>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead className="text-right">Count</TableHead>
-                  <TableHead>Last seen</TableHead>
+                  <TableHead>{t("admin.security.colRule")}</TableHead>
+                  <TableHead>{t("admin.security.colSeverity")}</TableHead>
+                  <TableHead>{t("admin.security.colSubject")}</TableHead>
+                  <TableHead className="text-right">{t("admin.security.colCount")}</TableHead>
+                  <TableHead>{t("admin.security.colLastSeen")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -80,17 +86,21 @@ function Content() {
                   <TableRow key={a.id}>
                     <TableCell className="max-w-md">
                       <p className="font-mono text-sm">{a.rule}</p>
-                      <p className="text-muted-foreground text-xs whitespace-normal">{RULES[a.rule] ?? ""}</p>
-                      {a.note ? <p className="mt-1 text-xs whitespace-normal">Note: {a.note}</p> : null}
+                      <p className="text-muted-foreground text-xs whitespace-normal">
+                        {RULES.has(a.rule) ? t(`admin.security.rule.${a.rule}` as MessageKey) : ""}
+                      </p>
+                      {a.note ? <p className="mt-1 text-xs whitespace-normal">{t("admin.security.note", { note: a.note })}</p> : null}
                     </TableCell>
-                    <TableCell>{severityBadge(a.severity)}</TableCell>
+                    <TableCell>
+                      <SeverityBadge severity={a.severity} />
+                    </TableCell>
                     <TableCell className="font-mono text-xs">{a.subject}</TableCell>
                     <TableCell className="text-right tabular-nums">{a.occurrences}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{formatDateTime(a.last_seen_at)}</TableCell>
                     <TableCell className="text-right">
                       {a.status === "open" ? (
                         <Button size="sm" variant="outline" onClick={() => setAcking(a)}>
-                          Acknowledge
+                          {t("admin.security.acknowledge")}
                         </Button>
                       ) : null}
                     </TableCell>
@@ -101,22 +111,22 @@ function Content() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={ShieldAlert} title={status === "open" ? "No open alerts" : "Nothing acknowledged yet"} />
+          <EmptyState icon={ShieldAlert} title={status === "open" ? t("admin.security.noOpen") : t("admin.security.noneAcknowledged")} />
         )}
       </div>
       <ReasonDialog
         open={acking !== null}
         onOpenChange={(o) => !o && setAcking(null)}
-        title={`Acknowledge ${acking?.rule ?? "alert"}?`}
-        description="Write what was checked and done; the note stays with the alert and in the platform audit."
-        confirmLabel="Acknowledge"
-        reasonLabel="Note"
+        title={t("admin.security.ackTitle", { rule: acking?.rule ?? "" })}
+        description={t("admin.security.ackDescription")}
+        confirmLabel={t("admin.security.acknowledge")}
+        reasonLabel={t("admin.security.ackNote")}
         pending={ack.isPending}
         onConfirm={async (note) => {
           if (!acking) return
           try {
             await ack.mutateAsync({ id: acking.id, note })
-            toast.success("Alert acknowledged")
+            toast.success(t("admin.security.acked"))
             setAcking(null)
           } catch (e) {
             toast.error(errorMessage(e))

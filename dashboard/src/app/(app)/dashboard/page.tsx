@@ -19,6 +19,8 @@ import { useDashboardCharts, useDashboardStats, useRecentActivity } from "@/lib/
 import { useAuth } from "@/lib/auth"
 import { formatRelative } from "@/lib/format"
 import { formatMoney, formatSignedMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
 // Recharts is the heaviest dependency of the app: load it after the KPIs so the numbers appear first.
 const SalesChart = dynamic(() => import("@/components/charts/sales-chart").then((m) => m.SalesChart), {
@@ -31,7 +33,8 @@ const MonthlyRevenueChart = dynamic(() => import("@/components/charts/monthly-re
 })
 
 function Trend({ current, previous }: { current: number; previous: number }) {
-  if (previous <= 0) return <span>No sales last month</span>
+  const t = useT()
+  if (previous <= 0) return <span>{t("dashboard.trend.noPrevious")}</span>
   const change = ((current - previous) / previous) * 100
   const up = change >= 0
   return (
@@ -39,7 +42,7 @@ function Trend({ current, previous }: { current: number; previous: number }) {
       <span className={up ? "text-emerald-700 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>
         {up ? "▲" : "▼"} {Math.abs(change).toFixed(0)}%
       </span>{" "}
-      vs. last month
+      {t("dashboard.trend.vsLastMonth")}
     </span>
   )
 }
@@ -52,17 +55,20 @@ function DashboardContent() {
   const activity = useRecentActivity(8)
   const currency = user?.restaurant?.currency ?? "EUR"
   const s = stats.data
+  const t = useT()
+  const hour = new Date().getHours()
+  const greeting: MessageKey = hour < 12 ? "dashboard.greeting.morning" : hour < 18 ? "dashboard.greeting.afternoon" : "dashboard.greeting.evening"
 
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Dashboard"
-        description={`Good ${new Date().getHours() < 12 ? "morning" : new Date().getHours() < 18 ? "afternoon" : "evening"}, ${user?.name.split(" ")[0] ?? ""}.`}
+        title={t("nav.dashboard")}
+        description={t(greeting, { name: user?.name.split(" ")[0] ?? "" })}
         actions={
           can("vouchers.sell") ? (
             <Button asChild>
               <Link href="/vouchers/new">
-                <Plus /> Sell voucher
+                <Plus /> {t("dashboard.sellVoucher")}
               </Link>
             </Button>
           ) : null
@@ -73,49 +79,49 @@ function DashboardContent() {
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Outstanding balance"
+          label={t("dashboard.outstanding")}
           icon={Wallet}
           loading={stats.isLoading}
           value={formatMoney(s?.outstanding_balance, currency)}
-          hint={s ? `Owed to guests on ${s.outstanding_vouchers} voucher${s.outstanding_vouchers === 1 ? "" : "s"}` : null}
+          hint={s ? t("dashboard.outstandingHint", { count: s.outstanding_vouchers }) : null}
         />
         <StatCard
-          label="Revenue this month"
+          label={t("dashboard.revenueMonth")}
           icon={Euro}
           loading={stats.isLoading}
           value={formatMoney(s?.monthly_revenue, currency)}
           hint={s ? <Trend current={s.monthly_revenue} previous={s.previous_month_revenue} /> : null}
         />
         <StatCard
-          label="Redeemed this month"
+          label={t("dashboard.redeemedMonth")}
           icon={ArrowDownRight}
           loading={stats.isLoading}
           value={formatMoney(s?.monthly_redeemed, currency)}
-          hint={s ? `${formatMoney(s.today_redeemed, currency)} today` : null}
+          hint={s ? t("dashboard.redeemedToday", { amount: formatMoney(s.today_redeemed, currency) }) : null}
         />
         <StatCard
-          label="Vouchers sold"
+          label={t("dashboard.vouchersSold")}
           icon={Ticket}
           loading={stats.isLoading}
           value={s?.vouchers_sold ?? 0}
-          hint={s ? `${s.vouchers_sold_this_month} this month · ${s.vouchers_empty} used up` : null}
+          hint={s ? t("dashboard.vouchersSoldHint", { month: s.vouchers_sold_this_month, empty: s.vouchers_empty }) : null}
         />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Sales & redemptions</CardTitle>
-            <CardDescription>Daily voucher value sold vs. redeemed</CardDescription>
+            <CardTitle>{t("dashboard.sales.title")}</CardTitle>
+            <CardDescription>{t("dashboard.sales.description")}</CardDescription>
             <CardAction>
               <Segmented
-                label="Period"
+                label={t("dashboard.period")}
                 value={String(days) as "7" | "30" | "90"}
                 onChange={(v) => setDays(Number(v) as 7 | 30 | 90)}
                 options={[
-                  { value: "7", label: "7d" },
-                  { value: "30", label: "30d" },
-                  { value: "90", label: "90d" },
+                  { value: "7", label: t("dashboard.periodDays", { days: 7 }) },
+                  { value: "30", label: t("dashboard.periodDays", { days: 30 }) },
+                  { value: "90", label: t("dashboard.periodDays", { days: 90 }) },
                 ]}
               />
             </CardAction>
@@ -125,14 +131,14 @@ function DashboardContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Card status</CardTitle>
+            <CardTitle>{t("dashboard.voucherStatus.title")}</CardTitle>
             <CardDescription>
               {s && s.expiring_soon > 0 ? (
                 <span className="inline-flex items-center gap-1">
-                  <CalendarClock className="size-3.5" /> {s.expiring_soon} voucher{s.expiring_soon === 1 ? "" : "s"} expire within 30 days
+                  <CalendarClock className="size-3.5" /> {t("dashboard.voucherStatus.expiring", { count: s.expiring_soon })}
                 </span>
               ) : (
-                "All cards by status"
+                t("dashboard.voucherStatus.all")
               )}
             </CardDescription>
           </CardHeader>
@@ -145,8 +151,8 @@ function DashboardContent() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Monthly revenue</CardTitle>
-            <CardDescription>Card sales and reloads over the last 12 months</CardDescription>
+            <CardTitle>{t("dashboard.monthly.title")}</CardTitle>
+            <CardDescription>{t("dashboard.monthly.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             {charts.data ? <MonthlyRevenueChart data={charts.data.monthly} currency={currency} /> : <Skeleton className="h-56 w-full" />}
@@ -155,12 +161,12 @@ function DashboardContent() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
+            <CardTitle>{t("dashboard.activity.title")}</CardTitle>
             {can("transactions.view") ? (
               <CardAction>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/transactions">
-                    View all <ArrowRight />
+                    {t("dashboard.activity.viewAll")} <ArrowRight />
                   </Link>
                 </Button>
               </CardAction>
@@ -180,9 +186,9 @@ function DashboardContent() {
                     <Link href={tx.voucher ? `/vouchers/${tx.voucher.id}` : "#"} className="hover:bg-muted flex items-center gap-3 rounded-lg px-2 py-2">
                       <TransactionTypeIcon type={tx.type} />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{tx.type_label}</p>
+                        <p className="truncate text-sm font-medium">{t(`ops.txType.${tx.type}` as MessageKey)}</p>
                         <p className="text-muted-foreground truncate text-xs">
-                          ••{tx.voucher?.voucher_number.slice(-4)} · {tx.user?.name ?? "System"} · {formatRelative(tx.created_at)}
+                          ••{tx.voucher?.voucher_number.slice(-4)} · {tx.user?.name ?? t("ops.system")} · {formatRelative(tx.created_at)}
                         </p>
                       </div>
                       <span
@@ -195,7 +201,7 @@ function DashboardContent() {
                 ))}
               </ul>
             ) : (
-              <EmptyState icon={Receipt} title="No activity yet" description="Transactions will appear here as soon as cards are issued or redeemed." />
+              <EmptyState icon={Receipt} title={t("dashboard.activity.emptyTitle")} description={t("dashboard.activity.emptyDescription")} />
             )}
           </CardContent>
         </Card>

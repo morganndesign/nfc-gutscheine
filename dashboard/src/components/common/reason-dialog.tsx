@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { useT } from "@/lib/i18n"
 
 /**
  * Confirmation dialog that optionally collects a reason (stored in the audit log).
@@ -18,7 +19,7 @@ export function ReasonDialog({
   confirmLabel,
   destructive,
   reasonRequired = true,
-  reasonLabel = "Reason",
+  reasonLabel,
   pending,
   onConfirm,
   suggestions,
@@ -38,6 +39,7 @@ export function ReasonDialog({
   suggestions?: string[]
   children?: ReactNode
 }) {
+  const t = useT()
   const [reason, setReason] = useState("")
   const needsReason = reasonRequired === true
   const showReason = reasonRequired !== "none"
@@ -59,11 +61,11 @@ export function ReasonDialog({
         {showReason ? (
           <div className="space-y-2">
             <Label htmlFor="reason">
-              {reasonLabel}
-              {needsReason ? null : <span className="text-muted-foreground"> (optional)</span>}
+              {reasonLabel ?? t("reasonDialog.reason")}
+              {needsReason ? null : <span className="text-muted-foreground"> {t("reasonDialog.optional")}</span>}
             </Label>
             {suggestions?.length ? (
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Common reasons">
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label={t("reasonDialog.suggestions")}>
                 {suggestions.map((s) => (
                   <button
                     key={s}
@@ -87,13 +89,13 @@ export function ReasonDialog({
               maxLength={500}
               rows={3}
               autoFocus={!suggestions?.length}
-              placeholder={suggestions?.length ? "Or describe what happened" : undefined}
+              placeholder={suggestions?.length ? t("reasonDialog.otherPlaceholder") : undefined}
             />
           </div>
         ) : null}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             variant={destructive ? "destructive" : "default"}

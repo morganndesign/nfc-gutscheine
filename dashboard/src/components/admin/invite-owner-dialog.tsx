@@ -9,9 +9,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useInviteOwner } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
+import { useT } from "@/lib/i18n"
 
 /** A new owner for the restaurant: a handover, or its only owner lost access. The previous owner stays until removed. */
 export function InviteOwnerDialog({ restaurantId, open, onOpenChange }: { restaurantId: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useT()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const mutation = useInviteOwner()
@@ -29,10 +31,8 @@ export function InviteOwnerDialog({ restaurantId, open, onOpenChange }: { restau
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Invite a new owner</DialogTitle>
-          <DialogDescription>
-            For a handover, or when the only owner can no longer sign in. The new owner can then deactivate the previous one.
-          </DialogDescription>
+          <DialogTitle>{t("admin.inviteOwner.title")}</DialogTitle>
+          <DialogDescription>{t("admin.inviteOwner.description")}</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -40,7 +40,7 @@ export function InviteOwnerDialog({ restaurantId, open, onOpenChange }: { restau
             e.preventDefault()
             try {
               await mutation.mutateAsync({ restaurantId, name: name.trim(), email: email.trim() })
-              toast.success(`Invitation sent to ${email.trim()}`)
+              toast.success(t("admin.invite.sent", { email: email.trim() }))
               onOpenChange(false)
             } catch (err) {
               toast.error(errorMessage(err))
@@ -48,20 +48,20 @@ export function InviteOwnerDialog({ restaurantId, open, onOpenChange }: { restau
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="owner-name">Name</Label>
+            <Label htmlFor="owner-name">{t("admin.field.name")}</Label>
             <Input id="owner-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={160} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="owner-email">E-mail</Label>
+            <Label htmlFor="owner-email">{t("admin.field.email")}</Label>
             <Input id="owner-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={191} required />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={!name.trim() || !email.trim() || mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              Send invitation
+              {t("admin.invite.send")}
             </Button>
           </DialogFooter>
         </form>

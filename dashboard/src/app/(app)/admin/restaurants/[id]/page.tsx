@@ -19,8 +19,11 @@ import { useAdminRestaurant } from "@/lib/api/hooks"
 import type { StaffUser } from "@/lib/api/types"
 import { formatDate, formatRelative } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
 function RestaurantContent({ id }: { id: string }) {
+  const t = useT()
   const { data, isLoading, isError } = useAdminRestaurant(id)
   const [inviting, setInviting] = useState<StaffUser | null>(null)
   const [invitingOwner, setInvitingOwner] = useState(false)
@@ -30,10 +33,10 @@ function RestaurantContent({ id }: { id: string }) {
       <div className="space-y-4">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/admin">
-            <ArrowLeft /> Restaurants
+            <ArrowLeft /> {t("nav.restaurants")}
           </Link>
         </Button>
-        <p className="text-muted-foreground text-sm">This restaurant does not exist (anymore).</p>
+        <p className="text-muted-foreground text-sm">{t("admin.restaurant.notFound")}</p>
       </div>
     )
   if (isLoading || !data) return <Skeleton className="h-96 w-full rounded-2xl" />
@@ -49,7 +52,7 @@ function RestaurantContent({ id }: { id: string }) {
       <div className="space-y-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/admin">
-            <ArrowLeft /> Restaurants
+            <ArrowLeft /> {t("nav.restaurants")}
           </Link>
         </Button>
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
@@ -59,20 +62,18 @@ function RestaurantContent({ id }: { id: string }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" asChild>
-              <Link href={`/admin/audit?restaurant_id=${r.id}`}>
-                <History /> Audit log
+              <Link href={`/admin/audit?restaurant=${r.id}`}>
+                <History /> {t("nav.audit")}
               </Link>
             </Button>
             <RestaurantActions restaurant={r} variant="buttons" />
           </div>
         </div>
         {archived ? (
-          <p className="text-muted-foreground text-sm">
-            Archived {formatRelative(r.archived_at)}. Its users and devices are locked out; all data is kept. Restore it to continue.
-          </p>
+          <p className="text-muted-foreground text-sm">{t("admin.restaurant.archivedNote", { when: formatRelative(r.archived_at) })}</p>
         ) : r.status === "suspended" ? (
           <p className="text-destructive text-sm">
-            Disabled {formatRelative(r.suspended_at)}: {r.suspension_reason}
+            {t("admin.restaurant.disabledNote", { when: formatRelative(r.suspended_at), reason: r.suspension_reason })}
           </p>
         ) : null}
       </div>
@@ -82,35 +83,35 @@ function RestaurantContent({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Profile</CardTitle>
+            <CardTitle>{t("admin.restaurant.profile")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>{r.legal_name ?? r.name}</p>
             <p className="text-muted-foreground">
-              {[r.address_line1, [r.postal_code, r.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "No address"}
+              {[r.address_line1, [r.postal_code, r.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || t("admin.restaurant.noAddress")}
             </p>
             <p className="text-muted-foreground">{r.email ?? "—"}</p>
-            {r.vat_number ? <p className="text-muted-foreground">VAT {r.vat_number}</p> : null}
+            {r.vat_number ? <p className="text-muted-foreground">{t("admin.restaurant.vat", { number: r.vat_number })}</p> : null}
             <p className="text-muted-foreground">
               {r.currency} · {r.locale} · {r.timezone}
             </p>
-            <p className="text-muted-foreground">Customer since {formatDate(r.created_at)}</p>
+            <p className="text-muted-foreground">{t("admin.restaurant.customerSince", { date: formatDate(r.created_at) })}</p>
             <p className="pt-2 font-medium">
-              {business.vouchers} vouchers · {formatMoney(r.outstanding_balance ?? 0, r.currency)} outstanding
+              {t("admin.restaurant.outstanding", { count: business.vouchers, amount: formatMoney(r.outstanding_balance ?? 0, r.currency) })}
             </p>
             <p className="text-muted-foreground text-xs">
               {hasBusinessData
-                ? `${business.transactions} transactions and ${business.customers} customers are kept: this restaurant can be archived but not deleted.`
-                : "No vouchers, transactions or customers yet: the restaurant can be deleted permanently."}
+                ? t("admin.restaurant.keepsData", { transactions: business.transactions, customers: business.customers })
+                : t("admin.restaurant.deletable")}
             </p>
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Users</CardTitle>
+            <CardTitle>{t("admin.restaurant.users")}</CardTitle>
             <CardAction>
               <Button variant="outline" size="sm" onClick={() => setInvitingOwner(true)}>
-                <UserPlus /> Invite owner
+                <UserPlus /> {t("admin.restaurant.inviteOwner")}
               </Button>
             </CardAction>
           </CardHeader>
@@ -118,12 +119,12 @@ function RestaurantContent({ id }: { id: string }) {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-6">Name</TableHead>
-                  <TableHead className="hidden sm:table-cell">Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Last sign-in</TableHead>
+                  <TableHead className="pl-6">{t("admin.field.name")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("admin.col.role")}</TableHead>
+                  <TableHead>{t("admin.col.status")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t("admin.col.lastSignIn")}</TableHead>
                   <TableHead className="w-12 pr-6">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t("admin.col.actions")}</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -133,11 +134,11 @@ function RestaurantContent({ id }: { id: string }) {
                     <TableCell className="pl-6">
                       <div className="font-medium">
                         {u.name}
-                        {r.owner?.id === u.id ? <span className="text-muted-foreground font-normal"> · primary owner</span> : null}
+                        {r.owner?.id === u.id ? <span className="text-muted-foreground font-normal"> · {t("admin.restaurant.primaryOwner")}</span> : null}
                       </div>
                       <div className="text-muted-foreground text-xs">{u.email}</div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">{u.role?.name}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{u.role ? t(`roles.${u.role.slug}` as MessageKey) : null}</TableCell>
                     <TableCell>
                       {canInviteAgain(u.invitation) && u.status === "active" ? <InvitationBadge invitation={u.invitation} /> : <UserStatusBadge user={u} />}
                     </TableCell>
@@ -146,13 +147,13 @@ function RestaurantContent({ id }: { id: string }) {
                       {usable && u.status === "active" && canInviteAgain(u.invitation) ? (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" aria-label={`Actions for ${u.name}`}>
+                            <Button variant="ghost" size="icon" aria-label={t("admin.actionsFor", { name: u.name })}>
                               <MoreHorizontal />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={() => setInviting(u)}>
-                              <Mail /> Invite again
+                              <Mail /> {t("admin.invite.again")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -162,7 +163,7 @@ function RestaurantContent({ id }: { id: string }) {
                 ))}
               </TableBody>
             </Table>
-            {data.users.length === 0 ? <p className="text-muted-foreground px-6 py-4 text-sm">No users.</p> : null}
+            {data.users.length === 0 ? <p className="text-muted-foreground px-6 py-4 text-sm">{t("admin.restaurant.noUsers")}</p> : null}
           </CardContent>
         </Card>
         <RestaurantTokens restaurantId={r.id} />

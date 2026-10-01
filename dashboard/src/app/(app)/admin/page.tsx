@@ -25,10 +25,12 @@ import { useAdminRestaurants, useCreateRestaurant, usePlatformStats, type AdminR
 import { errorMessage } from "@/lib/api/client"
 import { formatDate, formatNumber } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 
 const EMPTY_FORM = { name: "", email: "", phone: "", address_line1: "", postal_code: "", city: "Wien", ownerName: "", ownerEmail: "" }
 
 function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const t = useT()
   const create = useCreateRestaurant()
   const router = useRouter()
   const [form, setForm] = useState(EMPTY_FORM)
@@ -38,10 +40,8 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Onboard restaurant</DialogTitle>
-          <DialogDescription>
-            Creates the restaurant and its owner account, and e-mails the owner a link to choose a password (valid 72 hours).
-          </DialogDescription>
+          <DialogTitle>{t("admin.restaurants.onboard")}</DialogTitle>
+          <DialogDescription>{t("admin.create.description")}</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -65,12 +65,15 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
               const invitation = res.owner.invitation
               if (invitation?.delivery === "queued") {
                 // Invitations are sent from the queue; the restaurant page shows when it went out.
-                toast.success(`${res.data.name} created · invitation to ${res.owner.email} is being sent`)
+                toast.success(t("admin.create.createdSending", { name: res.data.name, email: res.owner.email }))
               } else if (invitation && invitation.delivery !== "sent") {
                 // The restaurant exists; the owner can be invited again from its page once mail works.
-                toast.warning(`${res.data.name} created, but the invitation was not delivered`, { description: invitationDetail(invitation), duration: 15_000 })
+                toast.warning(t("admin.create.createdNotDelivered", { name: res.data.name }), {
+                  description: invitationDetail(invitation, t),
+                  duration: 15_000,
+                })
               } else {
-                toast.success(`${res.data.name} created · invitation sent to ${res.owner.email}`)
+                toast.success(t("admin.create.createdSent", { name: res.data.name, email: res.owner.email }))
               }
               setForm(EMPTY_FORM)
               onOpenChange(false)
@@ -82,49 +85,49 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="r-name">Restaurant name</Label>
+              <Label htmlFor="r-name">{t("admin.field.restaurantName")}</Label>
               <Input id="r-name" required value={form.name} onChange={set("name")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="r-email">E-mail</Label>
+              <Label htmlFor="r-email">{t("admin.field.email")}</Label>
               <Input id="r-email" type="email" value={form.email} onChange={set("email")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="r-phone">Phone</Label>
+              <Label htmlFor="r-phone">{t("admin.field.phone")}</Label>
               <Input id="r-phone" value={form.phone} onChange={set("phone")} />
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="r-street">Street</Label>
+              <Label htmlFor="r-street">{t("admin.field.street")}</Label>
               <Input id="r-street" value={form.address_line1} onChange={set("address_line1")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="r-zip">Postal code</Label>
+              <Label htmlFor="r-zip">{t("admin.field.postalCode")}</Label>
               <Input id="r-zip" value={form.postal_code} onChange={set("postal_code")} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="r-city">City</Label>
+              <Label htmlFor="r-city">{t("admin.field.city")}</Label>
               <Input id="r-city" value={form.city} onChange={set("city")} />
             </div>
           </div>
           <div className="bg-surface space-y-3 rounded-2xl p-4">
-            <p className="text-sm font-medium">Owner account</p>
+            <p className="text-sm font-medium">{t("admin.create.ownerAccount")}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="o-name">Name</Label>
+                <Label htmlFor="o-name">{t("admin.field.name")}</Label>
                 <Input id="o-name" required value={form.ownerName} onChange={set("ownerName")} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="o-email">E-mail</Label>
+                <Label htmlFor="o-email">{t("admin.field.email")}</Label>
                 <Input id="o-email" type="email" required value={form.ownerEmail} onChange={set("ownerEmail")} />
               </div>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? <Loader2 className="animate-spin" /> : null} Create restaurant
+              {create.isPending ? <Loader2 className="animate-spin" /> : null} {t("admin.create.submit")}
             </Button>
           </DialogFooter>
         </form>
@@ -134,6 +137,7 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
 }
 
 function AdminContent() {
+  const t = useT()
   const router = useRouter()
   const stats = usePlatformStats()
   const [search, setSearch] = useState("")
@@ -146,53 +150,48 @@ function AdminContent() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Restaurants"
-        description="All tenants on the platform."
+        title={t("nav.restaurants")}
+        description={t("admin.restaurants.description")}
         actions={
           <Button onClick={() => setCreating(true)}>
-            <Plus /> Onboard restaurant
+            <Plus /> {t("admin.restaurants.onboard")}
           </Button>
         }
       />
       <MailWarning />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Restaurants"
+          label={t("nav.restaurants")}
           icon={Building2}
           loading={stats.isLoading}
           value={s?.restaurants_total ?? 0}
-          hint={`${s?.restaurants_active ?? 0} active${s?.restaurants_archived ? ` · ${s.restaurants_archived} archived` : ""}`}
+          hint={`${t("admin.stats.active", { count: s?.restaurants_active ?? 0 })}${s?.restaurants_archived ? ` · ${t("admin.stats.archived", { count: s.restaurants_archived })}` : ""}`}
         />
         <StatCard
-          label="Vouchers"
+          label={t("nav.vouchers")}
           icon={CreditCard}
           loading={stats.isLoading}
           value={formatNumber(s?.vouchers_total ?? 0)}
-          hint={`${formatNumber(s?.vouchers_active ?? 0)} active`}
+          hint={t("admin.stats.active", { count: formatNumber(s?.vouchers_active ?? 0) })}
         />
-        <StatCard label="Transactions this month" icon={Receipt} loading={stats.isLoading} value={formatNumber(s?.transactions_this_month ?? 0)} />
-        <StatCard label="Volume sold this month" icon={Euro} loading={stats.isLoading} value={formatMoney(s?.volume_sold_this_month ?? 0, "EUR")} />
+        <StatCard label={t("admin.stats.transactionsMonth")} icon={Receipt} loading={stats.isLoading} value={formatNumber(s?.transactions_this_month ?? 0)} />
+        <StatCard label={t("admin.stats.volumeMonth")} icon={Euro} loading={stats.isLoading} value={formatMoney(s?.volume_sold_this_month ?? 0, "EUR")} />
       </div>
       <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input
-              value={search}
-              onChange={(e) => (setSearch(e.target.value), setPage(1))}
-              placeholder="Search by restaurant, owner or e-mail…"
-              className="h-9 pl-9"
-            />
+            <Input value={search} onChange={(e) => (setSearch(e.target.value), setPage(1))} placeholder={t("admin.restaurants.search")} className="h-9 pl-9" />
           </div>
           <Segmented
-            label="Status"
+            label={t("admin.col.status")}
             value={filter}
             onChange={(v) => (setFilter(v), setPage(1))}
             options={[
-              { value: "all", label: "All" },
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Disabled" },
-              { value: "archived", label: "Archived" },
+              { value: "all", label: t("admin.restaurants.filterAll") },
+              { value: "active", label: t("admin.status.active") },
+              { value: "suspended", label: t("admin.status.disabled") },
+              { value: "archived", label: t("admin.status.archived") },
             ]}
           />
         </div>
@@ -207,13 +206,13 @@ function AdminContent() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-4">Restaurant</TableHead>
-                  <TableHead className="hidden md:table-cell">Owner</TableHead>
-                  <TableHead className="hidden lg:table-cell">Email</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden sm:table-cell">Created</TableHead>
+                  <TableHead className="pl-4">{t("admin.col.restaurant")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t("admin.col.owner")}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t("admin.field.email")}</TableHead>
+                  <TableHead>{t("admin.col.status")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("admin.col.created")}</TableHead>
                   <TableHead className="w-12 pr-4 text-right">
-                    <span className="sr-only">Actions</span>
+                    <span className="sr-only">{t("admin.col.actions")}</span>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -229,9 +228,12 @@ function AdminContent() {
                         {r.name}
                       </Link>
                       <div className="text-muted-foreground text-xs">
-                        {r.city ?? r.slug} · {r.vouchers_count ?? 0} cards · {formatMoney(r.outstanding_balance ?? 0, r.currency)}
+                        {r.city ?? r.slug} · {t("admin.restaurants.cards", { count: r.vouchers_count ?? 0 })} ·{" "}
+                        {formatMoney(r.outstanding_balance ?? 0, r.currency)}
                       </div>
-                      <div className="text-muted-foreground text-xs md:hidden">{r.owner ? `${r.owner.name} · ${r.owner.email}` : "No owner"}</div>
+                      <div className="text-muted-foreground text-xs md:hidden">
+                        {r.owner ? `${r.owner.name} · ${r.owner.email}` : t("admin.restaurants.noOwner")}
+                      </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {r.owner ? (
@@ -240,7 +242,7 @@ function AdminContent() {
                           <InvitationBadge invitation={r.owner.invitation} />
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">No owner</span>
+                        <span className="text-muted-foreground">{t("admin.restaurants.noOwner")}</span>
                       )}
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden lg:table-cell">{r.owner?.email ?? r.email ?? "—"}</TableCell>
@@ -260,8 +262,8 @@ function AdminContent() {
         ) : (
           <EmptyState
             icon={Building2}
-            title={search || filter !== "all" ? "No matching restaurants" : "No restaurants"}
-            description={search || filter !== "all" ? "Change the search or the status filter." : "Onboard the first restaurant to get started."}
+            title={search || filter !== "all" ? t("admin.restaurants.noMatch") : t("admin.restaurants.empty")}
+            description={search || filter !== "all" ? t("admin.restaurants.noMatchHint") : t("admin.restaurants.emptyHint")}
           />
         )}
       </div>

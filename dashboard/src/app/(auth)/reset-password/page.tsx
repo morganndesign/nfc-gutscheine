@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/lib/auth"
 import { api, errorMessage } from "@/lib/api/client"
+import { useT } from "@/lib/i18n"
 
 /**
  * Invitation and reset links carry their token in the URL fragment (#token=…&email=…), which browsers never send
@@ -27,6 +28,7 @@ function useLinkParams(): URLSearchParams | null {
 }
 
 function ResetForm() {
+  const t = useT()
   const linkParams = useLinkParams()
   const params = linkParams ?? new URLSearchParams()
   const router = useRouter()
@@ -44,11 +46,10 @@ function ResetForm() {
   if (!token || !email) {
     return (
       <div className="bg-card rounded-2xl border p-8 text-center text-sm">
-        This link is incomplete.{" "}
+        {t("resetPassword.incomplete")}{" "}
         <Link href="/forgot-password" className="underline">
-          Request a new one
+          {t("resetPassword.requestNew")}
         </Link>
-        .
       </div>
     )
   }
@@ -60,7 +61,7 @@ function ResetForm() {
         e.preventDefault()
         setError(null)
         if (password !== confirmation) {
-          setError("The passwords do not match.")
+          setError(t("resetPassword.mismatch"))
           return
         }
         setPending(true)
@@ -69,7 +70,7 @@ function ResetForm() {
           // Someone else may still be signed in in this browser (e.g. the platform admin who just onboarded this
           // owner): sign that session out, otherwise the login page would forward straight into their account.
           if (user) await logout().catch(() => undefined)
-          toast.success(invite ? "Your account is ready. Sign in with your new password." : "Password saved. You can sign in now.")
+          toast.success(invite ? t("resetPassword.accountReady") : t("resetPassword.saved"))
           router.replace("/login")
         } catch (err) {
           setError(errorMessage(err))
@@ -79,12 +80,12 @@ function ResetForm() {
       }}
     >
       <div className="space-y-1 text-center">
-        <h1 className="text-xl font-semibold tracking-tight">{invite ? "Welcome to GiftCard Pro" : "Choose a new password"}</h1>
-        {invite ? <p className="text-muted-foreground text-sm">Choose a password to activate your account.</p> : null}
+        <h1 className="text-xl font-semibold tracking-tight">{invite ? t("resetPassword.welcome") : t("resetPassword.chooseTitle")}</h1>
+        {invite ? <p className="text-muted-foreground text-sm">{t("resetPassword.activateHint")}</p> : null}
         <p className="text-muted-foreground text-sm">{email}</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="password">New password</Label>
+        <Label htmlFor="password">{t("resetPassword.newPassword")}</Label>
         <Input
           id="password"
           type="password"
@@ -95,10 +96,10 @@ function ResetForm() {
           onChange={(e) => setPassword(e.target.value)}
           className="h-10"
         />
-        <p className="text-muted-foreground text-xs">At least 12 characters with upper- and lower-case letters and a number.</p>
+        <p className="text-muted-foreground text-xs">{t("resetPassword.rules")}</p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="confirmation">Repeat password</Label>
+        <Label htmlFor="confirmation">{t("resetPassword.repeat")}</Label>
         <Input
           id="confirmation"
           type="password"
@@ -111,7 +112,7 @@ function ResetForm() {
       </div>
       {error ? <p className="text-destructive text-sm">{error}</p> : null}
       <Button type="submit" className="h-10 w-full" disabled={pending}>
-        {pending ? <Loader2 className="animate-spin" /> : null} Save password
+        {pending ? <Loader2 className="animate-spin" /> : null} {t("resetPassword.submit")}
       </Button>
     </form>
   )

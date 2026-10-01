@@ -10,6 +10,7 @@ use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Middleware\RequireTenant;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SetRequestLocale;
 use App\Http\Middleware\TrackDevice;
 use App\Services\Security\AuthEvents;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -47,6 +48,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fd00::/8']);
         $middleware->prepend(AssignRequestId::class);
         $middleware->append(SecurityHeaders::class);
+        // Response language (de/en/bs): the signed-in user's locale, else Accept-Language. Listed in the priority
+        // below right after authentication, so on authenticated routes it sees the user.
+        $middleware->api(append: [SetRequestLocale::class]);
 
         $middleware->alias([
             'tenant' => ResolveTenant::class,
@@ -63,6 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
             StartSession::class,
             EnsureFrontendRequestsAreStateful::class,
             AuthenticatesRequests::class,
+            SetRequestLocale::class,
             BindRememberedSignIn::class,
             EnforceDeviceToken::class,
             ResolveTenant::class,

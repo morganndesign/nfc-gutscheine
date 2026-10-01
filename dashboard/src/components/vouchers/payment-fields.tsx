@@ -6,36 +6,40 @@ import { Segmented } from "@/components/common/segmented"
 import type { PaymentInput } from "@/lib/api/hooks"
 import type { PaymentMethod } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
 export { paymentComplete } from "@/lib/payment"
 
-const LABELS: Record<PaymentMethod, string> = {
-  cash: "Cash",
-  card_terminal: "Card terminal",
-  bank_transfer: "Bank transfer",
-  complimentary: "Complimentary",
+/** How the money was received, by method (translate the server's `method_label` from the method instead). */
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, MessageKey> = {
+  cash: "payment.method.cash",
+  card_terminal: "payment.method.card_terminal",
+  bank_transfer: "payment.method.bank_transfer",
+  complimentary: "payment.method.complimentary",
 }
 
 /** Every sale and reload records how the money was received (decision 25). */
 export function PaymentFields({ value, onChange }: { value: PaymentInput; onChange: (value: PaymentInput) => void }) {
   const { can } = useAuth()
+  const t = useT()
   const methods: PaymentMethod[] = ["cash", "card_terminal", "bank_transfer", ...(can("vouchers.sell_complimentary") ? (["complimentary"] as const) : [])]
 
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label>Payment</Label>
+        <Label>{t("payment.label")}</Label>
         <Segmented
-          label="Payment method"
+          label={t("payment.methodAria")}
           value={value.method}
           onChange={(method) => onChange({ method, reference: null, reason: null })}
-          options={methods.map((m) => ({ value: m, label: LABELS[m] }))}
+          options={methods.map((m) => ({ value: m, label: t(PAYMENT_METHOD_LABELS[m]) }))}
           className="w-full"
         />
       </div>
       {value.method === "card_terminal" || value.method === "bank_transfer" ? (
         <div className="space-y-2">
-          <Label htmlFor="payment-reference">{value.method === "card_terminal" ? "Terminal receipt number" : "Bank reference"}</Label>
+          <Label htmlFor="payment-reference">{value.method === "card_terminal" ? t("payment.terminalReceipt") : t("payment.bankReference")}</Label>
           <Input
             id="payment-reference"
             required
@@ -47,17 +51,17 @@ export function PaymentFields({ value, onChange }: { value: PaymentInput; onChan
       ) : null}
       {value.method === "complimentary" ? (
         <div className="space-y-2">
-          <Label htmlFor="payment-reason">Why is this voucher free?</Label>
+          <Label htmlFor="payment-reason">{t("payment.complimentaryReason")}</Label>
           <Input
             id="payment-reason"
             required
             minLength={3}
             maxLength={500}
-            placeholder="e.g. raffle prize, guest compensation"
+            placeholder={t("payment.complimentaryPlaceholder")}
             value={value.reason ?? ""}
             onChange={(e) => onChange({ ...value, reason: e.target.value })}
           />
-          <p className="text-muted-foreground text-xs">Complimentary value is not revenue and is listed separately in reports.</p>
+          <p className="text-muted-foreground text-xs">{t("payment.complimentaryHint")}</p>
         </div>
       ) : null}
     </div>

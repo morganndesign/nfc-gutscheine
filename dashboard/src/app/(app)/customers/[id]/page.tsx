@@ -17,6 +17,7 @@ import { errorMessage } from "@/lib/api/client"
 import { useAuth } from "@/lib/auth"
 import { formatDate } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 
 function CustomerContent({ id }: { id: string }) {
   const { can } = useAuth()
@@ -24,6 +25,7 @@ function CustomerContent({ id }: { id: string }) {
   const anonymize = useAnonymizeCustomer(id)
   const [editing, setEditing] = useState(false)
   const [erasing, setErasing] = useState(false)
+  const t = useT()
 
   if (isLoading || !data) return <Skeleton className="h-64 w-full rounded-2xl" />
   const c = data.data
@@ -33,21 +35,21 @@ function CustomerContent({ id }: { id: string }) {
       <div className="space-y-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/customers">
-            <ArrowLeft /> Customers
+            <ArrowLeft /> {t("nav.customers")}
           </Link>
         </Button>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{c.anonymized ? "Anonymized customer" : c.full_name}</h1>
-            <p className="text-muted-foreground text-sm">Customer since {formatDate(c.created_at)}</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{c.anonymized ? t("customer.anonymized") : c.full_name}</h1>
+            <p className="text-muted-foreground text-sm">{t("customer.since", { date: formatDate(c.created_at) })}</p>
           </div>
           {can("customers.manage") && !c.anonymized ? (
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setEditing(true)}>
-                <Pencil /> Edit
+                <Pencil /> {t("common.edit")}
               </Button>
               <Button variant="outline" className="text-destructive" onClick={() => setErasing(true)}>
-                <EyeOff /> Anonymize (GDPR)
+                <EyeOff /> {t("customer.anonymize")}
               </Button>
             </div>
           ) : null}
@@ -57,7 +59,7 @@ function CustomerContent({ id }: { id: string }) {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Contact</CardTitle>
+            <CardTitle>{t("customer.contact")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <p className="flex items-center gap-2">
@@ -66,22 +68,22 @@ function CustomerContent({ id }: { id: string }) {
             <p className="flex items-center gap-2">
               <Phone className="text-muted-foreground size-4" /> {c.phone ?? "—"}
             </p>
-            <p className="text-muted-foreground">Marketing consent: {c.marketing_consent ? "yes" : "no"}</p>
+            <p className="text-muted-foreground">{c.marketing_consent ? t("customer.marketingYes") : t("customer.marketingNo")}</p>
             {c.notes ? <p className="bg-surface text-muted-foreground rounded-xl p-3 whitespace-pre-line">{c.notes}</p> : null}
           </CardContent>
         </Card>
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Vouchers · {formatMoney(c.vouchers_balance ?? 0, data.vouchers[0]?.currency ?? "EUR")} open</CardTitle>
+            <CardTitle>{t("customer.vouchersTitle", { amount: formatMoney(c.vouchers_balance ?? 0, data.vouchers[0]?.currency ?? "EUR") })}</CardTitle>
           </CardHeader>
           <CardContent className="px-0">
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-6">Voucher</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead className="pr-6">Expires</TableHead>
+                  <TableHead className="pl-6">{t("ops.col.voucher")}</TableHead>
+                  <TableHead>{t("ops.col.status")}</TableHead>
+                  <TableHead className="text-right">{t("ops.col.balance")}</TableHead>
+                  <TableHead className="pr-6">{t("ops.col.expires")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -102,7 +104,7 @@ function CustomerContent({ id }: { id: string }) {
                 {!data.vouchers.length ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-muted-foreground py-8 text-center">
-                      No vouchers.
+                      {t("customer.noVouchers")}
                     </TableCell>
                   </TableRow>
                 ) : null}
@@ -123,16 +125,16 @@ function CustomerContent({ id }: { id: string }) {
       <ReasonDialog
         open={erasing}
         onOpenChange={setErasing}
-        title="Anonymize customer"
-        description="Irreversibly removes name, e-mail, phone and notes (GDPR right to erasure). Cards and their balances stay valid."
-        confirmLabel="Anonymize"
+        title={t("customer.anonymizeTitle")}
+        description={t("customer.anonymizeDescription")}
+        confirmLabel={t("customer.anonymizeConfirm")}
         destructive
         reasonRequired="none"
         pending={anonymize.isPending}
         onConfirm={async () => {
           try {
             await anonymize.mutateAsync()
-            toast.success("Customer anonymized")
+            toast.success(t("customer.anonymizedToast"))
             setErasing(false)
             void refetch()
           } catch (e) {

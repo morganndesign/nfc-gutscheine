@@ -66,7 +66,7 @@ final class CredentialVerifier
 
             throw $deviceClient
                 ? new AccountDeactivatedException
-                : ValidationException::withMessages(['email' => 'This account has been deactivated.']);
+                : ValidationException::withMessages(['email' => __('api.deactivated')]);
         }
 
         if ($user->roleSlug() !== RoleSlug::PlatformAdmin && ($user->restaurant === null || ! $user->restaurant->isActive())) {
@@ -90,7 +90,7 @@ final class CredentialVerifier
 
     private function failed(): ValidationException
     {
-        return ValidationException::withMessages(['email' => 'The e-mail address or password is incorrect. After too many attempts the account is locked for a few minutes.']);
+        return ValidationException::withMessages(['email' => __('api.credentials')]);
     }
 
     private function actor(Request $request): Actor

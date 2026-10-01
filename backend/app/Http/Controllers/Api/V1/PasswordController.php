@@ -33,8 +33,6 @@ final class PasswordController extends Controller
     ) {}
 
     /** The same answer for every failure, so the endpoint reveals neither accounts nor token state (audit S5). */
-    private const INVALID_LINK = 'This link is invalid or has expired. Please request a new one.';
-
     public function forgot(ForgotPasswordRequest $request): JsonResponse
     {
         // Sent from the queue: the answer is immediate and identical for every address, and a slow or failing mail
@@ -94,7 +92,7 @@ final class PasswordController extends Controller
                 restaurantId: $invited?->restaurant_id,
             );
 
-            throw ValidationException::withMessages(['email' => self::INVALID_LINK]);
+            throw ValidationException::withMessages(['email' => __('api.invalid_link')]);
         }
 
         return response()->json(['message' => __($status)]);

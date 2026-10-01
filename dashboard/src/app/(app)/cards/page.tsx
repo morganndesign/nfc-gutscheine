@@ -24,6 +24,7 @@ import type { Card, CardState } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDateTime, formatNumber } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 
 type Filter = "all" | "active" | "suspended" | "stock"
 
@@ -39,13 +40,14 @@ type Action = { card: Card; action: "suspend" | "resume" | "revoke" }
 function CardDetail({ number, onClose, onAction }: { number: string; onClose: () => void; onAction: (a: Action) => void }) {
   const { can } = useAuth()
   const { data: card, isLoading } = useCard(number)
+  const t = useT()
 
   return (
     <Sheet open onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle className="font-mono">{number}</SheetTitle>
-          <SheetDescription>{card ? cardStateLabel(card.state) : "Loading…"}</SheetDescription>
+          <SheetDescription>{card ? cardStateLabel(card.state) : t("common.loading")}</SheetDescription>
         </SheetHeader>
         {isLoading || !card ? (
           <Skeleton className="m-4 h-40" />
@@ -53,41 +55,40 @@ function CardDetail({ number, onClose, onAction }: { number: string; onClose: ()
           <div className="space-y-6 px-4 pb-6">
             {card.voucher ? (
               <div className="bg-muted/40 rounded-xl border p-3">
-                <p className="text-muted-foreground text-xs">Voucher</p>
+                <p className="text-muted-foreground text-xs">{t("ops.col.voucher")}</p>
                 <Link href={`/vouchers/${card.voucher.id}`} className="font-mono text-sm underline-offset-4 hover:underline">
                   {card.voucher.voucher_number}
                 </Link>
                 <p className="text-lg font-semibold tabular-nums">{formatMoney(card.voucher.balance, card.voucher.currency)}</p>
               </div>
             ) : null}
-            {card.successor ? <p className="text-sm">Replaced by <span className="font-mono">{card.successor}</span>.</p> : null}
+            {card.successor ? (
+              <p className="text-sm">
+                {t("cards.replacedBy")} <span className="font-mono">{card.successor}</span>.
+              </p>
+            ) : null}
             {can("cards.manage") ? (
               <div className="flex flex-wrap gap-2">
                 {card.state === "active" ? (
                   <Button variant="outline" className="text-destructive" onClick={() => onAction({ card, action: "suspend" })}>
-                    <Pause /> Suspend
+                    <Pause /> {t("cards.suspend")}
                   </Button>
                 ) : null}
                 {card.state === "suspended" ? (
                   <Button variant="outline" onClick={() => onAction({ card, action: "resume" })}>
-                    <Play /> Resume
+                    <Play /> {t("cards.resume")}
                   </Button>
                 ) : null}
                 {card.state === "available" || card.state === "delivered" ? (
                   <Button variant="outline" className="text-destructive" onClick={() => onAction({ card, action: "revoke" })}>
-                    <Ban /> Take out of service
+                    <Ban /> {t("cards.revoke")}
                   </Button>
                 ) : null}
               </div>
             ) : null}
-            {card.state === "active" || card.state === "suspended" ? (
-              <p className="text-muted-foreground text-xs">
-                To replace a lost or damaged card, open the waiter app → Menu → Find a card, and hold a new card from stock to the phone. The balance moves to
-                the new card.
-              </p>
-            ) : null}
+            {card.state === "active" || card.state === "suspended" ? <p className="text-muted-foreground text-xs">{t("cards.replaceHint")}</p> : null}
             <div>
-              <h3 className="mb-2 text-sm font-medium">History</h3>
+              <h3 className="mb-2 text-sm font-medium">{t("cards.history")}</h3>
               <ol className="space-y-2">
                 {(card.history ?? []).map((h, i) => (
                   <li key={i} className="flex items-start justify-between gap-3 text-sm">
@@ -109,21 +110,22 @@ function CardDetail({ number, onClose, onAction }: { number: string; onClose: ()
 
 function Batches() {
   const { data } = useCardBatches()
+  const t = useT()
   if (!data?.length) return null
   return (
     <div className="bg-card overflow-hidden rounded-2xl border">
       <div className="border-b px-4 py-3">
-        <h2 className="text-sm font-medium">Deliveries</h2>
-        <p className="text-muted-foreground text-xs">Confirm a delivery in the waiter app: Menu → Confirm a delivery.</p>
+        <h2 className="text-sm font-medium">{t("cards.deliveries")}</h2>
+        <p className="text-muted-foreground text-xs">{t("cards.deliveriesHint")}</p>
       </div>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Batch</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Ordered</TableHead>
-            <TableHead className="text-right">In stock</TableHead>
-            <TableHead className="text-right">Sold</TableHead>
+            <TableHead>{t("cards.col.batch")}</TableHead>
+            <TableHead>{t("ops.col.status")}</TableHead>
+            <TableHead className="text-right">{t("cards.col.ordered")}</TableHead>
+            <TableHead className="text-right">{t("cards.col.inStock")}</TableHead>
+            <TableHead className="text-right">{t("cards.col.sold")}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -153,12 +155,13 @@ function CardsContent() {
   const [acting, setActing] = useState<Action | null>(null)
   const { data, isLoading } = useCards(page, { state: FILTERS[filter], search: useDebounce(search.trim()) })
   const action = useCardAction()
+  const t = useT()
 
   const run = async (reason: string) => {
     if (!acting) return
     try {
       await action.mutateAsync({ number: acting.card.card_number, action: acting.action, reason })
-      toast.success(acting.action === "suspend" ? "Card suspended" : acting.action === "resume" ? "Card resumed" : "Card taken out of service")
+      toast.success(t(acting.action === "suspend" ? "cards.toast.suspended" : acting.action === "resume" ? "cards.toast.resumed" : "cards.toast.revoked"))
       setActing(null)
     } catch (e) {
       toast.error(errorMessage(e))
@@ -167,23 +170,29 @@ function CardsContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Cards" description="Physical gift cards: your stock and your guests' cards. Suspend a lost card at once; it no longer pays." />
+      <PageHeader title={t("nav.cards")} description={t("cards.description")} />
       <Batches />
       <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
-            <Input value={search} onChange={(e) => (setSearch(e.target.value), setPage(1))} placeholder="Card number, e.g. 0042" className="h-9 pl-9" aria-label="Search cards" />
+            <Input
+              value={search}
+              onChange={(e) => (setSearch(e.target.value), setPage(1))}
+              placeholder={t("cards.searchPlaceholder")}
+              className="h-9 pl-9"
+              aria-label={t("cards.searchLabel")}
+            />
           </div>
           <Segmented
-            label="Card filter"
+            label={t("cards.filterLabel")}
             value={filter}
             onChange={(f) => (setFilter(f), setPage(1))}
             options={[
-              { value: "all", label: "All" },
-              { value: "active", label: "Active" },
-              { value: "suspended", label: "Suspended" },
-              { value: "stock", label: "In stock" },
+              { value: "all", label: t("cards.filter.all") },
+              { value: "active", label: t("cards.filter.active") },
+              { value: "suspended", label: t("cards.filter.suspended") },
+              { value: "stock", label: t("cards.filter.stock") },
             ]}
           />
         </div>
@@ -194,10 +203,10 @@ function CardsContent() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Card</TableHead>
-                  <TableHead>State</TableHead>
-                  <TableHead className="hidden sm:table-cell">Batch</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
+                  <TableHead>{t("cards.col.card")}</TableHead>
+                  <TableHead>{t("cards.col.state")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("cards.col.batch")}</TableHead>
+                  <TableHead className="text-right">{t("ops.col.balance")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -216,24 +225,33 @@ function CardsContent() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={CreditCard} title="No cards" description={search || filter !== "all" ? "Nothing matches the filter." : "Cards appear here once a delivery is confirmed."} />
+          <EmptyState
+            icon={CreditCard}
+            title={t("cards.emptyTitle")}
+            description={search || filter !== "all" ? t("cards.emptyFiltered") : t("cards.emptyDescription")}
+          />
         )}
       </div>
       {open ? <CardDetail number={open} onClose={() => setOpen(null)} onAction={setActing} /> : null}
       <ReasonDialog
         open={acting !== null}
         onOpenChange={(o) => !o && setActing(null)}
-        title={acting?.action === "suspend" ? `Suspend ${acting.card.card_number}?` : acting?.action === "resume" ? `Resume ${acting?.card.card_number}?` : `Take ${acting?.card.card_number ?? "card"} out of service?`}
-        description={
+        title={t(
+          acting?.action === "suspend" ? "cards.dialog.suspendTitle" : acting?.action === "resume" ? "cards.dialog.resumeTitle" : "cards.dialog.revokeTitle",
+          { number: acting?.card.card_number ?? "" },
+        )}
+        description={t(
           acting?.action === "suspend"
-            ? "The card stops paying immediately, also for a tap made a moment ago. The balance stays with the voucher."
+            ? "cards.dialog.suspendDescription"
             : acting?.action === "revoke"
-              ? "The card can never be sold. Use this for damaged or missing stock cards."
-              : "The card pays again."
-        }
-        confirmLabel={acting?.action === "suspend" ? "Suspend card" : acting?.action === "resume" ? "Resume card" : "Take out of service"}
+              ? "cards.dialog.revokeDescription"
+              : "cards.dialog.resumeDescription",
+        )}
+        confirmLabel={t(
+          acting?.action === "suspend" ? "cards.dialog.suspendConfirm" : acting?.action === "resume" ? "cards.dialog.resumeConfirm" : "cards.revoke",
+        )}
         destructive={acting?.action !== "resume"}
-        suggestions={acting?.action === "resume" ? ["Found again"] : ["Lost", "Stolen", "Damaged"]}
+        suggestions={acting?.action === "resume" ? [t("cards.reason.found")] : [t("cards.reason.lost"), t("cards.reason.stolen"), t("cards.reason.damaged")]}
         pending={action.isPending}
         onConfirm={(reason) => void run(reason)}
       />

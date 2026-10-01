@@ -15,8 +15,7 @@ import { downloadFile, errorMessage } from "@/lib/api/client"
 import { useAuth } from "@/lib/auth"
 import { todayInput } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
-
-const METHOD_LABELS: Record<string, string> = { cash: "Cash", card_terminal: "Card terminal", bank_transfer: "Bank transfer" }
+import { hasMessage, useT } from "@/lib/i18n"
 
 function CashUpView() {
   const { user, can } = useAuth()
@@ -24,16 +23,28 @@ function CashUpView() {
   const [date, setDate] = useState(today)
   const [exporting, setExporting] = useState(false)
   const { data, isLoading, error } = useCashUp(date)
+  const t = useT()
+  const methodLabel = (method: string) => {
+    const key = `ops.method.${method}`
+    return hasMessage(key) ? t(key) : method
+  }
   const money = (cents: number) => formatMoney(cents, data?.currency ?? user?.restaurant?.currency ?? "EUR")
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Cash-up"
-        description="Voucher money received and paid back on one day, per payment method and per person."
+        title={t("nav.cashUp")}
+        description={t("cashUp.description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Input type="date" value={date} max={today} onChange={(e) => e.target.value && setDate(e.target.value)} className="w-40" aria-label="Day" />
+            <Input
+              type="date"
+              value={date}
+              max={today}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              className="w-40"
+              aria-label={t("cashUp.day")}
+            />
             {can("transactions.export") ? (
               <Button
                 variant="outline"
@@ -49,7 +60,7 @@ function CashUpView() {
                   }
                 }}
               >
-                {exporting ? <Loader2 className="animate-spin" /> : <Download />} Payments CSV
+                {exporting ? <Loader2 className="animate-spin" /> : <Download />} {t("cashUp.exportPayments")}
               </Button>
             ) : null}
           </div>
@@ -62,29 +73,29 @@ function CashUpView() {
         <>
           <Card>
             <CardHeader>
-              <CardTitle>Per payment method</CardTitle>
+              <CardTitle>{t("cashUp.perMethod")}</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Method</TableHead>
-                    <TableHead className="text-right">Received</TableHead>
-                    <TableHead className="text-right">Paid back</TableHead>
-                    <TableHead className="text-right">Net</TableHead>
+                    <TableHead>{t("cashUp.method")}</TableHead>
+                    <TableHead className="text-right">{t("cashUp.received")}</TableHead>
+                    <TableHead className="text-right">{t("cashUp.paidBack")}</TableHead>
+                    <TableHead className="text-right">{t("cashUp.net")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.methods.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-muted-foreground text-center">
-                        No voucher money on this day.
+                        {t("cashUp.noMoney")}
                       </TableCell>
                     </TableRow>
                   ) : (
                     data.methods.map((m) => (
                       <TableRow key={m.method}>
-                        <TableCell>{METHOD_LABELS[m.method] ?? m.method}</TableCell>
+                        <TableCell>{methodLabel(m.method)}</TableCell>
                         <TableCell className="text-right tabular-nums">{money(m.received)}</TableCell>
                         <TableCell className="text-right tabular-nums">{m.paid_out ? `−${money(m.paid_out)}` : "—"}</TableCell>
                         <TableCell className="text-right font-medium tabular-nums">{money(m.net)}</TableCell>
@@ -94,7 +105,7 @@ function CashUpView() {
                 </TableBody>
                 <TableFooter>
                   <TableRow>
-                    <TableCell>Total</TableCell>
+                    <TableCell>{t("cashUp.total")}</TableCell>
                     <TableCell className="text-right tabular-nums">{money(data.total_received)}</TableCell>
                     <TableCell className="text-right tabular-nums">{data.total_paid_out ? `−${money(data.total_paid_out)}` : "—"}</TableCell>
                     <TableCell className="text-right tabular-nums">{money(data.total_received - data.total_paid_out)}</TableCell>
@@ -107,23 +118,23 @@ function CashUpView() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
             <Card>
               <CardHeader>
-                <CardTitle>Per person</CardTitle>
+                <CardTitle>{t("cashUp.perPerson")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Person</TableHead>
-                      <TableHead>Method</TableHead>
-                      <TableHead className="text-right">Received</TableHead>
-                      <TableHead className="text-right">Paid back</TableHead>
+                      <TableHead>{t("cashUp.person")}</TableHead>
+                      <TableHead>{t("cashUp.method")}</TableHead>
+                      <TableHead className="text-right">{t("cashUp.received")}</TableHead>
+                      <TableHead className="text-right">{t("cashUp.paidBack")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data.staff.map((s) => (
                       <TableRow key={`${s.user?.id ?? "system"}-${s.method}`}>
                         <TableCell>{s.user?.name ?? "—"}</TableCell>
-                        <TableCell>{METHOD_LABELS[s.method] ?? s.method}</TableCell>
+                        <TableCell>{methodLabel(s.method)}</TableCell>
                         <TableCell className="text-right tabular-nums">{money(s.received)}</TableCell>
                         <TableCell className="text-right tabular-nums">{s.paid_out ? `−${money(s.paid_out)}` : "—"}</TableCell>
                       </TableRow>
@@ -134,20 +145,20 @@ function CashUpView() {
             </Card>
             <Card>
               <CardHeader>
-                <CardTitle>Also on this day</CardTitle>
+                <CardTitle>{t("cashUp.alsoToday")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <dl className="divide-y text-sm">
                   <div className="flex justify-between py-2.5">
-                    <dt className="text-muted-foreground">Reloads corrected (not kept)</dt>
+                    <dt className="text-muted-foreground">{t("cashUp.reversedReloads")}</dt>
                     <dd className="tabular-nums">{money(data.reversed_reloads)}</dd>
                   </div>
                   <div className="flex justify-between py-2.5">
-                    <dt className="text-muted-foreground">Complimentary value given</dt>
+                    <dt className="text-muted-foreground">{t("cashUp.complimentary")}</dt>
                     <dd className="tabular-nums">{money(data.complimentary)}</dd>
                   </div>
                   <div className="flex justify-between py-2.5">
-                    <dt className="text-muted-foreground">Owed to guests at close</dt>
+                    <dt className="text-muted-foreground">{t("cashUp.outstanding")}</dt>
                     <dd className="font-medium tabular-nums">{money(data.outstanding_end_of_day)}</dd>
                   </div>
                 </dl>

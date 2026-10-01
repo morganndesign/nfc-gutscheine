@@ -18,10 +18,13 @@ import { errorMessage } from "@/lib/api/client"
 import type { Device } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatRelative } from "@/lib/format"
+import { useConfirm } from "@/components/common/confirm"
+import { useT } from "@/lib/i18n"
 
 const ICONS = { phone: Smartphone, tablet: Tablet } as Record<string, typeof Monitor>
 
 function RenameDialog({ device, onClose }: { device: Device; onClose: () => void }) {
+  const t = useT()
   const action = useDeviceAction()
   const [name, setName] = useState(device.name)
 
@@ -29,7 +32,7 @@ function RenameDialog({ device, onClose }: { device: Device; onClose: () => void
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Rename device</DialogTitle>
+          <DialogTitle>{t("devices.renameTitle")}</DialogTitle>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -37,7 +40,7 @@ function RenameDialog({ device, onClose }: { device: Device; onClose: () => void
             e.preventDefault()
             try {
               await action.mutateAsync({ id: device.id, action: "rename", name: name.trim() })
-              toast.success("Device renamed")
+              toast.success(t("devices.renamed"))
               onClose()
             } catch (err) {
               toast.error(errorMessage(err))
@@ -45,15 +48,23 @@ function RenameDialog({ device, onClose }: { device: Device; onClose: () => void
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="device-name">Name</Label>
-            <Input id="device-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} placeholder="e.g. Bar phone" autoFocus required />
+            <Label htmlFor="device-name">{t("manage.field.name")}</Label>
+            <Input
+              id="device-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={120}
+              placeholder={t("devices.namePlaceholder")}
+              autoFocus
+              required
+            />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={action.isPending || !name.trim()}>
-              {action.isPending ? <Loader2 className="animate-spin" /> : null} Save
+              {action.isPending ? <Loader2 className="animate-spin" /> : null} {t("common.save")}
             </Button>
           </DialogFooter>
         </form>
@@ -63,6 +74,8 @@ function RenameDialog({ device, onClose }: { device: Device; onClose: () => void
 }
 
 function DevicesContent() {
+  const t = useT()
+  const confirm = useConfirm()
   const { can } = useAuth()
   const { data, isLoading } = useDevices()
   const action = useDeviceAction()
@@ -70,9 +83,18 @@ function DevicesContent() {
   const [revoking, setRevoking] = useState<Device | null>(null)
 
   const run = async (d: Device, act: "revoke" | "restore") => {
+    if (
+      act === "restore" &&
+      !(await confirm({
+        title: t("devices.restoreTitle", { name: d.name }),
+        description: t("devices.restoreDescription"),
+        confirmLabel: t("devices.restore"),
+      }))
+    )
+      return
     try {
       await action.mutateAsync({ id: d.id, action: act })
-      toast.success(act === "revoke" ? `${d.name} revoked` : `${d.name} restored`)
+      toast.success(act === "revoke" ? t("devices.revokedToast", { name: d.name }) : t("devices.restoredToast", { name: d.name }))
       setRevoking(null)
     } catch (e) {
       toast.error(errorMessage(e))
@@ -81,7 +103,7 @@ function DevicesContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Devices" description="Phones and terminals that scanned or redeemed vouchers. Revoke a lost device to block it immediately." />
+      <PageHeader title={t("devices.title")} description={t("devices.description")} />
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -100,28 +122,37 @@ function DevicesContent() {
                 <div className="min-w-0 flex-1 space-y-1">
                   <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                     <p className="min-w-0 truncate font-medium">{d.name}</p>
-                    {d.is_current ? <Badge variant="secondary">This device</Badge> : null}
-                    {d.status === "revoked" ? <Badge variant="destructive">Revoked</Badge> : null}
+                    {d.is_current ? <Badge variant="secondary">{t("devices.thisDevice")}</Badge> : null}
+                    {d.status === "revoked" ? <Badge variant="destructive">{t("devices.revokedBadge")}</Badge> : null}
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    Last seen {formatRelative(d.last_seen_at)}
-                    {d.last_user ? ` by ${d.last_user.name}` : ""}
+                    {!d.last_seen_at
+                      ? t("devices.neverSeen")
+                      : d.last_user
+                        ? t("devices.lastSeenBy", { time: formatRelative(d.last_seen_at), name: d.last_user.name })
+                        : t("devices.lastSeen", { time: formatRelative(d.last_seen_at) })}
                     {d.last_ip ? ` · ${d.last_ip}` : ""}
                   </p>
                 </div>
                 {can("devices.manage") ? (
                   <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center">
-                    <Button variant="ghost" size="icon-sm" aria-label={`Rename ${d.name}`} title="Rename" onClick={() => setRenaming(d)}>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      aria-label={t("devices.renameAria", { name: d.name })}
+                      title={t("devices.rename")}
+                      onClick={() => setRenaming(d)}
+                    >
                       <Pencil />
                     </Button>
                     {!d.is_current ? (
                       d.status === "active" ? (
                         <Button variant="outline" size="sm" className="text-destructive" onClick={() => setRevoking(d)}>
-                          <Ban /> Revoke
+                          <Ban /> {t("devices.revoke")}
                         </Button>
                       ) : (
                         <Button variant="outline" size="sm" onClick={() => void run(d, "restore")}>
-                          <RotateCcw /> Restore
+                          <RotateCcw /> {t("devices.restore")}
                         </Button>
                       )
                     ) : null}
@@ -132,15 +163,15 @@ function DevicesContent() {
           })}
         </div>
       ) : (
-        <EmptyState icon={Smartphone} title="No devices yet" description="Devices appear automatically the first time a team member signs in on them." />
+        <EmptyState icon={Smartphone} title={t("devices.emptyTitle")} description={t("devices.emptyDescription")} />
       )}
       {renaming ? <RenameDialog device={renaming} onClose={() => setRenaming(null)} /> : null}
       <ReasonDialog
         open={revoking !== null}
         onOpenChange={(o) => !o && setRevoking(null)}
-        title={`Revoke ${revoking?.name ?? "device"}?`}
-        description="This device can no longer scan or redeem cards, effective immediately. You can restore it later."
-        confirmLabel="Revoke device"
+        title={t("devices.revokeTitle", { name: revoking?.name ?? "" })}
+        description={t("devices.revokeDescription")}
+        confirmLabel={t("devices.revokeConfirm")}
         destructive
         reasonRequired="none"
         pending={action.isPending}

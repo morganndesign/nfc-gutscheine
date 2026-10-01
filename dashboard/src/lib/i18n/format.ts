@@ -66,4 +66,3 @@ export function format(language: Language, template: string, params: Params = {}
   }
   return out
 }
-

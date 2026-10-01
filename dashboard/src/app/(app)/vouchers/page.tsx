@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Download, Filter, Loader2, Plus, Search, Ticket } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
-import { StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabel } from "@/components/common/status-badge"
+import { StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabelKey } from "@/components/common/status-badge"
 import { EmptyState } from "@/components/common/empty-state"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { RequirePermission } from "@/components/layout/auth-guard"
@@ -30,18 +30,21 @@ import type { VoucherStatus } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
-const SORTS = [
-  { value: "-created_at", label: "Newest first" },
-  { value: "created_at", label: "Oldest first" },
-  { value: "-balance", label: "Highest balance" },
-  { value: "balance", label: "Lowest balance" },
-  { value: "expires_at", label: "Expiring soonest" },
-  { value: "-last_used_at", label: "Recently used" },
+const SORTS: { value: string; label: MessageKey }[] = [
+  { value: "-created_at", label: "vouchers.list.sortNewest" },
+  { value: "created_at", label: "vouchers.list.sortOldest" },
+  { value: "-balance", label: "vouchers.list.sortHighestBalance" },
+  { value: "balance", label: "vouchers.list.sortLowestBalance" },
+  { value: "expires_at", label: "vouchers.list.sortExpiring" },
+  { value: "-last_used_at", label: "vouchers.list.sortRecentlyUsed" },
 ]
 
 function VouchersContent() {
   const { can } = useAuth()
+  const t = useT()
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<VoucherStatus[]>([])
@@ -61,8 +64,8 @@ function VouchersContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Vouchers"
-        description={data ? `${data.meta.total} voucher${data.meta.total === 1 ? "" : "s"}` : "All vouchers of your restaurant"}
+        title={t("vouchers.title")}
+        description={data ? t("vouchers.list.count", { count: data.meta.total }) : t("vouchers.list.description")}
         actions={
           <>
             {can("vouchers.export") ? (
@@ -80,13 +83,13 @@ function VouchersContent() {
                   }
                 }}
               >
-                {exporting ? <Loader2 className="animate-spin" /> : <Download />} Export CSV
+                {exporting ? <Loader2 className="animate-spin" /> : <Download />} {t("vouchers.list.export")}
               </Button>
             ) : null}
             {can("vouchers.sell") ? (
               <Button asChild>
                 <Link href="/vouchers/new">
-                  <Plus /> Sell voucher
+                  <Plus /> {t("vouchers.sell")}
                 </Link>
               </Button>
             ) : null}
@@ -104,37 +107,37 @@ function VouchersContent() {
                 setSearch(e.target.value)
                 setPage(1)
               }}
-              placeholder="Search by voucher number, customer, recipient or note…"
+              placeholder={t("vouchers.list.searchPlaceholder")}
               className="h-9 pl-9"
-              aria-label="Search vouchers"
+              aria-label={t("vouchers.list.searchAria")}
             />
           </div>
           <div className="flex gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-9">
-                  <Filter /> Status
+                  <Filter /> {t("vouchers.col.status")}
                   {status.length ? <span className="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px]">{status.length}</span> : null}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("vouchers.list.filterByStatus")}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {VOUCHER_STATUSES.map((s) => (
                   <DropdownMenuCheckboxItem key={s} checked={status.includes(s)} onCheckedChange={() => toggleStatus(s)} onSelect={(e) => e.preventDefault()}>
-                    {statusLabel(s)}
+                    {t(statusLabelKey(s))}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
             <Select value={sort} onValueChange={(v) => setSort(v)}>
-              <SelectTrigger className="h-9 w-44" aria-label="Sort">
+              <SelectTrigger className="h-9 w-44" aria-label={t("vouchers.list.sortAria")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {SORTS.map((s) => (
                   <SelectItem key={s.value} value={s.value}>
-                    {s.label}
+                    {t(s.label)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -153,12 +156,12 @@ function VouchersContent() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="pl-4">Voucher</TableHead>
-                  <TableHead className="hidden sm:table-cell">Customer</TableHead>
-                  <TableHead className="hidden sm:table-cell">Status</TableHead>
-                  <TableHead className="pr-4 text-right sm:pr-2">Balance</TableHead>
-                  <TableHead className="hidden md:table-cell">Expires</TableHead>
-                  <TableHead className="hidden pr-4 lg:table-cell">Issued</TableHead>
+                  <TableHead className="pl-4">{t("vouchers.col.voucher")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("vouchers.col.customer")}</TableHead>
+                  <TableHead className="hidden sm:table-cell">{t("vouchers.col.status")}</TableHead>
+                  <TableHead className="pr-4 text-right sm:pr-2">{t("vouchers.col.balance")}</TableHead>
+                  <TableHead className="hidden md:table-cell">{t("vouchers.col.expires")}</TableHead>
+                  <TableHead className="hidden pr-4 lg:table-cell">{t("vouchers.col.issued")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -169,11 +172,11 @@ function VouchersContent() {
                         {voucher.voucher_number_formatted}
                       </Link>
                       <span className="text-muted-foreground block max-w-44 truncate text-xs sm:hidden">
-                        {voucher.customer?.full_name ?? voucher.recipient_name ?? "Anonymous"}
+                        {voucher.customer?.full_name ?? voucher.recipient_name ?? t("vouchers.anonymous")}
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden max-w-48 truncate sm:table-cell">
-                      {voucher.customer?.full_name ?? voucher.recipient_name ?? "—"}
+                      {voucher.customer?.full_name ?? voucher.recipient_name ?? t("common.none")}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
                       <StatusBadge status={displayStatus(voucher)} />
@@ -198,8 +201,8 @@ function VouchersContent() {
         ) : (
           <EmptyState
             icon={Ticket}
-            title={debounced || status.length ? "No matching vouchers" : "No vouchers yet"}
-            description={debounced || status.length ? "Try a different search or clear the filters." : "Sell your first voucher and print its QR code."}
+            title={debounced || status.length ? t("vouchers.list.noMatches") : t("vouchers.list.empty")}
+            description={debounced || status.length ? t("vouchers.list.noMatchesHint") : t("vouchers.list.emptyHint")}
             action={
               debounced || status.length ? (
                 <Button
@@ -210,12 +213,12 @@ function VouchersContent() {
                     setPage(1)
                   }}
                 >
-                  Clear filters
+                  {t("vouchers.list.clearFilters")}
                 </Button>
               ) : can("vouchers.sell") ? (
                 <Button asChild>
                   <Link href="/vouchers/new">
-                    <Plus /> Sell voucher
+                    <Plus /> {t("vouchers.sell")}
                   </Link>
                 </Button>
               ) : undefined

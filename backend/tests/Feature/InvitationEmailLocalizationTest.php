@@ -33,7 +33,7 @@ final class InvitationEmailLocalizationTest extends TestCase
 
     private function onboard(string $locale = 'de-AT', string $ownerName = 'Hanna Maria Hirsch'): Restaurant
     {
-        Sanctum::actingAs(User::factory()->platformAdmin()->create(['name' => 'Platform Admin']), ['*']);
+        Sanctum::actingAs(User::factory()->platformAdmin()->create(['name' => 'Platform Admin', 'locale' => 'en']), ['*']);
         $id = $this->postJson('/api/v1/admin/restaurants', [
             'name' => 'Zum Goldenen Hirschen',
             'locale' => $locale,
@@ -80,7 +80,7 @@ final class InvitationEmailLocalizationTest extends TestCase
             $this->assertStringNotContainsString($english, $text, "no English left: {$english}");
         }
 
-        // Sending in German does not change the language of the API response.
+        // Sending in German does not change the language of the API response (the admin's own: English).
         $this->assertSame('en', app()->getLocale());
     }
 

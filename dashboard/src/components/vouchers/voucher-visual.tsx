@@ -1,8 +1,11 @@
+"use client"
+
 import { QrCode } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatMoney } from "@/lib/money"
 import { formatDate } from "@/lib/format"
 import type { VoucherKind, VoucherStatus } from "@/lib/api/types"
+import { useT } from "@/lib/i18n"
 
 /** A wallet-style rendering of a voucher for staff screens. Guests never see the voucher number. */
 export function VoucherVisual({
@@ -24,6 +27,7 @@ export function VoucherVisual({
   brandColor?: string
   className?: string
 }) {
+  const t = useT()
   const muted = status !== "active"
   return (
     <div
@@ -38,14 +42,14 @@ export function VoucherVisual({
       <div className="relative flex h-full flex-col justify-between">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs tracking-widest text-white/70 uppercase">{kind === "digital" ? "Digital voucher" : "Card voucher"}</p>
+            <p className="text-xs tracking-widest text-white/70 uppercase">{kind === "digital" ? t("voucherVisual.digital") : t("voucherVisual.card")}</p>
             <p className="mt-0.5 text-base font-semibold">{restaurantName}</p>
           </div>
           <QrCode className="size-6 text-white/80" aria-hidden />
         </div>
         <div>
           <p className="tabular text-3xl font-semibold tracking-tight">{formatMoney(balance, currency)}</p>
-          <p className="mt-2 text-xs text-white/75">{expiresAt ? `Valid until ${formatDate(expiresAt)}` : "No expiry"}</p>
+          <p className="mt-2 text-xs text-white/75">{expiresAt ? t("voucherVisual.validUntil", { date: formatDate(expiresAt) }) : t("vouchers.noExpiry")}</p>
         </div>
       </div>
     </div>

@@ -231,7 +231,11 @@ export function useCancelSale() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ voucherId, reason, reference }: { voucherId: string; reason: string; reference?: string | null }) =>
-      api<MoneyResult>(`/vouchers/${voucherId}/cancellation`, { method: "POST", body: { reason, reference: reference || null }, idempotencyKey: newIdempotencyKey() }),
+      api<MoneyResult>(`/vouchers/${voucherId}/cancellation`, {
+        method: "POST",
+        body: { reason, reference: reference || null },
+        idempotencyKey: newIdempotencyKey(),
+      }),
     onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
   })
 }
@@ -514,6 +518,25 @@ export function useAdminRestaurants(search: string, page = 1, status: AdminResta
   })
 }
 
+/** Every restaurant by name, archived ones included (for filters): all pages of the active and the archived list. */
+export function useAllAdminRestaurants() {
+  return useQuery({
+    queryKey: [...keys.admin, "restaurants", "all-names"],
+    queryFn: async () => {
+      const all: { id: string; name: string; archived: boolean }[] = []
+      for (const status of [undefined, "archived"] as const) {
+        for (let page = 1; ; page++) {
+          const res = await api<Paginated<Restaurant>>("/admin/restaurants", { query: { page, per_page: 100, status } })
+          all.push(...res.data.map((r) => ({ id: r.id, name: r.name, archived: status === "archived" })))
+          if (page >= res.meta.last_page) break
+        }
+      }
+      return all.sort((a, b) => a.name.localeCompare(b.name))
+    },
+    staleTime: 60_000,
+  })
+}
+
 /** Records that make a restaurant non-deletable (they must be kept; archive instead). */
 export interface RestaurantBusinessData {
   vouchers: number
@@ -661,12 +684,13 @@ export function useAdminRevokeApiToken() {
   })
 }
 
-export function usePlatformAudit(page = 1, filters: { restaurantId?: string; action?: string } = {}) {
+/** `restaurant`: a restaurant id, or `"platform"` for entries that belong to no restaurant. */
+export function usePlatformAudit(page = 1, filters: { restaurant?: string; action?: string } = {}) {
   return useQuery({
-    queryKey: [...keys.admin, "audit", page, filters.restaurantId ?? "", filters.action ?? ""],
+    queryKey: [...keys.admin, "audit", page, filters.restaurant ?? "", filters.action ?? ""],
     queryFn: () =>
       api<Paginated<AuditLog>>("/admin/audit-logs", {
-        query: { page, restaurant_id: filters.restaurantId || undefined, action: filters.action || undefined },
+        query: { page, restaurant: filters.restaurant || undefined, action: filters.action || undefined },
       }),
     placeholderData: keepPreviousData,
   })
@@ -746,13 +770,17 @@ export function useOrderCardBatch() {
 export function useCardBatchAction() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...input }: { id: string } & (
-      | { kind: "status"; status: CardBatchStatus; reason: string; tracking_ref?: string }
-      | { kind: "approval" }
-      | { kind: "hold-resolution"; missing: string[] }
+    mutationFn: ({
+      id,
+      ...input
+    }: { id: string } & (
+      { kind: "status"; status: CardBatchStatus; reason: string; tracking_ref?: string } | { kind: "approval" } | { kind: "hold-resolution"; missing: string[] }
     )) =>
       input.kind === "status"
-        ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/status`, { method: "POST", body: { status: input.status, reason: input.reason, tracking_ref: input.tracking_ref } })
+        ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/status`, {
+            method: "POST",
+            body: { status: input.status, reason: input.reason, tracking_ref: input.tracking_ref },
+          })
         : input.kind === "approval"
           ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/approval`, { method: "POST" })
           : api<{ data: CardBatch }>(`/admin/card-batches/${id}/hold-resolution`, { method: "POST", body: { missing: input.missing } }),
@@ -774,7 +802,8 @@ export function useSecurityAlerts(page: number, status?: "open" | "acknowledged"
 export function useAcknowledgeAlert() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, note }: { id: string; note: string }) => api<{ data: SecurityAlert }>(`/admin/security-alerts/${id}/acknowledge`, { method: "POST", body: { note } }),
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      api<{ data: SecurityAlert }>(`/admin/security-alerts/${id}/acknowledge`, { method: "POST", body: { note } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.securityAlerts }),
   })
 }

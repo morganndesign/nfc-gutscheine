@@ -12,6 +12,7 @@ import { PaymentFields, paymentComplete } from "@/components/vouchers/payment-fi
 import { type PaymentInput, useReloadVoucher } from "@/lib/api/hooks"
 import { errorMessage, newIdempotencyKey } from "@/lib/api/client"
 import { formatMoney, parseMoneyInput } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 import { RELOAD_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 
 export function ReloadDialog({
@@ -29,6 +30,7 @@ export function ReloadDialog({
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
+  const t = useT()
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
   const [payment, setPayment] = useState<PaymentInput>({ method: "cash" })
@@ -64,9 +66,9 @@ export function ReloadDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reload voucher</DialogTitle>
+          <DialogTitle>{t("vouchers.reload.title")}</DialogTitle>
           <DialogDescription>
-            Current balance {formatMoney(balance, currency)} · at most {formatMoney(maxBalance, currency)}
+            {t("vouchers.reload.description", { balance: formatMoney(balance, currency), max: formatMoney(maxBalance, currency) })}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -85,16 +87,14 @@ export function ReloadDialog({
                 input: { amount: cents, payment, note: note || null },
               })
               forgetPendingKey(scope)
-              toast.success(`${formatMoney(cents, currency)} loaded · new balance ${formatMoney(result.data.voucher.balance, currency)}`)
+              toast.success(t("vouchers.reload.done", { amount: formatMoney(cents, currency), balance: formatMoney(result.data.voucher.balance, currency) }))
               reset()
               onOpenChange(false)
             } catch (err) {
               if (isUncertainOutcome(err, { unanswered, finalCodes: RELOAD_CODES })) {
                 rememberPendingKey(scope, key.current)
                 setUncertain(true)
-                setError(
-                  "The connection was interrupted, so it is not known whether the reload was booked. Press “Check and reload”: it can never be booked twice.",
-                )
+                setError(t("vouchers.reload.uncertain"))
               } else {
                 forgetPendingKey(scope)
                 setUncertain(false)
@@ -105,25 +105,29 @@ export function ReloadDialog({
           }}
         >
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount</Label>
+            <Label htmlFor="amount">{t("vouchers.field.amount")}</Label>
             <MoneyInput id="amount" autoFocus disabled={uncertain} value={amount} onChange={(e) => setAmount(e.target.value)} className="h-12 text-xl" />
-            {tooMuch ? <p className="text-destructive text-xs">The balance would exceed {formatMoney(maxBalance, currency)}.</p> : null}
+            {tooMuch ? <p className="text-destructive text-xs">{t("vouchers.reload.tooMuch", { max: formatMoney(maxBalance, currency) })}</p> : null}
           </div>
           {!uncertain ? <PaymentFields value={payment} onChange={setPayment} /> : null}
           <div className="space-y-2">
-            <Label htmlFor="note">Note</Label>
+            <Label htmlFor="note">{t("vouchers.field.note")}</Label>
             <Input id="note" disabled={uncertain} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
           </div>
           {error ? <p className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</p> : null}
           <DialogFooter>
             {!uncertain ? (
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             ) : null}
             <Button type="submit" disabled={invalid || mutation.isPending}>
               {mutation.isPending ? <Loader2 className="animate-spin" /> : null}
-              {uncertain ? "Check and reload" : `Reload ${cents ? formatMoney(cents, currency) : ""}`}
+              {uncertain
+                ? t("vouchers.reload.check")
+                : cents
+                  ? t("vouchers.reload.submit", { amount: formatMoney(cents, currency) })
+                  : t("vouchers.reload.submitEmpty")}
             </Button>
           </DialogFooter>
         </form>

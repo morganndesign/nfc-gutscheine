@@ -5,7 +5,8 @@ import { History, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { EmptyState } from "@/components/common/empty-state"
 import { ReasonDialog } from "@/components/common/reason-dialog"
-import { TransactionTypeIcon } from "@/components/vouchers/transaction-type"
+import { PAYMENT_METHOD_LABELS } from "@/components/vouchers/payment-fields"
+import { TransactionTypeIcon, transactionLabelKey } from "@/components/vouchers/transaction-type"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useReverseTransaction, useVoucherHistory } from "@/lib/api/hooks"
@@ -15,14 +16,15 @@ import { useAuth } from "@/lib/auth"
 import { auditLabel } from "@/lib/audit"
 import { formatDateTime } from "@/lib/format"
 import { formatMoney, formatSignedMoney } from "@/lib/money"
+import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
 const REVERSIBLE: string[] = ["redemption", "reload"]
-
-const PAYMENT_LABELS: Record<string, string> = { cash: "cash", card_terminal: "card terminal", bank_transfer: "bank transfer", complimentary: "complimentary" }
+const TRANSACTION_TYPES: string[] = ["issue", "reload", "redemption", "reversal", "refund"]
 
 export function VoucherHistory({ voucherId, currency }: { voucherId: string; currency: string }) {
   const { can } = useAuth()
+  const t = useT()
   const { data, isLoading } = useVoucherHistory(voucherId)
   const reverse = useReverseTransaction()
   const [reversing, setReversing] = useState<string | null>(null)
@@ -36,7 +38,7 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
       </div>
     )
   }
-  if (!data?.length) return <EmptyState icon={History} title="No history" />
+  if (!data?.length) return <EmptyState icon={History} title={t("vouchers.history.empty")} />
 
   return (
     <>
@@ -53,8 +55,14 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-3">
                 <p className={cn("text-sm font-medium", entry.reversed && "line-through opacity-60")}>
-                  {entry.kind === "event" ? auditLabel(entry.type) : entry.label}
-                  {entry.reversed ? <span className="text-muted-foreground ml-2 text-xs font-normal no-underline">reversed</span> : null}
+                  {entry.kind === "event"
+                    ? auditLabel(entry.type)
+                    : TRANSACTION_TYPES.includes(entry.type)
+                      ? t(transactionLabelKey(entry.type as TransactionType))
+                      : entry.label}
+                  {entry.reversed ? (
+                    <span className="text-muted-foreground ml-2 text-xs font-normal no-underline">{t("vouchers.history.reversed")}</span>
+                  ) : null}
                 </p>
                 {entry.amount !== null ? (
                   <span
@@ -72,9 +80,11 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
                 {formatDateTime(entry.created_at)}
                 {entry.user ? ` · ${entry.user}` : ""}
                 {entry.device ? ` · ${entry.device}` : ""}
-                {entry.payment_method ? ` · Paid by ${PAYMENT_LABELS[entry.payment_method] ?? entry.payment_method}` : ""}
-                {entry.reference ? ` · Ref. ${entry.reference}` : ""}
-                {entry.balance_after !== null ? ` · Balance ${formatMoney(entry.balance_after, currency)}` : ""}
+                {entry.payment_method
+                  ? ` · ${t("vouchers.history.payment", { method: PAYMENT_METHOD_LABELS[entry.payment_method] ? t(PAYMENT_METHOD_LABELS[entry.payment_method]) : entry.payment_method })}`
+                  : ""}
+                {entry.reference ? ` · ${t("vouchers.ref", { reference: entry.reference })}` : ""}
+                {entry.balance_after !== null ? ` · ${t("vouchers.history.balance", { amount: formatMoney(entry.balance_after, currency) })}` : ""}
               </p>
               {entry.note ? <p className="text-muted-foreground mt-0.5 text-xs italic">“{entry.note}”</p> : null}
             </div>
@@ -83,7 +93,7 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
                 variant="ghost"
                 size="icon-sm"
                 className="group-hover:opacity-100 focus-visible:opacity-100 sm:opacity-0"
-                aria-label="Reverse transaction"
+                aria-label={t("vouchers.history.reverse")}
                 onClick={() => setReversing(entry.id)}
               >
                 <RotateCcw />
@@ -97,17 +107,17 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
       <ReasonDialog
         open={reversing !== null}
         onOpenChange={(o) => !o && setReversing(null)}
-        title="Reverse transaction"
-        suggestions={["Wrong amount", "Wrong voucher", "Guest cancelled"]}
-        description="Creates a counter-entry that restores the previous balance. The original entry stays in the ledger."
-        confirmLabel="Reverse"
+        title={t("vouchers.history.reverse")}
+        suggestions={[t("vouchers.reason.wrongAmount"), t("vouchers.reason.wrongVoucher"), t("vouchers.reason.guestCancelled")]}
+        description={t("vouchers.history.reverseDescription")}
+        confirmLabel={t("vouchers.history.reverseConfirm")}
         destructive
         pending={reverse.isPending}
         onConfirm={async (reason) => {
           if (!reversing) return
           try {
             await reverse.mutateAsync({ id: reversing, reason })
-            toast.success("Transaction reversed")
+            toast.success(t("vouchers.history.reversedToast"))
             setReversing(null)
           } catch (e) {
             toast.error(errorMessage(e))

@@ -79,7 +79,7 @@ final class RestaurantService
     {
         if (isset($data['currency']) && $data['currency'] !== $restaurant->currency
             && Voucher::query()->withoutGlobalScopes()->where('restaurant_id', $restaurant->getKey())->exists()) {
-            throw ValidationException::withMessages(['currency' => 'The currency cannot be changed after vouchers were issued.']);
+            throw ValidationException::withMessages(['currency' => __('api.currency_locked')]);
         }
 
         $restaurant->fill($data);
@@ -172,7 +172,7 @@ final class RestaurantService
     public function delete(Actor $actor, Restaurant $restaurant, string $confirmation): void
     {
         if (! hash_equals(Str::lower($restaurant->slug), Str::lower(trim($confirmation)))) {
-            throw ValidationException::withMessages(['confirm' => "Type the restaurant's short name \"{$restaurant->slug}\" to confirm."]);
+            throw ValidationException::withMessages(['confirm' => __('api.confirm_slug', ['slug' => $restaurant->slug])]);
         }
 
         DB::transaction(function () use ($actor, $restaurant): void {

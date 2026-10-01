@@ -33,7 +33,7 @@ final class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => self::$password ??= Hash::make('Password123!'),
             'status' => UserStatus::Active,
-            'locale' => 'en',
+            'locale' => 'de',
             'remember_token' => Str::random(10),
         ];
     }

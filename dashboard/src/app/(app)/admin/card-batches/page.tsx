@@ -4,6 +4,7 @@ import { useState } from "react"
 import { CheckCircle2, Loader2, Package, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { BatchStatusBadge, batchStatusLabel } from "@/components/cards/card-state"
+import { useConfirm } from "@/components/common/confirm"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
 import { PaginationBar } from "@/components/common/pagination-bar"
@@ -20,6 +21,7 @@ import { useAdminCardBatches, useAdminRestaurants, useCardBatchAction, useOrderC
 import { errorMessage } from "@/lib/api/client"
 import type { CardBatch, CardBatchStatus } from "@/lib/api/types"
 import { formatDate, formatNumber } from "@/lib/format"
+import { useT } from "@/lib/i18n"
 
 /** The next steps the platform takes for a batch (the server checks every transition). */
 const NEXT: Partial<Record<CardBatchStatus, CardBatchStatus[]>> = {
@@ -40,6 +42,7 @@ const NEXT: Partial<Record<CardBatchStatus, CardBatchStatus[]>> = {
 }
 
 function OrderDialog({ onClose }: { onClose: () => void }) {
+  const t = useT()
   const restaurants = useAdminRestaurants("", 1, "active")
   const order = useOrderCardBatch()
   const [restaurant, setRestaurant] = useState("")
@@ -51,16 +54,21 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Order cards</DialogTitle>
-          <DialogDescription>Cards are printed with the restaurant&apos;s branding only and personalised at the in-house station.</DialogDescription>
+          <DialogTitle>{t("admin.batches.order")}</DialogTitle>
+          <DialogDescription>{t("admin.batches.orderDescription")}</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
             try {
-              await order.mutateAsync({ restaurant_id: restaurant, quantity: Number(quantity), manufacturer: manufacturer.trim(), card_design_ref: design.trim() || undefined })
-              toast.success("Batch ordered")
+              await order.mutateAsync({
+                restaurant_id: restaurant,
+                quantity: Number(quantity),
+                manufacturer: manufacturer.trim(),
+                card_design_ref: design.trim() || undefined,
+              })
+              toast.success(t("admin.batches.ordered"))
               onClose()
             } catch (err) {
               toast.error(errorMessage(err))
@@ -68,10 +76,10 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
           }}
         >
           <div className="space-y-2">
-            <Label>Restaurant</Label>
+            <Label>{t("admin.col.restaurant")}</Label>
             <Select value={restaurant} onValueChange={setRestaurant}>
-              <SelectTrigger className="w-full" aria-label="Restaurant">
-                <SelectValue placeholder="Choose a restaurant" />
+              <SelectTrigger className="w-full" aria-label={t("admin.col.restaurant")}>
+                <SelectValue placeholder={t("admin.batches.chooseRestaurant")} />
               </SelectTrigger>
               <SelectContent>
                 {(restaurants.data?.data ?? []).map((r) => (
@@ -84,24 +92,24 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="b-qty">Quantity</Label>
+              <Label htmlFor="b-qty">{t("admin.batches.quantity")}</Label>
               <Input id="b-qty" inputMode="numeric" value={quantity} onChange={(e) => setQuantity(e.target.value.replace(/\D/g, ""))} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="b-man">Printer</Label>
+              <Label htmlFor="b-man">{t("admin.batches.printer")}</Label>
               <Input id="b-man" value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} maxLength={120} required />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="b-design">Artwork reference</Label>
-            <Input id="b-design" value={design} onChange={(e) => setDesign(e.target.value)} maxLength={120} placeholder="optional" />
+            <Label htmlFor="b-design">{t("admin.batches.artwork")}</Label>
+            <Input id="b-design" value={design} onChange={(e) => setDesign(e.target.value)} maxLength={120} placeholder={t("admin.batches.optional")} />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button type="submit" disabled={order.isPending || !restaurant || !quantity || manufacturer.trim().length < 2}>
-              {order.isPending ? <Loader2 className="animate-spin" /> : null} Order
+              {order.isPending ? <Loader2 className="animate-spin" /> : null} {t("admin.batches.orderSubmit")}
             </Button>
           </DialogFooter>
         </form>
@@ -111,6 +119,7 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
 }
 
 function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void }) {
+  const t = useT()
   const action = useCardBatchAction()
   const options = NEXT[batch.status] ?? []
   const [status, setStatus] = useState<CardBatchStatus | "">(options[0] ?? "")
@@ -139,9 +148,9 @@ function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => voi
           }}
         >
           <div className="space-y-2">
-            <Label>Next status</Label>
+            <Label>{t("admin.batches.nextStatus")}</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as CardBatchStatus)}>
-              <SelectTrigger className="w-full" aria-label="Next status">
+              <SelectTrigger className="w-full" aria-label={t("admin.batches.nextStatus")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -152,24 +161,28 @@ function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => voi
                 ))}
               </SelectContent>
             </Select>
-            {status === "compromised" ? <p className="text-destructive text-xs">Every card of this batch not yet with a guest is revoked for good.</p> : null}
+            {status === "compromised" ? <p className="text-destructive text-xs">{t("admin.batches.compromisedWarning")}</p> : null}
           </div>
           {status === "shipped" ? (
             <div className="space-y-2">
-              <Label htmlFor="b-track">Tracking number</Label>
+              <Label htmlFor="b-track">{t("admin.batches.tracking")}</Label>
               <Input id="b-track" value={tracking} onChange={(e) => setTracking(e.target.value)} maxLength={120} />
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label htmlFor="b-reason">Reason</Label>
+            <Label htmlFor="b-reason">{t("admin.batches.reason")}</Label>
             <Input id="b-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={120} required />
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
+              {t("common.cancel")}
             </Button>
-            <Button type="submit" variant={status === "compromised" ? "destructive" : "default"} disabled={action.isPending || !status || reason.trim().length < 3}>
-              {action.isPending ? <Loader2 className="animate-spin" /> : null} Save
+            <Button
+              type="submit"
+              variant={status === "compromised" ? "destructive" : "default"}
+              disabled={action.isPending || !status || reason.trim().length < 3}
+            >
+              {action.isPending ? <Loader2 className="animate-spin" /> : null} {t("common.save")}
             </Button>
           </DialogFooter>
         </form>
@@ -179,39 +192,40 @@ function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => voi
 }
 
 function HoldDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void }) {
+  const t = useT()
   const action = useCardBatchAction()
   const [missing, setMissing] = useState("")
-  const numbers = missing.split(/[\s,;]+/).map((n) => n.trim().toUpperCase()).filter(Boolean)
+  const numbers = missing
+    .split(/[\s,;]+/)
+    .map((n) => n.trim().toUpperCase())
+    .filter(Boolean)
   const report = batch.qa_report?.receipt as { counted?: number; expected?: number } | undefined
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Resolve {batch.batch_code}</DialogTitle>
-          <DialogDescription>
-            The restaurant counted {report?.counted ?? "?"} of {report?.expected ?? "?"} cards. List the cards that are really missing; they become lost, every other
-            delivered card becomes available.
-          </DialogDescription>
+          <DialogTitle>{t("admin.batches.resolveTitle", { code: batch.batch_code })}</DialogTitle>
+          <DialogDescription>{t("admin.batches.resolveDescription", { counted: report?.counted ?? "?", expected: report?.expected ?? "?" })}</DialogDescription>
         </DialogHeader>
         <Textarea value={missing} onChange={(e) => setMissing(e.target.value)} placeholder="B-2026-0001-0042, B-2026-0001-0043" rows={4} />
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             disabled={action.isPending}
             onClick={async () => {
               try {
                 await action.mutateAsync({ id: batch.id, kind: "hold-resolution", missing: numbers })
-                toast.success(`${batch.batch_code} is in service`)
+                toast.success(t("admin.batches.inService", { code: batch.batch_code }))
                 onClose()
               } catch (err) {
                 toast.error(errorMessage(err))
               }
             }}
           >
-            {action.isPending ? <Loader2 className="animate-spin" /> : null} Resolve ({numbers.length} missing)
+            {action.isPending ? <Loader2 className="animate-spin" /> : null} {t("admin.batches.resolveSubmit", { count: numbers.length })}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -220,6 +234,8 @@ function HoldDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void 
 }
 
 function Content() {
+  const t = useT()
+  const confirm = useConfirm()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<CardBatchStatus | "all">("all")
   const { data, isLoading } = useAdminCardBatches(page, status === "all" ? undefined : status)
@@ -229,9 +245,15 @@ function Content() {
   const [resolving, setResolving] = useState<CardBatch | null>(null)
 
   const approve = async (b: CardBatch) => {
+    const ok = await confirm({
+      title: t("admin.batches.approveTitle", { code: b.batch_code }),
+      description: t("admin.batches.approveDescription"),
+      confirmLabel: t("admin.batches.approve"),
+    })
+    if (!ok) return
     try {
       const res = await action.mutateAsync({ id: b.id, kind: "approval" })
-      toast.success(res.data.status === "accepted" ? `${b.batch_code} accepted` : "First approval recorded; a second person must approve")
+      toast.success(res.data.status === "accepted" ? t("admin.batches.accepted", { code: b.batch_code }) : t("admin.batches.firstApproval"))
     } catch (e) {
       toast.error(errorMessage(e))
     }
@@ -240,22 +262,22 @@ function Content() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Card batches"
-        description="Order, personalise at the station, accept (two people), ship. The restaurant confirms the delivery in the waiter app."
+        title={t("nav.cardBatches")}
+        description={t("admin.batches.description")}
         actions={
           <Button onClick={() => setOrdering(true)}>
-            <Plus /> Order cards
+            <Plus /> {t("admin.batches.order")}
           </Button>
         }
       />
       <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="flex items-center gap-3 border-b p-3">
           <Select value={status} onValueChange={(v) => (setStatus(v as CardBatchStatus | "all"), setPage(1))}>
-            <SelectTrigger className="w-48" aria-label="Filter by status">
+            <SelectTrigger className="w-48" aria-label={t("admin.batches.filterStatus")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">{t("admin.batches.allStatuses")}</SelectItem>
               {(Object.keys(NEXT) as CardBatchStatus[]).concat(["closed"]).map((s) => (
                 <SelectItem key={s} value={s}>
                   {batchStatusLabel(s)}
@@ -271,13 +293,13 @@ function Content() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Batch</TableHead>
-                  <TableHead>Restaurant</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ordered</TableHead>
-                  <TableHead className="text-right">Personalised</TableHead>
-                  <TableHead className="text-right">QA failed</TableHead>
-                  <TableHead className="hidden lg:table-cell">Ordered on</TableHead>
+                  <TableHead>{t("admin.batches.colBatch")}</TableHead>
+                  <TableHead>{t("admin.col.restaurant")}</TableHead>
+                  <TableHead>{t("admin.col.status")}</TableHead>
+                  <TableHead className="text-right">{t("admin.batches.colOrdered")}</TableHead>
+                  <TableHead className="text-right">{t("admin.batches.colPersonalised")}</TableHead>
+                  <TableHead className="text-right">{t("admin.batches.colQaFailed")}</TableHead>
+                  <TableHead className="hidden lg:table-cell">{t("admin.batches.colOrderedOn")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -296,17 +318,17 @@ function Content() {
                     <TableCell className="text-right whitespace-nowrap">
                       {b.status === "qa_testing" ? (
                         <Button size="sm" variant="outline" onClick={() => void approve(b)} disabled={action.isPending}>
-                          <CheckCircle2 /> Approve {b.approvals?.length ? "(2nd)" : ""}
+                          <CheckCircle2 /> {b.approvals?.length ? t("admin.batches.approveSecond") : t("admin.batches.approve")}
                         </Button>
                       ) : null}
                       {b.status === "on_hold" ? (
                         <Button size="sm" variant="outline" onClick={() => setResolving(b)}>
-                          Resolve
+                          {t("admin.batches.resolve")}
                         </Button>
                       ) : null}
                       {NEXT[b.status]?.length ? (
                         <Button size="sm" variant="ghost" onClick={() => setChanging(b)}>
-                          Status…
+                          {t("admin.batches.changeStatus")}
                         </Button>
                       ) : null}
                     </TableCell>
@@ -317,7 +339,7 @@ function Content() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={Package} title="No card batches" description="Order the first batch for a restaurant." />
+          <EmptyState icon={Package} title={t("admin.batches.empty")} description={t("admin.batches.emptyHint")} />
         )}
       </div>
       {ordering ? <OrderDialog onClose={() => setOrdering(false)} /> : null}

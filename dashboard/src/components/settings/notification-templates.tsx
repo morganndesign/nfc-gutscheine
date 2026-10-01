@@ -16,20 +16,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { useNotificationTemplates, useSaveTemplate } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { NotificationTemplate } from "@/lib/api/types"
+import { hasMessage, useT, type Translate } from "@/lib/i18n"
 
-const TEMPLATE_LABELS: Record<string, string> = {
-  voucher_issued: "Voucher purchased",
-  voucher_reloaded: "Voucher topped up",
-  voucher_expiring: "Voucher expires soon",
-  voucher_refunded: "Voucher refunded",
-  card_replaced: "Gift card replaced",
-}
+/** The order a guest receives them in. */
+const KEY_ORDER = ["voucher_issued", "voucher_reloaded", "voucher_expiring", "voucher_refunded", "card_replaced"]
 
-function templateLabel(key: string): string {
-  return TEMPLATE_LABELS[key] ?? key.replace(/_/g, " ")
+function templateLabel(t: Translate, key: string): string {
+  const k = `emailTemplates.type.${key}`
+  return hasMessage(k) ? t(k) : key.replace(/_/g, " ")
 }
 
 function TemplateEditor({ template, onClose }: { template: NotificationTemplate; onClose: () => void }) {
+  const t = useT()
   const save = useSaveTemplate()
   const [subject, setSubject] = useState(template.subject)
   const [body, setBody] = useState(template.body)
@@ -40,40 +38,40 @@ function TemplateEditor({ template, onClose }: { template: NotificationTemplate;
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {templateLabel(template.key)} · {template.locale.toUpperCase()}
+            {templateLabel(t, template.key)} · {template.locale.toUpperCase()}
           </DialogTitle>
-          <DialogDescription>Placeholders: {template.placeholders.map((p) => `{{ ${p} }}`).join(", ")}</DialogDescription>
+          <DialogDescription>{t("emailTemplates.placeholders", { list: template.placeholders.map((p) => `{{ ${p} }}`).join(", ") })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="subject">Subject</Label>
+            <Label htmlFor="subject">{t("emailTemplates.subject")}</Label>
             <Input id="subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="body">Message</Label>
+            <Label htmlFor="body">{t("emailTemplates.message")}</Label>
             <Textarea id="body" rows={12} value={body} onChange={(e) => setBody(e.target.value)} className="font-mono text-sm" />
           </div>
           <label className="flex items-center gap-2 text-sm">
-            <Switch checked={active} onCheckedChange={setActive} /> Send this e-mail
+            <Switch checked={active} onCheckedChange={setActive} /> {t("emailTemplates.active")}
           </label>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button
             disabled={save.isPending}
             onClick={async () => {
               try {
                 await save.mutateAsync({ key: template.key, locale: template.locale, subject, body, is_active: active })
-                toast.success("Template saved")
+                toast.success(t("emailTemplates.saved"))
                 onClose()
               } catch (e) {
                 toast.error(errorMessage(e))
               }
             }}
           >
-            {save.isPending ? <Loader2 className="animate-spin" /> : null} Save
+            {save.isPending ? <Loader2 className="animate-spin" /> : null} {t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -81,9 +79,8 @@ function TemplateEditor({ template, onClose }: { template: NotificationTemplate;
   )
 }
 
-const KEY_ORDER = Object.keys(TEMPLATE_LABELS)
-
 export function NotificationTemplates() {
+  const t = useT()
   const { user } = useAuth()
   const { data, isLoading } = useNotificationTemplates()
   const [editing, setEditing] = useState<NotificationTemplate | null>(null)
@@ -97,26 +94,26 @@ export function NotificationTemplates() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Customer e-mails</CardTitle>
-        <CardDescription>Sent automatically to customers with an e-mail address, in the restaurant&apos;s language.</CardDescription>
+        <CardTitle>{t("emailTemplates.title")}</CardTitle>
+        <CardDescription>{t("emailTemplates.description")}</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-40 w-full" />
         ) : (
           <ul className="divide-y rounded-2xl border">
-            {templates.map((t) => (
-              <li key={t.id} className="flex items-center justify-between gap-4 p-4">
+            {templates.map((tpl) => (
+              <li key={tpl.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-medium">
-                    {templateLabel(t.key)} <Badge variant="outline">{t.locale.toUpperCase()}</Badge>
-                    {t.is_default ? <Badge variant="secondary">Default</Badge> : <Badge>Customized</Badge>}
-                    {!t.is_active ? <Badge variant="destructive">Off</Badge> : null}
+                    {templateLabel(t, tpl.key)} <Badge variant="outline">{tpl.locale.toUpperCase()}</Badge>
+                    {tpl.is_default ? <Badge variant="secondary">{t("emailTemplates.default")}</Badge> : <Badge>{t("emailTemplates.customized")}</Badge>}
+                    {!tpl.is_active ? <Badge variant="destructive">{t("emailTemplates.off")}</Badge> : null}
                   </p>
-                  <p className="text-muted-foreground truncate text-sm">{preview(t.subject)}</p>
+                  <p className="text-muted-foreground truncate text-sm">{preview(tpl.subject)}</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={() => setEditing(t)}>
-                  Edit
+                <Button variant="outline" size="sm" onClick={() => setEditing(tpl)}>
+                  {t("common.edit")}
                 </Button>
               </li>
             ))}

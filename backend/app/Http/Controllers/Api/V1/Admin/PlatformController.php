@@ -18,6 +18,7 @@ use App\Models\VoucherTransaction;
 use App\Services\Audit\AuditLogger;
 use App\Services\Users\InvitationService;
 use App\Support\Actor;
+use Closure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -54,14 +55,22 @@ final class PlatformController extends Controller
     public function auditLogs(Request $request): AnonymousResourceCollection
     {
         $v = $request->validate([
+            // `restaurant`: one restaurant's id, or `platform` for entries that belong to no restaurant.
+            'restaurant' => ['nullable', 'string', static function (string $attribute, mixed $value, Closure $fail): void {
+                if ($value !== 'platform' && ! Str::isUuid((string) $value)) {
+                    $fail('The restaurant filter must be a restaurant id or "platform".');
+                }
+            }],
             'restaurant_id' => ['nullable', 'uuid'],
             'action' => ['nullable', 'string', 'max:80'],
         ]);
+        $restaurant = $v['restaurant'] ?? $v['restaurant_id'] ?? null;
 
         $logs = AuditLog::query()
             ->withoutGlobalScopes()
             ->with(['user', 'restaurant'])
-            ->when($v['restaurant_id'] ?? null, static fn ($q, $id) => $q->where('restaurant_id', $id))
+            ->when($restaurant === 'platform', static fn ($q) => $q->whereNull('restaurant_id'))
+            ->when($restaurant !== null && $restaurant !== 'platform', static fn ($q) => $q->where('restaurant_id', $restaurant))
             ->when($v['action'] ?? null, static fn ($q, $a) => $q->where('action', 'like', addcslashes((string) $a, '%_\\').'%'))
             ->latest('created_at')
             ->orderByDesc('id')

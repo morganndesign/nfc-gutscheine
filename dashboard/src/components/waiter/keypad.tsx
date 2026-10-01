@@ -2,6 +2,7 @@
 
 import { Delete } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useT } from "@/lib/i18n"
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "del"] as const
 
@@ -9,6 +10,7 @@ const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "00", "0", "del"] as 
  * POS-style numeric keypad: digits shift in from the right (typing 1 8 5 0 → 18,50).
  */
 export function Keypad({ value, onChange, maxCents }: { value: number; onChange: (cents: number) => void; maxCents?: number }) {
+  const t = useT()
   const press = (key: (typeof KEYS)[number]) => {
     if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.(8)
     if (key === "del") {
@@ -21,13 +23,13 @@ export function Keypad({ value, onChange, maxCents }: { value: number; onChange:
   }
 
   return (
-    <div className="short:gap-1.5 grid grid-cols-3 gap-2" role="group" aria-label="Amount keypad">
+    <div className="short:gap-1.5 grid grid-cols-3 gap-2" role="group" aria-label={t("waiter.keypad")}>
       {KEYS.map((key) => (
         <button
           key={key}
           type="button"
           onClick={() => press(key)}
-          aria-label={key === "del" ? "Delete last digit" : key}
+          aria-label={key === "del" ? t("waiter.deleteDigit") : key}
           className={cn(
             "bg-muted tabular active:bg-accent short:h-12 short:text-xl flex h-16 items-center justify-center rounded-2xl text-2xl font-medium transition select-none active:scale-95",
             key === "del" && "text-muted-foreground",

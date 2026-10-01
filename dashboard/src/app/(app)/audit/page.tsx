@@ -10,21 +10,25 @@ import { RequirePermission } from "@/components/layout/auth-guard"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuditLogs } from "@/lib/api/hooks"
+import { useT } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 
-const GROUPS = [
-  { value: "all", label: "All events" },
-  { value: "voucher.", label: "Vouchers" },
-  { value: "presentment.", label: "Scans" },
-  { value: "transaction.", label: "Transactions" },
-  { value: "auth.", label: "Sign-ins" },
-  { value: "user.", label: "Team" },
-  { value: "device.", label: "Devices" },
-  { value: "restaurant.", label: "Settings" },
-  { value: "api_token.", label: "API tokens" },
-  { value: "customer.", label: "Customers" },
+const GROUPS: { value: string; label: MessageKey }[] = [
+  { value: "all", label: "audit.group.all" },
+  { value: "voucher.", label: "audit.group.vouchers" },
+  { value: "card.", label: "audit.group.cards" },
+  { value: "presentment.", label: "audit.group.scans" },
+  { value: "transaction.", label: "audit.group.transactions" },
+  { value: "auth.", label: "audit.group.signIns" },
+  { value: "user.", label: "audit.group.team" },
+  { value: "device.", label: "audit.group.devices" },
+  { value: "restaurant.", label: "audit.group.settings" },
+  { value: "api_token.", label: "audit.group.apiTokens" },
+  { value: "customer.", label: "audit.group.customers" },
 ]
 
 function AuditContent() {
+  const t = useT()
   const [group, setGroup] = useState("all")
   const [page, setPage] = useState(1)
   const { data, isLoading } = useAuditLogs({ action: group === "all" ? undefined : group, page })
@@ -32,17 +36,17 @@ function AuditContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Audit log"
-        description="Every security- and money-relevant action, with who, when and from where. Entries can never be changed or deleted."
+        title={t("nav.audit")}
+        description={t("audit.description")}
         actions={
           <Select value={group} onValueChange={(v) => (setGroup(v), setPage(1))}>
-            <SelectTrigger className="w-44" aria-label="Filter events">
+            <SelectTrigger className="w-44" aria-label={t("audit.filter")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {GROUPS.map((g) => (
                 <SelectItem key={g.value} value={g.value}>
-                  {g.label}
+                  {t(g.label)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -62,7 +66,7 @@ function AuditContent() {
             <PaginationBar page={data.meta} onPageChange={setPage} />
           </>
         ) : (
-          <EmptyState icon={ScrollText} title="No events" />
+          <EmptyState icon={ScrollText} title={t("audit.empty")} />
         )}
       </div>
     </div>
