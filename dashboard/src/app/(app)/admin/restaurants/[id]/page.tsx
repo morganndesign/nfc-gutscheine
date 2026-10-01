@@ -94,9 +94,6 @@ function RestaurantContent({ id }: { id: string }) {
             <p className="text-muted-foreground">
               {r.currency} · {r.locale} · {r.timezone}
             </p>
-            <p className="text-muted-foreground">
-              Plan: <span className="capitalize">{r.plan}</span>
-            </p>
             <p className="text-muted-foreground">Customer since {formatDate(r.created_at)}</p>
             <p className="pt-2 font-medium">
               {business.vouchers} vouchers · {formatMoney(r.outstanding_balance ?? 0, r.currency)} outstanding

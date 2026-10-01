@@ -546,7 +546,6 @@ export type UpdateRestaurantInput = Partial<
     | "currency"
     | "timezone"
     | "locale"
-    | "plan"
   >
 >
 

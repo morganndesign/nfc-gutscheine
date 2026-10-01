@@ -136,7 +136,6 @@ function Content() {
 const SETTING_LABELS: Record<string, string> = {
   "app.min_version.android": "Minimum waiter app version (Android)",
   "app.min_version.ios": "Minimum waiter app version (iPhone)",
-  "platform.default_plan": "Default plan",
   "platform.maintenance_notice": "Maintenance notice",
   "platform.support_email": "Support e-mail",
 }

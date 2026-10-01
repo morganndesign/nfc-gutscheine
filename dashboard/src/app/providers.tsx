@@ -7,6 +7,8 @@ import { Toaster } from "@/components/ui/sonner"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { ApiError } from "@/lib/api/client"
 import { AuthProvider, SESSION_QUERY_KEY } from "@/lib/auth"
+import { ConfirmProvider } from "@/components/common/confirm"
+import { I18nProvider } from "@/lib/i18n"
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(() => {
@@ -35,7 +37,11 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
         <TooltipProvider delayDuration={200}>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <I18nProvider>
+              <ConfirmProvider>{children}</ConfirmProvider>
+            </I18nProvider>
+          </AuthProvider>
           <Toaster position="top-center" richColors closeButton />
         </TooltipProvider>
       </ThemeProvider>

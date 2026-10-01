@@ -35,7 +35,7 @@ const CURRENCIES = ["EUR", "CHF", "USD", "GBP"]
 const LOCALES = ["de-AT", "de-DE", "de-CH", "en-GB", "en-US"]
 
 type EditForm = Record<
-  "name" | "legal_name" | "vat_number" | "email" | "phone" | "website" | "address_line1" | "postal_code" | "city" | "country" | "plan",
+  "name" | "legal_name" | "vat_number" | "email" | "phone" | "website" | "address_line1" | "postal_code" | "city" | "country",
   string
 > & { currency: string; timezone: string; locale: string }
 
@@ -51,7 +51,6 @@ function toForm(r: Restaurant): EditForm {
     postal_code: r.postal_code ?? "",
     city: r.city ?? "",
     country: r.country,
-    plan: r.plan,
     currency: r.currency,
     timezone: r.timezone,
     locale: r.locale,
@@ -104,7 +103,6 @@ export function EditRestaurantDialog({ restaurant, open, onOpenChange }: { resta
               postal_code: form.postal_code || null,
               city: form.city || null,
               country: form.country.toUpperCase(),
-              plan: form.plan,
               currency: form.currency,
               timezone: form.timezone,
               locale: form.locale,
@@ -163,7 +161,6 @@ export function EditRestaurantDialog({ restaurant, open, onOpenChange }: { resta
               {lockedCurrency ? <p className="text-muted-foreground text-xs">Fixed: vouchers were issued in {restaurant.currency}.</p> : null}
               {errors.currency ? <p className="text-destructive text-xs">{errors.currency[0]}</p> : null}
             </div>
-            {field("plan", "Plan", { required: true })}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

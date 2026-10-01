@@ -34,7 +34,6 @@ final class RestaurantFactory extends Factory
             'timezone' => 'Europe/Vienna',
             'locale' => 'de-AT',
             'status' => RestaurantStatus::Active,
-            'plan' => 'standard',
         ];
     }
 

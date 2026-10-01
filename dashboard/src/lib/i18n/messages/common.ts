@@ -1,0 +1,47 @@
+import { defineMessages } from "@/lib/i18n/define"
+
+/** Words and actions used across the whole dashboard. */
+export const common = defineMessages({
+  en: {
+    "common.cancel": "Cancel",
+    "common.save": "Save",
+    "common.saving": "Saving …",
+    "common.close": "Close",
+    "common.back": "Back",
+    "common.edit": "Edit",
+    "common.delete": "Delete",
+    "common.confirm": "Confirm",
+    "common.never": "Never",
+    "common.language": "Language",
+    "common.loading": "Loading …",
+    "common.none": "—",
+  },
+  de: {
+    "common.cancel": "Abbrechen",
+    "common.save": "Speichern",
+    "common.saving": "Wird gespeichert …",
+    "common.close": "Schließen",
+    "common.back": "Zurück",
+    "common.edit": "Bearbeiten",
+    "common.delete": "Löschen",
+    "common.confirm": "Bestätigen",
+    "common.never": "Nie",
+    "common.language": "Sprache",
+    "common.loading": "Wird geladen …",
+    "common.none": "—",
+  },
+  bs: {
+    "common.cancel": "Odustani",
+    "common.save": "Sačuvaj",
+    "common.saving": "Čuva se …",
+    "common.close": "Zatvori",
+    "common.back": "Nazad",
+    "common.edit": "Uredi",
+    "common.delete": "Obriši",
+    "common.confirm": "Potvrdi",
+    "common.never": "Nikad",
+    "common.language": "Jezik",
+    "common.loading": "Učitava se …",
+    "common.none": "—",
+  },
+})

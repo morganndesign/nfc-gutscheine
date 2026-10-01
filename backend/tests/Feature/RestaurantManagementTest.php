@@ -65,7 +65,7 @@ final class RestaurantManagementTest extends TestCase
         $this->getJson('/api/v1/admin/restaurants?search=nobody')->assertOk()->assertJsonCount(0, 'data');
     }
 
-    public function test_admin_edits_restaurant_including_plan_and_currency(): void
+    public function test_admin_edits_restaurant_including_currency(): void
     {
         Notification::fake();
         $this->actingAsAdmin();
@@ -74,11 +74,10 @@ final class RestaurantManagementTest extends TestCase
         $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", [
             'name' => 'Café Central Wien',
             'city' => 'Wien',
-            'plan' => 'pro',
             'currency' => 'CHF',
         ])->assertOk()
             ->assertJsonPath('data.name', 'Café Central Wien')
-            ->assertJsonPath('data.plan', 'pro')
+            ->assertJsonMissingPath('data.plan')
             ->assertJsonPath('data.currency', 'CHF')
             ->assertJsonPath('data.owner.email', 'owner@central.test');
 
@@ -95,7 +94,7 @@ final class RestaurantManagementTest extends TestCase
         $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", ['currency' => 'CHF'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('currency');
-        $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", ['currency' => 'EUR', 'plan' => 'pro'])->assertOk();
+        $this->patchJson("/api/v1/admin/restaurants/{$restaurant->id}", ['currency' => 'EUR'])->assertOk();
     }
 
     public function test_disable_and_enable(): void

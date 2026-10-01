@@ -1,4 +1,7 @@
 import { getDeviceId } from "@/lib/device"
+import { CATALOGS, type MessageKey } from "@/lib/i18n/catalog"
+import { format } from "@/lib/i18n/format"
+import { currentLanguage } from "@/lib/i18n/state"
 
 /**
  * Thin fetch wrapper for the Laravel API.
@@ -93,6 +96,8 @@ async function send(path: string, options: RequestOptions, retry: boolean): Prom
   const headers: Record<string, string> = {
     Accept: "application/json",
     "X-Requested-With": "XMLHttpRequest",
+    // Validation messages come back in the user's language.
+    "Accept-Language": currentLanguage(),
   }
   if (options.body !== undefined) headers["Content-Type"] = "application/json"
   const xsrf = readCookie("XSRF-TOKEN")
@@ -153,13 +158,25 @@ export function newIdempotencyKey(): string {
   return crypto.randomUUID()
 }
 
-export function errorMessage(error: unknown, fallback = "Something went wrong. Please try again."): string {
+function text(key: MessageKey, params?: Record<string, string | number>): string {
+  const language = currentLanguage()
+  return format(language, CATALOGS[language][key] ?? CATALOGS.en[key], params)
+}
+
+/**
+ * What to tell the user about a failed request, in their language: the translation of the error code when there is
+ * one (`errors.<CODE>`), else the server's (localised) validation message, else its message.
+ */
+export function errorMessage(error: unknown, fallback?: string): string {
+  const generic = fallback ?? text("errors.generic")
   if (error instanceof ApiError) {
+    const key = `errors.${error.code ?? ""}`
+    if (error.code && key in CATALOGS.en) return text(key as MessageKey)
     const first = Object.values(error.fieldErrors)[0]?.[0]
-    return first ?? error.message ?? fallback
+    return first ?? error.message ?? generic
   }
   // fetch() rejects with a TypeError when the device is offline or the server is unreachable.
-  if (error instanceof TypeError) return "No connection to the server. Check the internet connection and try again."
-  if (error instanceof Error && error.name !== "AbortError") return error.message || fallback
-  return fallback
+  if (error instanceof TypeError) return text("errors.offline")
+  if (error instanceof Error && error.name !== "AbortError") return error.message || generic
+  return generic
 }

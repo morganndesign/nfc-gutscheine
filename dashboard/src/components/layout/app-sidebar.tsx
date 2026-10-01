@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
-import { ChevronsUpDown, CreditCard, LogOut, Monitor, Moon, Sun, UserCog } from "lucide-react"
+import { Check, ChevronsUpDown, CreditCard, Languages, LogOut, Monitor, Moon, Sun, UserCog } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -32,6 +32,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/lib/auth"
+import { LANGUAGES, useI18n } from "@/lib/i18n"
+import type { MessageKey } from "@/lib/i18n/catalog"
 import { MANAGE_NAV, PLATFORM_NAV, RESTAURANT_NAV, type NavItem } from "@/components/layout/nav"
 
 function initials(name: string): string {
@@ -48,6 +50,7 @@ export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const { theme, setTheme } = useTheme()
+  const { t, language, setLanguage } = useI18n()
 
   if (!user) return null
   const hasRestaurant = !!user.restaurant
@@ -56,18 +59,18 @@ export function AppSidebar() {
   const isActive = (href: string) =>
     href === "/admin" ? pathname === "/admin" || pathname.startsWith("/admin/restaurants") : pathname === href || pathname.startsWith(`${href}/`)
 
-  const renderGroup = (label: string | null, items: NavItem[]) =>
+  const renderGroup = (label: MessageKey | null, items: NavItem[]) =>
     items.length ? (
       <SidebarGroup>
-        {label ? <SidebarGroupLabel>{label}</SidebarGroupLabel> : null}
+        {label ? <SidebarGroupLabel>{t(label)}</SidebarGroupLabel> : null}
         <SidebarGroupContent>
           <SidebarMenu>
             {items.map((item) => (
               <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={item.label}>
+                <SidebarMenuButton asChild isActive={isActive(item.href)} tooltip={t(item.label)}>
                   <Link href={item.href}>
                     <item.icon />
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -89,7 +92,7 @@ export function AppSidebar() {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{user.restaurant?.name ?? "GiftCard Pro"}</span>
-                  <span className="text-muted-foreground truncate text-xs">{user.restaurant ? "GiftCard Pro" : "Platform administration"}</span>
+                  <span className="text-muted-foreground truncate text-xs">{user.restaurant ? "GiftCard Pro" : t("nav.platformAdministration")}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -98,8 +101,8 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         {renderGroup(null, visible(RESTAURANT_NAV))}
-        {renderGroup("Manage", visible(MANAGE_NAV))}
-        {renderGroup("Platform", visible(PLATFORM_NAV))}
+        {renderGroup("nav.groupManage", visible(MANAGE_NAV))}
+        {renderGroup("nav.groupPlatform", visible(PLATFORM_NAV))}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>
@@ -112,7 +115,7 @@ export function AppSidebar() {
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">{user.name}</span>
-                    <span className="text-muted-foreground truncate text-xs">{user.role.name}</span>
+                    <span className="text-muted-foreground truncate text-xs">{t(`roles.${user.role.slug}` as MessageKey)}</span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -124,24 +127,36 @@ export function AppSidebar() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => router.push("/account")}>
-                  <UserCog /> Account
+                  <UserCog /> {t("menu.account")}
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
-                    <Sun /> Appearance
+                    <Sun /> {t("menu.appearance")}
                   </DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
                     <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
                       <DropdownMenuRadioItem value="light">
-                        <Sun /> Light
+                        <Sun /> {t("menu.light")}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="dark">
-                        <Moon /> Dark
+                        <Moon /> {t("menu.dark")}
                       </DropdownMenuRadioItem>
                       <DropdownMenuRadioItem value="system">
-                        <Monitor /> System
+                        <Monitor /> {t("menu.system")}
                       </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Languages /> {t("common.language")}
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {LANGUAGES.map((l) => (
+                      <DropdownMenuItem key={l.code} onSelect={() => void setLanguage(l.code)}>
+                        <Check className={l.code === language ? "" : "invisible"} /> {l.label}
+                      </DropdownMenuItem>
+                    ))}
                   </DropdownMenuSubContent>
                 </DropdownMenuSub>
                 <DropdownMenuSeparator />
@@ -151,7 +166,7 @@ export function AppSidebar() {
                     router.replace("/login")
                   }}
                 >
-                  <LogOut /> Sign out
+                  <LogOut /> {t("menu.signOut")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

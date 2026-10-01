@@ -1,4 +1,7 @@
 import { regionalLocale, regionalTimeZone } from "@/lib/regional"
+import { intlTag } from "@/lib/i18n/format"
+import { currentLanguage } from "@/lib/i18n/state"
+import { CATALOGS } from "@/lib/i18n/catalog"
 
 export function formatDate(iso: string | null | undefined, locale = regionalLocale(), timeZone = regionalTimeZone()): string {
   if (!iso) return "—"
@@ -10,8 +13,9 @@ export function formatDateTime(iso: string | null | undefined, locale = regional
   return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(new Date(iso))
 }
 
-export function formatRelative(iso: string | null | undefined, locale = "en"): string {
-  if (!iso) return "Never"
+/** "3 hours ago" in the UI language ("Never" without a date). */
+export function formatRelative(iso: string | null | undefined, locale = intlTag(currentLanguage())): string {
+  if (!iso) return CATALOGS[currentLanguage()]["common.never"]
   const diff = (new Date(iso).getTime() - Date.now()) / 1000
   const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" })
   const abs = Math.abs(diff)

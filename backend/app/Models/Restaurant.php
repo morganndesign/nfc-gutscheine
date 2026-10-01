@@ -34,7 +34,6 @@ use Illuminate\Support\Carbon;
  * @property string $timezone
  * @property string $locale
  * @property RestaurantStatus $status
- * @property string $plan
  * @property Carbon|null $suspended_at
  * @property string|null $suspension_reason
  * @property Carbon $created_at
@@ -54,7 +53,7 @@ class Restaurant extends Model
     protected $fillable = [
         'name', 'slug', 'legal_name', 'vat_number', 'email', 'phone', 'website',
         'address_line1', 'address_line2', 'postal_code', 'city', 'country',
-        'currency', 'timezone', 'locale', 'plan',
+        'currency', 'timezone', 'locale',
     ];
 
     protected function casts(): array

@@ -16,7 +16,6 @@ use App\Models\NotificationTemplate;
 use App\Models\PersonalAccessToken;
 use App\Models\Restaurant;
 use App\Models\RestaurantSetting;
-use App\Models\SystemSetting;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
@@ -56,7 +55,6 @@ final class RestaurantService
             $restaurant->fill($data);
             $restaurant->slug = $this->uniqueSlug((string) ($data['slug'] ?? $data['name']));
             $restaurant->status = RestaurantStatus::Active;
-            $restaurant->plan = (string) ($data['plan'] ?? SystemSetting::get('platform.default_plan', 'standard'));
             $restaurant->save();
 
             if (isset($data['settings']) && is_array($data['settings'])) {

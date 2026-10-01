@@ -19,7 +19,6 @@ final class UpdateRestaurantRequest extends ApiRequest
     {
         return [
             ...(new RestaurantProfileRules)->rules(),
-            'plan' => ['sometimes', 'required', 'string', 'max:40'],
             'currency' => ['sometimes', 'required', 'string', 'size:3', 'alpha', Rule::in(['EUR', 'CHF', 'USD', 'GBP'])],
         ];
     }

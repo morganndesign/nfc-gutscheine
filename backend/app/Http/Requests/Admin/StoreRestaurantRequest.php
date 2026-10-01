@@ -27,7 +27,6 @@ final class StoreRestaurantRequest extends ApiRequest
             'currency' => ['nullable', 'string', 'size:3', 'alpha', Rule::in(['EUR', 'CHF', 'USD', 'GBP'])],
             'timezone' => ['nullable', 'timezone:all'],
             'locale' => ['nullable', 'in:de-AT,de-DE,de-CH,en-GB,en-US'],
-            'plan' => ['nullable', 'string', 'max:40'],
             'owner' => ['required', 'array'],
             'owner.name' => ['required', 'string', 'max:160'],
             'owner.email' => ['required', 'email:rfc', 'max:191', Rule::unique('users', 'email')],

@@ -397,7 +397,6 @@ export interface Restaurant {
   timezone: string
   locale: string
   status: "active" | "suspended"
-  plan: string
   suspended_at: string | null
   suspension_reason: string | null
   settings?: RestaurantSettings
