@@ -1309,15 +1309,6 @@
   "@reloadTapAgain": {
     "description": "Spec key: reload.tapAgain (12 §5.13) · Max: 64 · Notes: Reload · the first tap is older than its 60 s validity"
   },
-  "reloadBalance": "Balance now {amount}",
-  "@reloadBalance": {
-    "description": "Spec key: reload.balance (12 §5.13) · Max: 32 · Notes: Reload · above the keypad",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
   "reloadAmountLabel": "Top-up amount",
   "@reloadAmountLabel": {
     "description": "Spec key: reload.amount.label (12 §5.13) · Max: 24 · Notes: Reload · above the amount"
@@ -1538,6 +1529,14 @@
   "menuSectionSettings": "Settings",
   "@menuSectionSettings": {
     "description": "Spec key: menu.section.settings (12 §5.16) · Max: 24 · Notes: 03a"
+  },
+  "menuLanguage": "Language",
+  "@menuLanguage": {
+    "description": "Spec key: menu.language (12 §5.16) · Max: 24 · Notes: Account language, the same in the dashboard (options are endonyms, not translated)"
+  },
+  "menuLanguageFailed": "Language not changed. Please try again.",
+  "@menuLanguageFailed": {
+    "description": "Spec key: menu.languageFailed (12 §5.16) · Max: 60 · Notes: Snackbar"
   },
   "menuTheme": "Appearance",
   "@menuTheme": {

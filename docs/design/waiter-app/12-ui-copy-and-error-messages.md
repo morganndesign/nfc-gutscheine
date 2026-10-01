@@ -734,7 +734,6 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `reload.title` | Karte aufladen | Top up card | Dopuna kartice | 28 | Reload · TopBar |
 | `reload.tap` | Die Karte des Gastes ans Handy halten. | Hold the guest's card to the phone. | Prislonite gostovu karticu uz telefon. | 64 | Reload · step 1, also the iPhone sheet |
 | `reload.tapAgain` | Zum Bestätigen die Karte noch einmal ans Handy halten. | Hold the card to the phone again to confirm. | Ponovo prislonite karticu da potvrdite. | 64 | Reload · the first tap is older than its 60 s validity |
-| `reload.balance` | Guthaben jetzt {amount} | Balance now {amount} | Trenutno stanje {amount} | 32 | Reload · above the keypad |
 | `reload.amount.label` | Aufladebetrag | Top-up amount | Iznos dopune | 24 | Reload · above the amount |
 | `reload.amount.max` | Höchstens {max}, sonst wird das Guthabenlimit überschritten. | At most {max}, or the balance limit is exceeded. | Najviše {max}, inače se prekoračuje limit stanja. | 60 | Reload · BALANCE_LIMIT_EXCEEDED |
 | `reload.submit` | {amount} aufladen | Top up {amount} | Dopuni {amount} | 32 | Reload · PrimaryButton |
@@ -794,6 +793,8 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `menu.restaurant` | Lokal | Restaurant | Restoran | 24 | 03a |
 | `menu.device` | Gerät | Device | Uređaj | 24 | 03a · value: device name |
 | `menu.section.settings` | Einstellungen | Settings | Postavke | 24 | 03a |
+| `menu.language` | Sprache | Language | Jezik | 24 | Account language, the same in the dashboard (options are endonyms, not translated) |
+| `menu.languageFailed` | Sprache nicht geändert. Bitte erneut versuchen. | Language not changed. Please try again. | Jezik nije promijenjen. Pokušajte ponovo. | 60 | Snackbar |
 | `menu.theme` | Darstellung | Appearance | Izgled | 24 | 03a |
 | `menu.theme.system` | Wie System | Match system | Kao sistem | 14 | 03a |
 | `menu.theme.light` | Hell | Light | Svijetlo | 10 | 03a |
@@ -940,7 +941,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **406 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **407 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

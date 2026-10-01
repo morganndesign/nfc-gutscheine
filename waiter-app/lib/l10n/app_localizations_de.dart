@@ -929,11 +929,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Zum Bestätigen die Karte noch einmal ans Handy halten.';
 
   @override
-  String reloadBalance(String amount) {
-    return 'Guthaben jetzt $amount';
-  }
-
-  @override
   String get reloadAmountLabel => 'Aufladebetrag';
 
   @override
@@ -1095,6 +1090,13 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get menuSectionSettings => 'Einstellungen';
+
+  @override
+  String get menuLanguage => 'Sprache';
+
+  @override
+  String get menuLanguageFailed =>
+      'Sprache nicht geändert. Bitte erneut versuchen.';
 
   @override
   String get menuTheme => 'Darstellung';

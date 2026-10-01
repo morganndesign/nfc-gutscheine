@@ -49,14 +49,11 @@ class ChargeCardSliver extends StatelessWidget {
     this.trailing = const <Widget>[],
     this.topGap = 0,
     this.maxHeight = Sizes.balanceCardMaxHeight,
-    this.withKeypad = true,
   });
 
   /// Height cap of the ID-1 card ([cardMaxHeight]).
   final double maxHeight;
 
-  /// Whether the keypad shares the screen (`BalanceCardDensity.choose`).
-  final bool withKeypad;
 
   /// The card for the chosen density.
   final CardSlotBuilder card;
@@ -90,7 +87,6 @@ class ChargeCardSliver extends StatelessWidget {
         final BalanceCardDensity density = BalanceCardDensity.choose(
           context,
           availableHeight: available,
-          withKeypad: withKeypad,
         );
         final Size size = ChargeMetrics.cardSize(
           density,

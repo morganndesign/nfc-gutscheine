@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 
 import '../cards/ntag424_session.dart';
@@ -58,6 +60,13 @@ class WaiterApi {
   }
 
   Future<void> signOut() => _client.send('POST', '/auth/logout');
+
+  /// The account's language (`de`, `en`, `bs`), the same in the dashboard.
+  Future<void> setLanguage(String code) =>
+      _client.send('PUT', '/auth/language', body: <String, Object?>{'locale': code});
+
+  /// The restaurant's logo (PNG) from its versioned path in the settings.
+  Future<Uint8List> logo(String path) => _client.bytes(path.replaceFirst(RegExp(r'^/api/v1'), ''));
 
   Future<CurrentDevice> currentDevice() async =>
       CurrentDevice.fromJson((await _client.send('GET', '/devices/current')).json);

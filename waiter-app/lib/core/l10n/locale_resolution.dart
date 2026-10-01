@@ -44,3 +44,6 @@ Locale localeListResolutionCallback(
 /// For `WidgetsApp.localeResolutionCallback` (single-locale platforms).
 Locale localeResolutionCallback(Locale? locale, Iterable<Locale> supported) =>
     resolveAppLocale(locale);
+
+/// The app locale for the signed-in account's language (`de`, `en`, `bs`); null = follow the phone.
+Locale? accountLocale(String? language) => language == null ? null : resolveAppLocale(Locale(language));

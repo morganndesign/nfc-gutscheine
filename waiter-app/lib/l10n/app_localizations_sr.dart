@@ -926,11 +926,6 @@ class AppLocalizationsSr extends AppLocalizations {
   String get reloadTapAgain => 'Ponovo prislonite karticu da potvrdite.';
 
   @override
-  String reloadBalance(String amount) {
-    return 'Trenutno stanje $amount';
-  }
-
-  @override
   String get reloadAmountLabel => 'Iznos dopune';
 
   @override
@@ -1091,6 +1086,12 @@ class AppLocalizationsSr extends AppLocalizations {
 
   @override
   String get menuSectionSettings => 'Postavke';
+
+  @override
+  String get menuLanguage => 'Jezik';
+
+  @override
+  String get menuLanguageFailed => 'Jezik nije promijenjen. Pokušajte ponovo.';
 
   @override
   String get menuTheme => 'Izgled';

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
@@ -22,16 +23,13 @@ enum BalanceCardDensity {
   compact;
 
   /// The density for a card slot: compact when the ID-1 card would be
-  /// shorter than 136 pt (`availableHeight`), at a font scale of 130 % and
-  /// more, or — with the keypad on screen — at compact window height
-  /// (05 §3.1 "When used", 08 §3.2). Layouts without a keypad (partial
-  /// redemption disabled, card-state variants: [withKeypad] `false`) keep
-  /// the full card whenever it has 136 pt (08 §3.2 "the card takes Full
-  /// density"). Chosen when S07 opens; the screen keeps it while typing.
+  /// shorter than 136 pt (`availableHeight`) or at a font scale of 130 % and
+  /// more. Otherwise the guest's card is shown as a card (ID-1), also on
+  /// small phones with the keypad: it is what the waiter recognises.
+  /// Chosen when S07 opens; the screen keeps it while typing.
   static BalanceCardDensity choose(
     BuildContext context, {
     required double availableHeight,
-    bool withKeypad = true,
   }) {
     final WaiterLayout layout = context.layout;
     final double idOne = WaiterLayout.idOneCardHeight(layout.contentWidth);
@@ -39,8 +37,7 @@ enum BalanceCardDensity {
         availableHeight < BalanceCardTokens.minFullHeight ||
         idOne < BalanceCardTokens.minFullHeight;
     final bool largeText = MediaQuery.textScalerOf(context).scale(1) >= 1.3;
-    final bool compactWindow = withKeypad && layout.heightClass.isCompact;
-    return tooShort || largeText || compactWindow
+    return tooShort || largeText
         ? BalanceCardDensity.compact
         : BalanceCardDensity.full;
   }
@@ -57,6 +54,7 @@ class BalanceCardData {
     required this.status,
     this.expiresAt,
     this.brandColor,
+    this.logo,
   });
 
   /// Restaurant name as configured (not uppercased).
@@ -76,6 +74,9 @@ class BalanceCardData {
 
   /// Restaurant `brand_color` (`#RRGGBB`), `null` = `color.brand.ink`.
   final String? brandColor;
+
+  /// The restaurant's logo (PNG), shown instead of the name on the full card; `null` = the name.
+  final Uint8List? logo;
 
   /// The badge shown on the card: none for an active voucher with a balance;
   /// "used up" for a zero balance (05 §3.1 states).
@@ -121,7 +122,8 @@ class BalanceCardData {
       other.last4 == last4 &&
       other.status == status &&
       other.expiresAt == expiresAt &&
-      other.brandColor == brandColor;
+      other.brandColor == brandColor &&
+      identical(other.logo, logo);
 
   @override
   int get hashCode => Object.hash(
@@ -131,6 +133,7 @@ class BalanceCardData {
     status,
     expiresAt,
     brandColor,
+    logo,
   );
 }
 
@@ -369,6 +372,25 @@ class _CardShell extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final Size size = _cardSize(density, constraints.maxWidth, maxHeight);
+        Widget face = Padding(
+          padding: EdgeInsets.all(padding),
+          // Text is capped at 130 %; at the largest sizes the screen
+          // uses the compact strip (05 §3.1). Anything that still does
+          // not fit is clipped by the card, never laid out outside it.
+          child: ClipRect(child: child),
+        );
+        // A smaller card is the same card, scaled: laid out at the phone size and shrunk as a whole, so name,
+        // balance and number never collide on a small screen.
+        if (density == BalanceCardDensity.full &&
+            size.height < _referenceHeight) {
+          face = FittedBox(
+            child: SizedBox(
+              width: _referenceHeight * BalanceCardTokens.aspectRatio,
+              height: _referenceHeight,
+              child: face,
+            ),
+          );
+        }
         return Center(
           heightFactor: 1,
           child: SizedBox(
@@ -381,13 +403,7 @@ class _CardShell extends StatelessWidget {
               outline: colors.outline,
               shadows: shadows ?? colors.shadows,
               clip: true,
-              child: Padding(
-                padding: EdgeInsets.all(padding),
-                // Text is capped at 130 %; at the largest sizes the screen
-                // uses the compact strip (05 §3.1). Anything that still does
-                // not fit is clipped by the card, never laid out outside it.
-                child: ClipRect(child: child),
-              ),
+              child: face,
             ),
           ),
         );
@@ -395,6 +411,9 @@ class _CardShell extends StatelessWidget {
     );
   }
 }
+
+/// Height at which the full card is laid out; smaller cards scale this layout down.
+const double _referenceHeight = Sizes.balanceCardMaxHeight;
 
 /// Text scale cap for everything inside the card (04 §3.7).
 const double _cardTextScale = 1.3;
@@ -497,7 +516,10 @@ class _CardFace extends StatelessWidget {
                     maxScale: _cardTextScale,
                   ),
                   const SizedBox(height: BalanceCardTokens.overlineGap),
-                  name,
+                  if (data.logo != null)
+                    _Logo(bytes: data.logo!, label: data.restaurantName)
+                  else
+                    name,
                 ],
               ),
             ),
@@ -535,6 +557,37 @@ class _CardFace extends StatelessWidget {
       child: content,
     );
   }
+}
+
+/// The restaurant's logo on a white plate (any logo stays readable on any card colour).
+class _Logo extends StatelessWidget {
+  const _Logo({required this.bytes, required this.label});
+
+  final Uint8List bytes;
+  final String label;
+
+  static const double _height = 40;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    height: _height,
+    constraints: const BoxConstraints(maxWidth: 180),
+    padding: const EdgeInsets.symmetric(
+      horizontal: Space.s3,
+      vertical: Space.s1,
+    ),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFFFFF),
+      borderRadius: BorderRadius.circular(Radii.s),
+    ),
+    child: Image.memory(
+      bytes,
+      fit: BoxFit.contain,
+      semanticLabel: label,
+      gaplessPlayback: true,
+      filterQuality: FilterQuality.medium,
+    ),
+  );
 }
 
 /// Balance with the currency symbol at 60 % on the same baseline and the

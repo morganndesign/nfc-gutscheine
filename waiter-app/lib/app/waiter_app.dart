@@ -87,7 +87,8 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
       child: FeedbackScope(
         service: _s.feedback,
         child: ListenableBuilder(
-          listenable: _s.settings,
+          // The account's language (shared with the dashboard) wins over the phone's once signed in.
+          listenable: Listenable.merge(<Listenable>[_s.settings, _s.session]),
           builder: (BuildContext context, _) => MaterialApp.router(
             debugShowCheckedModeBanner: false,
             onGenerateTitle: (BuildContext context) => AppLocalizations.of(context).appName,
@@ -95,6 +96,7 @@ class _WaiterAppState extends State<WaiterApp> with WidgetsBindingObserver {
             darkTheme: waiterThemeData(Brightness.dark),
             themeMode: _themeMode,
             localizationsDelegates: appLocalizationsDelegates,
+            locale: accountLocale(_s.session.user?.locale),
             supportedLocales: supportedLocales,
             localeListResolutionCallback: localeListResolutionCallback,
             builder: (BuildContext context, Widget? child) {

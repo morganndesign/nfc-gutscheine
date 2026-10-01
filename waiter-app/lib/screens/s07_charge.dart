@@ -456,7 +456,6 @@ class _ChargeFrame extends StatelessWidget {
                           horizontalInset: 0,
                           topGap: metrics.topGap,
                           maxHeight: cardMaxHeight(layout, pane: true),
-                          withKeypad: keypad && entry != null,
                           anchor: entry == null
                               ? CardAnchor.top
                               : CardAnchor.centre,
@@ -503,7 +502,6 @@ class _ChargeFrame extends StatelessWidget {
                   horizontalInset: layout.margin,
                   topGap: metrics.topGap,
                   maxHeight: cardMaxHeight(layout, pane: false),
-                  withKeypad: false,
                   anchor: CardAnchor.top,
                   trailing: trailing,
                 ),
@@ -536,7 +534,6 @@ class _ChargeFrame extends StatelessWidget {
             horizontalInset: layout.margin,
             topGap: metrics.topGap,
             maxHeight: cardMaxHeight(layout, pane: false),
-            withKeypad: keypad,
             anchor: CardAnchor.bottom,
           ),
         ],
@@ -924,7 +921,6 @@ class _EntryBlock extends StatelessWidget {
       below = Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _messageArea(l10n),
           if (!s.fullOnly) ...<Widget>[
             SizedBox(height: metrics.rowGap - _chipOverhang),
             IgnorePointer(
@@ -943,9 +939,12 @@ class _EntryBlock extends StatelessWidget {
       );
     }
 
+    // Helper line and quick amounts sit between the card and the amount, so the amount stays right above the
+    // keypad where the waiter types it. The uncertain panel takes the place of both (same total height).
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
+        if (!s.isUncertain) _messageArea(l10n),
         amount,
         AnimatedSwitcher(
           duration: Motion.durationBase,

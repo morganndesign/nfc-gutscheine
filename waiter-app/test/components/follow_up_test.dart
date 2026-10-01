@@ -355,31 +355,21 @@ void main() {
       expect(tester.getSize(find.byType(BalanceCard)).height, 277);
     });
 
-    testWidgets('no keypad: full card even at compact window height', (
+    testWidgets('the guest card stays a card at compact window height, with or without keypad', (
       WidgetTester tester,
     ) async {
-      late BalanceCardDensity withKeypad;
-      late BalanceCardDensity fullOnly;
+      late BalanceCardDensity density;
       await pumpComponent(
         tester,
         Builder(
           builder: (BuildContext context) {
-            withKeypad = BalanceCardDensity.choose(
-              context,
-              availableHeight: 200,
-            );
-            fullOnly = BalanceCardDensity.choose(
-              context,
-              availableHeight: 200,
-              withKeypad: false,
-            );
+            density = BalanceCardDensity.choose(context, availableHeight: 200);
             return const SizedBox();
           },
         ),
         size: const Size(375, 667),
       );
-      expect(withKeypad, BalanceCardDensity.compact);
-      expect(fullOnly, BalanceCardDensity.full);
+      expect(density, BalanceCardDensity.full);
     });
   });
 

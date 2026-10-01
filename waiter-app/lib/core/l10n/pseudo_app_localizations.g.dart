@@ -917,10 +917,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get reloadTapAgain => pseudoLocalize(base.reloadTapAgain);
 
   @override
-  String reloadBalance(String amount) =>
-      pseudoLocalize(base.reloadBalance(pseudoMarker(0)), <String>[amount]);
-
-  @override
   String get reloadAmountLabel => pseudoLocalize(base.reloadAmountLabel);
 
   @override
@@ -1082,6 +1078,12 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get menuSectionSettings => pseudoLocalize(base.menuSectionSettings);
+
+  @override
+  String get menuLanguage => pseudoLocalize(base.menuLanguage);
+
+  @override
+  String get menuLanguageFailed => pseudoLocalize(base.menuLanguageFailed);
 
   @override
   String get menuTheme => pseudoLocalize(base.menuTheme);

@@ -34,7 +34,7 @@ void main() {
       await tester.tap(text(en.reloadReady));
       await settle(tester, 20);
       expect(app.nfc.prompts.single, en.reloadTap);
-      expect(find.textContaining('Balance now', findRichText: true), findsOneWidget);
+      expect(find.byType(BalanceCard), findsOneWidget);
 
       await typeDigits(tester, '3000');
       await tester.tap(primary('Continue'));

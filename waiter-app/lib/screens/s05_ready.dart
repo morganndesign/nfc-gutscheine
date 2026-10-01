@@ -9,6 +9,7 @@ import '../app/money.dart';
 import '../components/components.dart';
 import '../components/support/announce.dart';
 import '../core/api/models.dart';
+import '../core/branding/restaurant_logo.dart';
 import '../core/platform/nfc_relay.dart';
 import '../core/state/loop_controller.dart';
 import '../core/state/loop_state.dart';
@@ -166,6 +167,8 @@ class _ReadyScreenState extends State<ReadyScreen> {
       builder: (BuildContext context, _) {
         final LoopController loop = services.loop;
         final SessionUser? user = services.session.user;
+        // The logo for the guest cards, ready before the first scan.
+        unawaited(restaurantLogos.prefetch(services.api, user?.restaurant?.settings.logoUrl));
         final List<PendingRedemption> pending = loop.pendingRedemptions;
         return CallbackShortcuts(
           bindings: <ShortcutActivator, VoidCallback>{

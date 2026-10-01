@@ -72,6 +72,7 @@ class RestaurantSettings {
     required this.allowPartialRedemption,
     required this.maxDebitPerTransaction,
     required this.brandColor,
+    this.logoUrl,
     this.minVoucherValue,
     this.maxVoucherBalance,
     this.sendCustomerEmails = false,
@@ -81,6 +82,7 @@ class RestaurantSettings {
     allowPartialRedemption: _bool(json, 'allow_partial_redemption', fallback: true),
     maxDebitPerTransaction: _intOrNull(json, 'max_debit_per_transaction'),
     brandColor: _stringOrNull(json, 'brand_color'),
+    logoUrl: _stringOrNull(json, 'logo_url'),
     minVoucherValue: _intOrNull(json, 'min_voucher_value'),
     maxVoucherBalance: _intOrNull(json, 'max_voucher_balance'),
     sendCustomerEmails: _bool(json, 'send_customer_emails'),
@@ -90,6 +92,7 @@ class RestaurantSettings {
     'allow_partial_redemption': allowPartialRedemption,
     'max_debit_per_transaction': maxDebitPerTransaction,
     'brand_color': brandColor,
+    'logo_url': logoUrl,
     'min_voucher_value': minVoucherValue,
     'max_voucher_balance': maxVoucherBalance,
     'send_customer_emails': sendCustomerEmails,
@@ -102,6 +105,9 @@ class RestaurantSettings {
 
   /// `#RRGGBB` or null (→ `color.brand.ink`).
   final String? brandColor;
+
+  /// Versioned API path of the restaurant's logo (`/api/v1/restaurant/logo?v=…`), null without a logo.
+  final String? logoUrl;
 
   /// Smallest value of a sold voucher, in cents.
   final int? minVoucherValue;
@@ -186,6 +192,7 @@ class SessionUser {
     required this.permissions,
     required this.restaurant,
     this.roleSlug,
+    this.locale,
   });
 
   factory SessionUser.fromJson(Map<String, Object?> json) {
@@ -199,6 +206,7 @@ class SessionUser {
       permissions: permissions is List ? permissions.whereType<String>().toList() : const <String>[],
       restaurant: restaurant == null ? null : Restaurant.fromJson(_map(restaurant, 'restaurant')),
       roleSlug: role is Map ? _stringOrNull(role.cast<String, Object?>(), 'slug') : null,
+      locale: _stringOrNull(json, 'locale'),
     );
   }
 
@@ -211,6 +219,9 @@ class SessionUser {
   /// `owner`, `manager` or `waiter`.
   final String? roleSlug;
 
+  /// The account's language (`de`, `en`, `bs`), shared with the dashboard; null = follow the phone.
+  final String? locale;
+
   /// Cached so S05 can render before `/auth/me` answers (offline start).
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
@@ -219,6 +230,7 @@ class SessionUser {
     'permissions': permissions,
     'restaurant': restaurant?.toJson(),
     if (roleSlug != null) 'role': <String, Object?>{'slug': roleSlug},
+    if (locale != null) 'locale': locale,
   };
 
   /// Waiter initials for the `Avatar` (max. two letters).

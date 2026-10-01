@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:giftcard_waiter/app/app_scope.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/core/api/models.dart';
+import 'package:giftcard_waiter/core/branding/restaurant_logo.dart';
 import 'package:giftcard_waiter/core/format/format.dart';
 
 /// The BalanceCard content of a presented voucher (05 §3.1): the restaurant's
@@ -15,6 +16,7 @@ BalanceCardData balanceCardDataOf(BuildContext context, PresentedVoucher voucher
     status: voucher.isExpired && voucher.status == VoucherStatus.active ? VoucherStatus.expired : voucher.status,
     expiresAt: restaurantDateOf(context, voucher.expiresAt),
     brandColor: brandColorOf(context),
+    logo: restaurantLogos.peek(context.services.session.user?.restaurant?.settings.logoUrl),
   );
 }
 

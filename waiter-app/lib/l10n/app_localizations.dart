@@ -1646,12 +1646,6 @@ abstract class AppLocalizations {
   /// **'Hold the card to the phone again to confirm.'**
   String get reloadTapAgain;
 
-  /// Spec key: reload.balance (12 §5.13) · Max: 32 · Notes: Reload · above the keypad
-  ///
-  /// In en, this message translates to:
-  /// **'Balance now {amount}'**
-  String reloadBalance(String amount);
-
   /// Spec key: reload.amount.label (12 §5.13) · Max: 24 · Notes: Reload · above the amount
   ///
   /// In en, this message translates to:
@@ -1920,6 +1914,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Settings'**
   String get menuSectionSettings;
+
+  /// Spec key: menu.language (12 §5.16) · Max: 24 · Notes: Account language, the same in the dashboard (options are endonyms, not translated)
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get menuLanguage;
+
+  /// Spec key: menu.languageFailed (12 §5.16) · Max: 60 · Notes: Snackbar
+  ///
+  /// In en, this message translates to:
+  /// **'Language not changed. Please try again.'**
+  String get menuLanguageFailed;
 
   /// Spec key: menu.theme (12 §5.16) · Max: 24 · Notes: 03a
   ///

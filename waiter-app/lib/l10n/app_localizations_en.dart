@@ -924,11 +924,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reloadTapAgain => 'Hold the card to the phone again to confirm.';
 
   @override
-  String reloadBalance(String amount) {
-    return 'Balance now $amount';
-  }
-
-  @override
   String get reloadAmountLabel => 'Top-up amount';
 
   @override
@@ -1088,6 +1083,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get menuSectionSettings => 'Settings';
+
+  @override
+  String get menuLanguage => 'Language';
+
+  @override
+  String get menuLanguageFailed => 'Language not changed. Please try again.';
 
   @override
   String get menuTheme => 'Appearance';

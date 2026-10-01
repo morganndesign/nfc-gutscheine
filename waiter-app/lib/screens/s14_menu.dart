@@ -69,6 +69,13 @@ class _MenuBodyState extends State<_MenuBody> {
     _services.feedback.haptic(HapticToken.select);
   }
 
+  Future<void> _chooseLanguage() => showWaiterSheet<void>(
+    context: context,
+    title: AppLocalizations.of(context).menuLanguage,
+    edgeToEdge: true,
+    builder: (BuildContext sheetContext) => const _LanguageChoice(),
+  );
+
   Future<void> _chooseTheme() => showWaiterSheet<void>(
     context: context,
     title: AppLocalizations.of(context).menuTheme,
@@ -171,6 +178,12 @@ class _MenuBodyState extends State<_MenuBody> {
             ),
           ),
           const SizedBox(height: Space.s2),
+          SheetRow(
+            label: l10n.menuLanguage,
+            value: languageName(Localizations.localeOf(context).languageCode),
+            trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
+            onPressed: () => unawaited(_chooseLanguage()),
+          ),
           SheetRow(
             label: l10n.menuTheme,
             value: _themeLabel(l10n, settings.theme),
@@ -318,6 +331,69 @@ class _ThemeChoice extends StatelessWidget {
               services.feedback.haptic(HapticToken.select);
               Navigator.of(context).pop();
             },
+          ),
+      ],
+    );
+  }
+}
+
+/// The account languages, each in its own language (never translated).
+const List<(String, String)> accountLanguages = <(String, String)>[
+  ('de', 'Deutsch'),
+  ('en', 'English'),
+  ('bs', 'Bosanski · Hrvatski · Srpski'),
+];
+
+/// The endonym of a language code (`hr`/`sr` count as `bs`).
+String languageName(String code) {
+  final String key = code == 'hr' || code == 'sr' ? 'bs' : code;
+  return accountLanguages.firstWhere(((String, String) l) => l.$1 == key, orElse: () => accountLanguages.first).$2;
+}
+
+/// Nested language sheet: saves the account's language (the dashboard follows), the app switches at once.
+class _LanguageChoice extends StatefulWidget {
+  const _LanguageChoice();
+
+  @override
+  State<_LanguageChoice> createState() => _LanguageChoiceState();
+}
+
+class _LanguageChoiceState extends State<_LanguageChoice> {
+  String? _saving;
+
+  Future<void> _choose(String code) async {
+    final AppServices services = context.services;
+    final SnackbarController? snackbar = SnackbarHost.maybeOf(context);
+    final String failed = AppLocalizations.of(context).menuLanguageFailed;
+    setState(() => _saving = code);
+    services.feedback.haptic(HapticToken.select);
+    try {
+      await services.api.setLanguage(code);
+      await services.session.refreshUser();
+      if (mounted) Navigator.of(context).pop();
+    } on Object {
+      snackbar?.show(SnackbarData(message: failed));
+      if (mounted) setState(() => _saving = null);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String current = Localizations.localeOf(context).languageCode;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (final (String code, String name) in accountLanguages)
+          SheetRow(
+            label: name,
+            toggled: languageName(current) == name,
+            trailing: _saving == code
+                ? const Spinner()
+                : languageName(current) == name
+                ? WaiterIconView(WaiterIcon.check)
+                : null,
+            showDivider: code != accountLanguages.last.$1,
+            onPressed: _saving == null ? () => unawaited(_choose(code)) : null,
           ),
       ],
     );

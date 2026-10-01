@@ -14,6 +14,7 @@ import '../../core/reload/reload_controller.dart';
 import '../../core/theme/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../payment_method_row.dart';
+import '../charge/voucher_data.dart';
 import 'card_tap_view.dart';
 
 /// S24 · Top up card — managers and owners (`vouchers.reload`) on a phone that reads cards, Android and iPhone
@@ -175,13 +176,9 @@ class _ReloadScreenState extends State<ReloadScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          ScaledText(
-                            l10n.reloadBalance(money.format(s.voucher.balance)),
-                            type: TypeTokens.bodyM,
-                            color: context.colors.fgSecondary,
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: Space.s4),
+                          // The guest's card with its balance now, as at the till.
+                          BalanceCard(data: balanceCardDataOf(context, s.voucher), money: money, maxHeight: 160),
+                          const SizedBox(height: Space.s5),
                           ScaledText(
                             l10n.reloadAmountLabel,
                             type: TypeTokens.caption,

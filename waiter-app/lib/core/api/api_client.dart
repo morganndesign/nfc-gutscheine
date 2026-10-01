@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io' show HandshakeException, SocketException, TlsException;
+import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show visibleForTesting;
@@ -129,6 +130,33 @@ class ApiClient {
       throw ApiTransportFailure(requestId: requestId, timedOut: isTimeout, issue: issue, detail: detail);
     } finally {
       timer.cancel();
+    }
+  }
+
+  /// GET of a binary resource (the restaurant's logo) with the same identity headers as [send].
+  Future<Uint8List> bytes(String path, {Duration timeout = ApiTimeouts.standard}) async {
+    final String requestId = _uuid.v4();
+    final String? bearer = _identity.token;
+    try {
+      final Response<List<int>> response = await _dio.get<List<int>>(
+        path,
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: timeout,
+          headers: <String, Object?>{
+            'Accept': 'image/png,image/*',
+            'X-Device-Id': _identity.deviceId,
+            'X-Request-Id': requestId,
+            'User-Agent': _identity.userAgent,
+            if (bearer != null) 'Authorization': 'Bearer $bearer',
+          },
+        ),
+      );
+      final List<int>? data = response.data;
+      if (response.statusCode != 200 || data == null) throw ApiServerFault(requestId: requestId, status: response.statusCode ?? 0);
+      return Uint8List.fromList(data);
+    } on DioException catch (e) {
+      throw ApiTransportFailure(requestId: requestId, timedOut: false, detail: e.type.name);
     }
   }
 
