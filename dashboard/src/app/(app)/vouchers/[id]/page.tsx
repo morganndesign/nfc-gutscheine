@@ -28,6 +28,8 @@ import type { Voucher } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate, formatDateTime, formatRelative, todayInput } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
+import { soldToday } from "@/lib/voucher-state"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useT } from "@/lib/i18n"
 
 type DialogName = "reload" | "block" | "expire" | "reinstate" | "edit" | "refund" | "cancel" | "reissue" | null
@@ -118,10 +120,12 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
     voucher.total_redeemed === 0 &&
     voucher.total_loaded === voucher.initial_value &&
     !!salePayment &&
-    new Date(voucher.created_at).toDateString() === new Date().toDateString()
+    soldToday(voucher.created_at, user?.restaurant?.timezone)
   const needsStornoReference = salePayment?.method === "card_terminal" || salePayment?.method === "bank_transfer"
   const [stornoReference, setStornoReference] = useState("")
   const cancelSale = useCancelSale()
+
+  useDocumentTitle(voucher.voucher_number_formatted)
 
   const activeQr = voucher.media?.find((m) => m.type === "printable_qr" && m.status === "active")
   const activeCard = voucher.media?.find((m) => m.type === "nfc_card" && m.status === "active")
@@ -232,7 +236,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
               balance={voucher.balance}
               currency={voucher.currency}
               expiresAt={voucher.expires_at}
-              status={voucher.status}
+              status={voucher.status === "active" && voucher.is_expired ? "expired" : voucher.status}
               brandColor={settings?.brand_color}
             />
           </div>

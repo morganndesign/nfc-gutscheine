@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { ScrollText } from "lucide-react"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { EmptyState } from "@/components/common/empty-state"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { AuditTable } from "@/components/common/audit-table"
@@ -31,7 +32,7 @@ function AuditContent() {
   const t = useT()
   const [group, setGroup] = useState("all")
   const [page, setPage] = useState(1)
-  const { data, isLoading } = useAuditLogs({ action: group === "all" ? undefined : group, page })
+  const { data, isLoading, error, refetch } = useAuditLogs({ action: group === "all" ? undefined : group, page })
 
   return (
     <div className="space-y-6">
@@ -60,6 +61,8 @@ function AuditContent() {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <AuditTable logs={data.data} />

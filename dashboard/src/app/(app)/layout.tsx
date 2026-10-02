@@ -29,7 +29,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <SidebarInset className="min-w-0">
           <PlatformNotice />
           <TopBar />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</main>
+          {/* SidebarInset already is the page's <main> landmark. */}
+          <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
         </SidebarInset>
       </SidebarProvider>
     </AuthGuard>

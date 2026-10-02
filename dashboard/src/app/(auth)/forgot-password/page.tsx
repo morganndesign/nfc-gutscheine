@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { api, errorMessage } from "@/lib/api/client"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useT } from "@/lib/i18n"
 
 export default function ForgotPasswordPage() {
   const t = useT()
+  useDocumentTitle(t("forgotPassword.title"))
   const [email, setEmail] = useState("")
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle")
   const [error, setError] = useState<string | null>(null)

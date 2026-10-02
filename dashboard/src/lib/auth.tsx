@@ -10,6 +10,8 @@ import { MANAGE_NAV, PLATFORM_NAV, RESTAURANT_NAV } from "@/components/layout/na
 interface AuthContextValue {
   user: SessionUser | null
   isLoading: boolean
+  /** The session could not be checked (server unreachable or failing) — not the same as "signed out". */
+  sessionError: unknown
   can: (permission: Permission) => boolean
   canAny: (...permissions: Permission[]) => boolean
   login: (email: string, password: string, remember: boolean) => Promise<SessionUser>
@@ -24,7 +26,7 @@ export const SESSION_QUERY_KEY = ["session"] as const
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: SESSION_QUERY_KEY,
     queryFn: async () => {
       try {
@@ -76,7 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEY })
   }, [queryClient])
 
-  const value = useMemo(() => ({ user, isLoading, can, canAny, login, logout, refresh }), [user, isLoading, can, canAny, login, logout, refresh])
+  const sessionError = data === undefined ? error : null
+  const value = useMemo(
+    () => ({ user, isLoading, sessionError, can, canAny, login, logout, refresh }),
+    [user, isLoading, sessionError, can, canAny, login, logout, refresh],
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

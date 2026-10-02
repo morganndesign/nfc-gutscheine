@@ -330,6 +330,8 @@ export interface HistoryEntry {
   note: string | null
   payment_method: PaymentMethod | null
   reversed: boolean
+  /** The server's verdict for the signed-in account: undoable now, by this person. */
+  reversible: boolean
   user: string | null
   device: string | null
   created_at: string

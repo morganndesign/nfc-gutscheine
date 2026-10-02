@@ -2,6 +2,7 @@
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, apiRaw, newIdempotencyKey } from "@/lib/api/client"
+import { VOUCHER_DATA_KEYS, keys } from "@/lib/api/query-keys"
 import type {
   ApiToken,
   Card,
@@ -37,27 +38,7 @@ import type {
   VoucherTemplate,
 } from "@/lib/api/types"
 
-export const keys = {
-  dashboard: ["dashboard"] as const,
-  vouchers: ["vouchers"] as const,
-  voucher: (id: string) => ["vouchers", id] as const,
-  voucherHistory: (id: string) => ["vouchers", id, "history"] as const,
-  transactions: ["transactions"] as const,
-  customers: ["customers"] as const,
-  customer: (id: string) => ["customers", id] as const,
-  users: ["users"] as const,
-  roles: ["roles"] as const,
-  devices: ["devices"] as const,
-  settings: ["settings"] as const,
-  templates: ["settings", "templates"] as const,
-  tokens: ["api-tokens"] as const,
-  audit: ["audit"] as const,
-  admin: ["admin"] as const,
-  cards: ["cards"] as const,
-  cardBatches: ["card-batches"] as const,
-  adminCardBatches: ["admin", "card-batches"] as const,
-  securityAlerts: ["admin", "security-alerts"] as const,
-}
+export { keys } from "@/lib/api/query-keys"
 
 // ---------------------------------------------------------------- dashboard
 
@@ -164,7 +145,7 @@ export function useUpdateVoucher(id: string) {
   return useMutation({
     mutationFn: (input: { customer_id?: string | null; recipient_name?: string | null; notes?: string | null }) =>
       api<{ data: Voucher }>(`/vouchers/${id}`, { method: "PATCH", body: input }),
-    onSuccess: () => invalidateVoucherData(qc, id),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -175,7 +156,7 @@ export function useVoucherAction(id: string) {
   return useMutation({
     mutationFn: ({ action, reason }: { action: VoucherAction; reason?: string }) =>
       api<{ data: Voucher }>(`/vouchers/${id}/${action}`, { method: "POST", body: reason !== undefined ? { reason } : {} }),
-    onSuccess: () => invalidateVoucherData(qc, id),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -183,7 +164,7 @@ export function useReinstateVoucher(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: { reason: string; expires_on?: string | null }) => api<{ data: Voucher }>(`/vouchers/${id}/reinstate`, { method: "POST", body: input }),
-    onSuccess: () => invalidateVoucherData(qc, id),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -204,7 +185,7 @@ export function useReloadVoucher() {
       input: { amount: number; payment: PaymentInput; note?: string | null }
       idempotencyKey: string
     }) => api<MoneyResult>(`/vouchers/${voucherId}/reloads`, { method: "POST", body: input, idempotencyKey }),
-    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -221,7 +202,7 @@ export function useRefundVoucher() {
       input: { payment: { method: "cash" | "card_terminal" | "bank_transfer"; reference?: string | null }; reason: string }
       idempotencyKey: string
     }) => api<MoneyResult>(`/vouchers/${voucherId}/refund`, { method: "POST", body: input, idempotencyKey }),
-    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -238,7 +219,7 @@ export function useCancelSale() {
         body: { reason, reference: reference || null },
         idempotencyKey: newIdempotencyKey(),
       }),
-    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -248,7 +229,7 @@ export function useReissueQr() {
   return useMutation({
     mutationFn: ({ voucherId, reason }: { voucherId: string; reason: string }) =>
       api<{ data: Voucher; printable: { payload: string; qr_svg: string } }>(`/vouchers/${voucherId}/printable`, { method: "POST", body: { reason } }),
-    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -272,16 +253,13 @@ export function useRedeemVoucher() {
       input: { amount: number; presentment_id: string; reference?: string | null }
       idempotencyKey: string
     }) => api<MoneyResult>(`/vouchers/${voucherId}/redemptions`, { method: "POST", body: input, idempotencyKey }),
-    onSuccess: (_data, vars) => invalidateVoucherData(qc, vars.voucherId),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
-function invalidateVoucherData(qc: ReturnType<typeof useQueryClient>, id?: string) {
-  void qc.invalidateQueries({ queryKey: keys.vouchers })
-  void qc.invalidateQueries({ queryKey: keys.dashboard })
-  void qc.invalidateQueries({ queryKey: keys.transactions })
-  void qc.invalidateQueries({ queryKey: keys.customers })
-  if (id) void qc.invalidateQueries({ queryKey: keys.voucher(id) })
+/** After money moved or a voucher changed: every list, total and report that shows it (the voucher's own keys included). */
+function invalidateVoucherData(qc: ReturnType<typeof useQueryClient>) {
+  for (const queryKey of VOUCHER_DATA_KEYS) void qc.invalidateQueries({ queryKey })
 }
 
 // ---------------------------------------------------------------- transactions
@@ -319,7 +297,7 @@ export interface CashUp {
 /** The end-of-day cash-up of one local day. */
 export function useCashUp(date: string) {
   return useQuery({
-    queryKey: ["cash-up", date],
+    queryKey: [...keys.cashUp, date],
     queryFn: () => api<{ data: CashUp }>("/reports/cash-up", { query: { date } }),
     select: (r) => r.data,
   })
@@ -357,7 +335,8 @@ export function useSaveCustomer(id?: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (input: CustomerInput) => api<{ data: Customer }>(id ? `/customers/${id}` : "/customers", { method: id ? "PATCH" : "POST", body: input }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.customers }),
+    // Customer names also show on vouchers.
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -365,7 +344,7 @@ export function useAnonymizeCustomer(id: string) {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api<{ data: Customer }>(`/customers/${id}/anonymize`, { method: "POST" }),
-    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.customers }),
+    onSuccess: () => invalidateVoucherData(qc),
   })
 }
 
@@ -436,7 +415,7 @@ export function useUpdateRestaurantProfile() {
     mutationFn: (input: Partial<Restaurant>) => api<{ data: Restaurant }>("/settings/restaurant", { method: "PUT", body: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.settings })
-      void qc.invalidateQueries({ queryKey: ["session"] })
+      void qc.invalidateQueries({ queryKey: keys.session })
     },
   })
 }
@@ -457,7 +436,7 @@ export function useUpdateVoucherSettings() {
     mutationFn: (input: VoucherSettingsInput) => api<{ data: RestaurantSettings }>("/settings/vouchers", { method: "PUT", body: input }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.settings })
-      void qc.invalidateQueries({ queryKey: ["session"] })
+      void qc.invalidateQueries({ queryKey: keys.session })
     },
   })
 }
@@ -474,7 +453,7 @@ export function useRestaurantLogo() {
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.settings })
-      void qc.invalidateQueries({ queryKey: ["session"] })
+      void qc.invalidateQueries({ queryKey: keys.session })
     },
   })
 }

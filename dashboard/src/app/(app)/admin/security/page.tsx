@@ -5,6 +5,7 @@ import { ShieldAlert } from "lucide-react"
 import { toast } from "sonner"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { Segmented } from "@/components/common/segmented"
@@ -47,7 +48,7 @@ function Content() {
   const t = useT()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<"open" | "acknowledged">("open")
-  const { data, isLoading } = useSecurityAlerts(page, status)
+  const { data, isLoading, error, refetch } = useSecurityAlerts(page, status)
   const ack = useAcknowledgeAlert()
   const [acking, setAcking] = useState<SecurityAlert | null>(null)
 
@@ -68,6 +69,8 @@ function Content() {
         </div>
         {isLoading ? (
           <Skeleton className="m-4 h-64" />
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <Table>

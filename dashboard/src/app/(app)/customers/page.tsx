@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Plus, Search, UserSquare2 } from "lucide-react"
 import { PageHeader } from "@/components/common/page-header"
 import { EmptyState } from "@/components/common/empty-state"
+import { QueryError } from "@/components/common/query-error"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { CustomerDialog } from "@/components/common/customer-dialog"
 import { RequirePermission } from "@/components/layout/auth-guard"
@@ -26,7 +27,7 @@ function CustomersContent() {
   const [search, setSearch] = useState("")
   const [page, setPage] = useState(1)
   const [creating, setCreating] = useState(false)
-  const { data, isLoading } = useCustomers(useDebounce(search), page)
+  const { data, isLoading, error, refetch } = useCustomers(useDebounce(search), page)
   const currency = user?.restaurant?.currency ?? "EUR"
   const t = useT()
 
@@ -62,6 +63,8 @@ function CustomersContent() {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <Table>

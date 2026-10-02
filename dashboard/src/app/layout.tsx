@@ -6,7 +6,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: { default: "GiftCard Pro", template: "%s · GiftCard Pro" },
-  description: "Vouchers and gift cards for restaurants: sell, redeem and track them securely.",
+  description: "Gutscheine und Geschenkkarten für Restaurants: sicher verkaufen, einlösen und nachverfolgen.",
   applicationName: "GiftCard Pro",
   robots: { index: false, follow: false },
   manifest: "/manifest.webmanifest",
@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
+    <html lang="de" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="bg-background text-foreground min-h-dvh font-sans antialiased">
         <Providers>{children}</Providers>
       </body>

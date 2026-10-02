@@ -1,6 +1,7 @@
 "use client"
 
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { ApiTokens } from "@/components/settings/api-tokens"
 import { VoucherDesignForm } from "@/components/settings/voucher-design-form"
@@ -16,12 +17,14 @@ import { useT } from "@/lib/i18n"
 function SettingsContent() {
   const t = useT()
   const { can } = useAuth()
-  const { data } = useRestaurantSettings()
+  const { data, error, refetch } = useRestaurantSettings()
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <PageHeader title={t("settingsPage.title")} />
-      {!data ? (
+      {error && !data ? (
+        <QueryError error={error} onRetry={() => void refetch()} />
+      ) : !data ? (
         <Skeleton className="h-96 w-full rounded-2xl" />
       ) : (
         <Tabs defaultValue="vouchers" className="space-y-4">

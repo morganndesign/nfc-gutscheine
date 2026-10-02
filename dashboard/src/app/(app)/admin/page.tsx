@@ -9,6 +9,7 @@ import { InvitationBadge, invitationDetail } from "@/components/admin/invitation
 import { MailWarning } from "@/components/admin/mail-warning"
 import { RestaurantActions, RestaurantStatusBadge } from "@/components/admin/restaurant-actions"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { Segmented } from "@/components/common/segmented"
 import { StatCard } from "@/components/common/stat-card"
 import { PaginationBar } from "@/components/common/pagination-bar"
@@ -144,7 +145,7 @@ function AdminContent() {
   const [page, setPage] = useState(1)
   const [creating, setCreating] = useState(false)
   const [filter, setFilter] = useState<AdminRestaurantFilter>("all")
-  const { data, isLoading } = useAdminRestaurants(useDebounce(search), page, filter)
+  const { data, isLoading, error, refetch } = useAdminRestaurants(useDebounce(search), page, filter)
   const s = stats.data
 
   return (
@@ -201,6 +202,8 @@ function AdminContent() {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <Table>

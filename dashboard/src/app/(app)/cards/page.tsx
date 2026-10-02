@@ -7,6 +7,7 @@ import { Ban, CreditCard, Pause, Play, Search } from "lucide-react"
 import { toast } from "sonner"
 import { BatchStatusBadge, CardStateBadge, cardStateLabel } from "@/components/cards/card-state"
 import { EmptyState } from "@/components/common/empty-state"
+import { QueryError } from "@/components/common/query-error"
 import { PageHeader } from "@/components/common/page-header"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { ReasonDialog } from "@/components/common/reason-dialog"
@@ -39,7 +40,7 @@ type Action = { card: Card; action: "suspend" | "resume" | "revoke" }
 
 function CardDetail({ number, onClose, onAction }: { number: string; onClose: () => void; onAction: (a: Action) => void }) {
   const { can } = useAuth()
-  const { data: card, isLoading } = useCard(number)
+  const { data: card, isLoading, error } = useCard(number)
   const t = useT()
 
   return (
@@ -49,7 +50,9 @@ function CardDetail({ number, onClose, onAction }: { number: string; onClose: ()
           <SheetTitle className="font-mono">{number}</SheetTitle>
           <SheetDescription>{card ? cardStateLabel(card.state) : t("common.loading")}</SheetDescription>
         </SheetHeader>
-        {isLoading || !card ? (
+        {error && !card ? (
+          <QueryError error={error} />
+        ) : isLoading || !card ? (
           <Skeleton className="m-4 h-40" />
         ) : (
           <div className="space-y-6 px-4 pb-6">
@@ -153,7 +156,7 @@ function CardsContent() {
   const [page, setPage] = useState(1)
   const [open, setOpen] = useState<string | null>(null)
   const [acting, setActing] = useState<Action | null>(null)
-  const { data, isLoading } = useCards(page, { state: FILTERS[filter], search: useDebounce(search.trim()) })
+  const { data, isLoading, error, refetch } = useCards(page, { state: FILTERS[filter], search: useDebounce(search.trim()) })
   const action = useCardAction()
   const t = useT()
 
@@ -198,6 +201,8 @@ function CardsContent() {
         </div>
         {isLoading ? (
           <Skeleton className="m-4 h-64" />
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <Table>

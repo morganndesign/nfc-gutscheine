@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { errorMessage } from "@/lib/api/client"
 import { destinationFor, useAuth } from "@/lib/auth"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useT, type Translate } from "@/lib/i18n"
 
 function loginSchema(t: Translate) {
@@ -26,6 +27,7 @@ type Values = z.infer<ReturnType<typeof loginSchema>>
 
 function LoginForm() {
   const t = useT()
+  useDocumentTitle(t("login.title"))
   const { user, login } = useAuth()
   const schema = useMemo(() => loginSchema(t), [t])
   const router = useRouter()

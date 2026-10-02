@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowDownRight, ArrowRight, CalendarClock, Euro, Plus, Receipt, Ticket, Wallet } from "lucide-react"
 import { GettingStarted } from "@/components/dashboard/getting-started"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { StatCard } from "@/components/common/stat-card"
 import { EmptyState } from "@/components/common/empty-state"
 import { StatusBreakdown } from "@/components/charts/status-breakdown"
@@ -77,36 +78,41 @@ function DashboardContent() {
 
       {s && s.vouchers_sold === 0 ? <GettingStarted /> : null}
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
-        <StatCard
-          label={t("dashboard.outstanding")}
-          icon={Wallet}
-          loading={stats.isLoading}
-          value={formatMoney(s?.outstanding_balance, currency)}
-          hint={s ? t("dashboard.outstandingHint", { count: s.outstanding_vouchers }) : null}
-        />
-        <StatCard
-          label={t("dashboard.revenueMonth")}
-          icon={Euro}
-          loading={stats.isLoading}
-          value={formatMoney(s?.monthly_revenue, currency)}
-          hint={s ? <Trend current={s.monthly_revenue} previous={s.previous_month_revenue} /> : null}
-        />
-        <StatCard
-          label={t("dashboard.redeemedMonth")}
-          icon={ArrowDownRight}
-          loading={stats.isLoading}
-          value={formatMoney(s?.monthly_redeemed, currency)}
-          hint={s ? t("dashboard.redeemedToday", { amount: formatMoney(s.today_redeemed, currency) }) : null}
-        />
-        <StatCard
-          label={t("dashboard.vouchersSold")}
-          icon={Ticket}
-          loading={stats.isLoading}
-          value={s?.vouchers_sold ?? 0}
-          hint={s ? t("dashboard.vouchersSoldHint", { month: s.vouchers_sold_this_month, empty: s.vouchers_empty }) : null}
-        />
-      </div>
+      {/* No figures rather than wrong ones: "0 € outstanding" while the server is unreachable would be false. */}
+      {stats.error && !s ? (
+        <QueryError error={stats.error} onRetry={() => void stats.refetch()} />
+      ) : (
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+          <StatCard
+            label={t("dashboard.outstanding")}
+            icon={Wallet}
+            loading={stats.isLoading}
+            value={formatMoney(s?.outstanding_balance, currency)}
+            hint={s ? t("dashboard.outstandingHint", { count: s.outstanding_vouchers }) : null}
+          />
+          <StatCard
+            label={t("dashboard.revenueMonth")}
+            icon={Euro}
+            loading={stats.isLoading}
+            value={formatMoney(s?.monthly_revenue, currency)}
+            hint={s ? <Trend current={s.monthly_revenue} previous={s.previous_month_revenue} /> : null}
+          />
+          <StatCard
+            label={t("dashboard.redeemedMonth")}
+            icon={ArrowDownRight}
+            loading={stats.isLoading}
+            value={formatMoney(s?.monthly_redeemed, currency)}
+            hint={s ? t("dashboard.redeemedToday", { amount: formatMoney(s.today_redeemed, currency) }) : null}
+          />
+          <StatCard
+            label={t("dashboard.vouchersSold")}
+            icon={Ticket}
+            loading={stats.isLoading}
+            value={s?.vouchers_sold ?? 0}
+            hint={s ? t("dashboard.vouchersSoldHint", { month: s.vouchers_sold_this_month, empty: s.vouchers_empty }) : null}
+          />
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -179,6 +185,8 @@ function DashboardContent() {
                   <Skeleton key={i} className="h-10 w-full" />
                 ))}
               </div>
+            ) : activity.error && !activity.data ? (
+              <QueryError error={activity.error} onRetry={() => void activity.refetch()} />
             ) : activity.data?.length ? (
               <ul>
                 {activity.data.map((tx) => (

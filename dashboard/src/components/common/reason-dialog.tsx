@@ -43,6 +43,15 @@ export function ReasonDialog({
   const [reason, setReason] = useState("")
   const needsReason = reasonRequired === true
   const showReason = reasonRequired !== "none"
+  const ready = !pending && !(needsReason && reason.trim().length < 3)
+
+  // Every opening starts empty: the parent usually closes the dialog itself after success, which onOpenChange never
+  // sees, and the next reversal or block must not carry over the previous reason into the audit log.
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setReason("")
+  }
 
   return (
     <Dialog
@@ -84,7 +93,8 @@ export function ReasonDialog({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && !(needsReason && reason.trim().length < 3)) onConfirm(reason.trim())
+                // Not while the first confirmation is still running: that would send it twice.
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && ready) onConfirm(reason.trim())
               }}
               maxLength={500}
               rows={3}
@@ -97,11 +107,7 @@ export function ReasonDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             {t("common.cancel")}
           </Button>
-          <Button
-            variant={destructive ? "destructive" : "default"}
-            disabled={pending || (needsReason && reason.trim().length < 3)}
-            onClick={() => onConfirm(reason.trim())}
-          >
+          <Button variant={destructive ? "destructive" : "default"} disabled={!ready} onClick={() => onConfirm(reason.trim())}>
             {pending ? <Loader2 className="animate-spin" /> : null} {confirmLabel}
           </Button>
         </DialogFooter>

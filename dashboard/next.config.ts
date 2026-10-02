@@ -12,8 +12,9 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  // Camera for scanning voucher QR codes. The web app never reads cards (architecture §10.3).
-  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=(), nfc=()" },
+  // Camera for scanning voucher QR codes. The web app never reads cards (architecture §10.3); Web NFC has no
+  // Permissions-Policy feature ("nfc=()" only made browsers log an error on every page).
+  { key: "Permissions-Policy", value: "camera=(self), microphone=(), geolocation=()" },
   {
     key: "Content-Security-Policy",
     value: [

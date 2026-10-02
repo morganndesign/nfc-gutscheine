@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { UserStatusBadge } from "@/components/common/user-status-badge"
 import { PageHeader } from "@/components/common/page-header"
 import { EmptyState } from "@/components/common/empty-state"
+import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -16,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useRoles, useSaveUser, useUserAction, useUsers } from "@/lib/api/hooks"
-import { errorMessage } from "@/lib/api/client"
+import { ApiError, errorMessage } from "@/lib/api/client"
 import type { StaffUser } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatRelative } from "@/lib/format"
@@ -33,6 +34,14 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
   const [role, setRole] = useState<string>(user?.role?.slug ?? "waiter")
   const [locale, setLocale] = useState<Language>(user ? toLanguage(user.locale) : "de")
   const assignable = roles.data?.filter((r) => r.assignable) ?? []
+  // Server validation (e-mail already taken, …) is shown next to its field, in the user's language.
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({})
+  const fieldError = (field: string) =>
+    fieldErrors[field]?.[0] ? (
+      <p id={`u-${field}-error`} className="text-destructive text-xs">
+        {fieldErrors[field][0]}
+      </p>
+    ) : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -45,22 +54,41 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
+            setFieldErrors({})
             try {
               await save.mutateAsync({ name, email, role, locale })
               toast.success(user ? t("team.dialog.updated") : t("team.dialog.invited", { email }))
               onOpenChange(false)
             } catch (err) {
-              toast.error(errorMessage(err))
+              if (err instanceof ApiError && err.code === "VALIDATION_FAILED") setFieldErrors(err.fieldErrors)
+              else toast.error(errorMessage(err))
             }
           }}
         >
           <div className="space-y-2">
             <Label htmlFor="u-name">{t("manage.field.name")}</Label>
-            <Input id="u-name" required value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              id="u-name"
+              required
+              value={name}
+              aria-invalid={!!fieldErrors.name}
+              aria-describedby={fieldErrors.name ? "u-name-error" : undefined}
+              onChange={(e) => setName(e.target.value)}
+            />
+            {fieldError("name")}
           </div>
           <div className="space-y-2">
             <Label htmlFor="u-email">{t("manage.field.email")}</Label>
-            <Input id="u-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input
+              id="u-email"
+              type="email"
+              required
+              value={email}
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? "u-email-error" : undefined}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            {fieldError("email")}
           </div>
           <div className="space-y-2">
             <Label htmlFor="u-role">{t("team.role")}</Label>
@@ -77,6 +105,7 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">{t(`team.roleDescription.${role}` as MessageKey)}</p>
+            {fieldError("role")}
           </div>
           <div className="space-y-2">
             <Label htmlFor="u-locale">{t("common.language")}</Label>
@@ -112,7 +141,7 @@ function TeamContent() {
   const t = useT()
   const confirm = useConfirm()
   const { user: me, can } = useAuth()
-  const { data, isLoading } = useUsers()
+  const { data, isLoading, error, refetch } = useUsers()
   const action = useUserAction()
   const [editing, setEditing] = useState<StaffUser | "new" | null>(null)
   const manage = can("users.manage")
@@ -181,6 +210,8 @@ function TeamContent() {
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <Table>
             <TableHeader>

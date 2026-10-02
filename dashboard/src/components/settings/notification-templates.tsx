@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/lib/auth"
+import { QueryError } from "@/components/common/query-error"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -82,7 +83,7 @@ function TemplateEditor({ template, onClose }: { template: NotificationTemplate;
 export function NotificationTemplates() {
   const t = useT()
   const { user } = useAuth()
-  const { data, isLoading } = useNotificationTemplates()
+  const { data, isLoading, error, refetch } = useNotificationTemplates()
   const [editing, setEditing] = useState<NotificationTemplate | null>(null)
   // The restaurant's own language first, then the e-mails in the order a guest receives them.
   const language = (user?.restaurant?.locale ?? "de").slice(0, 2)
@@ -100,6 +101,8 @@ export function NotificationTemplates() {
       <CardContent>
         {isLoading ? (
           <Skeleton className="h-40 w-full" />
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : (
           <ul className="divide-y rounded-2xl border">
             {templates.map((tpl) => (

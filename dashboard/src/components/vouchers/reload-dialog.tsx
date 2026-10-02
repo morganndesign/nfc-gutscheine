@@ -54,16 +54,15 @@ export function ReloadDialog({
     key.current = newIdempotencyKey()
   }
 
+  // Closing (Escape, outside click or Cancel) clears the form; an unknown outcome is resolved first, never abandoned.
+  const changeOpen = (o: boolean) => {
+    if (!o && uncertain) return
+    if (!o) reset()
+    onOpenChange(o)
+  }
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        // An unknown outcome is resolved first (sent again with the same key), never abandoned.
-        if (!o && uncertain) return
-        if (!o) reset()
-        onOpenChange(o)
-      }}
-    >
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("vouchers.reload.title")}</DialogTitle>
@@ -117,7 +116,7 @@ export function ReloadDialog({
           {error ? <p className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</p> : null}
           <DialogFooter>
             {!uncertain ? (
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => changeOpen(false)}>
                 {t("common.cancel")}
               </Button>
             ) : null}

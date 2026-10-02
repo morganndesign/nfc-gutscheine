@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/lib/auth"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import { PlatformNotice } from "@/components/layout/platform-notice"
 import { useT } from "@/lib/i18n"
 import type { MessageKey } from "@/lib/i18n/catalog"
@@ -22,6 +23,7 @@ export function WaiterShell({ children }: { children: ReactNode }) {
   const { user, can, logout } = useAuth()
   const router = useRouter()
   const t = useT()
+  useDocumentTitle(t("nav.redeem"))
 
   return (
     <div className="bg-background flex min-h-dvh flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
+import { QueryError } from "@/components/common/query-error"
 import { homeFor, useAuth } from "@/lib/auth"
 import type { Permission } from "@/lib/api/types"
 import { useT } from "@/lib/i18n"
@@ -20,18 +21,29 @@ export function FullScreenLoader() {
 
 /** Client-side route guard. The API enforces every permission independently. */
 export function AuthGuard({ children, permission }: { children: ReactNode; permission?: Permission }) {
-  const { user, isLoading, can } = useAuth()
+  const { user, isLoading, sessionError, can, refresh } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
   useEffect(() => {
-    if (isLoading) return
-    if (!user) router.replace(`/login?next=${encodeURIComponent(pathname)}`)
-  }, [isLoading, user, router, pathname])
+    if (isLoading || sessionError) return
+    // Back to the same page after signing in, filters included.
+    if (!user) router.replace(`/login?next=${encodeURIComponent(pathname + window.location.search)}`)
+  }, [isLoading, sessionError, user, router, pathname])
 
+  // The server could not be reached: that is not a sign-out. Offer to try again instead of a login form that fails too.
+  if (!user && sessionError && !isLoading) return <SessionUnavailable error={sessionError} onRetry={() => void refresh()} />
   if (isLoading || !user) return <FullScreenLoader />
   if (permission && !can(permission)) return <Forbidden />
   return <>{children}</>
+}
+
+function SessionUnavailable({ error, onRetry }: { error: unknown; onRetry: () => void }) {
+  return (
+    <div className="flex min-h-dvh items-center justify-center">
+      <QueryError error={error} onRetry={onRetry} />
+    </div>
+  )
 }
 
 export function Forbidden() {

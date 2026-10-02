@@ -21,10 +21,7 @@ const STATUS: Record<VoucherStatus | "empty", { label: MessageKey; className: st
 
 export const VOUCHER_STATUSES: VoucherStatus[] = ["active", "blocked", "expired", "refunded"]
 
-/** The badge status of a voucher: "empty" for an active voucher without balance. */
-export function displayStatus(voucher: { status: VoucherStatus; balance: number }): VoucherStatus | "empty" {
-  return voucher.status === "active" && voucher.balance === 0 ? "empty" : voucher.status
-}
+export { displayStatus } from "@/lib/voucher-state"
 
 export function statusLabelKey(status: VoucherStatus | "empty"): MessageKey {
   return STATUS[status].label

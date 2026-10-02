@@ -180,7 +180,7 @@ export function WaiterTerminal() {
           <div className="flex items-center justify-between gap-2">
             <p className="text-muted-foreground truncate text-sm">{t("waiter.digitalVoucher", { restaurant: voucher.restaurant_name })}</p>
             <div className="flex shrink-0 items-center gap-1">
-              <StatusBadge status={voucher.is_expired && voucher.status === "active" ? "expired" : displayStatus(voucher)} />
+              <StatusBadge status={displayStatus(voucher)} />
               {!uncertain ? (
                 <Button variant="ghost" size="icon" className="rounded-full" onClick={reset} aria-label={t("waiter.closeVoucher")}>
                   <X />

@@ -12,6 +12,7 @@ export const errors = defineMessages({
   en: {
     "errors.generic": "Something went wrong. Please try again.",
     "errors.offline": "No connection to the server. Check the internet connection and try again.",
+    "errors.loadFailed": "This could not be loaded. Please try again.",
 
     // Framework / HTTP
     "errors.UNAUTHENTICATED": "Your session has ended. Please sign in again.",
@@ -71,6 +72,7 @@ export const errors = defineMessages({
   de: {
     "errors.generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     "errors.offline": "Keine Verbindung zum Server. Prüfen Sie die Internetverbindung und versuchen Sie es erneut.",
+    "errors.loadFailed": "Das konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
 
     "errors.UNAUTHENTICATED": "Ihre Sitzung ist abgelaufen. Bitte melden Sie sich erneut an.",
     "errors.FORBIDDEN": "Dafür fehlt Ihnen die Berechtigung.",
@@ -126,6 +128,7 @@ export const errors = defineMessages({
   bs: {
     "errors.generic": "Nešto nije u redu. Pokušajte ponovo.",
     "errors.offline": "Nema veze sa serverom. Provjerite internet vezu i pokušajte ponovo.",
+    "errors.loadFailed": "Ovo se nije moglo učitati. Pokušajte ponovo.",
 
     "errors.UNAUTHENTICATED": "Vaša sesija je istekla. Prijavite se ponovo.",
     "errors.FORBIDDEN": "Nemate ovlaštenje za ovu radnju.",

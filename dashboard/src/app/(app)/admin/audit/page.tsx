@@ -6,6 +6,7 @@ import { Search, ShieldCheck } from "lucide-react"
 import { AuditTable } from "@/components/common/audit-table"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Input } from "@/components/ui/input"
@@ -27,7 +28,10 @@ function Content() {
   const restaurant = params.get("restaurant") ?? params.get("restaurant_id") ?? ALL
   const [page, setPage] = useState(1)
   const [action, setAction] = useState("")
-  const { data, isLoading } = usePlatformAudit(page, { restaurant: restaurant === ALL ? undefined : restaurant, action: useDebounce(action.trim()) })
+  const { data, isLoading, error, refetch } = usePlatformAudit(page, {
+    restaurant: restaurant === ALL ? undefined : restaurant,
+    action: useDebounce(action.trim()),
+  })
   const restaurants = useAllAdminRestaurants()
 
   const setRestaurant = (value: string) => {
@@ -77,6 +81,8 @@ function Content() {
         </div>
         {isLoading ? (
           <Skeleton className="m-4 h-64" />
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <AuditTable logs={data.data} showRestaurant={restaurant === ALL} />

@@ -537,7 +537,7 @@ export const admin = defineMessages({
     "admin.batches.resolveDescription":
       "Das Restaurant hat {counted} von {expected} Karten gezählt. Geben Sie die Karten an, die wirklich fehlen; sie gelten als verloren, alle anderen gelieferten Karten werden verfügbar.",
     "admin.batches.inService": "{code} ist in Betrieb",
-    "admin.batches.resolveSubmit": "Klären ({count} fehlen)",
+    "admin.batches.resolveSubmit": "Klären ({count, plural, one {# fehlt} other {# fehlen}})",
     "admin.batches.accepted": "{code} abgenommen",
     "admin.batches.firstApproval": "Erste Freigabe erfasst; eine zweite Person muss freigeben",
     "admin.batches.approveTitle": "{code} freigeben?",

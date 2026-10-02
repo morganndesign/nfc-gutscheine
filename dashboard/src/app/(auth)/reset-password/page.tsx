@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/lib/auth"
 import { api, errorMessage } from "@/lib/api/client"
+import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useT } from "@/lib/i18n"
 
 /**
@@ -29,6 +30,7 @@ function useLinkParams(): URLSearchParams | null {
 
 function ResetForm() {
   const t = useT()
+  useDocumentTitle(t("forgotPassword.title"))
   const linkParams = useLinkParams()
   const params = linkParams ?? new URLSearchParams()
   const router = useRouter()

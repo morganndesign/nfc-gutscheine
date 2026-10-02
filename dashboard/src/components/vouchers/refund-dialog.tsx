@@ -13,7 +13,7 @@ import { errorMessage, newIdempotencyKey } from "@/lib/api/client"
 import { formatMoney } from "@/lib/money"
 import { useT } from "@/lib/i18n"
 import type { MessageKey } from "@/lib/i18n/catalog"
-import { forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
+import { REFUND_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 
 type Method = "cash" | "card_terminal" | "bank_transfer"
 
@@ -22,17 +22,6 @@ const METHODS: { value: Method; label: MessageKey }[] = [
   { value: "card_terminal", label: "payment.method.card_terminal" },
   { value: "bank_transfer", label: "payment.method.bank_transfer" },
 ]
-
-/** Codes after which the refund certainly did not happen (anything else may have been booked). */
-const REFUND_CODES: ReadonlySet<string> = new Set([
-  "VALIDATION_FAILED",
-  "FORBIDDEN",
-  "VOUCHER_NOT_REFUNDABLE",
-  "VOUCHER_NOT_REDEEMABLE",
-  "INSUFFICIENT_BALANCE",
-  "INVALID_AMOUNT",
-  "IDEMPOTENCY_CONFLICT",
-])
 
 /** Owner: pay the remaining balance back and close the voucher. Complimentary value is not paid out. */
 export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher; open: boolean; onOpenChange: (open: boolean) => void }) {
@@ -59,15 +48,15 @@ export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher
     key.current = newIdempotencyKey()
   }
 
+  // Closing (Escape, outside click or Cancel) clears the form; an unknown outcome is resolved first, never abandoned.
+  const changeOpen = (o: boolean) => {
+    if (!o && uncertain) return
+    if (!o) reset()
+    onOpenChange(o)
+  }
+
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o && uncertain) return
-        if (!o) reset()
-        onOpenChange(o)
-      }}
-    >
+    <Dialog open={open} onOpenChange={changeOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>{t("vouchers.refund.title")}</DialogTitle>
@@ -148,7 +137,7 @@ export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher
           {error ? <p className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</p> : null}
           <DialogFooter>
             {!uncertain ? (
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button type="button" variant="outline" onClick={() => changeOpen(false)}>
                 {t("common.cancel")}
               </Button>
             ) : null}

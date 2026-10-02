@@ -191,7 +191,9 @@ function Classic({ look, content }: { look: VoucherLook; content: VoucherContent
         <Brand content={content} color="#141414" align="left" size={11} />
         <div style={{ fontSize: u(2.2), letterSpacing: "0.32em", textTransform: "uppercase", color: rule, fontWeight: 600 }}>{t.copy.voucher}</div>
       </div>
+      {/* The band shrinks with the page and clips its own overflow: it is measured too, or a long message is cut off. */}
       <div
+        data-fit
         style={{
           background: look.brandColor,
           color: ink,

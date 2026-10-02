@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { StatusBadge, displayStatus } from "@/components/common/status-badge"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { CustomerDialog } from "@/components/common/customer-dialog"
+import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,12 +22,13 @@ import { useT } from "@/lib/i18n"
 
 function CustomerContent({ id }: { id: string }) {
   const { can } = useAuth()
-  const { data, isLoading, refetch } = useCustomer(id)
+  const { data, isLoading, error, refetch } = useCustomer(id)
   const anonymize = useAnonymizeCustomer(id)
   const [editing, setEditing] = useState(false)
   const [erasing, setErasing] = useState(false)
   const t = useT()
 
+  if (error && !data) return <QueryError error={error} onRetry={() => void refetch()} />
   if (isLoading || !data) return <Skeleton className="h-64 w-full rounded-2xl" />
   const c = data.data
 

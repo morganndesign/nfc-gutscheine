@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Download, Filter, Loader2, Plus, Search, Ticket } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabelKey } from "@/components/common/status-badge"
 import { EmptyState } from "@/components/common/empty-state"
 import { PaginationBar } from "@/components/common/pagination-bar"
@@ -54,7 +55,7 @@ function VouchersContent() {
   const debounced = useDebounce(search)
 
   const filters = { search: debounced, status, sort, page, per_page: 25 }
-  const { data, isLoading, isFetching } = useVouchers(filters)
+  const { data, isLoading, isFetching, error, refetch } = useVouchers(filters)
 
   const toggleStatus = (s: VoucherStatus) => {
     setPage(1)
@@ -151,6 +152,8 @@ function VouchersContent() {
               <Skeleton key={i} className="h-10 w-full" />
             ))}
           </div>
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data && data.data.length > 0 ? (
           <div className={isFetching ? "opacity-70 transition-opacity" : ""}>
             <Table>

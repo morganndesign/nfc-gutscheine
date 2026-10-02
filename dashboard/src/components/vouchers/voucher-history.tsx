@@ -4,6 +4,7 @@ import { useState } from "react"
 import { History, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { EmptyState } from "@/components/common/empty-state"
+import { QueryError } from "@/components/common/query-error"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { PAYMENT_METHOD_LABELS } from "@/components/vouchers/payment-fields"
 import { TransactionTypeIcon, transactionLabelKey } from "@/components/vouchers/transaction-type"
@@ -19,13 +20,12 @@ import { formatMoney, formatSignedMoney } from "@/lib/money"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 
-const REVERSIBLE: string[] = ["redemption", "reload"]
 const TRANSACTION_TYPES: string[] = ["issue", "reload", "redemption", "reversal", "refund"]
 
 export function VoucherHistory({ voucherId, currency }: { voucherId: string; currency: string }) {
   const { can } = useAuth()
   const t = useT()
-  const { data, isLoading } = useVoucherHistory(voucherId)
+  const { data, isLoading, error, refetch } = useVoucherHistory(voucherId)
   const reverse = useReverseTransaction()
   const [reversing, setReversing] = useState<string | null>(null)
 
@@ -38,6 +38,7 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
       </div>
     )
   }
+  if (error && !data) return <QueryError error={error} onRetry={() => void refetch()} />
   if (!data?.length) return <EmptyState icon={History} title={t("vouchers.history.empty")} />
 
   return (
@@ -88,7 +89,7 @@ export function VoucherHistory({ voucherId, currency }: { voucherId: string; cur
               </p>
               {entry.note ? <p className="text-muted-foreground mt-0.5 text-xs italic">“{entry.note}”</p> : null}
             </div>
-            {entry.kind === "transaction" && REVERSIBLE.includes(entry.type) && !entry.reversed && can("transactions.reverse") ? (
+            {entry.reversible ? (
               <Button
                 variant="ghost"
                 size="icon-sm"

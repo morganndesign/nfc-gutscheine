@@ -4,6 +4,7 @@ import { useState } from "react"
 import { KeyRound, Loader2, Plus } from "lucide-react"
 import { toast } from "sonner"
 import { CopyButton } from "@/components/common/copy-button"
+import { QueryError } from "@/components/common/query-error"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -46,7 +47,7 @@ export function ApiTokens() {
   const t = useT()
   const confirm = useConfirm()
   const { user } = useAuth()
-  const { data } = useApiTokens()
+  const { data, error, refetch } = useApiTokens()
   const create = useCreateApiToken()
   const revoke = useRevokeApiToken()
   const [open, setOpen] = useState(false)
@@ -55,6 +56,8 @@ export function ApiTokens() {
   const [expires, setExpires] = useState("")
   const [plain, setPlain] = useState<string | null>(null)
   const available = PRESET_ABILITIES.filter((a) => user?.permissions.includes(a))
+  // Only what this user may grant (and sees ticked): a preset the user lacks would be refused by the server.
+  const granted = abilities.filter((a) => (available as string[]).includes(a))
 
   return (
     <Card>
@@ -68,7 +71,9 @@ export function ApiTokens() {
         </CardAction>
       </CardHeader>
       <CardContent>
-        {data?.data.length ? (
+        {error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
+        ) : data?.data.length ? (
           <ul className="divide-y rounded-2xl border">
             {data.data.map((token) => (
               <li key={token.id} className="flex items-start justify-between gap-4 p-4">
@@ -150,7 +155,7 @@ export function ApiTokens() {
               onSubmit={async (e) => {
                 e.preventDefault()
                 try {
-                  const res = await create.mutateAsync({ name, abilities, expires_at: expires || null })
+                  const res = await create.mutateAsync({ name: name.trim(), abilities: granted, expires_at: expires || null })
                   setPlain(res.plain_text_token)
                 } catch (err) {
                   toast.error(errorMessage(err))
@@ -187,7 +192,7 @@ export function ApiTokens() {
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                   {t("common.cancel")}
                 </Button>
-                <Button type="submit" disabled={create.isPending || !name || !abilities.length}>
+                <Button type="submit" disabled={create.isPending || !name.trim() || !granted.length}>
                   {create.isPending ? <Loader2 className="animate-spin" /> : null} {t("apiTokens.create")}
                 </Button>
               </DialogFooter>

@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { EmptyState } from "@/components/common/empty-state"
+import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -77,7 +78,7 @@ function DevicesContent() {
   const t = useT()
   const confirm = useConfirm()
   const { can } = useAuth()
-  const { data, isLoading } = useDevices()
+  const { data, isLoading, error, refetch } = useDevices()
   const action = useDeviceAction()
   const [renaming, setRenaming] = useState<Device | null>(null)
   const [revoking, setRevoking] = useState<Device | null>(null)
@@ -110,6 +111,8 @@ function DevicesContent() {
             <Skeleton key={i} className="h-24 rounded-2xl" />
           ))}
         </div>
+      ) : error && !data ? (
+        <QueryError error={error} onRetry={() => void refetch()} />
       ) : data?.data.length ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {data.data.map((d) => {

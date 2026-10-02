@@ -15,6 +15,9 @@ export const common = defineMessages({
     "common.language": "Language",
     "common.loading": "Loading …",
     "common.none": "—",
+    "common.toggleSidebar": "Show or hide the menu",
+    "common.menu": "Menu",
+    "common.menuDescription": "Navigation of the app.",
   },
   de: {
     "common.cancel": "Abbrechen",
@@ -29,6 +32,9 @@ export const common = defineMessages({
     "common.language": "Sprache",
     "common.loading": "Wird geladen …",
     "common.none": "—",
+    "common.toggleSidebar": "Menü ein- oder ausblenden",
+    "common.menu": "Menü",
+    "common.menuDescription": "Navigation der App.",
   },
   bs: {
     "common.cancel": "Odustani",
@@ -43,5 +49,8 @@ export const common = defineMessages({
     "common.language": "Jezik",
     "common.loading": "Učitava se …",
     "common.none": "—",
+    "common.toggleSidebar": "Prikaži ili sakrij meni",
+    "common.menu": "Meni",
+    "common.menuDescription": "Navigacija aplikacije.",
   },
 })

@@ -2,6 +2,7 @@ import { getDeviceId } from "@/lib/device"
 import { CATALOGS, type MessageKey } from "@/lib/i18n/catalog"
 import { format } from "@/lib/i18n/format"
 import { currentLanguage } from "@/lib/i18n/state"
+import { ApiError, errorText, type ApiErrorBody } from "@/lib/api/errors"
 
 /**
  * Thin fetch wrapper for the Laravel API.
@@ -13,31 +14,7 @@ import { currentLanguage } from "@/lib/i18n/state"
  * - X-Device-Id identifies the waiter device (revocable by managers).
  */
 
-export interface ApiErrorBody {
-  message?: string
-  code?: string
-  errors?: Record<string, string[]>
-  context?: Record<string, unknown>
-  retry_after?: number
-}
-
-export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly body: ApiErrorBody,
-  ) {
-    super(body.message ?? `Request failed (${status})`)
-    this.name = "ApiError"
-  }
-
-  get code(): string | undefined {
-    return this.body.code
-  }
-
-  get fieldErrors(): Record<string, string[]> {
-    return this.body.errors ?? {}
-  }
-}
+export { ApiError, type ApiErrorBody } from "@/lib/api/errors"
 
 function readCookie(name: string): string | null {
   if (typeof document === "undefined") return null
@@ -152,7 +129,8 @@ export async function downloadFile(path: string, query: Query, fallbackName: str
   document.body.appendChild(a)
   a.click()
   a.remove()
-  URL.revokeObjectURL(url)
+  // Revoking at once cancels the download in Safari and Firefox: the browser reads the blob after click() returns.
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export function newIdempotencyKey(): string {
@@ -166,18 +144,19 @@ function text(key: MessageKey, params?: Record<string, string | number>): string
 
 /**
  * What to tell the user about a failed request, in their language: the translation of the error code when there is
- * one (`errors.<CODE>`), else the server's (localised) validation message, else its message.
+ * one (`errors.<CODE>`), else the server's (localised) validation message, else `fallback` or a generic text. English
+ * server messages ("Server Error", a proxy's 502 page) never reach the screen.
  */
 export function errorMessage(error: unknown, fallback?: string): string {
-  const generic = fallback ?? text("errors.generic")
-  if (error instanceof ApiError) {
-    const key = `errors.${error.code ?? ""}`
-    if (error.code && key in CATALOGS.en) return text(key as MessageKey)
-    const first = Object.values(error.fieldErrors)[0]?.[0]
-    return first ?? error.message ?? generic
+  const source = errorText(error, (code) => `errors.${code}` in CATALOGS.en)
+  switch (source.kind) {
+    case "code":
+      return text(`errors.${source.code}` as MessageKey)
+    case "field":
+      return source.message
+    case "offline":
+      return text("errors.offline")
+    default:
+      return fallback ?? text("errors.generic")
   }
-  // fetch() rejects with a TypeError when the device is offline or the server is unreachable.
-  if (error instanceof TypeError) return text("errors.offline")
-  if (error instanceof Error && error.name !== "AbortError") return error.message || generic
-  return generic
 }

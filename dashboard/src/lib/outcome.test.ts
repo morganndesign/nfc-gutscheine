@@ -2,6 +2,7 @@ import { test } from "node:test"
 import assert from "node:assert/strict"
 import {
   PENDING_KEY_TTL_MS,
+  REFUND_CODES,
   RELOAD_CODES,
   REDEMPTION_CODES,
   SALE_CODES,
@@ -72,4 +73,13 @@ test("without storage the helpers do nothing", () => {
   assert.equal(pendingKey("x"), null)
   rememberPendingKey("x", "k")
   forgetPendingKey("x")
+})
+
+test("a refund that went unanswered stays uncertain on a permission refusal", () => {
+  const earlier = { unanswered: true, finalCodes: REFUND_CODES }
+  // The route's permission check runs before the key lookup: a 403 says nothing about the lost request.
+  assert.equal(isUncertainOutcome({ status: 403, code: "FORBIDDEN" }, earlier), true)
+  assert.equal(isUncertainOutcome({ status: 401, code: "UNAUTHENTICATED" }, earlier), true)
+  assert.equal(isUncertainOutcome({ status: 422, code: "VOUCHER_NOT_REFUNDABLE" }, earlier), false)
+  assert.equal(isUncertainOutcome({ status: 409, code: "IDEMPOTENCY_CONFLICT" }, earlier), false)
 })

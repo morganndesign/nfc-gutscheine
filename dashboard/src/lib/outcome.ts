@@ -43,6 +43,19 @@ export const RELOAD_CODES: ReadonlySet<string> = new Set([
 ])
 
 /**
+ * Codes only a refund answers with (the voucher state checks run after the key lookup). A 403 is not one of them: it
+ * comes from the route's permission check, before the key is looked up, and says nothing about an earlier attempt.
+ */
+export const REFUND_CODES: ReadonlySet<string> = new Set([
+  "VALIDATION_FAILED",
+  "VOUCHER_NOT_REFUNDABLE",
+  "VOUCHER_NOT_REDEEMABLE",
+  "INSUFFICIENT_BALANCE",
+  "INVALID_AMOUNT",
+  "IDEMPOTENCY_CONFLICT",
+])
+
+/**
  * Keys of requests that went unanswered, kept in this browser tab (sessionStorage) under a description of the
  * request. Leaving the page does not lose them: sending the same request again reuses the key, so the server
  * answers with what the lost request booked instead of booking it twice. Kept for [PENDING_KEY_TTL_MS]; storage

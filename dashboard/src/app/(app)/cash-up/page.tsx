@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Download, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -22,7 +23,7 @@ function CashUpView() {
   const today = todayInput(0, user?.restaurant?.timezone)
   const [date, setDate] = useState(today)
   const [exporting, setExporting] = useState(false)
-  const { data, isLoading, error } = useCashUp(date)
+  const { data, isLoading, error, refetch } = useCashUp(date)
   const t = useT()
   const methodLabel = (method: string) => {
     const key = `ops.method.${method}`
@@ -66,8 +67,9 @@ function CashUpView() {
           </div>
         }
       />
-      {error ? <p className="text-destructive text-sm">{errorMessage(error)}</p> : null}
-      {isLoading || !data ? (
+      {error && !data ? (
+        <QueryError error={error} onRetry={() => void refetch()} />
+      ) : isLoading || !data ? (
         <Skeleton className="h-64 w-full" />
       ) : (
         <>

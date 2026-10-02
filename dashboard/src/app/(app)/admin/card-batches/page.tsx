@@ -7,6 +7,7 @@ import { BatchStatusBadge, batchStatusLabel } from "@/components/cards/card-stat
 import { useConfirm } from "@/components/common/confirm"
 import { EmptyState } from "@/components/common/empty-state"
 import { PageHeader } from "@/components/common/page-header"
+import { QueryError } from "@/components/common/query-error"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { Button } from "@/components/ui/button"
@@ -25,9 +26,9 @@ import { useT } from "@/lib/i18n"
 
 /** The next steps the platform takes for a batch (the server checks every transition). */
 const NEXT: Partial<Record<CardBatchStatus, CardBatchStatus[]>> = {
-  ordered: ["in_production"],
-  in_production: ["personalized"],
-  personalized: ["qa_testing"],
+  ordered: ["in_production", "rejected"],
+  in_production: ["personalized", "rejected"],
+  personalized: ["qa_testing", "rejected"],
   qa_testing: ["rejected"],
   accepted: ["assigned", "compromised"],
   assigned: ["shipped", "compromised"],
@@ -238,7 +239,7 @@ function Content() {
   const confirm = useConfirm()
   const [page, setPage] = useState(1)
   const [status, setStatus] = useState<CardBatchStatus | "all">("all")
-  const { data, isLoading } = useAdminCardBatches(page, status === "all" ? undefined : status)
+  const { data, isLoading, error, refetch } = useAdminCardBatches(page, status === "all" ? undefined : status)
   const action = useCardBatchAction()
   const [ordering, setOrdering] = useState(false)
   const [changing, setChanging] = useState<CardBatch | null>(null)
@@ -288,6 +289,8 @@ function Content() {
         </div>
         {isLoading ? (
           <Skeleton className="m-4 h-64" />
+        ) : error && !data ? (
+          <QueryError error={error} onRetry={() => void refetch()} />
         ) : data?.data.length ? (
           <>
             <Table>
