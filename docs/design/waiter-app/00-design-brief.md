@@ -225,7 +225,7 @@ status badge.
 
 **Elevation** (light theme shadows; dark theme uses surface colour steps + 1 px border.subtle instead):
 elev.0 none · elev.1 `0 1 2 rgba(0,0,0,.04)` · elev.2 `0 4 16 rgba(0,0,0,.08)` (balance card) · elev.3
-`0 12 32 rgba(0,0,0,.12)` (sheets, snackbar) · elev.card-brand `0 16 40 <brand colour at 28 %>`.
+`0 12 32 rgba(0,0,0,.12)` (sheets, snackbar).
 
 **Motion** — durations: motion.instant 90 ms · fast 160 · base 240 · slow 360 · emphasis 520; curves:
 motion.ease.standard (0.2, 0, 0, 1) · decelerate (0, 0, 0, 1) · accelerate (0.3, 0, 1, 1) · spring.card

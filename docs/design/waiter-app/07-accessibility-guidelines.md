@@ -125,7 +125,7 @@ Text colour auto-selected (white or #0A0A0C) and must reach 4.5:1 against the **
 | Element | Visual | Touch target | Notes |
 |---|---|---|---|
 | Every interactive element | ≥ 44 pt | **≥ 56 × 56 pt** | hit area may extend into spacing, never overlap another target |
-| Keypad keys | full cell | **≥ 72 pt high** (64 on compact height < 700 pt), width = (content width − 2 × 8) / 3 | gaps ≥ 8 pt |
+| Keypad keys | full cell | **≥ 72 pt high** (52 on compact height < 700 pt), width = (content width − 2 × 8) / 3 | gaps ≥ 8 pt |
 | Primary CTA / `HoldButton` | full width | 64 pt high (56 compact height) | |
 | `QuickAmountChip` | 40 pt high | 56 pt (8 pt extension above/below) | |
 | `IconButton` (Recent, Menu, close) | 24 pt icon | 56 × 56 | |

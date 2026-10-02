@@ -208,9 +208,8 @@ Each entry: **Trigger · Screens · Properties (from → to) · Duration · Curv
   |---|---|---|---|
   | `BalanceCard` scale | 0.40 (Android/QR origin) · 0.60 (iPhone/S11) | 1.00 | `motion.spring.card` |
   | `BalanceCard` position | origin centre | final layout slot | `motion.spring.card` |
-  | `BalanceCard` corner radius | `radius.full` equivalent at scale | `radius.xl` | `motion.spring.card` |
+  | `BalanceCard` corner radius | `radius.full` equivalent at scale | ID-1 card radius | `motion.spring.card` |
   | `BalanceCard` opacity | 0 | 1 | 160 ms, decelerate (reaches 1 at 160 ms) |
-  | `elev.card-brand` shadow opacity | 0 | 1 | 240 ms, decelerate, delay 80 ms |
   | Ready content (title, secondary buttons) | opacity 1, y 0 | opacity 0, y −8 | 90 ms, accelerate |
   | `TopBar` | unchanged (persistent) | — | — |
   | `AmountDisplay` + `Keypad` + CTA | opacity 0, y +16 | opacity 1, y 0 | 240 ms, decelerate, **delay 40 ms** after card start |
@@ -335,7 +334,7 @@ Each entry: **Trigger · Screens · Properties (from → to) · Duration · Curv
   |---|---|---|---|
   | 0 | `SuccessMark` halo (24 pt ring, `color.success.bg`) | opacity 0 → 1, scale 0.6 → 1.0 | `motion.spring.card` |
   | 0 | `Keypad`, `AmountDisplay`, CTA | opacity → 0, y +16 | 160, accelerate |
-  | 0 | `BalanceCard` → card chip | shrinks to a chip at the top of S09: width → content width (≈ 132 pt), height → 40 pt, radius `radius.xl` → `radius.full`, content cross-fades to `•••• 6488` (caption) on `brand_color`; background, shadow `elev.card-brand` → `elev.1` | `motion.spring.card` (settles ≈ 330) |
+  | 0 | `BalanceCard` → card chip | shrinks to a chip at the top of S09: width → content width (≈ 132 pt), height → 40 pt, radius → `radius.full`, content cross-fades to `•••• 6488` (caption) on `brand_color` | `motion.spring.card` (settles ≈ 330) |
   | 0 | `SuccessMark` circle | stroke path 0 → 100 %, from 12 o'clock clockwise, 3 pt stroke `color.success`; at 240 the circle fill (`color.success`) fades in | 240 draw + 90 fill, standard |
   | 0 | Haptic + sound | `haptic.success` + `sound.success` | — |
   | 80 | Title `success.title` | opacity 0 → 1, y +8 → 0 | 240, decelerate |
@@ -523,7 +522,7 @@ M17 / M18 / M19                                                                 
 - 60 fps minimum on the reference low-end Android (Android 9, 2 GB RAM); 120 fps on ProMotion where the platform grants it. A dropped frame in M08, M12 or M18 is a release blocker; in M04/M10 it is not.
 - Animate only transform and opacity where possible; `BalanceCard` → chip (M18) animates size and radius — render the card as one layer during the morph (no text reflow per frame; the content cross-fades).
 - Blur (M28) is static; never animate blur radius.
-- Shadows (`elev.card-brand`) animate opacity, never blur radius.
+- Shadows animate opacity, never blur radius.
 - All loops (M04, M10, M29) stop when their element is not visible, when the app is backgrounded, and — for M04/M10 — in Low Power Mode / Battery Saver (use RM variant).
 - Details on engine choices and platform-specific curve mapping: [09](09-flutter-handoff.md).
 

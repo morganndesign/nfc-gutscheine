@@ -1123,7 +1123,7 @@ Shown when the lookup has not answered 150 ms after the read (Android) or after 
 ```
 y=59   ├─────────────────────────────────────────┤ TopBar 56 (unchanged)
 y=115  │ space.4 16                               │
-y=131  │ ┌─────────────────────────────────────┐ │ Skeleton · BalanceCard shape 353 × 220, radius.xl
+y=131  │ ┌─────────────────────────────────────┐ │ Skeleton · BalanceCard shape 353 × 220, ID-1 radius
        │ │ ▭▭▭▭                         ◌      │ │ (same geometry as S07 BalanceCard, 03b)
        │ │ ▭▭▭▭▭▭▭▭▭▭                          │ │
        │ │ ▭▭▭▭▭▭▭                              │ │
@@ -1368,7 +1368,7 @@ Target ≤ 8 s for a number read from the card (16 digits ≈ 5.5 s + tap + look
 - [ ] Long-press ⌫ clears the field.
 - [ ] Pasting "5285-1058-7098-6488" fills the field.
 - [ ] Digits are retained after a 404 when the waiter returns via "Try again".
-- [ ] Button in thumb zone on every phone frame; keys ≥ 72 (64 compact).
+- [ ] Button in thumb zone on every phone frame; keys ≥ 72 (52 compact).
 - [ ] Screen reader reads digits in groups, not as one large number.
 
 New strings (S11):

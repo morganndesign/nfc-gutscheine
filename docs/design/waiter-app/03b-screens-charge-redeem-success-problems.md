@@ -171,7 +171,7 @@ button always states the exact amount; there is no confirmation screen.
  │            ╭──────────────────────────╮               │ y 119
  │            │ GIFT CARD            ))) │               │ BalanceCard 224 × 141 (ID-1, height-driven)
  │            │ Trattoria Bella Vista    │               │ x 84.5 – 308.5, padding space.3
- │            │ € 32,50                  │               │ radius.xl, elev.2 / elev.card-brand
+ │            │ € 32,50                  │               │ ID-1 corner radius, no shadow
  │            │ •••• 6488 · Valid until 26.09.2029      │
  │            ╰──────────────────────────╯               │ y 260   space.3 (12)
  │                     € 24,90                           │ y 272  AmountDisplay 68 (type.amount.xl, centred)

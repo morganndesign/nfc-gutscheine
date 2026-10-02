@@ -287,7 +287,7 @@ Names are binding (brief §6). Specifications: [05](05-component-library.md). Pr
 |---|---|---|---|---|
 | `PrimaryButton` (large 64 / regular 56) | P0 | all | tokens, `Spinner` | Label may carry an amount and break at " · " ([12 §1.8](12-ui-copy-and-error-messages.md#18-length-limits)) |
 | `HoldButton` | P0 | S07/S08 | `PrimaryButton`, `ProgressRing`, feedback service | 600 ms hold, ticks at 33/66/100 %, accessible alternative action ([07](07-accessibility-guidelines.md)) |
-| `Keypad` | P0 | S07, S11 | tokens, feedback service | 3 × 4: 1–9, 00, 0, ⌫; long-press ⌫ clears; ≥ 72 pt keys (64 compact); `haptic.key` |
+| `Keypad` | P0 | S07, S11 | tokens, feedback service | 3 × 4: 1–9, 00, 0, ⌫; long-press ⌫ clears; ≥ 72 pt keys (52 compact); `haptic.key` |
 | `AmountDisplay` | P0 | S07 | formatter, `type.amount.xl` | POS entry (digits shift in from the right), max 7 digits, shrink-to-fit, never truncate |
 | `BalanceCard` | P0 | S07, S09 (small) | brand colour logic, `StatusBadge` | ID-1 ratio, squircle on iOS, contrast fallback, desaturation for blocked/expired/replaced |
 | `StatusBadge` | P0 | S07 | icons | 6 statuses |

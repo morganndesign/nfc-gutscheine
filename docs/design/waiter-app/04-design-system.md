@@ -41,7 +41,7 @@ Three tiers. Engineers consume tier 2 and 3; tier 1 exists only to feed them.
 | 2 · Semantic (this document) | `color.fg.primary`, `space.4`, `radius.l`, `type.body.l`, `motion.duration.base` | The public API. Themes swap values here. |
 | 3 · Component (05) | `keypad.key.height`, `balanceCard.padding` | Only when a component needs a value that is not a plain semantic token; always defined as a reference to tier 2 plus an optional derivation. |
 
-**Naming grammar:** `category.role[.variant][.state]`, lowerCamelCase segments, dots as separators: `color.action.primaryPressed`, `type.amount.xl`, `elev.card-brand` (kept exactly as in the brief). Numeric scales use the step number (`space.4` = 16 pt), not the value.
+**Naming grammar:** `category.role[.variant][.state]`, lowerCamelCase segments, dots as separators: `color.action.primaryPressed`, `type.amount.xl`, `type.key`. Numeric scales use the step number (`space.4` = 16 pt), not the value.
 
 **Theme resolution:** every colour token has a light and a dark value. The app resolves the theme from (1) the Menu override "Light / Dark / System" (S14), else (2) the OS appearance. High-contrast variants (§10) are applied on top of the resolved theme.
 
@@ -252,7 +252,7 @@ Rules:
 | `radius.s` | 12 | TextField, CardNumberField, Snackbar |
 | `radius.m` | 16 | Regular buttons (56), StatusBanner, TransactionRow pressed fill, IconButton pressed fill on square variant |
 | `radius.l` | 20 | Large buttons (64), keypad keys |
-| `radius.xl` | 28 | BalanceCard, HistoryCard, Dialog, content cards inside sheets |
+| `radius.xl` | 28 | HistoryCard, Dialog, content cards inside sheets |
 | `radius.sheet` | 32 | Top corners of BottomSheet |
 | `radius.full` | 999 | Avatar, circular IconButton fill, pills, grabber, progress caps |
 
@@ -284,7 +284,6 @@ Elevation communicates "this floats above the flow and will go away". Only four 
 | `elev.1` | 0 1 2 `rgba(0,0,0,0.04)` | 0 | HistoryCard (separation from sheet), Avatar on imagery |
 | `elev.2` | 0 4 16 `rgba(0,0,0,0.08)` | 0 | BalanceCard in desaturated states and skeleton; Dialog (together with scrim) |
 | `elev.3` | 0 12 32 `rgba(0,0,0,0.12)` | 0 | BottomSheet (cast upward: 0 −12 32), Snackbar |
-| `elev.card-brand` | 0 16 40 `<brand colour at 28 % alpha>` | 0 | BalanceCard, active states (the brand glow) |
 
 Shadow direction: light from above; the sheet's shadow is cast upward (negative y) because it rises from the bottom edge.
 
@@ -500,11 +499,11 @@ This is the implementation of the brief's "+6 % luminance to −6 %". For ink: #
 | #6B7280 (slate grey) | 0.167 | – | 4.30 / 3.70 | – | – | **fallback to ink** |
 | #808080 (mid grey) | 0.216 | – | 3.54 / 4.48 | – | – | **fallback to ink** |
 
-**Desaturated states** (blocked, expired, replaced): the brand colour's chroma is reduced by **40 %** in OKLCH (lightness and hue unchanged), the sheen is recomputed from the result, the text algorithm runs again, and the shadow switches from `elev.card-brand` to neutral `elev.2` (a desaturated card must not glow). Inactive and zero-balance cards are **not** desaturated (brief §5).
+**Desaturated states** (blocked, expired, replaced): the brand colour's chroma is reduced by **40 %** in OKLCH (lightness and hue unchanged), the sheen is recomputed from the result, the text algorithm runs again. Inactive and zero-balance cards are **not** desaturated (brief §5).
 
-**Shadow:** `elev.card-brand` uses the *original* brand colour at 28 % alpha (light theme only). For the fallback case it uses ink.
+**Shadow:** none. The card is drawn flat, with ID-1 proportions and corner radius (3.18 mm on 85.6 mm), like the printed card.
 
-**Dark theme:** the card colour is identical in both themes (it represents a physical object). It gains the 1-px `color.card.borderDark` outline and loses the shadow.
+**Dark theme:** the card colour is identical in both themes (it represents a physical object). It gains the 1-px `color.card.borderDark` outline.
 
 ---
 
@@ -1035,7 +1034,7 @@ Format: **name · light · dark · notes**. ➕ = added by this document. Values
 | size.target.min | 56 × 56 pt | brief |
 | size.button.l | 64 pt high (56 compact height) | brief |
 | size.button.m | 56 pt high | brief |
-| size.key | 72 pt high (64 compact height) | brief |
+| size.key | 72 pt high (52 compact height) | brief |
 | size.key.gap | 8 pt | brief (≥ 8) |
 | size.topBar | 56 pt | + safe area |
 | size.chip | 40 pt visual, 56 pt target | |
@@ -1065,7 +1064,6 @@ Format: **name · light · dark · notes**. ➕ = added by this document. Values
 | elev.1 | 0 1 2 rgba(0,0,0,.04) | surface step + hairline | |
 | elev.2 | 0 4 16 rgba(0,0,0,.08) | surface step + hairline | |
 | elev.3 | 0 12 32 rgba(0,0,0,.12) | surface step + hairline | sheets cast upward |
-| elev.card-brand | 0 16 40 brand @ 28 % | none + card.borderDark | |
 | opacity.disabled ➕ | 0.40 | 0.40 | groups only |
 | opacity.cardSecondary ➕ | 0.76 | 0.76 | if ≥ 4.5 : 1 |
 | opacity.pressedOverlay ➕ | 0.08 | 0.08 | |

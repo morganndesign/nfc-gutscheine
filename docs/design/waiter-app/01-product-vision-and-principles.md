@@ -214,7 +214,7 @@ Ten principles, in priority order. When two conflict, the higher one wins. Each 
 
 **In practice**
 - All primary actions sit in the bottom 45 % of the screen ([07 · Accessibility](07-accessibility-guidelines.md)).
-- Touch targets ≥ 56 × 56 pt everywhere; keypad keys ≥ 72 pt high (64 on compact height); primary CTA 64 pt high (56 compact), full width.
+- Touch targets ≥ 56 × 56 pt everywhere; keypad keys ≥ 72 pt high (52 on compact height); primary CTA 64 pt high (56 compact), full width.
 - Layouts are symmetric: nothing essential lives only in one corner. The TopBar (top) contains only secondary things: restaurant, avatar, Recent, Menu.
 - Key gaps ≥ 8 pt; no two primary or destructive actions adjacent. Glove-friendly and wet-finger tolerant.
 - Sheets (Recent, Menu) open from the bottom and are dismissed by a downward swipe.
@@ -313,7 +313,7 @@ Visual principles. They turn the UX principles into pixels. Token values live in
 
 ### D1 · Quiet surfaces
 
-The canvas (`color.bg.canvas` #FAFAFA / #0A0A0C) and surfaces are near-neutral and almost flat. Structure comes from spacing (4-pt grid) and typography, not from boxes, lines and shadows. Elevation is reserved for the balance card (`elev.2` + `elev.card-brand`) and sheets (`elev.3`).
+The canvas (`color.bg.canvas` #FAFAFA / #0A0A0C) and surfaces are near-neutral and almost flat. Structure comes from spacing (4-pt grid) and typography, not from boxes, lines and shadows. Elevation is reserved for sheets (`elev.3`); the balance card is flat like a real card.
 
 | Do | Don't |
 |---|---|
@@ -343,7 +343,7 @@ GiftCard Waiter has almost no brand of its own. The `BalanceCard` carries the re
 
 | Do | Don't |
 |---|---|
-| Render the balance card like a physical card: full width minus margins, max 220 pt high, subtle sheen (+6 % → −6 % luminance), `radius.xl` continuous corners on iOS. | Add restaurant logos, photos or patterns (not in v1; see [13](13-future-and-design-review.md)). |
+| Render the balance card like a physical card: full width minus margins, max 220 pt high, subtle sheen (+6 % → −6 % luminance), ID-1 corner radius (3.18 mm on 85.6 mm), no shadow. | Add restaurant logos, photos or patterns (not in v1; see [13](13-future-and-design-review.md)). |
 | Choose text colour automatically (white or #0A0A0C) and fall back to ink when 4.5:1 cannot be met. | Use `brand_color` for buttons, backgrounds or text elsewhere in the app. |
 | Desaturate the card 40 % for blocked/expired/replaced and add the `StatusBadge`. | Tint the whole card red; status is conveyed by badge + banner, not by recolouring the brand. |
 
@@ -403,7 +403,7 @@ The same app runs at a candle-lit table and on a sunny terrace. Neither is an ed
 
 | Condition | Design response |
 |---|---|
-| Dark room (< 10 lux) | Dark theme (follows system by default): canvas #0A0A0C, no pure white areas larger than the text; dark theme uses surface steps + 1 px `border.subtle` instead of shadows; balance card keeps the brand colour and glows subtly via `elev.card-brand`. |
+| Dark room (< 10 lux) | Dark theme (follows system by default): canvas #0A0A0C, no pure white areas larger than the text; dark theme uses surface steps + 1 px `border.subtle` instead of shadows; balance card keeps the brand colour, without a shadow. |
 | Bright sunlight (> 50 000 lux) | Light theme recommended outdoors (tip in Menu S14); text ≥ 4.5:1, UI ≥ 3:1; OS "Increase contrast" / "High contrast text" switches `fg.secondary`→`fg.primary`, `border.subtle`→`border.strong`, banner text weight 600. |
 | Both | Amounts ≥ 40 pt; status by icon + text; the app never changes screen brightness; "Keep screen on" (default ON) prevents dimming on S05/S07/S09. |
 
