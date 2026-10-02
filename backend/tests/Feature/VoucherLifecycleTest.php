@@ -265,6 +265,7 @@ final class VoucherLifecycleTest extends TestCase
 
         // Took the cash, then takes the balance back: refused (and not offered).
         $this->getJson("/api/v1/transactions/{$txId}")->assertOk()->assertJsonPath('data.reversible', false);
+        $this->assertFalse($this->historyEntry($voucher, $txId)['reversible'], 'the history offers no undo either');
         $this->postJson("/api/v1/transactions/{$txId}/reverse", ['reason' => 'Mistake'])
             ->assertStatus(409)->assertJsonPath('code', 'TRANSACTION_NOT_REVERSIBLE')->assertJsonPath('context.reason', 'own_reload');
         $this->assertSame(8000, $voucher->refresh()->balance);
@@ -272,9 +273,34 @@ final class VoucherLifecycleTest extends TestCase
         // A second manager (four eyes) reverses it.
         $this->actingAsStaff($restaurant, RoleSlug::Manager);
         $this->getJson("/api/v1/transactions/{$txId}")->assertOk()->assertJsonPath('data.reversible', true);
+        $this->assertTrue($this->historyEntry($voucher, $txId)['reversible']);
         $this->postJson("/api/v1/transactions/{$txId}/reverse", ['reason' => 'Mistake'])->assertCreated();
         $this->assertSame(5000, $voucher->refresh()->balance);
         $this->assertLedgerConsistent($voucher);
+        $this->assertFalse($this->historyEntry($voucher, $txId)['reversible'], 'reversed once is final');
+    }
+
+    public function test_the_history_offers_no_undo_on_a_refunded_voucher(): void
+    {
+        $restaurant = $this->restaurant();
+        $sale = $this->sell($restaurant, 5000);
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $txId = $this->redeemWithQr($sale->voucher, $sale->printable->payload, 1000)->assertCreated()->json('data.transaction.id');
+
+        $this->actingAsStaff($restaurant, RoleSlug::Owner);
+        $this->assertTrue($this->historyEntry($sale->voucher, $txId)['reversible']);
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/refund", ['payment' => ['method' => 'cash'], 'reason' => 'Returned'], $this->idempotency())->assertCreated();
+        $history = $this->getJson("/api/v1/vouchers/{$sale->voucher->id}/history")->assertOk()->json('data');
+        $this->assertSame([], array_values(array_filter($history, static fn (array $e): bool => $e['reversible'])));
+    }
+
+    /** @return array<string, mixed> */
+    private function historyEntry(Voucher $voucher, string $id): array
+    {
+        $entry = collect($this->getJson("/api/v1/vouchers/{$voucher->id}/history")->assertOk()->json('data'))->firstWhere('id', $id);
+        $this->assertIsArray($entry);
+
+        return $entry;
     }
 
     public function test_an_owner_may_reverse_their_own_reload(): void

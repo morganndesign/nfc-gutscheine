@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\Permission;
 use App\Enums\TransactionType;
+use App\Enums\VoucherStatus;
 use App\Models\Concerns\BelongsToRestaurant;
 use App\Models\Concerns\HashChained;
 use App\Models\Concerns\Immutable;
@@ -94,9 +96,24 @@ class VoucherTransaction extends Model implements HashChainedRecord
             : $this->reversal()->exists();
     }
 
+    /** A redemption or reload not yet reversed, of a voucher that is still open (a refund closes it for good). */
     public function isReversible(): bool
     {
-        return $this->type->isReversible() && ! $this->isReversed();
+        return $this->type->isReversible() && ! $this->isReversed() && $this->voucher->status !== VoucherStatus::Refunded;
+    }
+
+    /**
+     * Whether [viewer] may reverse this entry: reversible at all, and a reload they booked themselves only with the
+     * right to reverse their own reloads (four eyes).
+     */
+    public function isReversibleBy(?User $viewer): bool
+    {
+        if (! $this->isReversible() || $viewer === null || ! $viewer->hasPermission(Permission::TransactionsReverse)) {
+            return false;
+        }
+
+        return ! ($this->type === TransactionType::Reload && $this->user_id === $viewer->getKey()
+            && ! $viewer->hasPermission(Permission::TransactionsReverseOwnReload));
     }
 
     /** @return BelongsTo<Voucher, $this> */

@@ -23,6 +23,9 @@ final class CardKeys
 {
     private const SYSTEM_IDENTIFIER = 'GiftCardPro';
 
+    /** The longest key set version K1's AN10922 input (`K` ‖ version ‖ 01 ‖ system identifier, ≤ 31 bytes) takes. */
+    public const MAX_VERSION_LENGTH = 31 - 2 - 11;
+
     /** @var array<int, string> slot => batch key (ephemeral, for this object's lifetime) */
     private array $batchKeys = [];
 

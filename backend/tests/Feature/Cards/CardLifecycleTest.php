@@ -100,6 +100,29 @@ final class CardLifecycleTest extends TestCase
         return [$batch, array_map(static fn (Card $c): Card => $c->refresh(), $cards)];
     }
 
+    public function test_a_leaked_key_set_also_stops_batches_still_at_the_manufacturer(): void
+    {
+        [$inQa, $qaCards] = $this->qaTestedBatch(2);
+        $ordered = $this->batches()->order($this->restaurant, $inQa->keySet, 'Card Co', 2, $this->actor());
+        $printing = $this->batches()->changeStatus(
+            $this->batches()->order($this->restaurant, $inQa->keySet, 'Card Co', 1, $this->actor()),
+            CardBatchStatus::InProduction, 'printing', $this->actor(),
+        );
+        $printed = $this->cards()->transition($this->cards()->register($printing, "\x04".random_bytes(6), $this->actor()), CardState::Personalized, 'station verified', $this->actor());
+
+        $this->artisan('cards:key-set:compromised', ['version' => 'ks-2026-01', '--confirm' => 'ks-2026-01'])->assertSuccessful();
+
+        foreach ([$inQa, $ordered, $printing] as $batch) {
+            $this->assertSame(CardBatchStatus::Rejected, $batch->refresh()->status, $batch->batch_code);
+        }
+        $this->assertSame(CardState::QaFailed, $printed->refresh()->state);
+        foreach ($qaCards as $card) {
+            $this->assertSame(CardState::QaFailed, $card->refresh()->state, 'a QA-passed card of a leaked set never reaches stock');
+        }
+        $this->expectException(CardStateException::class);
+        $this->batches()->approve($inQa->refresh(), $this->actor());
+    }
+
     public function test_a_batch_travels_from_order_to_the_restaurant_stock(): void
     {
         [$batch, $cards] = $this->qaTestedBatch();

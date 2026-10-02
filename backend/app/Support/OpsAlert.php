@@ -24,6 +24,9 @@ final class OpsAlert
         }
         $to = config('giftcard.ops_alert_email') ?: SystemSetting::get('platform.support_email');
         if (! is_string($to) || $to === '') {
+            // Nobody could be told: try again next time instead of staying silent for the whole window.
+            Cache::forget('ops-alert:'.$key);
+
             return false;
         }
         try {
@@ -32,6 +35,7 @@ final class OpsAlert
             return true;
         } catch (Throwable $e) {
             Log::error('Operations alert could not be sent', ['alert' => $key, 'error' => $e->getMessage()]);
+            Cache::forget('ops-alert:'.$key);
 
             return false;
         }

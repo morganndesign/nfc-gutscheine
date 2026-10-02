@@ -6,5 +6,10 @@
     "Regards,": "Srdačan pozdrav,",
     "The given data was invalid.": "Uneseni podaci nisu ispravni.",
     "(and :count more error)": "(i još :count greška)",
-    "(and :count more errors)": "(i još :count greška)|(i još :count greške)|(i još :count grešaka)"
+    "(and :count more errors)": "(i još :count greška)|(i još :count greške)|(i još :count grešaka)",
+    "Reset Password Notification": "Ponovno postavljanje lozinke",
+    "You are receiving this email because we received a password reset request for your account.": "Primate ovaj e-mail jer je za Vaš račun zatraženo ponovno postavljanje lozinke.",
+    "Reset Password": "Postavi novu lozinku",
+    "This password reset link will expire in :count minutes.": "Ovaj link vrijedi :count minuta.",
+    "If you did not request a password reset, no further action is required.": "Ako to niste tražili, ne morate ništa učiniti. Vaša lozinka ostaje nepromijenjena."
 }

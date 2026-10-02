@@ -26,6 +26,11 @@ final class CsvExporter
     }
 
     /**
+     * Rows come out in primary-key order: time-ordered UUIDs, i.e. in the order they were written. Paging is by key
+     * (constant memory, stable while rows are added), and keyset paging is only correct when the key is the only
+     * sort, so any order the query brings is dropped: with ORDER BY created_at first, rows whose key is out of step
+     * with created_at would be skipped or exported twice at every page boundary.
+     *
      * @template TModel of Model
      *
      * @param  Builder<TModel>  $query
@@ -44,7 +49,7 @@ final class CsvExporter
             fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, array_keys($columns), ';', '"', '');
 
-            foreach ($query->lazyById($chunk) as $model) {
+            foreach ($query->reorder()->lazyById($chunk) as $model) {
                 $row = [];
                 foreach ($columns as $resolver) {
                     $row[] = CsvSanitizer::cell($resolver($model));

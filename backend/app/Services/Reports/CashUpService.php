@@ -38,13 +38,17 @@ final class CashUpService
         $from = $start->copy()->utc();
         $to = $start->copy()->addDay()->utc();
 
-        // Money that stays: payments in whose sale or reload was not reversed; payouts out.
+        // The day as it stood at its close: a reversal made on a later day never changes it (it shows on its own day).
+        $reversedThatDay = static fn ($q) => $q->select(DB::raw(1))->from('voucher_transactions as t')
+            ->join('voucher_transactions as r', 'r.related_transaction_id', '=', 't.id')
+            ->whereColumn('t.payment_id', 'payments.id')
+            ->where('r.created_at', '<', $to);
+
+        // Money that stays: payments in whose sale or reload was not reversed that day; payouts out.
         $payments = Payment::query()
             ->where('created_at', '>=', $from)->where('created_at', '<', $to)
             ->where('method', '!=', PaymentMethod::Complimentary->value)
-            ->whereNotExists(static fn ($q) => $q->select(DB::raw(1))->from('voucher_transactions as t')
-                ->join('voucher_transactions as r', 'r.related_transaction_id', '=', 't.id')
-                ->whereColumn('t.payment_id', 'payments.id'))
+            ->whereNotExists($reversedThatDay)
             ->get(['id', 'method', 'direction', 'amount', 'received_by']);
 
         $methods = [];
@@ -68,7 +72,9 @@ final class CashUpService
             ->whereHas('relatedTransaction', static fn ($q) => $q->where('type', TransactionType::Reload->value))
             ->sum('amount');
         $complimentary = (int) Payment::query()->where('method', PaymentMethod::Complimentary->value)
-            ->where('created_at', '>=', $from)->where('created_at', '<', $to)->sum('amount');
+            ->where('created_at', '>=', $from)->where('created_at', '<', $to)
+            ->whereNotExists($reversedThatDay)
+            ->sum('amount');
 
         // Each voucher's balance after its last ledger entry before the end of the day.
         $outstanding = (int) VoucherTransaction::query()

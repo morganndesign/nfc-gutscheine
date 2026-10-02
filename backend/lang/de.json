@@ -6,5 +6,10 @@
     "Regards,": "Viele Grüße,",
     "The given data was invalid.": "Die eingegebenen Daten sind ungültig.",
     "(and :count more error)": "(und :count weiterer Fehler)",
-    "(and :count more errors)": "(und :count weitere Fehler)"
+    "(and :count more errors)": "(und :count weitere Fehler)",
+    "Reset Password Notification": "Passwort zurücksetzen",
+    "You are receiving this email because we received a password reset request for your account.": "Sie erhalten diese E-Mail, weil für Ihr Konto das Zurücksetzen des Passworts angefordert wurde.",
+    "Reset Password": "Neues Passwort festlegen",
+    "This password reset link will expire in :count minutes.": "Dieser Link ist :count Minuten gültig.",
+    "If you did not request a password reset, no further action is required.": "Falls Sie das nicht angefordert haben, müssen Sie nichts tun. Ihr Passwort bleibt unverändert."
 }

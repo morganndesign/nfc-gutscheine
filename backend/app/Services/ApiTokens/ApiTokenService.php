@@ -35,7 +35,9 @@ final class ApiTokenService
             throw new RoleAssignmentException('Integration tokens belong to a restaurant. Platform administrators cannot create them.');
         }
 
-        $allowed = $user->role->permissionSlugs();
+        // Never more than the caller holds right now: the role in the dashboard, the role and the abilities of the
+        // token when a token creates a token (a token with only api_tokens.manage must not mint a wider one).
+        $allowed = $user->effectivePermissions();
         $invalid = array_diff($abilities, $allowed);
         if ($invalid !== []) {
             throw new RoleAssignmentException('Tokens cannot have abilities you do not have: '.implode(', ', $invalid));

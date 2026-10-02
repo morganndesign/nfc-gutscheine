@@ -13,4 +13,5 @@ return [
     'debit_above_daily' => 'Limit po naplati ne smije biti veći od dnevnog limita po vaučeru.',
     'logo_unreadable' => 'Slika se ne može pročitati. Učitajte PNG ili JPEG datoteku.',
     'logo_too_small' => 'Logo mora biti najmanje :min piksela širok i visok.',
+    'logo_too_large' => 'Logo smije biti najviše :max piksela širok i visok.',
 ];

@@ -37,8 +37,12 @@ final class SignInEmailChanged extends Notification implements ShouldQueue
     {
         return (new MailMessage)
             ->subject(__('account.email_changed.subject'))
-            ->greeting(__('account.email_changed.greeting', ['name' => StaffInvitation::firstName($this->name)]))
-            ->line(__('account.email_changed.body', ['changed_by' => $this->changedBy, 'restaurant' => $this->restaurantName, 'email' => $this->newEmail]))
+            ->greeting(__('account.email_changed.greeting', ['name' => MarkdownText::escape(StaffInvitation::firstName($this->name))]))
+            ->line(__('account.email_changed.body', [
+                'changed_by' => MarkdownText::escape($this->changedBy),
+                'restaurant' => MarkdownText::escape($this->restaurantName),
+                'email' => MarkdownText::escape($this->newEmail),
+            ]))
             ->line(__('account.email_changed.signed_out'))
             ->line(__('account.email_changed.unexpected'))
             ->salutation(__('invitation.closing')."\n\n".__('invitation.signature'));

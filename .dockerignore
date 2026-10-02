@@ -7,6 +7,9 @@ backend/vendor
 **/.env
 **/.env.*
 !**/.env.example
+# Runtime data of a development checkout (keystore, generated APP_KEY, uploads): never baked into an image, where
+# Docker would copy it into a fresh laravel-storage volume on the first start. The Dockerfile creates the folders.
+backend/storage/app
 backend/storage/logs/*
 backend/storage/framework/cache/*
 backend/storage/framework/sessions/*

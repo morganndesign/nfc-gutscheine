@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cards;
 
+use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
@@ -12,13 +13,17 @@ use App\Enums\RoleSlug;
 use App\Enums\SecurityEventOutcome;
 use App\Enums\SecurityEventType;
 use App\Models\Card;
+use App\Models\KeySet;
 use App\Models\Medium;
 use App\Models\Restaurant;
 use App\Models\SecurityEvent;
+use App\Models\User;
 use App\Models\Voucher;
+use App\Services\Cards\CardBatchLifecycle;
 use App\Services\Cards\CardLifecycle;
 use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
+use Tests\Support\Ntag424Chip;
 use Tests\Support\WithCards;
 use Tests\TestCase;
 
@@ -143,6 +148,30 @@ final class TapPageTest extends TestCase
         app(CardLifecycle::class)->transition($this->card->refresh(), CardState::Suspended, 'lost', Actor::system());
         app(CardLifecycle::class)->transition($this->card->refresh(), CardState::Revoked, 'fraud', Actor::system());
         $this->get($this->tapUrl(5))->assertOk()->assertSee('nicht mehr gültig');
+    }
+
+    public function test_a_card_not_yet_sold_is_not_activated_rather_than_invalid(): void
+    {
+        // docs/NFC.md A6: a card fresh from the station opens "not activated yet"; so does one on its way to the
+        // restaurant. "No longer valid" is for cards that are out of service for good.
+        [, $cards] = $this->deliveredCards($this->restaurant);
+        $this->card = $cards[0];
+        $this->assertSame(CardState::Delivered, $this->card->state);
+        $this->get($this->tapUrl(2))->assertOk()->assertSee('noch nicht aktiviert')->assertDontSee('nicht mehr gültig');
+
+        $this->card = $this->cardFreshFromTheStation();
+        $this->assertSame(CardState::QaPassed, $this->card->state);
+        $this->get($this->tapUrl(2))->assertOk()->assertSee('noch nicht aktiviert')->assertDontSee('nicht mehr gültig');
+    }
+
+    private function cardFreshFromTheStation(): Card
+    {
+        $admin = new Actor(User::factory()->platformAdmin()->create());
+        $batches = app(CardBatchLifecycle::class);
+        $batch = $batches->order($this->restaurant, KeySet::query()->where('version', 'ks-2026-01')->firstOrFail(), 'Card Co', 1, $admin);
+        $batch = $batches->changeStatus($batch, CardBatchStatus::InProduction, 'printing', $admin);
+
+        return $this->personalizeAtStation($batch, Ntag424Chip::factory(), $admin)->refresh();
     }
 
     public function test_the_restaurant_controls_the_public_balance(): void

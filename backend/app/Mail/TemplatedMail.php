@@ -21,7 +21,9 @@ final class TemplatedMail extends Mailable
         public readonly string $textBody,
         public readonly string $restaurantName,
         public readonly string $brandColor,
-        public readonly ?string $footer = null,
+        public readonly ?string $footer,
+        /** Language of the template the text came from (de, en, bs): the html lang attribute. */
+        public readonly string $language,
     ) {}
 
     public function envelope(): Envelope

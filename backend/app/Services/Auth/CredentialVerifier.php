@@ -103,6 +103,10 @@ final class CredentialVerifier
     {
         $threshold = (int) config('giftcard.security.login_lockout_threshold');
 
+        // A lockout that has run out starts a new count: otherwise the counter stays at the threshold and a single
+        // mistyped password (or one guess per lockout period by an attacker) locks the account again at once.
+        User::query()->whereKey($user->getKey())->where('locked_until', '<=', Carbon::now())
+            ->update(['failed_login_attempts' => 0, 'locked_until' => null]);
         // Atomic increment: parallel guessing attempts must all be counted.
         User::query()->whereKey($user->getKey())->increment('failed_login_attempts');
         $attempts = (int) User::query()->whereKey($user->getKey())->value('failed_login_attempts');

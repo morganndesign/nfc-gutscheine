@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Restaurant;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
+use DateTimeZone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +26,11 @@ final class DashboardService
     private const NOT_REVERSED = 'NOT EXISTS (SELECT 1 FROM voucher_transactions r WHERE r.related_transaction_id = voucher_transactions.id)';
 
     private const PAID = 'NOT EXISTS (SELECT 1 FROM payments p WHERE p.id = voucher_transactions.payment_id AND p.method = ?)';
+
+    /** Money kept, per ledger entry: paid sales and reloads that were not reversed, minus refund payouts (like the KPI). */
+    private const KEPT = 'SUM(CASE WHEN type IN (?, ?) AND '.self::NOT_REVERSED.' AND '.self::PAID.' THEN amount'
+        .' WHEN type = ? THEN -COALESCE((SELECT p.amount FROM payments p WHERE p.id = voucher_transactions.payment_id), 0)'
+        .' ELSE 0 END)';
 
     /**
      * @return array<string, int|string>
@@ -82,7 +88,7 @@ final class DashboardService
     }
 
     /**
-     * Daily sold vs. redeemed amounts for the last $days days (inclusive of today).
+     * Daily sold (money kept, as the revenue KPI) vs. redeemed amounts for the last $days days (inclusive of today).
      *
      * @return list<array{date: string, sold: int, redeemed: int, transactions: int}>
      */
@@ -91,13 +97,12 @@ final class DashboardService
         $tz = $restaurant->timezone;
         $end = Carbon::now($tz)->endOfDay();
         $start = $end->copy()->subDays($days - 1)->startOfDay();
-        $offsetMinutes = $end->utcOffset();
 
-        $bucket = $this->dateBucket('created_at', $offsetMinutes);
+        $bucket = $this->dateBucket('created_at', $tz, $start, $end, 'day');
 
         $rows = VoucherTransaction::query()
             ->selectRaw("{$bucket} as bucket")
-            ->selectRaw('SUM(CASE WHEN type IN (?, ?) AND '.self::NOT_REVERSED.' AND '.self::PAID.' THEN amount ELSE 0 END) as sold', [TransactionType::Issue->value, TransactionType::Reload->value, PaymentMethod::Complimentary->value])
+            ->selectRaw(self::KEPT.' as sold', $this->keptBindings())
             ->selectRaw('SUM(CASE WHEN type = ? AND '.self::NOT_REVERSED.' THEN -amount ELSE 0 END) as redeemed', [TransactionType::Redemption->value])
             ->selectRaw('COUNT(*) as transactions')
             ->where('created_at', '>=', $start->copy()->utc())
@@ -122,7 +127,8 @@ final class DashboardService
     }
 
     /**
-     * Revenue (card sales + reloads) and redemptions per month for the last $months months, in one query.
+     * Revenue (money kept: paid sales and reloads minus refund payouts) and redemptions per month for the last
+     * $months months, in one query.
      *
      * @return list<array{month: string, revenue: int, redeemed: int}>
      */
@@ -130,12 +136,11 @@ final class DashboardService
     {
         $tz = $restaurant->timezone;
         $start = Carbon::now($tz)->startOfMonth()->subMonthsNoOverflow($months - 1);
-        $offsetMinutes = Carbon::now($tz)->utcOffset();
-        $bucket = $this->dateBucket('created_at', $offsetMinutes, 'month');
+        $bucket = $this->dateBucket('created_at', $tz, $start, Carbon::now($tz)->endOfMonth(), 'month');
 
         $rows = VoucherTransaction::query()
             ->selectRaw("{$bucket} as bucket")
-            ->selectRaw('SUM(CASE WHEN type IN (?, ?) AND '.self::NOT_REVERSED.' AND '.self::PAID.' THEN amount ELSE 0 END) as revenue', [TransactionType::Issue->value, TransactionType::Reload->value, PaymentMethod::Complimentary->value])
+            ->selectRaw(self::KEPT.' as revenue', $this->keptBindings())
             ->selectRaw('SUM(CASE WHEN type = ? AND '.self::NOT_REVERSED.' THEN -amount ELSE 0 END) as redeemed', [TransactionType::Redemption->value])
             ->where('created_at', '>=', $start->copy()->utc())
             ->groupBy('bucket')
@@ -188,15 +193,41 @@ final class DashboardService
             ->sum('amount');
     }
 
-    /**
-     * SQL expression grouping a UTC timestamp column into local calendar days or months.
-     * The offset is the restaurant's current UTC offset (an integer, never user input); days around
-     * a DST switch can be shifted by one hour, which is acceptable for charts.
-     */
-    private function dateBucket(string $column, int $offsetMinutes, string $unit = 'day'): string
+    /** @return list<string> */
+    private function keptBindings(): array
     {
-        $offset = (int) $offsetMinutes;
+        return [TransactionType::Issue->value, TransactionType::Reload->value, PaymentMethod::Complimentary->value, TransactionType::Refund->value];
+    }
 
+    /**
+     * SQL expression grouping a UTC timestamp column into the restaurant's local calendar days or months. Each row
+     * is shifted by the UTC offset in force at its own moment (the timezone's transitions between $from and $to,
+     * e.g. Europe/Vienna's summer time), so a sale at 00:30 local time stays on its day whatever today's offset is.
+     * Offsets and instants come from the timezone database, never from user input.
+     */
+    private function dateBucket(string $column, string $timezone, Carbon $from, Carbon $to, string $unit): string
+    {
+        $transitions = (new DateTimeZone($timezone))->getTransitions($from->getTimestamp(), $to->getTimestamp()) ?: [];
+        $initial = $transitions === [] ? $from->utcOffset() * 60 : (int) $transitions[0]['offset'];
+
+        $expression = $this->shifted($column, intdiv($initial, 60), $unit);
+        if (count($transitions) < 2) {
+            return $expression;
+        }
+
+        $case = 'CASE';
+        $offset = $initial;
+        foreach (array_slice($transitions, 1) as $transition) {
+            $at = Carbon::createFromTimestampUTC((int) $transition['ts'])->format('Y-m-d H:i:s');
+            $case .= " WHEN {$column} < '{$at}' THEN ".$this->shifted($column, intdiv($offset, 60), $unit);
+            $offset = (int) $transition['offset'];
+        }
+
+        return $case.' ELSE '.$this->shifted($column, intdiv($offset, 60), $unit).' END';
+    }
+
+    private function shifted(string $column, int $offset, string $unit): string
+    {
         return match (DB::connection()->getDriverName()) {
             'sqlite' => $unit === 'month'
                 ? "strftime('%Y-%m', {$column}, '".($offset >= 0 ? '+' : '')."{$offset} minutes')"

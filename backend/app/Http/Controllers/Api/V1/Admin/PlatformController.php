@@ -135,10 +135,8 @@ final class PlatformController extends Controller
         $guard = Auth::guard('web')->check() ? 'web (session via Sanctum)' : 'sanctum (API token)';
 
         Log::info('Platform test e-mail requested', [
-            'recipient' => $recipient,
             'recipient_source' => $to !== null ? 'request' : 'authenticated user',
             'user_id' => $user->getKey(),
-            'user_email' => $user->email,
             'guard' => $guard,
             'mailer' => config('mail.default'),
         ]);

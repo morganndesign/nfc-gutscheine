@@ -60,7 +60,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('logout', [AuthController::class, 'logout']);
             Route::put('profile', [PasswordController::class, 'updateProfile']);
             Route::put('language', [AuthController::class, 'language']);
-            Route::put('password', [PasswordController::class, 'change']);
+            // The current-password check must not become a guessing oracle for a stolen session (prefix: own bucket).
+            Route::put('password', [PasswordController::class, 'change'])->middleware('throttle:5,1,password-change');
         });
 
         // --------------------------------------------- restaurant-scoped API
@@ -80,7 +81,8 @@ Route::prefix('v1')->group(function (): void {
                 ->where('authentication', '[0-9A-HJKMNP-TV-Z]{26}')
                 ->middleware('throttle:presentment');
 
-            Route::get('vouchers/export', [VoucherController::class, 'export'])->middleware('can:vouchers.export');
+            // Full CSV exports are the most expensive reads: 10 a minute per person, all exports together.
+            Route::get('vouchers/export', [VoucherController::class, 'export'])->middleware(['can:vouchers.export', 'throttle:10,1,exports']);
             Route::get('vouchers', [VoucherController::class, 'index'])->middleware('can:vouchers.view');
             Route::post('vouchers', [VoucherController::class, 'store'])->middleware(['can:vouchers.sell', 'idempotent', 'throttle:voucher-operation']);
             Route::get('vouchers/{voucher}', [VoucherController::class, 'show'])->middleware('can:vouchers.view');
@@ -117,9 +119,9 @@ Route::prefix('v1')->group(function (): void {
             Route::get('card-batches', [CardController::class, 'batches'])->middleware('can:cards.view');
             Route::post('card-batches/{batch}/receipt', [CardController::class, 'receive'])->whereUuid('batch')->middleware(['can:cards.receive', 'throttle:voucher-operation']);
 
-            Route::get('transactions/export', [TransactionController::class, 'export'])->middleware('can:transactions.export');
+            Route::get('transactions/export', [TransactionController::class, 'export'])->middleware(['can:transactions.export', 'throttle:10,1,exports']);
             Route::get('reports/cash-up', [ReportController::class, 'cashUp'])->middleware('can:transactions.view');
-            Route::get('reports/payments/export', [ReportController::class, 'paymentsExport'])->middleware('can:transactions.export');
+            Route::get('reports/payments/export', [ReportController::class, 'paymentsExport'])->middleware(['can:transactions.export', 'throttle:10,1,exports']);
             Route::get('transactions', [TransactionController::class, 'index'])->middleware('can:transactions.view');
             Route::get('transactions/{transaction}', [TransactionController::class, 'show'])->middleware('can:transactions.view');
             Route::post('transactions/{transaction}/reverse', [TransactionController::class, 'reverse'])->middleware('can:transactions.reverse');
@@ -150,7 +152,8 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/', [SettingsController::class, 'show']);
                 Route::put('restaurant', [SettingsController::class, 'updateRestaurant']);
                 Route::put('vouchers', [SettingsController::class, 'updateVoucherSettings']);
-                Route::post('logo', [LogoController::class, 'store']);
+                // Decoding and re-encoding an image is expensive.
+                Route::post('logo', [LogoController::class, 'store'])->middleware('throttle:10,1,logo');
                 Route::delete('logo', [LogoController::class, 'destroy']);
                 Route::get('notification-templates', [NotificationTemplateController::class, 'index']);
                 Route::put('notification-templates/{key}', [NotificationTemplateController::class, 'update'])->where('key', '[a-z_]+');

@@ -41,11 +41,13 @@ final class TapPageController
         $language = GuestCopy::language($restaurant->locale);
         $copy = GuestCopy::for($language);
 
+        // A card on its way from the station to a guest is "not activated yet"; only a card out of service for good
+        // (or refused at QA) is "no longer valid".
         $message = match (true) {
-            in_array($card->state, [CardState::Available, CardState::Bound], true) => $copy['not_active'],
+            $card->state === CardState::Active => null,
             $card->state === CardState::Suspended => $copy['suspended'],
-            $card->state !== CardState::Active => $copy['invalid'],
-            default => null,
+            $card->state->isTerminal() || $card->state === CardState::QaFailed => $copy['invalid'],
+            default => $copy['not_active'],
         };
         if ($message !== null) {
             return $this->page($language, $restaurant, $message);

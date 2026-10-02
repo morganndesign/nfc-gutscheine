@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Enums\Permission;
-use App\Enums\TransactionType;
 use App\Models\User;
 use App\Models\VoucherTransaction;
 use Illuminate\Http\Request;
@@ -37,8 +35,7 @@ final class TransactionResource extends JsonResource
             'reversed' => $tx->isReversed(),
             'reversed_at' => $tx->reversal?->created_at->toIso8601String(),
             // For this viewer: a reload they booked themselves is reversed by someone else (four eyes).
-            'reversible' => $tx->isReversible() && ! ($tx->type === TransactionType::Reload && $viewer !== null
-                && $tx->user_id === $viewer->id && ! $viewer->hasPermission(Permission::TransactionsReverseOwnReload)),
+            'reversible' => $tx->isReversibleBy($viewer),
             'related_transaction_id' => $tx->related_transaction_id,
             'payment' => $this->whenLoaded('payment', static fn (): ?array => $tx->payment !== null ? PaymentResource::make($tx->payment)->resolve() : null),
             'voucher' => $this->whenLoaded('voucher', static fn (): array => [

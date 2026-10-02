@@ -62,6 +62,19 @@ final class KeySetCommandsTest extends TestCase
         $this->artisan('cards:key-set:verify')->assertSuccessful();
     }
 
+    public function test_every_version_the_ceremony_accepts_can_key_and_verify_cards(): void
+    {
+        // K1 is diversified from "K" ‖ version ‖ 01 ‖ system identifier: AN10922 takes at most 31 bytes.
+        $this->artisan('cards:key-set:create', ['version' => 'ks-2026-01-printer1'])->assertFailed();
+        $this->assertSame(0, KeySet::query()->count());
+        $this->assertSame([], app(LocalKeystore::class)->read(), 'no root key of a refused set stays in the keystore');
+
+        $longest = 'ks-2026-01-printer';
+        $this->artisan('cards:key-set:create', ['version' => $longest])->assertSuccessful();
+        $card = $this->availableCard($this->restaurant(), $longest);
+        $this->get(str_replace((string) config('giftcard.tap_url'), '/t', $this->chip($card)->readNdefUrl()))->assertOk();
+    }
+
     public function test_the_tamper_check_fails_when_a_key_or_its_record_differs(): void
     {
         $this->artisan('cards:key-set:create', ['version' => 'ks-2026-01'])->assertSuccessful();

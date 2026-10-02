@@ -102,7 +102,9 @@ final class AuthenticationTest extends TestCase
     public function test_user_can_change_password(): void
     {
         $restaurant = $this->restaurant();
-        $user = $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $user = $this->staff($restaurant, RoleSlug::Manager);
+        // Only a browser session changes the password (an access token is refused, see AccountTakeoverAuditTest).
+        $this->actingAs($user, 'web');
 
         $this->putJson('/api/v1/auth/password', [
             'current_password' => 'Password123!',

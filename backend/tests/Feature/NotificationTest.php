@@ -107,4 +107,43 @@ final class NotificationTest extends TestCase
 
         $this->assertSame(1, NotificationLog::query()->where('template_key', 'voucher_expiring')->count());
     }
+
+    public function test_a_reminder_that_failed_for_good_is_tried_again_on_the_next_run(): void
+    {
+        Mail::fake();
+        Carbon::setTestNow('2026-10-01 12:00:00');
+        $restaurant = $this->restaurant();
+        $restaurant->settings->forceFill(['validity_months' => 36])->save();
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => 'soon@example.com']], $this->idempotency())->assertCreated();
+
+        Carbon::setTestNow('2029-09-25 12:00:00');
+        $this->artisan('vouchers:notify-expiring')->assertSuccessful();
+        // SMTP was down for longer than the job's retries.
+        NotificationLog::query()->where('template_key', 'voucher_expiring')->update(['status' => 'failed']);
+
+        Carbon::setTestNow('2029-09-26 12:00:00');
+        $this->artisan('vouchers:notify-expiring')->assertSuccessful();
+        $this->assertSame(1, NotificationLog::query()->where('template_key', 'voucher_expiring')->where('status', '!=', 'failed')->count());
+    }
+
+    public function test_the_guest_e_mail_declares_the_language_it_is_written_in(): void
+    {
+        Mail::fake();
+        foreach (['de-AT' => 'de', 'hr-HR' => 'bs', 'en-GB' => 'en'] as $locale => $language) {
+            $restaurant = $this->restaurant(['locale' => $locale]);
+            $this->actingAsStaff($restaurant, RoleSlug::Manager);
+            $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => "guest-{$language}@example.com"]], $this->idempotency())->assertCreated();
+
+            Mail::assertSent(TemplatedMail::class, function (TemplatedMail $mail) use ($language): bool {
+                if (! $mail->hasTo("guest-{$language}@example.com")) {
+                    return false;
+                }
+                // Screen readers and mail clients pick voice and hyphenation from it.
+                $this->assertStringContainsString('<html lang="'.$language.'">', $mail->render());
+
+                return true;
+            });
+        }
+    }
 }

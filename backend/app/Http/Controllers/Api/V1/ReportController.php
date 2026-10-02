@@ -21,8 +21,9 @@ final class ReportController extends Controller
     /** GET /reports/cash-up?date=Y-m-d (default today): money in and out per method and person, liability at close. */
     public function cashUp(Request $request, CashUpService $cashUp): JsonResponse
     {
-        $date = $request->validate(['date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:today']])['date']
-            ?? Carbon::now($this->timezone())->toDateString();
+        // "Today" is the restaurant's local day: after local midnight the new day is already today, whatever UTC says.
+        $today = Carbon::now($this->timezone())->toDateString();
+        $date = $request->validate(['date' => ['nullable', 'date_format:Y-m-d', 'before_or_equal:'.$today]])['date'] ?? $today;
 
         return response()->json(['data' => $cashUp->day((string) $date)]);
     }
@@ -41,8 +42,7 @@ final class ReportController extends Controller
         return $exporter->stream(
             Payment::query()->with(['voucher', 'receiver', 'transaction.reversal'])
                 ->where('created_at', '>=', $this->dayStart((string) $v['from']))
-                ->where('created_at', '<=', $this->dayEnd((string) $v['to']))
-                ->orderBy('created_at'),
+                ->where('created_at', '<=', $this->dayEnd((string) $v['to'])),
             [
                 'Date' => static fn (Payment $p): string => $p->created_at->timezone($tz)->format('Y-m-d H:i:s'),
                 'Payment ID' => static fn (Payment $p): string => $p->id,

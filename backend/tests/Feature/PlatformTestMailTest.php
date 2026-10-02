@@ -47,7 +47,8 @@ final class PlatformTestMailTest extends TestCase
         $this->assertCount(1, $sent);
         $this->assertSame('ops@example.com', $sent[0]->getOriginalMessage()->getTo()[0]->getAddress());
         Log::shouldHaveReceived('info')->with('Platform test e-mail requested', Mockery::on(
-            static fn (array $c): bool => $c['recipient'] === 'ops@example.com'
+            // No e-mail address in the logs (personal data); the audit trail names the person.
+            static fn (array $c): bool => ! array_key_exists('recipient', $c) && ! array_key_exists('user_email', $c)
                 && $c['recipient_source'] === 'authenticated user'
                 && $c['user_id'] === $admin->id,
         ))->once();

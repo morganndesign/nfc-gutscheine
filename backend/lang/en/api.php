@@ -13,4 +13,5 @@ return [
     'debit_above_daily' => 'The limit per redemption must not exceed the daily limit per voucher.',
     'logo_unreadable' => 'The image could not be read. Upload a PNG or JPEG file.',
     'logo_too_small' => 'The logo must be at least :min pixels wide and high.',
+    'logo_too_large' => 'The logo may be at most :max pixels wide and high.',
 ];

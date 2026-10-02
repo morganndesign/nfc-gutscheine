@@ -49,17 +49,20 @@ final class CardAuthenticator
     }
 
     /**
-     * Single use: a second finish of the same challenge fails, whatever its answer.
+     * Single use, also under concurrency: a second finish of the same challenge fails, whatever its answer.
      *
      * @param  \Closure(array<string, scalar|null>): CardKeys  $keys  The card keys for the challenge's context
      * @return array{0: Ev2Session, 1: array<string, scalar|null>} the session and the context given at begin
      */
     public function finish(\Closure $keys, string $challenge, string $encryptedCardResponse): array
     {
-        $sealed = $this->cache->pull(self::PREFIX.$challenge);
-        if (! is_string($sealed)) {
+        // pull() is GET then DEL: two concurrent finishes could both read the challenge. The atomic add() of a
+        // claim decides which one may use it.
+        $sealed = $this->cache->get(self::PREFIX.$challenge);
+        if (! is_string($sealed) || ! $this->cache->add(self::PREFIX.'used:'.$challenge, true, self::LIFETIME_SECONDS)) {
             throw new CardAuthenticationFailedException;
         }
+        $this->cache->forget(self::PREFIX.$challenge);
 
         /** @var array{uid: string, a: string, b: string, context: array<string, scalar|null>} $state */
         $state = json_decode($this->encrypter->decryptString($sealed), true, 4, JSON_THROW_ON_ERROR);

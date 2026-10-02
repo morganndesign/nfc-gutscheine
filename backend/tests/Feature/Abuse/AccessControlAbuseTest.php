@@ -125,7 +125,7 @@ final class AccessControlAbuseTest extends TestCase
         $owner = $this->staff($restaurant, RoleSlug::Owner);
         $integration = $owner->createToken('POS', ['vouchers.redeem']);
 
-        Sanctum::actingAs($owner, ['*']);
+        $this->actingAs($owner, 'web');
         $this->putJson('/api/v1/auth/password', ['current_password' => 'Password123!', 'password' => 'Another123456', 'password_confirmation' => 'Another123456'])->assertOk();
 
         $this->assertNotNull(PersonalAccessToken::query()->findOrFail($integration->accessToken->getKey())->revoked_at);

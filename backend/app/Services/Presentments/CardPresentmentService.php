@@ -161,7 +161,8 @@ final class CardPresentmentService
                 'medium_id' => $voucher !== null ? $this->mediumOf($card)?->getKey() : null,
                 'card_id' => $card->getKey(),
                 'rf_uid' => $card->uid,
-                'sdm_counter' => $card->sdm_counter,
+                // The counter of the tap this authentication began with; the card may have been read since.
+                'sdm_counter' => is_int($context['counter']) ? $context['counter'] : null,
                 'purpose' => $purpose,
                 'method' => PresentmentMethod::LiveAuth,
                 'level' => PresentmentMethod::LiveAuth->level(),
@@ -180,7 +181,7 @@ final class CardPresentmentService
         $this->events->record(SecurityEventType::CardAuthenticate, $actor, subject: $voucher, data: [
             'card_number' => $card->card_number,
             'purpose' => $purpose->value,
-            'counter' => $card->sdm_counter,
+            'counter' => $presentment->sdm_counter,
             'presentment_id' => $presentment->getKey(),
             'stage' => 'complete',
         ], restaurantId: (string) $restaurant->getKey());

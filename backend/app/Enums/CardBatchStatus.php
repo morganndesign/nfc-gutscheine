@@ -27,9 +27,10 @@ enum CardBatchStatus: string
     public function next(): array
     {
         $next = match ($this) {
-            self::Ordered => [self::InProduction],
-            self::InProduction => [self::Personalized],
-            self::Personalized => [self::QaTesting],
+            // Before acceptance a batch can be stopped (a cancelled order, a leaked key set): its cards fail QA.
+            self::Ordered => [self::InProduction, self::Rejected],
+            self::InProduction => [self::Personalized, self::Rejected],
+            self::Personalized => [self::QaTesting, self::Rejected],
             self::QaTesting => [self::Accepted, self::Rejected],
             self::Accepted => [self::Assigned],
             self::Assigned => [self::Shipped],

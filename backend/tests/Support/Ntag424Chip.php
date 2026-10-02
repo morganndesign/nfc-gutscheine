@@ -230,6 +230,9 @@ final class Ntag424Chip
     /** NXP's signature of the UID (here: under the test stand-in key); null = not a genuine chip. */
     public ?string $originalitySignature = null;
 
+    /** Set to a status word to answer Read_Sig with an error instead (an emulator that does not know it). */
+    public ?string $readSigStatus = null;
+
     private function getVersion(): string
     {
         $frame = $this->versionFrame ?? 0;
@@ -244,6 +247,9 @@ final class Ntag424Chip
 
     private function readSig(): string
     {
+        if ($this->readSigStatus !== null) {
+            return $this->readSigStatus;
+        }
         $this->originalitySignature ??= $this->genuine ? TestOriginality::sign($this->uid) : random_bytes(56);
 
         return $this->originalitySignature."\x91\x00";

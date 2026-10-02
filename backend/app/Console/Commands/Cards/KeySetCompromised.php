@@ -16,7 +16,8 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Incident response for a leaked key set (the keystore or a root key was exposed): every batch of the set that can
- * be is declared compromised (stock cards revoked, guests' cards suspended — the owner replaces them), then the set
+ * be is declared compromised (stock cards revoked, guests' cards suspended — the owner replaces them), every batch not
+ * yet accepted is rejected (its cards fail QA and are never shipped), then the set
  * is retired, so no card of it is verified again — neither a guest tap nor a payment. Irreversible; needs the
  * version typed twice. Afterwards create a new key set (cards:key-set:create) for new batches.
  */
@@ -48,9 +49,11 @@ final class KeySetCompromised extends Command
             $open = CardBatch::query()->withoutGlobalScopes()->where('key_set_id', $set->getKey())->orderBy('batch_code')->get();
             foreach ($open as $batch) {
                 /** @var CardBatch $batch */
-                if ($batch->status->canBecome(CardBatchStatus::Compromised)) {
-                    $batches->changeStatus($batch, CardBatchStatus::Compromised, "key set {$set->version} compromised", $actor);
-                    $declared[] = $batch->batch_code;
+                // Accepted onwards: compromised. Still at the manufacturer or in QA: rejected, its cards never leave.
+                $to = $batch->status->canBecome(CardBatchStatus::Compromised) ? CardBatchStatus::Compromised : CardBatchStatus::Rejected;
+                if ($batch->status->canBecome($to)) {
+                    $batches->changeStatus($batch, $to, "key set {$set->version} compromised", $actor);
+                    $declared[] = $batch->batch_code.($to === CardBatchStatus::Rejected ? ' (rejected)' : '');
                 }
             }
             $set->forceFill(['status' => KeySetStatus::Retired])->save();

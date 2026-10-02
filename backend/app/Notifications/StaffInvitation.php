@@ -15,7 +15,7 @@ use Illuminate\Support\Str;
  * restaurant). All wording lives in lang/<locale>/invitation.php; the button fallback line and the footer come
  * from lang/<locale>.json (Laravel's notification template). The language is chosen by InvitationService via
  * Notification::locale(). Sent from the queue ({@see SendStaffInvitation}); the outcome is recorded
- * in notification_logs.
+ * in notification_logs. Names typed by users are Markdown-escaped ({@see MarkdownText}).
  */
 final class StaffInvitation extends Notification
 {
@@ -48,17 +48,17 @@ final class StaffInvitation extends Notification
             'invite' => 1,
         ]);
 
-        $restaurant = ['restaurant' => $this->restaurantName];
+        $restaurant = ['restaurant' => MarkdownText::escape($this->restaurantName)];
         $body = match (true) {
             $this->forOwner => __('invitation.body_owner', $restaurant),
-            $this->invitedBy !== null => __('invitation.body_staff', $restaurant + ['inviter' => $this->invitedBy]),
+            $this->invitedBy !== null => __('invitation.body_staff', $restaurant + ['inviter' => MarkdownText::escape($this->invitedBy)]),
             default => __('invitation.body_staff_anonymous', $restaurant),
         };
 
         $message = (new MailMessage)
             ->subject(__('invitation.subject'))
             ->greeting(__('invitation.headline'))
-            ->line(__('invitation.greeting', ['name' => self::firstName($notifiable->name)]))
+            ->line(__('invitation.greeting', ['name' => MarkdownText::escape(self::firstName($notifiable->name))]))
             ->line($body)
             ->line(__('invitation.instruction'))
             ->action(__('invitation.action'), $url)

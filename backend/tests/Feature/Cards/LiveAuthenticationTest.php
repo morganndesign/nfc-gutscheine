@@ -9,6 +9,7 @@ use App\Enums\RoleSlug;
 use App\Enums\SecurityEventOutcome;
 use App\Enums\SecurityEventType;
 use App\Models\Card;
+use App\Models\Presentment;
 use App\Models\Restaurant;
 use App\Models\SecurityEvent;
 use App\Services\Cards\CardLifecycle;
@@ -218,5 +219,26 @@ final class LiveAuthenticationTest extends TestCase
         $this->assertStringStartsWith('https://evil.example/t/', $url);
 
         $this->tap($chip, url: $url)->assertForbidden()->assertJsonPath('code', 'SUN_VERIFICATION_FAILED');
+    }
+
+    public function test_the_presentment_records_the_counter_of_its_own_tap(): void
+    {
+        [$card] = $this->activeCardVoucher($this->restaurant);
+        $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
+        $chip = $this->chip($card);
+
+        $url = $chip->readNdefUrl();
+        $challenge = substr($chip->authenticateFirst(), 0, 16);
+        $begun = $this->postJson('/api/v1/presentments/cards', ['purpose' => 'spend', 'tap_url' => $url, 'rf_uid' => $chip->uidHex(), 'challenge' => bin2hex($challenge)])->assertOk();
+        $tapped = (int) $card->refresh()->sdm_counter;
+        $answer = $chip->transceive((string) hex2bin((string) $begun->json('data.command')));
+
+        // The guest's phone reads the card in between: the card's counter moves on, this tap's does not.
+        $this->get(str_replace((string) config('giftcard.tap_url'), '/t', $chip->readNdefUrl()))->assertOk();
+        $this->assertSame($tapped + 1, $card->refresh()->sdm_counter);
+
+        $id = $this->postJson('/api/v1/presentments/cards/'.$begun->json('data.authentication'), ['response' => bin2hex($answer)])->assertCreated()->json('data.id');
+        $this->assertSame($tapped, Presentment::query()->findOrFail($id)->sdm_counter);
+        $this->assertSame($tapped, SecurityEvent::query()->where('type', SecurityEventType::CardAuthenticate->value)->sole()->data['counter']);
     }
 }

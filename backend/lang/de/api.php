@@ -13,4 +13,5 @@ return [
     'debit_above_daily' => 'Das Limit pro Einlösung darf das Tageslimit pro Gutschein nicht übersteigen.',
     'logo_unreadable' => 'Das Bild konnte nicht gelesen werden. Laden Sie eine PNG- oder JPEG-Datei hoch.',
     'logo_too_small' => 'Das Logo muss mindestens :min Pixel breit und hoch sein.',
+    'logo_too_large' => 'Das Logo darf höchstens :max Pixel breit und hoch sein.',
 ];

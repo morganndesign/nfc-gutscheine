@@ -104,7 +104,13 @@ final class CardPersonalizer
     /** @param list<string> $responses the chip's answers (with status words) to the commands of the last round */
     public function next(string $id, array $responses, Actor $actor): PersonalizationStep
     {
-        $sealed = $this->cache->pull(self::PREFIX.$id);
+        // Used once, also when the station relays a round twice at the same time: pull() is GET then DEL, the
+        // atomic add() of a claim decides.
+        $sealed = $this->cache->get(self::PREFIX.$id);
+        if (is_string($sealed) && ! $this->cache->add(self::PREFIX.'used:'.$id, true, self::STEP_SECONDS)) {
+            $sealed = null;
+        }
+        $this->cache->forget(self::PREFIX.$id);
         $state = is_string($sealed) ? json_decode($this->encrypter->decryptString($sealed), true, 8, JSON_THROW_ON_ERROR) : null;
         if (! is_array($state)) {
             return $this->guard($actor, 'expired', null, null, fn (): never => $this->fail('expired'));
@@ -116,7 +122,7 @@ final class CardPersonalizer
 
         return $this->guard($actor, $stage, null, $card, fn (): PersonalizationStep => match ($stage) {
             'auth' => $this->afterAuthStart($card, $state, $responses, $actor),
-            'auth2' => $this->afterAuthAnswer($card, $state, $responses),
+            'auth2' => $this->afterAuthAnswer($card, $state, $responses, $actor),
             'versions' => $this->afterVersions($card, $state, $responses),
             'script' => $this->afterScript($card, $state, $responses, $actor),
             'qa' => $this->afterQa($card, $state, $responses, $actor),
@@ -148,7 +154,13 @@ final class CardPersonalizer
                 default => $sw === '91AF' && strlen($response) === 18,
             };
             if (! $ok) {
-                $this->fail("{$kind}:{$sw}");
+                // A chip that answers these plain commands with an error is no NXP NTAG 424 DNA (a chip that left the
+                // field gives no answer at all): it never gets keys and gives its place in the order back.
+                match ($kind) {
+                    'select', 'version1', 'version2', 'version3' => $this->reject($card, 'not_ntag424', 'not an NXP NTAG 424 DNA', $actor),
+                    'signature' => $this->reject($card, 'not_genuine', 'not a genuine NXP chip', $actor),
+                    default => $this->fail("{$kind}:{$sw}"),
+                };
             }
         }
         $last = $expect[count($responses) - 1] ?? null;
@@ -171,13 +183,17 @@ final class CardPersonalizer
      * @param  array<string, mixed>  $state
      * @param  list<string>  $responses
      */
-    private function afterAuthAnswer(Card $card, array $state, array $responses): PersonalizationStep
+    private function afterAuthAnswer(Card $card, array $state, array $responses, Actor $actor): PersonalizationStep
     {
         $response = $this->single($responses);
-        if (self::statusWord($response) === '91AE' && $state['k0'] === 'factory') {
-            $state['k0'] = 'card';
+        if (self::statusWord($response) === '91AE') {
+            if ($state['k0'] === 'factory') {
+                $state['k0'] = 'card';
 
-            return $this->step($card, $state, 'auth', ['auth1'], [self::authenticateFirst(0)]);
+                return $this->step($card, $state, 'auth', ['auth1'], [self::authenticateFirst(0)]);
+            }
+            // Neither the factory K0 nor ours: another system's chip. It can never be keyed here.
+            $this->reject($card, 'auth:91AE', 'unknown keys', $actor);
         }
         if (self::statusWord($response) !== '9100' || strlen($response) !== 34) {
             $this->fail('auth:'.self::statusWord($response));

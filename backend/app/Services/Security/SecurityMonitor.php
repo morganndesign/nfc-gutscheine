@@ -33,29 +33,51 @@ final class SecurityMonitor
     /** An open alert of the same rule and subject absorbs repeats for this long. */
     private const DEDUP_MINUTES = 60;
 
-    /** @return int events processed */
-    public function run(): int
+    /**
+     * Events stay under watch this long after they were written. `seq` is taken at insert, but a row becomes visible
+     * when its transaction commits: an event can appear behind one already checked. Every run therefore checks
+     * again every event that has not settled ({@see SecurityEventSealer::SETTLE_SECONDS}, the same reasoning);
+     * an alert never counts one event twice.
+     */
+    public const SETTLE_SECONDS = SecurityEventSealer::SETTLE_SECONDS;
+
+    /** @return int events checked */
+    public function run(?Carbon $now = null): int
     {
-        $cursor = (int) DB::table('security_monitor_cursors')->where('name', self::CURSOR)->value('seq');
-        /** @var Collection<int, SecurityEvent> $events */
-        $events = SecurityEvent::query()->where('seq', '>', $cursor)->orderBy('seq')->limit(self::BATCH)->get();
+        // Every event up to the cursor has been checked and has settled.
+        $settled = (int) DB::table('security_monitor_cursors')->where('name', self::CURSOR)->value('seq');
+        $cutoff = ($now ?? Carbon::now())->copy()->subSeconds(self::SETTLE_SECONDS);
+        $after = $settled;
+        $advancing = true;
+        $checked = 0;
 
-        foreach ($events as $event) {
-            foreach ($this->rules() as $rule) {
-                if (! ($rule['match'])($event)) {
-                    continue;
+        do {
+            /** @var Collection<int, SecurityEvent> $events */
+            $events = SecurityEvent::query()->where('seq', '>', $after)->orderBy('seq')->limit(self::BATCH)->get();
+            foreach ($events as $event) {
+                foreach ($this->rules() as $rule) {
+                    if (! ($rule['match'])($event)) {
+                        continue;
+                    }
+                    $subject = ($rule['subject'])($event);
+                    if (isset($rule['threshold']) && $this->count($rule, $event, $subject) < $rule['threshold']) {
+                        continue;
+                    }
+                    $this->raise($rule['name'], $rule['severity'], $event, $subject);
                 }
-                $subject = ($rule['subject'])($event);
-                if (isset($rule['threshold']) && $this->count($rule, $event, $subject) < $rule['threshold']) {
-                    continue;
+                // The cursor stops at the first event that has not settled: anything behind it may still appear.
+                $advancing = $advancing && $event->occurred_at->lessThanOrEqualTo($cutoff);
+                if ($advancing) {
+                    $settled = $event->seq;
                 }
-                $this->raise($rule['name'], $rule['severity'], $event, $subject);
+                $after = $event->seq;
             }
-            $cursor = $event->seq;
-        }
-        DB::table('security_monitor_cursors')->updateOrInsert(['name' => self::CURSOR], ['seq' => $cursor, 'updated_at' => Carbon::now()]);
+            $checked += $events->count();
+        } while ($events->count() === self::BATCH);
 
-        return $events->count();
+        DB::table('security_monitor_cursors')->updateOrInsert(['name' => self::CURSOR], ['seq' => $settled, 'updated_at' => Carbon::now()]);
+
+        return $checked;
     }
 
     /**
@@ -86,7 +108,8 @@ final class SecurityMonitor
             // A chip that is not a genuine NXP NTAG 424 DNA at the station (signature, product or UID do not fit).
             ['name' => 'card.counterfeit', 'severity' => 'critical', 'subject' => static fn (SecurityEvent $e): ?string => $e->data['batch_code'] ?? $card($e),
                 'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:not_')
-                    || $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:uid_mismatch')],
+                    || $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:uid_mismatch')
+                    || $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:version_length')],
             ['name' => 'card.unknown_keys', 'severity' => 'high', 'subject' => $card,
                 'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardPersonalize, 'CARD_PERSONALIZATION_FAILED:auth:91AE')],
             // An app token used from another phone: the token was copied.
@@ -139,14 +162,24 @@ final class SecurityMonitor
 
     private function raise(string $rule, string $severity, SecurityEvent $event, ?string $subject): void
     {
+        // Checked before (it has not settled yet), or inside the range of an alert of this rule and subject: that
+        // alert already stands for it, never a second one.
+        $counted = SecurityAlert::query()->where('rule', $rule)->where('subject', $subject)
+            ->where('first_event_seq', '<=', $event->seq)->where('last_event_seq', '>=', $event->seq)
+            ->exists();
+        if ($counted) {
+            return;
+        }
+
         /** @var SecurityAlert|null $open */
         $open = SecurityAlert::query()->where('rule', $rule)->where('subject', $subject)->where('status', 'open')
             ->where('last_seen_at', '>=', $event->occurred_at->copy()->subMinutes(self::DEDUP_MINUTES))
             ->first();
         if ($open !== null) {
-            if ($open->last_event_seq < $event->seq) {
-                $open->forceFill(['occurrences' => $open->occurrences + 1, 'last_event_seq' => $event->seq, 'last_seen_at' => $event->occurred_at])->save();
-            }
+            // An event that committed late can lie before the alert's first one.
+            $open->forceFill(['occurrences' => $open->occurrences + 1] + ($event->seq > $open->last_event_seq
+                ? ['last_event_seq' => $event->seq, 'last_seen_at' => $event->occurred_at]
+                : ['first_event_seq' => $event->seq, 'first_seen_at' => $event->occurred_at]))->save();
 
             return;
         }

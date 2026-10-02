@@ -380,7 +380,8 @@ final class VoucherService
         $matches = static fn (VoucherTransaction $tx): bool => $tx->type === TransactionType::Reload
             && $tx->voucher_id === $voucher->getKey()
             && $tx->amount === $amount
-            && $tx->user_id === $actor->userId();
+            && $tx->user_id === $actor->userId()
+            && $tx->payment?->method === $payment->method;
 
         try {
             return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, fn (): TransactionResult => $this->bookReload($actor, $voucher, $amount, $payment, $idempotencyKey, $note, $presentmentId, $matches));
@@ -473,6 +474,10 @@ final class VoucherService
             return DB::transaction(function () use ($actor, $transaction, $reason): TransactionResult {
                 $voucher = $this->lock($transaction->voucher()->firstOrFail());
 
+                // A refunded voucher is closed for good: a correction would leave a balance on it nobody can spend or pay back.
+                if ($voucher->status === VoucherStatus::Refunded) {
+                    throw new TransactionNotReversibleException('This voucher is closed.', ['reason' => 'voucher_closed']);
+                }
                 if ($transaction->reversal()->exists()) {
                     throw new TransactionNotReversibleException('This transaction has already been reversed.');
                 }
@@ -561,9 +566,11 @@ final class VoucherService
     {
         $this->assertOwnedByTenant($voucher);
 
+        // A cancellation pays back the sale's own way, so only a refund's payout method is the caller's choice.
         $matches = static fn (VoucherTransaction $tx): bool => $tx->type === TransactionType::Refund
             && $tx->voucher_id === $voucher->getKey()
-            && $tx->user_id === $actor->userId();
+            && $tx->user_id === $actor->userId()
+            && ($payout === null || $tx->payment?->method === $payout->method);
 
         return $this->idempotent($voucher->restaurant_id, $idempotencyKey, $matches, function () use ($actor, $voucher, $payout, $reason, $idempotencyKey, $matches, $cancel, $reference): TransactionResult {
             $locked = $this->lock($voucher);
@@ -734,7 +741,10 @@ final class VoucherService
         });
     }
 
-    /** Back to active, or to expired when the voucher's expiry passed while it was blocked. */
+    /**
+     * Back to active, or to expired when the voucher was expired before it was blocked (`expired_at` is kept while
+     * blocked; only reinstating, an owner's decision, clears it) or its expiry passed while it was blocked.
+     */
     public function unblock(Actor $actor, Voucher $voucher): Voucher
     {
         return $this->mutate($voucher, function (Voucher $locked) use ($actor): void {
@@ -742,9 +752,9 @@ final class VoucherService
                 throw new InvalidVoucherStateException('Only blocked vouchers can be unblocked.', ['status' => $locked->status->value]);
             }
 
-            $expired = $locked->isExpiredByDate();
+            $expired = $locked->expired_at !== null || $locked->isExpiredByDate();
             $locked->status = $expired ? VoucherStatus::Expired : VoucherStatus::Active;
-            $locked->expired_at = $expired ? Carbon::now() : $locked->expired_at;
+            $locked->expired_at = $expired ? ($locked->expired_at ?? Carbon::now()) : null;
             $locked->blocked_at = null;
             $locked->blocked_reason = null;
             $locked->save();
@@ -864,7 +874,11 @@ final class VoucherService
 
     private function replaySale(Actor $actor, VoucherTransaction $existing, IssueVoucherData $data): SaleResult
     {
-        if ($existing->type !== TransactionType::Issue || $existing->amount !== $data->value || $existing->user_id !== $actor->userId()) {
+        // A retry repeats the sale exactly: same seller, value, form and payment method. Anything else reusing the
+        // key is a different sale and must not be answered "sold" (nor revoke the first sale's QR).
+        if ($existing->type !== TransactionType::Issue || $existing->amount !== $data->value || $existing->user_id !== $actor->userId()
+            || $existing->payment?->method !== $data->payment->method
+            || $existing->voucher->kind !== ($data->isCard() ? VoucherKind::Card : VoucherKind::Digital)) {
             throw new IdempotencyConflictException;
         }
 

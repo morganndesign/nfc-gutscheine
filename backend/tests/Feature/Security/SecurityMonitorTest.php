@@ -5,11 +5,17 @@ declare(strict_types=1);
 namespace Tests\Feature\Security;
 
 use App\Enums\RoleSlug;
+use App\Enums\SecurityEventType;
+use App\Exceptions\Domain\CardAuthenticationFailedException;
 use App\Models\Restaurant;
 use App\Models\SecurityAlert;
 use App\Models\SystemSetting;
 use App\Models\User;
+use App\Services\Security\SecurityEventRecorder;
+use App\Services\Security\SecurityMonitor;
+use App\Support\Actor;
 use Illuminate\Mail\Events\MessageSent;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\Mime\Email;
@@ -72,6 +78,36 @@ final class SecurityMonitorTest extends TestCase
         $this->assertSame(1, $this->rawMails());
         $this->assertSame('ops@giftcardpro.test', $this->sent[0]->getTo()[0]->getAddress());
         $this->assertStringContainsString('critical: card.clone_attempt', (string) $this->sent[0]->getSubject());
+    }
+
+    public function test_an_event_that_commits_after_a_later_one_was_checked_still_raises_its_alert(): void
+    {
+        // seq is taken at insert, the row becomes visible at commit: event 1 (a clone attempt) commits after event 2
+        // was already checked by a monitor run.
+        $recorder = app(SecurityEventRecorder::class);
+        DB::beginTransaction();
+        $clone = $recorder->refused(SecurityEventType::CardAuthenticate, Actor::system(), new CardAuthenticationFailedException('', ['reason' => 'rf_uid_mismatch']),
+            data: ['card_number' => 'B-2026-0001-0001', 'stage' => 'begin'], restaurantId: $this->restaurant->id)->getAttributes();
+        $later = $recorder->record(SecurityEventType::CardTap, Actor::system(), data: ['card_number' => 'B-2026-0001-0002', 'counter' => 2],
+            restaurantId: $this->restaurant->id)->getAttributes();
+        DB::rollBack();
+        // MySQL does not hand a rolled-back auto-increment back; only the order matters.
+        $this->assertSame($clone['seq'] + 1, $later['seq']);
+
+        DB::table('security_events')->insert($later);
+        $this->monitor();
+        DB::table('security_events')->insert($clone);
+        $this->monitor();
+
+        $this->assertSame('card:B-2026-0001-0001', SecurityAlert::query()->where('rule', 'card.clone_attempt')->sole()->subject);
+
+        // Checking the same events again raises nothing twice; once they have settled they are not checked again.
+        $this->monitor();
+        $this->assertSame(1, SecurityAlert::query()->sole()->occurrences);
+        $this->travel(SecurityMonitor::SETTLE_SECONDS + 1)->seconds();
+        $this->monitor();
+        $this->assertSame($later['seq'], (int) DB::table('security_monitor_cursors')->where('name', 'fraud')->value('seq'));
+        $this->assertSame(1, $this->rawMails());
     }
 
     public function test_a_replayed_card_url_is_flagged_after_the_third_replay(): void

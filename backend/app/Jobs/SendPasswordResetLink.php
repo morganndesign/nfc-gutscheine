@@ -11,17 +11,22 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Traits\Localizable;
 
 /**
  * "Forgot password", sent from the queue (audit F3): the HTTP request answers at once with the same text for
  * every address (S5), and a slow mail server never blocks a PHP worker.
  *
  * Accounts that never accepted their invitation get nothing: the invitation stays the only way in (S6).
+ *
+ * Written in the user's own language (de, en, bs; wording in lang/<locale>.json): the worker's application language
+ * is the server default, not the user's.
  */
 final class SendPasswordResetLink implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
+    use Localizable;
     use Queueable;
 
     public int $tries = 3;
@@ -40,6 +45,8 @@ final class SendPasswordResetLink implements ShouldQueue
             return;
         }
 
-        Password::broker('users')->sendResetLink(['email' => $this->email]);
+        $locale = in_array($user->locale, ['de', 'en', 'bs'], true) ? $user->locale : (string) config('giftcard.mail_locale');
+
+        $this->withLocale($locale, fn () => Password::broker('users')->sendResetLink(['email' => $this->email]));
     }
 }

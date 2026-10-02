@@ -123,6 +123,7 @@ final class VoucherNotificationService
                 $restaurant->name,
                 $restaurant->settings->brand_color,
                 $restaurant->settings->receipt_footer,
+                $language,
             ));
             $log->update(['status' => 'sent', 'sent_at' => Carbon::now()]);
         } catch (Throwable $e) {

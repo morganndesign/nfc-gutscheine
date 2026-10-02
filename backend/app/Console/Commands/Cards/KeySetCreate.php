@@ -7,6 +7,7 @@ namespace App\Console\Commands\Cards;
 use App\Crypto\CryptoProvider;
 use App\Crypto\KeyReference;
 use App\Crypto\Local\LocalKeystore;
+use App\Crypto\Ntag424\CardKeys;
 use App\Enums\KeySetStatus;
 use App\Models\KeySet;
 use Illuminate\Console\Command;
@@ -28,8 +29,9 @@ final class KeySetCreate extends Command
     public function handle(LocalKeystore $keystore, CryptoProvider $provider): int
     {
         $version = (string) $this->argument('version');
-        if (preg_match('/^[a-z0-9][a-z0-9._-]{0,31}$/', $version) !== 1) {
-            $this->error('The version is 1–32 characters of a–z, 0–9, dot, dash, underscore.');
+        // K1 is diversified from the version: a longer one could be created but no card of it could ever be keyed.
+        if (preg_match('/^[a-z0-9][a-z0-9._-]{0,'.(CardKeys::MAX_VERSION_LENGTH - 1).'}$/', $version) !== 1) {
+            $this->error('The version is 1–'.CardKeys::MAX_VERSION_LENGTH.' characters of a–z, 0–9, dot, dash, underscore.');
 
             return self::FAILURE;
         }

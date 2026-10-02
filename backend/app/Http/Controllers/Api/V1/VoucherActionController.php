@@ -160,9 +160,9 @@ final class VoucherActionController extends Controller
         ));
     }
 
-    public function history(Voucher $voucher, VoucherHistoryService $history): JsonResponse
+    public function history(Request $request, Voucher $voucher, VoucherHistoryService $history): JsonResponse
     {
-        return response()->json(['data' => $history->timeline($voucher)]);
+        return response()->json(['data' => $history->timeline($voucher, $this->user($request))]);
     }
 
     private function moneyResponse(Request $request, TransactionResult $result): JsonResponse

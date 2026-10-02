@@ -23,11 +23,28 @@ final class LogoService
 
     private const MIN_SIDE = 32;
 
+    /**
+     * Largest source accepted, checked from the file header before decoding: GD holds 4 bytes per pixel, so a few
+     * hundred kilobytes of PNG declaring 12000 × 12000 pixels would need over half a gigabyte (decompression bomb).
+     * 4096 × 4096 (~64 MB decoded) still fits a PHP-FPM worker with its default 128 MB.
+     */
+    private const MAX_SOURCE_SIDE = 4096;
+
     public function __construct(private readonly AuditLogger $audit) {}
 
     public function store(Actor $actor, Restaurant $restaurant, UploadedFile $file): RestaurantLogo
     {
-        $source = @imagecreatefromstring((string) file_get_contents($file->getRealPath()));
+        $bytes = (string) file_get_contents($file->getRealPath());
+        $info = @getimagesizefromstring($bytes);
+        if ($info === false || ! in_array($info[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG], true)) {
+            throw ValidationException::withMessages(['logo' => __('api.logo_unreadable')]);
+        }
+        if (max($info[0], $info[1]) > self::MAX_SOURCE_SIDE) {
+            throw ValidationException::withMessages(['logo' => __('api.logo_too_large', ['max' => self::MAX_SOURCE_SIDE])]);
+        }
+
+        $source = @imagecreatefromstring($bytes);
+        unset($bytes);
         if (! $source instanceof GdImage) {
             throw ValidationException::withMessages(['logo' => __('api.logo_unreadable')]);
         }

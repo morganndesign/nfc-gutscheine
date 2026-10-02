@@ -37,7 +37,9 @@ final class NotifyExpiringVouchers extends Command
                 $q->selectRaw('1')
                     ->from((new NotificationLog)->getTable())
                     ->whereColumn('notification_logs.voucher_id', 'vouchers.id')
-                    ->where('notification_logs.template_key', NotificationTemplate::KEY_VOUCHER_EXPIRING);
+                    ->where('notification_logs.template_key', NotificationTemplate::KEY_VOUCHER_EXPIRING)
+                    // A reminder whose delivery failed for good is tried again on the next run.
+                    ->where('notification_logs.status', '!=', 'failed');
             })
             ->select('id')
             ->chunkById(500, static function ($vouchers) use (&$queued): void {

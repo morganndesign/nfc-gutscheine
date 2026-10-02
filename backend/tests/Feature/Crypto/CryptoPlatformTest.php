@@ -15,6 +15,8 @@ use App\Crypto\Ntag424\Ev2FirstAuthentication;
 use App\Crypto\Ntag424\SunVerifier;
 use App\Crypto\Primitives\Aes;
 use App\Exceptions\Domain\CardAuthenticationFailedException;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
 use Illuminate\Support\Carbon;
 use Symfony\Component\Finder\Finder;
 use Tests\TestCase;
@@ -147,6 +149,31 @@ final class CryptoPlatformTest extends TestCase
         Carbon::setTestNow(Carbon::now()->addSeconds(CardAuthenticator::LIFETIME_SECONDS + 1));
         $this->expectException(CardAuthenticationFailedException::class);
         $authenticator->finish(static fn (): CardKeys => $keys, $late['challenge'], $cardAnswer($late['response']));
+    }
+
+    public function test_two_concurrent_finishes_of_one_challenge_yield_one_session(): void
+    {
+        $keys = $this->keySet();
+        $uid = (string) hex2bin('04DE5F1EACC040');
+        $cardKey = $keys->challengeKey($uid);
+        // Both requests read the challenge before either removes it (GET, GET, DEL, DEL): the removal is too late.
+        $store = new class extends ArrayStore
+        {
+            public function forget($key): bool
+            {
+                return true;
+            }
+        };
+        $authenticator = new CardAuthenticator(new Repository($store), $this->app->make('encrypter'));
+
+        $rndB = random_bytes(16);
+        $begun = $authenticator->begin($keys, $uid, Aes::encryptCbc($cardKey, Aes::ZERO_IV, $rndB));
+        $plain = Aes::decryptCbc($cardKey, Aes::ZERO_IV, $begun['response']);
+        $answer = Aes::encryptCbc($cardKey, Aes::ZERO_IV, "\x01\x02\x03\x04".Ev2FirstAuthentication::rotate(substr($plain, 0, 16)).str_repeat("\0", 12));
+
+        $authenticator->finish(static fn (): CardKeys => $keys, $begun['challenge'], $answer);
+        $this->expectException(CardAuthenticationFailedException::class);
+        $authenticator->finish(static fn (): CardKeys => $keys, $begun['challenge'], $answer);
     }
 
     public function test_no_key_is_configured_in_the_environment_and_only_the_crypto_module_touches_ciphers(): void

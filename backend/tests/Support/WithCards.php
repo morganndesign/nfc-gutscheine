@@ -118,9 +118,9 @@ trait WithCards
     }
 
     /** One card in the restaurant's stock (`available`). */
-    protected function availableCard(Restaurant $restaurant): Card
+    protected function availableCard(Restaurant $restaurant, string $keySet = 'ks-2026-01'): Card
     {
-        [$batch, $cards] = $this->deliveredCards($restaurant);
+        [$batch, $cards] = $this->deliveredCards($restaurant, 1, $keySet);
         app(CardBatchLifecycle::class)->receive($batch, 1, $cards[0], Actor::system());
 
         return $cards[0]->refresh();

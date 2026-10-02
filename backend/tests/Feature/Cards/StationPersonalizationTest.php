@@ -23,6 +23,9 @@ use App\Models\User;
 use App\Services\Cards\CardBatchLifecycle;
 use App\Support\Actor;
 use Closure;
+use Illuminate\Cache\ArrayStore;
+use Illuminate\Cache\Repository;
+use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\Ntag424Chip;
@@ -206,11 +209,50 @@ final class StationPersonalizationTest extends TestCase
         $reflection->setValue($foreign, array_fill(0, 5, random_bytes(16)));
 
         $this->station($foreign, $batch)->assertStatus(422)
-            ->assertJsonPath('code', 'CARD_PERSONALIZATION_FAILED');
+            ->assertJsonPath('code', 'CARD_PERSONALIZATION_FAILED')
+            ->assertJsonPath('context.reason', 'auth:91AE');
 
-        $this->assertSame(CardState::Manufactured, Card::query()->withoutGlobalScopes()->where('uid', $foreign->uid)->firstOrFail()->state);
         $refusal = SecurityEvent::query()->where('type', SecurityEventType::CardPersonalize->value)->where('outcome', SecurityEventOutcome::Refused->value)->firstOrFail();
         $this->assertSame('CARD_PERSONALIZATION_FAILED:auth:91AE', $refusal->reason);
+        $this->artisan('giftcard:monitor-security-events')->assertSuccessful();
+        $this->assertSame(1, SecurityAlert::query()->where('rule', 'card.unknown_keys')->count());
+    }
+
+    public function test_a_chip_that_can_never_be_keyed_gives_its_place_in_the_order_back(): void
+    {
+        // docs/NFC.md A4 then A7: a chip of another system held to the station must not take a genuine chip's place.
+        $batch = $this->stationBatch(1);
+        $this->actingAsStation();
+        $foreign = Ntag424Chip::factory();
+        (new \ReflectionProperty($foreign, 'keys'))->setValue($foreign, array_fill(0, 5, random_bytes(16)));
+        $this->station($foreign, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'auth:91AE');
+        $this->assertSame(CardState::QaFailed, Card::query()->withoutGlobalScopes()->where('uid', $foreign->uid)->sole()->state);
+
+        $this->station(Ntag424Chip::factory(), $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
+    }
+
+    public function test_a_chip_that_claims_to_be_an_ntag_424_dna_but_cannot_prove_it_is_counterfeit(): void
+    {
+        $batch = $this->stationBatch(1);
+        $this->actingAsStation();
+
+        // An emulator with the right GetVersion answer that does not know Read_Sig.
+        $noSignature = Ntag424Chip::factory();
+        $noSignature->readSigStatus = "\x91\x1C";
+        $this->station($noSignature, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_genuine');
+
+        // One that answers GetVersion with frames of the wrong length.
+        $shortVersion = Ntag424Chip::factory();
+        $shortVersion->hardwareVersion = "\x04\x04\x02\x30\x00\x11";
+        $this->station($shortVersion, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'version_length');
+
+        foreach ([$noSignature, $shortVersion] as $chip) {
+            $this->assertSame(CardState::QaFailed, Card::query()->withoutGlobalScopes()->where('uid', $chip->uid)->sole()->state);
+            $this->assertSame(0, $chip->keyVersion(0));
+        }
+        $this->artisan('giftcard:monitor-security-events')->assertSuccessful();
+        $this->assertSame(2, SecurityAlert::query()->where('rule', 'card.counterfeit')->sole()->occurrences, 'both chips count in the batch\'s alert');
+        $this->station(Ntag424Chip::factory(), $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
     }
 
     public function test_a_chip_that_is_not_a_genuine_nxp_chip_is_never_keyed(): void
@@ -283,6 +325,29 @@ final class StationPersonalizationTest extends TestCase
         $this->postJson('/api/v1/admin/personalizations/'.$session->json('data.personalization'), ['responses' => $versions])
             ->assertStatus(422);
         $this->assertSame('CARD_PERSONALIZATION_FAILED:expired', SecurityEvent::query()->where('outcome', 'refused')->orderByDesc('seq')->value('reason'));
+    }
+
+    public function test_a_round_relayed_twice_at_the_same_time_is_used_once(): void
+    {
+        // Both requests read the round before either removes it (GET, GET, DEL, DEL).
+        $store = new class extends ArrayStore
+        {
+            public function forget($key): bool
+            {
+                return true;
+            }
+        };
+        $this->app->instance(CacheRepository::class, new Repository($store));
+        $batch = $this->stationBatch();
+        $this->actingAsStation();
+        $chip = Ntag424Chip::factory();
+
+        $begun = $this->postJson("/api/v1/admin/card-batches/{$batch->id}/personalizations", ['rf_uid' => $chip->uidHex()])->assertOk();
+        $answers = array_map(fn (string $c): string => bin2hex($chip->transceive((string) hex2bin($c))), $begun->json('data.commands'));
+        $round = '/api/v1/admin/personalizations/'.$begun->json('data.personalization');
+
+        $this->postJson($round, ['responses' => $answers])->assertOk();
+        $this->postJson($round, ['responses' => $answers])->assertStatus(422)->assertJsonPath('context.reason', 'expired');
     }
 
     public function test_only_batches_in_production_take_chips(): void

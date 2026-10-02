@@ -92,6 +92,9 @@ final class UserService
                 if ($user->is($actor->user) && $role->getKey() !== $user->role_id) {
                     throw new RoleAssignmentException('You cannot change your own role.');
                 }
+                if ($previousRole === RoleSlug::Owner && $role->slug !== RoleSlug::Owner && $user->isActive()) {
+                    $this->assertAnotherOwnerRemains($user);
+                }
                 $user->role_id = $role->getKey();
             }
 
@@ -129,11 +132,11 @@ final class UserService
         if ($user->is($actor->user)) {
             throw new RoleAssignmentException('You cannot deactivate your own account.');
         }
-        if ($user->roleSlug() === RoleSlug::Owner && $this->activeOwnerCount($user) <= 1) {
-            throw new LastOwnerException;
-        }
 
         return DB::transaction(function () use ($actor, $user): User {
+            if ($user->roleSlug() === RoleSlug::Owner) {
+                $this->assertAnotherOwnerRemains($user);
+            }
             $user->forceFill(['status' => UserStatus::Inactive])->save();
             $this->terminateAccess($user, $actor);
             $this->audit->log('user.deactivated', $actor, $user, ['status' => UserStatus::Active], ['status' => UserStatus::Inactive]);
@@ -207,13 +210,22 @@ final class UserService
         $user->forceFill(['remember_token' => Str::random(60)])->save();
     }
 
-    private function activeOwnerCount(User $user): int
+    /**
+     * A restaurant always keeps an active owner. The owner rows are locked, so two owners deactivating or demoting
+     * each other at the same moment are serialised: the second one sees the first change and is refused.
+     */
+    private function assertAnotherOwnerRemains(User $owner): void
     {
-        return User::query()
-            ->where('restaurant_id', $user->restaurant_id)
+        $active = User::query()
+            ->where('restaurant_id', $owner->restaurant_id)
             ->where('status', UserStatus::Active->value)
             ->whereHas('role', static fn ($q) => $q->where('slug', RoleSlug::Owner->value))
-            ->count();
+            ->lockForUpdate()
+            ->pluck('id');
+
+        if ($active->reject(static fn (string $id): bool => $id === $owner->getKey())->isEmpty()) {
+            throw new LastOwnerException;
+        }
     }
 
     private function assertAssignable(Actor $actor, Role $role): void
