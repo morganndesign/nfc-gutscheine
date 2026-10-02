@@ -62,7 +62,7 @@ final class VoucherResource extends JsonResource
             'refundable' => $this->when(
                 $voucher->relationLoaded('payments') && $request->user() instanceof User && $request->user()->hasPermission(Permission::VouchersRefund),
                 static fn (): int => in_array($voucher->status, [VoucherStatus::Active, VoucherStatus::Blocked, VoucherStatus::Expired], true)
-                    ? min($voucher->balance, app(VoucherService::class)->paidIn($voucher))
+                    ? app(VoucherService::class)->refundable($voucher)
                     : 0,
             ),
             'last_used_at' => $voucher->last_used_at?->toIso8601String(),

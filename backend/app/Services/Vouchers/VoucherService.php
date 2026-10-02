@@ -589,7 +589,7 @@ final class VoucherService
                 $payout = $this->assertCancellable($actor, $locked, $reference);
                 $paidOut = $payout === null ? 0 : $locked->balance;
             } else {
-                $paidOut = min($locked->balance, $this->paidIn($locked));
+                $paidOut = $this->refundable($locked);
                 if ($paidOut === 0) {
                     throw new VoucherNotRefundableException;
                 }
@@ -685,17 +685,37 @@ final class VoucherService
         return new PaymentData($payment->method, $payment->method->requiresReference() ? $reference : null);
     }
 
-    /** What may still be paid back: money received for the voucher (not complimentary, not reversed) minus payouts. */
-    public function paidIn(Voucher $voucher): int
+    /**
+     * What a refund may pay back: the paid-in money still on the voucher. Spending uses complimentary value first
+     * (the guest's favour), but only value that was there at the time: complimentary value added after the paid
+     * money was spent is never paid out. Reversed entries count as never booked; a refund closes the voucher.
+     */
+    public function refundable(Voucher $voucher): int
     {
-        $received = (int) VoucherTransaction::query()->where('voucher_id', $voucher->getKey())
-            ->ofType(TransactionType::Issue, TransactionType::Reload)
+        $paid = 0;
+        $free = 0;
+        $entries = VoucherTransaction::query()->where('voucher_id', $voucher->getKey())
+            ->ofType(TransactionType::Issue, TransactionType::Reload, TransactionType::Redemption, TransactionType::Refund)
             ->notReversed()
-            ->whereHas('payment', static fn ($p) => $p->where('method', '!=', PaymentMethod::Complimentary->value))
-            ->sum('amount');
-        $paidBack = (int) Payment::query()->where('voucher_id', $voucher->getKey())->where('direction', PaymentDirection::Out->value)->sum('amount');
+            ->with('payment')
+            ->orderBy('chain_seq')
+            ->get();
+        foreach ($entries as $tx) {
+            /** @var VoucherTransaction $tx */
+            if ($tx->type === TransactionType::Refund) {
+                [$paid, $free] = [0, 0];
+            } elseif ($tx->type === TransactionType::Redemption) {
+                $fromFree = min($free, -$tx->amount);
+                $free -= $fromFree;
+                $paid = max(0, $paid - (-$tx->amount - $fromFree));
+            } elseif ($tx->payment?->method === PaymentMethod::Complimentary) {
+                $free += $tx->amount;
+            } else {
+                $paid += $tx->amount;
+            }
+        }
 
-        return max(0, $received - $paidBack);
+        return min($voucher->balance, $paid);
     }
 
     // ---------------------------------------------------------------------

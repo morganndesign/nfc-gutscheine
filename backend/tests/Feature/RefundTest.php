@@ -106,6 +106,29 @@ final class RefundTest extends TestCase
         $this->assertLedgerConsistent($gift->voucher);
     }
 
+    public function test_complimentary_value_given_after_the_paid_money_was_spent_is_never_paid_out(): void
+    {
+        $sale = $this->sell($this->restaurant, 5000);
+        $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
+        $redemption = $this->redeemWithQr($sale->voucher, $sale->printable->payload, 5000)->assertCreated()->json('data.transaction.id');
+        $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
+
+        // The 5000 paid were eaten; a goodwill top-up afterwards is food, not cash.
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 5000, 'payment' => ['method' => 'complimentary', 'reason' => 'Sorry for the wait']], $this->idempotency())->assertCreated();
+        $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 0);
+        $this->refund($sale->voucher)->assertStatus(422)->assertJsonPath('code', 'VOUCHER_NOT_REFUNDABLE');
+
+        // Money paid in later is refundable, and so is paid money whose spending was reversed.
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 1000, 'payment' => ['method' => 'cash']], $this->idempotency())->assertCreated();
+        $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 1000);
+        $this->postJson("/api/v1/transactions/{$redemption}/reverse", ['reason' => 'Booked on the wrong voucher'])->assertCreated();
+        $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 6000);
+        $this->refund($sale->voucher)->assertCreated()
+            ->assertJsonPath('data.transaction.amount', -11000)
+            ->assertJsonPath('data.transaction.payment.amount', 6000);
+        $this->assertLedgerConsistent($sale->voucher);
+    }
+
     public function test_refunds_are_the_owners_and_need_proof_for_non_cash(): void
     {
         $voucher = $this->issueVoucher($this->restaurant, 5000);
