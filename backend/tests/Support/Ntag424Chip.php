@@ -252,7 +252,8 @@ final class Ntag424Chip
         }
         $this->originalitySignature ??= $this->genuine ? TestOriginality::sign($this->uid) : random_bytes(56);
 
-        return $this->originalitySignature."\x91\x00";
+        // A real NTAG 424 DNA answers Read_Sig with 91 90, not 91 00 (seen on the first real cards).
+        return $this->originalitySignature."\x91\x90";
     }
 
     private function authenticatePart1(string $data): string

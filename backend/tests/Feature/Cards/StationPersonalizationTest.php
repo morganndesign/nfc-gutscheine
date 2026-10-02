@@ -97,7 +97,7 @@ final class StationPersonalizationTest extends TestCase
                 }
                 $answer = $chip->transceive((string) hex2bin($command));
                 $answers[] = bin2hex($answer);
-                if (! in_array(strtoupper(bin2hex(substr($answer, -2))), ['9000', '9100', '91AF'], true)) {
+                if (! in_array(strtoupper(bin2hex(substr($answer, -2))), ['9000', '9100', '91AF', '9190'], true)) {
                     break;
                 }
             }
@@ -265,12 +265,44 @@ final class StationPersonalizationTest extends TestCase
         $card = Card::query()->withoutGlobalScopes()->where('uid', $fake->uid)->firstOrFail();
         $this->assertSame(CardState::QaFailed, $card->state);
         $this->assertSame(0, $fake->keyVersion(0), 'no key was changed');
-        $this->station($fake, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'qa_failed');
+        // Held again, the check runs again and refuses it again; it still gets no key.
+        $this->station($fake, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_genuine');
+        $this->assertSame(0, $fake->keyVersion(0));
 
-        // Its place in the order goes to a genuine chip.
+        // Its place in the order goes to a genuine chip; after that the counterfeit is not even checked again.
         $genuine = Ntag424Chip::factory();
         $this->station($genuine, $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
         $this->assertNotNull(Card::query()->withoutGlobalScopes()->where('uid', $genuine->uid)->value('originality_signature'));
+        $this->station($fake, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'qa_failed');
+    }
+
+    public function test_a_genuine_chip_refused_by_a_wrong_chip_check_is_checked_again_and_keyed(): void
+    {
+        $batch = $this->stationBatch(1);
+        $this->actingAsStation();
+        // The first real cards were refused by the station (it stopped at Read_Sig's 91 90): their chips got no key.
+        $chip = Ntag424Chip::factory();
+        $answer = $chip->hardwareVersion;
+        $chip->hardwareVersion = "\x04\x04\x02\x31\x00\x11\x05";
+        $this->station($chip, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_ntag424');
+        $this->assertSame(0, $chip->keyVersion(0));
+
+        $chip->hardwareVersion = $answer;
+        $this->station($chip, $batch)->assertOk()->assertJsonPath('data.card.state', 'qa_passed');
+        $card = Card::query()->withoutGlobalScopes()->where('uid', $chip->uid)->sole();
+        $this->assertSame(CardState::QaPassed, $card->state);
+        $this->assertSame(['manufactured', 'qa_failed', 'manufactured', 'personalized', 'qa_passed'],
+            CardEvent::query()->withoutGlobalScopes()->where('card_id', $card->id)->orderBy('created_at')->orderBy('id')->pluck('to_state')->map(fn (CardState $s): string => $s->value)->all());
+    }
+
+    public function test_a_chip_refused_for_unknown_keys_is_not_checked_again(): void
+    {
+        $batch = $this->stationBatch(2);
+        $this->actingAsStation();
+        $foreign = Ntag424Chip::factory();
+        (new \ReflectionProperty($foreign, 'keys'))->setValue($foreign, array_fill(0, 5, random_bytes(16)));
+        $this->station($foreign, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'auth:91AE');
+        $this->station($foreign, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'qa_failed');
     }
 
     public function test_only_an_ntag_424_dna_whose_version_carries_its_uid_is_keyed(): void

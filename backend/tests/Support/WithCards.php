@@ -106,7 +106,7 @@ trait WithCards
             $answers = [];
             foreach ($step->commands as $command) {
                 $answers[] = $answer = $chip->transceive($command);
-                if (! in_array(substr($answer, -2), ["\x90\x00", "\x91\x00", "\x91\xAF"], true)) {
+                if (! in_array(substr($answer, -2), ["\x90\x00", "\x91\x00", "\x91\xAF", "\x91\x90"], true)) {
                     break;
                 }
             }

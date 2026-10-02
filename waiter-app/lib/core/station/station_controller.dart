@@ -81,7 +81,9 @@ class StationController extends ChangeNotifier {
   /// can start. It also keeps a reader that keeps failing from being restarted in a tight loop.
   final Duration _pause;
 
-  static const Set<String> _success = <String>{'9000', '9100', '91AF'};
+  /// Status words after which the next command of a round is sent. 9190 is what a real NTAG 424 DNA answers
+  /// to Read_Sig (its originality signature); stopping there left every genuine chip "incomplete".
+  static const Set<String> _success = <String>{'9000', '9100', '91AF', '9190'};
 
   StationPhase _phase = StationPhase.batches;
   List<StationBatch>? _batches;

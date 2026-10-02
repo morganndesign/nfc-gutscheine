@@ -105,6 +105,41 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('a genuine chip answers Read_Sig with 91 90: the round goes on to the write and the authentication', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    app.nfc.queue.add(chip(const <String, String>{}));
+    app.backend
+      ..on(
+        'POST',
+        begin,
+        FakeReply(
+          200,
+          Payloads.round(id: 'P1', commands: <String>['903C000001000000', '908D000000', '9071000002000000']),
+        ),
+      )
+      ..on('POST', '/admin/personalizations/P1', FakeReply(200, Payloads.round(stage: 'done', state: 'qa_passed')));
+    app.nfc.queue.last.script = (String apdu) => <String, String>{
+      '903C000001000000': '${'AB' * 56}9190',
+      '908D000000': '9100',
+      '9071000002000000': '${'CD' * 16}91AF',
+    }[apdu];
+
+    unawaited(station.choose(station.batches!.single));
+    await settle(tester);
+
+    expect(app.nfc.sent, <String>['903C000001000000', '908D000000', '9071000002000000']);
+    expect(
+      (app.backend.to('POST', '/admin/personalizations/P1').single.body!['responses']! as List<Object?>).length,
+      3,
+    );
+    expect(station.finished, 1);
+    unawaited(station.finish());
+    await settle(tester);
+    await finish(tester);
+  });
+
   testWidgets('the relay stops at the first refused command and sends what it has', (WidgetTester tester) async {
     await started(tester);
     app.nfc.queue.add(chip(<String, String>{'AA': '9000', 'BB': '919D', 'CC': '9100'}));

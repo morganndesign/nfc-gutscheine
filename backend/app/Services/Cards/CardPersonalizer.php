@@ -22,6 +22,7 @@ use App\Exceptions\Domain\CardPersonalizationFailedException;
 use App\Exceptions\Domain\DomainException;
 use App\Models\Card;
 use App\Models\CardBatch;
+use App\Models\CardEvent;
 use App\Models\KeySet;
 use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
@@ -82,7 +83,10 @@ final class CardPersonalizer
             } elseif ($card->batch_id !== $batch->getKey()) {
                 $this->fail('other_batch');
             } elseif ($card->state === CardState::QaFailed) {
-                $this->fail('qa_failed');
+                if (! $this->recheckable($card)) {
+                    $this->fail('qa_failed');
+                }
+                $card = $this->lifecycle->transition($card, CardState::Manufactured, 'chip check repeated', $actor);
             } elseif (! in_array($card->state, [CardState::Manufactured, CardState::Personalized], true)) {
                 $this->fail('already_personalized');
             }
@@ -157,8 +161,8 @@ final class CardPersonalizer
                 // A chip that answers these plain commands with an error is no NXP NTAG 424 DNA (a chip that left the
                 // field gives no answer at all): it never gets keys and gives its place in the order back.
                 match ($kind) {
-                    'select', 'version1', 'version2', 'version3' => $this->reject($card, 'not_ntag424', 'not an NXP NTAG 424 DNA', $actor, "{$kind}:{$sw}"),
-                    'signature' => $this->reject($card, 'not_genuine', 'not a genuine NXP chip', $actor, "signature:{$sw}"),
+                    'select', 'version1', 'version2', 'version3' => $this->reject($card, 'not_ntag424', self::NOT_NTAG424, $actor, "{$kind}:{$sw}"),
+                    'signature' => $this->reject($card, 'not_genuine', self::NOT_GENUINE, $actor, "signature:{$sw}"),
                     default => $this->fail("{$kind}:{$sw}"),
                 };
             }
@@ -424,7 +428,7 @@ final class CardPersonalizer
     {
         $refusal = count($version) === 2 ? ChipVersion::refusal($version[0], $version[1], $production, $card->uid) : 'version_length';
         if ($refusal !== null) {
-            $this->reject($card, $refusal, 'not an NXP NTAG 424 DNA', $actor,
+            $this->reject($card, $refusal, self::NOT_NTAG424, $actor,
                 strtoupper(implode(' ', array_map(bin2hex(...), [...$version, substr($production, 7)]))));
         }
 
@@ -436,7 +440,7 @@ final class CardPersonalizer
     {
         $key = (string) config('giftcard.cards.originality_public_key');
         if (! OriginalitySignature::verify($card->uid, $signature, $key)) {
-            $this->reject($card, 'not_genuine', 'not a genuine NXP chip', $actor);
+            $this->reject($card, 'not_genuine', self::NOT_GENUINE, $actor);
         }
         if ($card->originality_signature === null) {
             $card->forceFill(['originality_signature' => strtoupper(bin2hex($signature))])->save();
@@ -444,6 +448,30 @@ final class CardPersonalizer
 
         return true;
     }
+
+    /**
+     * A chip refused only by the read-only chip check (GetVersion, originality signature) never received a key, so
+     * the check may run again from the start — the first real cards were refused by a check that was wrong. A
+     * counterfeit fails again (and raises its alert again). Not while the batch already has every card it ordered.
+     */
+    private function recheckable(Card $card): bool
+    {
+        /** @var CardEvent|null $failed */
+        $failed = CardEvent::query()->withoutGlobalScopes()->where('card_id', $card->getKey())->latest('created_at')->latest('id')->first();
+        if ($failed === null || $failed->to_state !== CardState::QaFailed || $failed->from_state !== CardState::Manufactured
+            || ! in_array($failed->reason, [self::NOT_NTAG424, self::NOT_GENUINE], true)) {
+            return false;
+        }
+        $usable = Card::query()->withoutGlobalScopes()->where('batch_id', $card->batch_id)->where('state', '!=', CardState::QaFailed->value)->count();
+        /** @var CardBatch $batch */
+        $batch = CardBatch::query()->withoutGlobalScopes()->findOrFail($card->batch_id);
+
+        return $usable < $batch->quantity_ordered;
+    }
+
+    private const NOT_NTAG424 = 'not an NXP NTAG 424 DNA';
+
+    private const NOT_GENUINE = 'not a genuine NXP chip';
 
     /** Out of the batch for good: it never gets keys, and it frees its place for a genuine chip. */
     private function reject(Card $card, string $reason, string $cause, Actor $actor, ?string $detail = null): never

@@ -41,7 +41,9 @@ enum CardState: string
             self::Manufactured => [self::Personalized, self::QaFailed],
             self::Personalized => [self::QaPassed, self::QaFailed],
             self::QaPassed => [self::InInventory, self::QaFailed],
-            self::QaFailed => [self::Destroyed],
+            // Back to manufactured only for a chip the station refused at its read-only chip check, before any key
+            // was written (CardPersonalizer::recheckable): the check runs again from the start.
+            self::QaFailed => [self::Destroyed, self::Manufactured],
             self::InInventory => [self::Assigned, self::Revoked],
             self::Assigned => [self::Shipped, self::Revoked],
             self::Shipped => [self::Delivered, self::Lost, self::Revoked],
