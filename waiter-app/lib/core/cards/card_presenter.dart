@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import '../api/api_failure.dart';
 import '../api/models.dart';
 import '../api/waiter_api.dart';
@@ -83,12 +85,19 @@ class CardPresenter {
     try {
       card = await _nfc.start(prompt: texts.prompt);
       onDetected?.call();
-      final CardTap tap = await Ntag424Session.read(card);
-      final CardChallenge challenge = await _api.beginCardPresentment(tap, purpose: purpose);
-      final String answer = await Ntag424Session.answer(card, challenge.commandHex);
-      final T presented = await complete(challenge.authentication, answer);
+      final CardLink link = card;
+      // Once a card is on the phone the exchange ends — with a result or a message — never an endless spinner.
+      final T presented = await () async {
+        final CardTap tap = await Ntag424Session.read(link);
+        final CardChallenge challenge = await _api.beginCardPresentment(tap, purpose: purpose);
+        final String answer = await Ntag424Session.answer(link, challenge.commandHex);
+        return complete(challenge.authentication, answer);
+      }().timeout(exchangeTimeout);
       await card.close(message: texts.done);
       return presented;
+    } on TimeoutException {
+      await _closeQuietly(card, texts.failed);
+      throw const CardPresentException(CardPresentFailure.moved);
     } on NfcRelayException catch (e) {
       await card?.close(message: texts.failed, failed: true);
       throw CardPresentException(switch (e.failure) {
@@ -116,6 +125,23 @@ class CardPresenter {
         requestId: e.requestId,
         api: e,
       );
+    } on CardPresentException {
+      rethrow;
+    } on Object {
+      // Anything else a strange tag provokes (a blank card, another chip): not a card of this restaurant.
+      await _closeQuietly(card, texts.failed);
+      throw const CardPresentException(CardPresentFailure.notRecognized);
+    }
+  }
+
+  /// Upper bound for one exchange after the card was detected (card commands and two server calls).
+  static const Duration exchangeTimeout = Duration(seconds: 20);
+
+  static Future<void> _closeQuietly(CardLink? card, String message) async {
+    try {
+      await card?.close(message: message, failed: true);
+    } on Object {
+      // The card session is already gone.
     }
   }
 

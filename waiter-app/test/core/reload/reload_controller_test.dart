@@ -194,6 +194,26 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('a blank card (nothing on it) ends in a card problem, never an endless spinner', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    for (final String answer in <String>['${'00' * 32}9000', '']) {
+      app.nfc.card = FakeCard()..script = (String apdu) => apdu.startsWith('00B00000') ? answer : null;
+      final ReloadController c = controller();
+      unawaited(c.tap());
+      await settle(tester);
+
+      final ReloadProblem p = c.state as ReloadProblem;
+      expect(p.kind, ReloadProblemKind.card);
+      expect(p.card!.failure, CardPresentFailure.notRecognized);
+      expect(app.backend.to('POST', begin), isEmpty, reason: 'nothing is sent to the server');
+      expect(app.nfc.closed.last.failed, isTrue);
+      c.dispose();
+    }
+    await finish(tester);
+  });
+
   testWidgets('a waiter-level sign-in is told it may not top up', (WidgetTester tester) async {
     await started(tester);
     cardAnswers();

@@ -55,11 +55,22 @@ abstract final class Ntag424Session {
     return hexOf(answer);
   }
 
-  /// The URI of the first NDEF record of an NDEF file (2-byte NLEN, then the message).
+  /// The URI of the first NDEF record of an NDEF file (2-byte NLEN, then the message). An empty or malformed file
+  /// (a blank card from the factory, another tag) is a [CardProtocolException], never a crash.
   static String parseNdefUri(Uint8List file) {
+    try {
+      return _parseNdefUri(file);
+    } on CardProtocolException {
+      rethrow;
+    } on Object {
+      throw const CardProtocolException('NDEF');
+    }
+  }
+
+  static String _parseNdefUri(Uint8List file) {
     if (file.length < 7) throw const CardProtocolException('NDEF');
     final int length = (file[0] << 8) | file[1];
-    if (length + 2 > file.length) throw const CardProtocolException('NDEF');
+    if (length < 5 || length + 2 > file.length) throw const CardProtocolException('NDEF');
     final Uint8List message = Uint8List.sublistView(file, 2, 2 + length);
     final int header = message[0];
     final bool shortRecord = (header & 0x10) != 0;
@@ -105,6 +116,7 @@ abstract final class Ntag424Session {
     required bool Function(int, int) ok,
   }) async {
     final Uint8List answer = await card.transceive(apdu);
+    if (answer.length < 2) throw CardProtocolException(step);
     final int sw1 = answer[answer.length - 2];
     final int sw2 = answer[answer.length - 1];
     if (!ok(sw1, sw2)) throw CardProtocolException(step);

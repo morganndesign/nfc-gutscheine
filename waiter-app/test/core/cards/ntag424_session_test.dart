@@ -36,4 +36,15 @@ void main() {
       throwsA(isA<CardProtocolException>()),
     );
   });
+
+  test('a blank card from the factory (empty NDEF file) is refused, never a crash', () {
+    for (final List<int> blank in <List<int>>[
+      List<int>.filled(32, 0), // NLEN 0
+      <int>[0x00, 0x03, 0xD0, 0x00, 0x00, 0, 0, 0], // empty record
+      List<int>.filled(256, 0xFF),
+      <int>[0x00, 0x08, 0xD1, 0x01, 0x04, 0x55, 0x04, 0xC3, 0x28, 0x00], // invalid UTF-8
+    ]) {
+      expect(() => Ntag424Session.parseNdefUri(Uint8List.fromList(blank)), throwsA(isA<CardProtocolException>()));
+    }
+  });
 }
