@@ -8,13 +8,15 @@ import 'package:giftcard_waiter/core/reload/reload_controller.dart';
 import '../../support/app_harness.dart';
 
 /// Topping up a guest's card at the till: tap the card (its balance shows), enter the amount, say how the guest
-/// paid. The tap is the proof the card is there; the server books once per key.
+/// paid. The tap is the proof the card is there; the server books once per key. A new card from stock tapped here is
+/// sold with that amount (the card sale, with the same tap) instead.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const String begin = '/presentments/cards';
   const String complete = '/presentments/cards/${Payloads.cardAuthentication}';
   const String reloads = '/vouchers/${Payloads.voucherId}/reloads';
+  const String sales = '/vouchers';
   late TestApp app;
   late DateTime now;
 
@@ -24,9 +26,9 @@ void main() {
     }
   }
 
-  Future<void> started(WidgetTester tester) async {
+  Future<void> started(WidgetTester tester, {Map<String, Object?>? user}) async {
     now = DateTime(2026, 10, 2, 12);
-    app = await TestApp.create(user: Payloads.reloadManager(), nfc: FakeNfcRelay());
+    app = await TestApp.create(user: user ?? Payloads.reloadManager(), nfc: FakeNfcRelay());
     unawaited(app.session.start());
     await settle(tester);
   }
@@ -40,7 +42,16 @@ void main() {
     for (int i = 0; i < times; i++) {
       app.backend
         ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-        ..on('POST', complete, FakeReply(200, Payloads.presentment(balance: balance, id: 'tap-$i')));
+        ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: balance, id: 'tap-$i')));
+    }
+  }
+
+  /// A card from the restaurant's stock: the `reload` tap names no voucher.
+  void newCardAnswers({int times = 1, String number = 'B-2026-0001-0007'}) {
+    for (int i = 0; i < times; i++) {
+      app.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on('POST', complete, FakeReply(200, Payloads.cardOnly(id: 'new-$i', number: number)));
     }
   }
 
@@ -52,11 +63,13 @@ void main() {
     clock: () => now,
   );
 
-  Future<ReloadController> toDetails(WidgetTester tester, {int euros = 30}) async {
+  Future<ReloadController> toDetails(WidgetTester tester, {int euros = 30, bool newCard = false}) async {
     final ReloadController c = controller();
     unawaited(c.tap());
     await settle(tester);
-    expect((c.state as ReloadAmount).voucher.balance, 2000);
+    final ReloadAmount amount = c.state as ReloadAmount;
+    expect(amount.newCard, newCard);
+    if (!newCard) expect(amount.card.voucher!.balance, 2000);
     for (final String d in '${euros}00'.split('')) {
       c.digit(int.parse(d));
     }
@@ -75,8 +88,10 @@ void main() {
     await settle(tester);
 
     final ReloadDone done = c.state as ReloadDone;
-    expect(done.result.amount, 3000);
-    expect(done.result.balance, 5000);
+    expect(done.amount, 3000);
+    expect(done.balance, 5000);
+    expect(done.activatedCard, isNull);
+    expect(app.backend.to('POST', sales), isEmpty);
     expect(app.backend.to('POST', begin).single.body!['purpose'], 'reload');
     final Map<String, Object?> body = app.backend.to('POST', reloads).single.body!;
     expect(body['amount'], 3000);
@@ -245,6 +260,167 @@ void main() {
     unawaited(c.submit());
     await settle(tester);
     expect((c.state as ReloadProblem).kind, ReloadProblemKind.notAllowed);
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('the card states the server sends keep their own reason', (WidgetTester tester) async {
+    await started(tester);
+    const List<String> states = <String>['suspended', 'replaced', 'lost'];
+    for (final String state in states) {
+      app.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on(
+          'POST',
+          complete,
+          FakeReply(422, Payloads.error('CARD_NOT_USABLE', <String, Object?>{'reason': 'state', 'state': state})),
+        );
+    }
+    for (final String state in states) {
+      final ReloadController c = controller();
+      unawaited(c.tap());
+      await settle(tester);
+      final ReloadProblem p = c.state as ReloadProblem;
+      expect(p.kind, ReloadProblemKind.card);
+      expect(p.card!.failure, CardPresentFailure.notUsable);
+      expect(p.card!.cardState, state);
+      c.dispose();
+    }
+    await finish(tester);
+  });
+
+  // ------------------------------------------------------------------ a new card from stock
+
+  testWidgets('a new card: amount and payment like a sale, then sold with the reload tap', (WidgetTester tester) async {
+    await started(tester);
+    newCardAnswers();
+    app.backend.on('POST', sales, FakeReply(201, Payloads.soldCard(value: 3000)));
+    final ReloadController c = await toDetails(tester, newCard: true);
+    expect((c.state as ReloadDetails).card.cardNumber, 'B-2026-0001-0007');
+
+    c.chooseMethod(PaymentMethod.cardTerminal);
+    c.setReference('TID-9');
+    unawaited(c.submit());
+    await settle(tester);
+
+    final ReloadDone done = c.state as ReloadDone;
+    expect(done.activatedCard, 'B-2026-0001-0007');
+    expect(done.balance, 3000);
+    expect(app.backend.to('POST', reloads), isEmpty, reason: 'a stock card is never booked as a reload');
+    final RecordedRequest sale = app.backend.to('POST', sales).single;
+    expect(sale.body, <String, Object?>{
+      'value': 3000,
+      'form': 'card',
+      'presentment_id': 'new-0',
+      'payment': <String, Object?>{'method': 'card_terminal', 'reference': 'TID-9'},
+    });
+    expect(sale.headers['Idempotency-Key'], isNotEmpty);
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a new card keeps to the sale range', (WidgetTester tester) async {
+    await started(tester);
+    newCardAnswers();
+    final ReloadController c = controller();
+    unawaited(c.tap());
+    await settle(tester);
+
+    for (final int d in <int>[1, 0, 0]) {
+      c.digit(d);
+    }
+    c.continueToDetails();
+    final ReloadAmount s = c.state as ReloadAmount;
+    expect((s.min, s.max), (500, 50000), reason: 'min_voucher_value 5 €, max_voucher_balance 500 €');
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a new card: a lost answer is retried with the same key and tap, never sold twice', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    newCardAnswers();
+    app.backend
+      ..on('POST', sales, FakeReply.transport())
+      ..on('POST', sales, FakeReply(200, Payloads.soldCard(value: 3000, replayed: true)));
+    final ReloadController c = await toDetails(tester, newCard: true);
+
+    unawaited(c.submit());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.uncertain);
+    expect(c.uncertain, isTrue);
+
+    now = now.add(const Duration(minutes: 5));
+    unawaited(c.submit());
+    await settle(tester);
+
+    expect((c.state as ReloadDone).activatedCard, 'B-2026-0001-0007');
+    final List<RecordedRequest> sent = app.backend.to('POST', sales);
+    expect(sent, hasLength(2));
+    expect(sent[0].headers['Idempotency-Key'], sent[1].headers['Idempotency-Key']);
+    expect(sent[1].body!['presentment_id'], 'new-0');
+    expect(app.backend.to('POST', begin), hasLength(1));
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a new card tapped too long ago is confirmed with the same card', (WidgetTester tester) async {
+    await started(tester);
+    newCardAnswers();
+    newCardAnswers(number: 'B-2026-0001-0008');
+    newCardAnswers();
+    app.backend.on('POST', sales, FakeReply(201, Payloads.soldCard(value: 3000)));
+    final ReloadController c = await toDetails(tester, newCard: true);
+
+    // Another card at the confirming tap: nothing is sold.
+    now = now.add(const Duration(seconds: 55));
+    unawaited(c.submit());
+    await settle(tester);
+    final ReloadProblem p = c.state as ReloadProblem;
+    expect(p.kind, ReloadProblemKind.card);
+    expect(p.card!.cardState, CardPresentException.otherCard);
+    expect(app.backend.to('POST', sales), isEmpty);
+
+    // "Tap again" with the right card sells it with that tap.
+    unawaited(c.submit());
+    await settle(tester);
+    expect(c.state, isA<ReloadDone>());
+    expect(app.backend.to('POST', sales).single.body!['presentment_id'], 'new-0');
+    expect(app.backend.to('POST', begin), hasLength(3));
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a sign-in that may top up but not sell is told who activates a new card', (WidgetTester tester) async {
+    await started(
+      tester,
+      user: <String, Object?>{
+        ...Payloads.reloadManager(),
+        'permissions': <String>['vouchers.redeem', 'vouchers.reload', 'cards.view'],
+      },
+    );
+    newCardAnswers();
+    final ReloadController c = controller();
+    unawaited(c.tap());
+    await settle(tester);
+
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.cannotSell);
+    expect(app.backend.to('POST', sales), isEmpty);
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a new card: a refused sale (role changed) is the same message', (WidgetTester tester) async {
+    await started(tester);
+    newCardAnswers();
+    app.backend.on('POST', sales, FakeReply(403, Payloads.error('FORBIDDEN', <String, Object?>{})));
+    final ReloadController c = await toDetails(tester, newCard: true);
+
+    unawaited(c.submit());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.cannotSell);
+    expect(c.uncertain, isFalse);
     c.dispose();
     await finish(tester);
   });

@@ -142,6 +142,7 @@ final class VoucherService
         try {
             $result = DB::transaction(function () use ($actor, $data, $restaurant, $settings): SaleResult {
                 // A card sale: lock order presentment → card (architecture §10.6); the card must still be in stock.
+                // A `bind` tap (sale screen) or a top-up tap of a stock card (the till's "top up card") sells it.
                 $card = null;
                 if ($data->isCard()) {
                     $presentment = $this->presentments->lockForUse($data->cardPresentmentId);
@@ -150,7 +151,7 @@ final class VoucherService
                     if ($replay !== null) {
                         return $this->replaySale($actor, $replay, $data);
                     }
-                    $card = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Bind);
+                    $card = $this->presentments->consumeCard($presentment, $actor, [PresentmentPurpose::Bind, PresentmentPurpose::Reload], [CardState::Available]);
                 }
 
                 $voucher = new Voucher;

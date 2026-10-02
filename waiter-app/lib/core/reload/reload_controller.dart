@@ -9,9 +9,14 @@ import '../format/amount_entry.dart';
 import '../state/session_controller.dart';
 import '../state/session_state.dart';
 
-/// S24 · Top up card (managers and owners, `vouchers.reload`, Android and iPhone alike): tap the guest's card
-/// (its balance shows) → amount → how the guest paid → `POST /vouchers/{id}/reloads` with the tap. The tap is
-/// valid 60 s; when it is older at "Top up", the card is held once more to confirm.
+/// S24 · Top up card (managers and owners, `vouchers.reload`, Android and iPhone alike): tap the card → amount →
+/// how the guest paid → booked with the tap. The tap is valid 60 s; when it is older at "Top up", the card is held
+/// once more to confirm.
+///
+/// - A guest's active card (its balance shows) is topped up: `POST /vouchers/{id}/reloads`.
+/// - A new card from stock (the tap names no voucher) is sold with that amount, like a card sale on S20:
+///   `POST /vouchers` (form card) with the same tap. Staff need not switch screens for a guest who wants a card
+///   "topped up" that was never sold. Only someone who may sell cards activates one.
 @immutable
 sealed class ReloadState {
   const ReloadState();
@@ -25,19 +30,24 @@ final class ReloadTapCard extends ReloadState {
   final bool checking;
 }
 
-/// The amount on the keypad. [max] is shown when it would exceed the balance limit.
+/// The amount on the keypad. A top-up shows [max] when it would exceed the balance limit; a new card shows the
+/// sale range [min]–[max] when the value is outside it.
 final class ReloadAmount extends ReloadState {
-  const ReloadAmount({required this.voucher, this.amount = AmountEntry.empty, this.max});
+  const ReloadAmount({required this.card, this.amount = AmountEntry.empty, this.min, this.max});
 
-  final PresentedVoucher voucher;
+  final CardPresented card;
   final AmountEntry amount;
+  final int? min;
   final int? max;
+
+  /// A card from stock: sold with this amount instead of topped up.
+  bool get newCard => card.isNew;
 }
 
 /// Payment method and reference or reason.
 final class ReloadDetails extends ReloadState {
   const ReloadDetails({
-    required this.voucher,
+    required this.card,
     required this.amount,
     this.method = PaymentMethod.cash,
     this.submitting = false,
@@ -45,18 +55,20 @@ final class ReloadDetails extends ReloadState {
     this.reasonMissing = false,
   });
 
-  final PresentedVoucher voucher;
+  final CardPresented card;
   final AmountEntry amount;
   final PaymentMethod method;
 
-  /// The tap to confirm or `POST …/reloads` in flight.
+  bool get newCard => card.isNew;
+
+  /// The tap to confirm or the booking in flight.
   final bool submitting;
   final bool referenceMissing;
   final bool reasonMissing;
 
   ReloadDetails copyWith({PaymentMethod? method, bool? submitting, bool? referenceMissing, bool? reasonMissing}) =>
       ReloadDetails(
-        voucher: voucher,
+        card: card,
         amount: amount,
         method: method ?? this.method,
         submitting: submitting ?? this.submitting,
@@ -77,6 +89,9 @@ enum ReloadProblemKind {
 
   /// 403 or RELOAD_NOT_ALLOWED.
   notAllowed,
+
+  /// A new card from stock, and this sign-in may not sell cards: someone who may sell activates it.
+  cannotSell,
 }
 
 final class ReloadProblem extends ReloadState {
@@ -91,9 +106,22 @@ final class ReloadProblem extends ReloadState {
 }
 
 final class ReloadDone extends ReloadState {
-  const ReloadDone(this.result);
+  const ReloadDone({required this.amount, required this.balance, required this.currency, this.activatedCard});
 
-  final ReloadResult result;
+  ReloadDone.toppedUp(ReloadResult r) : this(amount: r.amount, balance: r.balance, currency: r.currency);
+
+  ReloadDone.sold(SoldVoucher v, String cardNumber)
+    : this(amount: v.value, balance: v.value, currency: v.currency, activatedCard: v.cardNumber ?? cardNumber);
+
+  /// Cents loaded now.
+  final int amount;
+
+  /// The card's balance now.
+  final int balance;
+  final String currency;
+
+  /// A new card from stock, sold and now active: its inventory number. Null for a top-up.
+  final String? activatedCard;
 }
 
 class ReloadController extends ChangeNotifier {
@@ -140,6 +168,9 @@ class ReloadController extends ChangeNotifier {
 
   RestaurantSettings? get _settings => _session.user?.restaurant?.settings;
 
+  /// The currency of the amount: the voucher's, or the restaurant's for a new card.
+  String currencyOf(CardPresented card) => card.voucher?.currency ?? _session.user?.restaurant?.currency ?? 'EUR';
+
   List<PaymentMethod> get methods => <PaymentMethod>[
     PaymentMethod.cash,
     PaymentMethod.cardTerminal,
@@ -149,18 +180,25 @@ class ReloadController extends ChangeNotifier {
 
   // ------------------------------------------------------------------ tap
 
-  /// Step 1: the guest's card. Its voucher and balance come with the tap.
+  /// Step 1: the card. A guest's card brings its voucher and balance; a new card from stock brings none.
   Future<void> tap() async {
     if (_state case ReloadTapCard(checking: true)) return;
     _set(const ReloadTapCard());
-    final Presentment? p = await _present(again: false);
+    final CardPresented? p = await _present(again: false);
     if (p == null) return;
-    _set(ReloadAmount(voucher: p.voucher));
+    // Said at once, not after the amount: the server would refuse the sale anyway.
+    if (p.isNew && !(_session.user?.canSellCards ?? false)) {
+      _definitive();
+      _set(const ReloadProblem(ReloadProblemKind.cannotSell));
+      return;
+    }
+    _set(ReloadAmount(card: p));
   }
 
-  Future<Presentment?> _present({required bool again}) async {
+  /// [expected]: confirming an expired tap, which must be the same card in the same state.
+  Future<CardPresented?> _present({required bool again, CardPresented? expected}) async {
     try {
-      final Presentment p = await _cards.presentVoucher(
+      final CardPresented p = await _cards.present(
         'reload',
         texts: (
           prompt: again ? _texts.again : _texts.prompt,
@@ -170,6 +208,13 @@ class ReloadController extends ChangeNotifier {
         ),
         onDetected: () => _set(ReloadTapCard(again: again, checking: true)),
       );
+      if (expected != null && (p.cardNumber != expected.cardNumber || p.isNew != expected.isNew)) {
+        // Another card, or the new card was sold at another till meanwhile: the entry was for that card.
+        throw CardPresentException(
+          CardPresentFailure.notUsable,
+          cardState: p.cardNumber != expected.cardNumber ? CardPresentException.otherCard : 'card_state',
+        );
+      }
       _presentmentId = p.id;
       _presentmentValidUntil = _clock().add(p.expiresIn - _margin);
       return p;
@@ -197,7 +242,7 @@ class ReloadController extends ChangeNotifier {
     final ReloadState s = _state;
     if (s is! ReloadAmount) return EntryOutcome.ignored;
     final EntryChange<AmountEntry> c = change(s.amount);
-    _set(ReloadAmount(voucher: s.voucher, amount: c.value));
+    _set(ReloadAmount(card: s.card, amount: c.value));
     return c.outcome;
   }
 
@@ -212,17 +257,29 @@ class ReloadController extends ChangeNotifier {
   void continueToDetails() {
     final ReloadState s = _state;
     if (s is! ReloadAmount || s.amount.isEmpty) return;
-    final int? room = _room(s.voucher);
-    if (room != null && s.amount.cents > room) {
-      _set(ReloadAmount(voucher: s.voucher, amount: s.amount, max: room));
-      return;
+    final int value = s.amount.cents;
+    final PresentedVoucher? voucher = s.card.voucher;
+    if (voucher == null) {
+      // A new card is sold: the sale's limits (as on S20).
+      final int? min = _settings?.minVoucherValue;
+      final int? max = _settings?.maxVoucherBalance;
+      if ((min != null && value < min) || (max != null && value > max)) {
+        _set(ReloadAmount(card: s.card, amount: s.amount, min: min ?? 1, max: max ?? value));
+        return;
+      }
+    } else {
+      final int? room = _room(voucher);
+      if (room != null && value > room) {
+        _set(ReloadAmount(card: s.card, amount: s.amount, max: room));
+        return;
+      }
     }
-    _set(ReloadDetails(voucher: s.voucher, amount: s.amount));
+    _set(ReloadDetails(card: s.card, amount: s.amount));
   }
 
   void backToAmount() {
     final ReloadState s = _state;
-    if (s is ReloadDetails && !s.submitting) _set(ReloadAmount(voucher: s.voucher, amount: s.amount));
+    if (s is ReloadDetails && !s.submitting) _set(ReloadAmount(card: s.card, amount: s.amount));
   }
 
   // ------------------------------------------------------------------ details
@@ -248,9 +305,10 @@ class ReloadController extends ChangeNotifier {
 
   // ------------------------------------------------------------------ book
 
-  /// Codes only the top-up itself answers with: after a lost answer they prove nothing was booked (the server
-  /// answers a booked key before it checks anything else).
+  /// Codes only the top-up or the sale itself answers with: after a lost answer they prove nothing was booked
+  /// (the server answers a booked key before it checks anything else).
   static const Set<String> _reloadCodes = <String>{
+    'INVALID_AMOUNT',
     'BALANCE_LIMIT_EXCEEDED',
     'RELOAD_NOT_ALLOWED',
     'VALIDATION_FAILED',
@@ -296,20 +354,35 @@ class ReloadController extends ChangeNotifier {
       _presentmentId = null;
       _set(const ReloadTapCard(again: true));
       // The screen was closed meanwhile (signed out, blocked): nothing is booked that no one sees.
-      if (await _present(again: true) == null || _disposed) return;
+      if (await _present(again: true, expected: details.card) == null || _disposed) return;
     }
 
     _set(details.copyWith(submitting: true));
+    final PaymentInput payment = PaymentInput(method: method, reference: reference.trim(), reason: reason.trim());
+    final PresentedVoucher? voucher = details.card.voucher;
     try {
-      final ReloadResult result = await _api.reload(
-        voucherId: details.voucher.id,
-        amount: details.amount.cents,
-        payment: PaymentInput(method: method, reference: reference.trim(), reason: reason.trim()),
-        presentmentId: _presentmentId!,
-        idempotencyKey: _idempotencyKey,
-      );
+      final ReloadDone done = voucher == null
+          // A new card: the card sale of S20 with this tap (server rules, limits, idempotency and audit of a sale).
+          ? ReloadDone.sold(
+              await _api.sell(
+                value: details.amount.cents,
+                payment: payment,
+                idempotencyKey: _idempotencyKey,
+                cardPresentmentId: _presentmentId!,
+              ),
+              details.card.cardNumber,
+            )
+          : ReloadDone.toppedUp(
+              await _api.reload(
+                voucherId: voucher.id,
+                amount: details.amount.cents,
+                payment: payment,
+                presentmentId: _presentmentId!,
+                idempotencyKey: _idempotencyKey,
+              ),
+            );
       _definitive();
-      _set(ReloadDone(result));
+      _set(done);
     } on ApiRejected catch (e) {
       if (_disposed) return;
       final ReloadDetails back = details.copyWith(submitting: false);
@@ -328,14 +401,25 @@ class ReloadController extends ChangeNotifier {
         return;
       }
       _definitive(); // nothing was booked
-      if (forbidden || e.code == 'RELOAD_NOT_ALLOWED' || e.code == 'COMPLIMENTARY_NOT_ALLOWED') {
+      if (forbidden && voucher == null) {
+        _set(ReloadProblem(ReloadProblemKind.cannotSell, details: back, requestId: e.requestId));
+      } else if (forbidden || e.code == 'RELOAD_NOT_ALLOWED' || e.code == 'COMPLIMENTARY_NOT_ALLOWED') {
         _set(ReloadProblem(ReloadProblemKind.notAllowed, details: back, requestId: e.requestId));
-      } else if (e.code == 'BALANCE_LIMIT_EXCEEDED') {
-        final int? max = e.contextInt('max_voucher_balance');
-        final int balance = e.contextInt('balance') ?? details.voucher.balance;
+      } else if (voucher == null && (e.code == 'INVALID_AMOUNT' || e.code == 'BALANCE_LIMIT_EXCEEDED')) {
         _set(
           ReloadAmount(
-            voucher: details.voucher,
+            card: details.card,
+            amount: details.amount,
+            min: e.contextInt('min') ?? _settings?.minVoucherValue ?? 1,
+            max: e.contextInt('max') ?? _settings?.maxVoucherBalance ?? details.amount.cents,
+          ),
+        );
+      } else if (voucher != null && e.code == 'BALANCE_LIMIT_EXCEEDED') {
+        final int? max = e.contextInt('max_voucher_balance');
+        final int balance = e.contextInt('balance') ?? voucher.balance;
+        _set(
+          ReloadAmount(
+            card: details.card,
             amount: details.amount,
             max: max == null ? 0 : (max - balance).clamp(0, max),
           ),
@@ -350,7 +434,13 @@ class ReloadController extends ChangeNotifier {
             ReloadProblemKind.card,
             details: back,
             requestId: e.requestId,
-            card: CardPresentException(CardPresentFailure.notUsable, requestId: e.requestId, api: e),
+            // The reason (`card_not_active`, `card_state`) picks the message.
+            card: CardPresentException(
+              CardPresentFailure.notUsable,
+              cardState: e.contextString('reason'),
+              requestId: e.requestId,
+              api: e,
+            ),
           ),
         );
       } else if (e.code == 'VALIDATION_FAILED' && e.fieldErrors.isNotEmpty) {

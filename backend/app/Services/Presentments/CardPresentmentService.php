@@ -88,7 +88,7 @@ final class CardPresentmentService
             if (! in_array($card->state, $purpose->cardStates(), true)) {
                 throw new CardNotUsableException('', ['reason' => 'state', 'state' => $card->state->value]);
             }
-            $voucher = $purpose->namesVoucher() ? $this->voucherOf($card) : null;
+            $voucher = $this->namedVoucher($purpose, $card);
             if (preg_match('/^[0-9A-Fa-f]{32}$/', $encryptedRndBHex) !== 1) {
                 throw new CardAuthenticationFailedException;
             }
@@ -149,8 +149,9 @@ final class CardPresentmentService
             if (! in_array($card->state, $purpose->cardStates(), true)) {
                 throw new CardNotUsableException('', ['reason' => 'state', 'state' => $card->state->value]);
             }
-            $voucher = $purpose->namesVoucher() ? $this->voucherOf($card) : null;
-            if ($voucher !== null && $voucher->getKey() !== $context['voucher']) {
+            $voucher = $this->namedVoucher($purpose, $card);
+            // Also refuses a stock card sold at another till between the two steps of a top-up tap.
+            if ($voucher?->getKey() !== $context['voucher']) {
                 throw new CardAuthenticationFailedException;
             }
 
@@ -205,6 +206,12 @@ final class CardPresentmentService
             ->where('type', MediumType::NfcCard->value)
             ->where('status', MediumStatus::Active->value)
             ->first();
+    }
+
+    /** The voucher the presentment names: an active card's, for spending and top-ups. A stock card names none. */
+    private function namedVoucher(PresentmentPurpose $purpose, Card $card): ?Voucher
+    {
+        return $purpose->namesVoucher() && $card->state === CardState::Active ? $this->voucherOf($card) : null;
     }
 
     /** The voucher an active card pays for. */

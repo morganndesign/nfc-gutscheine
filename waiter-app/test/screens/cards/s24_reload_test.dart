@@ -27,7 +27,7 @@ void main() {
       final TestApp app = await TestApp.create(isIos: ios, user: Payloads.reloadManager(), nfc: FakeNfcRelay());
       app.backend
         ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-        ..on('POST', complete, FakeReply(200, Payloads.presentment(balance: 2000)))
+        ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000)))
         ..on('POST', reloads, FakeReply(201, Payloads.reloaded()));
       await pumpWaiterApp(tester, app);
 
@@ -49,6 +49,75 @@ void main() {
       await finishApp(tester, app);
     });
   }
+
+  for (final bool ios in <bool>[false, true]) {
+    testWidgets('${ios ? 'iPhone' : 'Android'}: a new card from stock is sold and activated', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await TestApp.create(isIos: ios, user: Payloads.reloadManager(), nfc: FakeNfcRelay());
+      app.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
+        ..on('POST', '/vouchers', FakeReply(201, Payloads.soldCard(value: 3000)));
+      await pumpWaiterApp(tester, app);
+
+      await tester.tap(text(en.reloadReady));
+      await settle(tester, 20);
+      expect(text(en.reloadNewCardTitle), findsOneWidget);
+      expect(text(en.reloadNewCardBody('B-2026-0001-0007')), findsOneWidget);
+      expect(find.byType(BalanceCard), findsNothing);
+
+      await typeDigits(tester, '3000');
+      await tester.tap(primary('Continue'));
+      await settle(tester);
+      expect(text(en.reloadNewCardTitle), findsOneWidget);
+      await tester.tap(primary('Top up'));
+      await settle(tester, 20);
+
+      expect(text(en.saleCardDoneTitle), findsOneWidget);
+      expect(find.textContaining('B-2026-0001-0007 is active', findRichText: true), findsOneWidget);
+      expect(app.backend.to('POST', '/vouchers').single.body!['presentment_id'], Payloads.bindPresentmentId);
+      expect(app.backend.to('POST', '/vouchers/${Payloads.voucherId}/reloads'), isEmpty);
+      await finishApp(tester, app);
+    });
+
+    testWidgets('${ios ? 'iPhone' : 'Android'}: a suspended card says so', (WidgetTester tester) async {
+      final TestApp app = await TestApp.create(isIos: ios, user: Payloads.reloadManager(), nfc: FakeNfcRelay());
+      app.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on(
+          'POST',
+          complete,
+          FakeReply(422, Payloads.error('CARD_NOT_USABLE', <String, Object?>{'reason': 'state', 'state': 'suspended'})),
+        );
+      await pumpWaiterApp(tester, app);
+
+      await tester.tap(text(en.reloadReady));
+      await settle(tester, 20);
+      expect(text(en.problemCardNotUsableSuspended), findsOneWidget);
+      await finishApp(tester, app);
+    });
+  }
+
+  testWidgets('a sign-in that may not sell is told who activates a new card', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(
+      user: <String, Object?>{
+        ...Payloads.reloadManager(),
+        'permissions': <String>['vouchers.redeem', 'vouchers.reload', 'cards.view'],
+      },
+      nfc: FakeNfcRelay(),
+    );
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardOnly()));
+    await pumpWaiterApp(tester, app);
+
+    await tester.tap(text(en.reloadReady));
+    await settle(tester, 20);
+    expect(text(en.reloadNewCardNotAllowedBody), findsOneWidget);
+    expect(app.backend.to('POST', '/vouchers'), isEmpty);
+    await finishApp(tester, app);
+  });
 
   testWidgets('waiters and phones without a card reader see no top-up', (WidgetTester tester) async {
     final TestApp waiter = await TestApp.create(nfc: FakeNfcRelay());

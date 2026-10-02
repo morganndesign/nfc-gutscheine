@@ -1724,11 +1724,59 @@ abstract class AppLocalizations {
   /// **'This sign-in may not top up cards, or the restaurant does not allow top-ups.'**
   String get reloadNotAllowedBody;
 
-  /// Spec key: reload.card.notUsable (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE, card_not_active
+  /// Spec key: reload.card.replaced (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE state replaced (suspended, other restaurant: problem.cardNotUsable.*)
   ///
   /// In en, this message translates to:
-  /// **'This card cannot be topped up (suspended or not sold).'**
-  String get reloadCardNotUsable;
+  /// **'This card was replaced. Hold the guest\'s new card to the phone.'**
+  String get reloadCardReplaced;
+
+  /// Spec key: reload.card.revoked (12 §5.13) · Max: 90 · Notes: Reload · state revoked, destroyed
+  ///
+  /// In en, this message translates to:
+  /// **'This card is out of service and cannot be topped up.'**
+  String get reloadCardRevoked;
+
+  /// Spec key: reload.card.lost (12 §5.13) · Max: 90 · Notes: Reload · state lost
+  ///
+  /// In en, this message translates to:
+  /// **'This card is reported lost. A manager can help.'**
+  String get reloadCardLost;
+
+  /// Spec key: reload.card.notInStock (12 §5.13) · Max: 90 · Notes: Reload · state shipped, delivered
+  ///
+  /// In en, this message translates to:
+  /// **'This card is not in stock yet. Confirm the delivery first.'**
+  String get reloadCardNotInStock;
+
+  /// Spec key: reload.card.otherCard (12 §5.13) · Max: 90 · Notes: Reload · the confirming tap found another card
+  ///
+  /// In en, this message translates to:
+  /// **'This is a different card. Hold the same card to the phone to confirm.'**
+  String get reloadCardOtherCard;
+
+  /// Spec key: reload.newCard.title (12 §5.13) · Max: 36 · Notes: Reload · a card from stock was tapped: it is sold (card voucher)
+  ///
+  /// In en, this message translates to:
+  /// **'New card – load a balance'**
+  String get reloadNewCardTitle;
+
+  /// Spec key: reload.newCard.body (12 §5.13) · Max: 90 · Notes: Reload · inventory number; range message sale.amount.range
+  ///
+  /// In en, this message translates to:
+  /// **'Card {number} from stock. With this amount it is sold and activated.'**
+  String reloadNewCardBody(String number);
+
+  /// Spec key: reload.newCard.done.body (12 §5.13) · Max: 60 · Notes: Reload · title sale.card.done.title
+  ///
+  /// In en, this message translates to:
+  /// **'Card {number} is active · balance {balance}'**
+  String reloadNewCardDoneBody(String number, String balance);
+
+  /// Spec key: reload.newCard.notAllowed.body (12 §5.13) · Max: 90 · Notes: Reload · no vouchers.sell / cards.bind, or 403 on the sale; title sale.card.failed.title
+  ///
+  /// In en, this message translates to:
+  /// **'This is a new card. Someone who may sell vouchers activates it.'**
+  String get reloadNewCardNotAllowedBody;
 
   /// Spec key: reload.leaveUncertain.title (12 §5.13) · Max: 36 · Notes: Reload · Dialog
   ///

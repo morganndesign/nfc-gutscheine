@@ -141,6 +141,8 @@ final class PresentmentService
             $presentment->status !== PresentmentStatus::Verified => 'already_used',
             $presentment->isExpired() => 'expired',
             $presentment->purpose !== $purpose => 'wrong_purpose',
+            // A top-up tap of a card from stock names no voucher: it sells the card, it never reloads.
+            $presentment->card_id !== null && $presentment->voucher_id === null => 'card_not_active',
             $presentment->voucher_id !== $voucher->getKey() => 'wrong_voucher',
             $presentment->user_id !== $actor->userId() => 'other_user',
             $presentment->device_id !== $actor->deviceId() => 'other_device',
@@ -163,12 +165,14 @@ final class PresentmentService
     }
 
     /**
-     * Consumes a card presentment that has no voucher yet (bind, receive) and returns its card, locked. Call
-     * inside the operation's transaction, before anything is written.
+     * Consumes a card presentment that has no voucher yet (bind, receive, a top-up tap of a stock card) and returns
+     * its card, locked. Call inside the operation's transaction, before anything is written.
      *
      * @param  Presentment|null  $presentment  The presentment row, locked FOR UPDATE by the caller
+     * @param  list<PresentmentPurpose>  $purposes  The purposes whose tap authorises the operation
+     * @param  list<CardState>  $states  The card states the operation needs
      */
-    public function consumeCard(?Presentment $presentment, Actor $actor, PresentmentPurpose $purpose): Card
+    public function consumeCard(?Presentment $presentment, Actor $actor, array $purposes, array $states): Card
     {
         $card = $presentment?->card_id !== null
             ? Card::query()->withoutGlobalScopes()->whereKey($presentment->card_id)->lockForUpdate()->first()
@@ -177,14 +181,14 @@ final class PresentmentService
             $presentment === null => 'not_found',
             $presentment->status !== PresentmentStatus::Verified => 'already_used',
             $presentment->isExpired() => 'expired',
-            $presentment->purpose !== $purpose => 'wrong_purpose',
+            ! in_array($presentment->purpose, $purposes, true) => 'wrong_purpose',
             $presentment->restaurant_id !== $this->tenant->id() => 'wrong_restaurant',
             $presentment->user_id !== $actor->userId() => 'other_user',
             $presentment->device_id !== $actor->deviceId() => 'other_device',
             $presentment->method !== PresentmentMethod::LiveAuth || $card === null => 'not_a_card',
             $card->restaurant_id !== $presentment->restaurant_id => 'wrong_restaurant',
             // The card may have changed state since it was tapped (sold at another till, taken out of stock).
-            ! in_array($card->state, $purpose->cardStates(), true) => 'card_state',
+            ! in_array($card->state, $states, true) => 'card_state',
             default => null,
         };
         if ($reason !== null) {

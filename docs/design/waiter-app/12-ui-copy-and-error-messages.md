@@ -747,7 +747,15 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `reload.uncertain.body` | Keine Antwort vom Server. „Erneut versuchen“ klärt, ob aufgeladen wurde, ohne doppelt zu buchen. | No answer from the server. “Try again” finds out whether it was topped up without booking twice. | Nema odgovora servera. „Pokušaj ponovo“ provjerava je li dopunjeno, bez dvostrukog knjiženja. | 140 | Reload · the same key |
 | `reload.notAllowed.title` | Aufladen nicht möglich | Cannot top up | Dopuna nije moguća | 32 | Reload · 403 or RELOAD_NOT_ALLOWED |
 | `reload.notAllowed.body` | Diese Anmeldung darf keine Karten aufladen, oder das Restaurant erlaubt kein Aufladen. | This sign-in may not top up cards, or the restaurant does not allow top-ups. | Ova prijava ne smije dopunjavati kartice ili restoran ne dozvoljava dopunu. | 120 | Reload |
-| `reload.card.notUsable` | Diese Karte kann nicht aufgeladen werden (gesperrt oder nicht verkauft). | This card cannot be topped up (suspended or not sold). | Ova kartica se ne može dopuniti (blokirana ili nije prodana). | 90 | Reload · CARD_NOT_USABLE, card_not_active |
+| `reload.card.replaced` | Diese Karte wurde ersetzt. Die neue Karte des Gastes ans Handy halten. | This card was replaced. Hold the guest's new card to the phone. | Ova kartica je zamijenjena. Prislonite novu karticu gosta uz telefon. | 90 | Reload · CARD_NOT_USABLE state `replaced` (suspended, other restaurant: `problem.cardNotUsable.*`) |
+| `reload.card.revoked` | Diese Karte ist außer Betrieb und kann nicht aufgeladen werden. | This card is out of service and cannot be topped up. | Ova kartica je van upotrebe i ne može se dopuniti. | 90 | Reload · state `revoked`, `destroyed` |
+| `reload.card.lost` | Diese Karte ist als verloren gemeldet. Die Betriebsleitung kann helfen. | This card is reported lost. A manager can help. | Ova kartica je prijavljena kao izgubljena. Menadžer može pomoći. | 90 | Reload · state `lost` |
+| `reload.card.notInStock` | Diese Karte ist noch nicht im Lager. Zuerst die Lieferung bestätigen. | This card is not in stock yet. Confirm the delivery first. | Ova kartica još nije na zalihi. Prvo potvrdite isporuku. | 90 | Reload · state `shipped`, `delivered` |
+| `reload.card.otherCard` | Das ist eine andere Karte. Zum Bestätigen dieselbe Karte ans Handy halten. | This is a different card. Hold the same card to the phone to confirm. | Ovo je druga kartica. Za potvrdu prislonite istu karticu uz telefon. | 90 | Reload · the confirming tap found another card |
+| `reload.newCard.title` | Neue Karte – Guthaben aufladen | New card – load a balance | Nova kartica – dopunite stanje | 36 | Reload · a card from stock was tapped: it is sold (card voucher) |
+| `reload.newCard.body` | Karte {number} aus dem Lager. Mit dem Betrag wird sie verkauft und aktiviert. | Card {number} from stock. With this amount it is sold and activated. | Kartica {number} sa zalihe. Uz ovaj iznos se prodaje i aktivira. | 90 | Reload · inventory number; range message `sale.amount.range` |
+| `reload.newCard.done.body` | Karte {number} ist aktiv · Guthaben {balance} | Card {number} is active · balance {balance} | Kartica {number} je aktivna · stanje {balance} | 60 | Reload · title `sale.card.done.title` |
+| `reload.newCard.notAllowed.body` | Das ist eine neue Karte. Aktivieren kann sie, wer Gutscheine verkaufen darf. | This is a new card. Someone who may sell vouchers activates it. | Ovo je nova kartica. Aktivira je osoba koja smije prodavati vaučere. | 90 | Reload · no `vouchers.sell` / `cards.bind`, or 403 on the sale; title `sale.card.failed.title` |
 | `reload.leaveUncertain.title` | Aufladung offen – trotzdem schließen? | Top-up open – close anyway? | Dopuna otvorena – ipak zatvoriti? | 36 | Reload · Dialog |
 | `reload.leaveUncertain.body` | Vielleicht wurde bereits aufgeladen. Nur „Erneut versuchen“ klärt das, ohne doppelt zu buchen. | It may already have been topped up. Only “Try again” finds out without booking twice. | Možda je već dopunjeno. Samo „Pokušaj ponovo“ to provjerava bez dvostrukog knjiženja. | 120 | Reload · Dialog (confirm = `sale.leave.confirm`) |
 
@@ -941,7 +949,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **407 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **415 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

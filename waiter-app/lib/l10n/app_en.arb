@@ -1379,9 +1379,54 @@
   "@reloadNotAllowedBody": {
     "description": "Spec key: reload.notAllowed.body (12 §5.13) · Max: 120 · Notes: Reload"
   },
-  "reloadCardNotUsable": "This card cannot be topped up (suspended or not sold).",
-  "@reloadCardNotUsable": {
-    "description": "Spec key: reload.card.notUsable (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE, card_not_active"
+  "reloadCardReplaced": "This card was replaced. Hold the guest's new card to the phone.",
+  "@reloadCardReplaced": {
+    "description": "Spec key: reload.card.replaced (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE state replaced (suspended, other restaurant: problem.cardNotUsable.*)"
+  },
+  "reloadCardRevoked": "This card is out of service and cannot be topped up.",
+  "@reloadCardRevoked": {
+    "description": "Spec key: reload.card.revoked (12 §5.13) · Max: 90 · Notes: Reload · state revoked, destroyed"
+  },
+  "reloadCardLost": "This card is reported lost. A manager can help.",
+  "@reloadCardLost": {
+    "description": "Spec key: reload.card.lost (12 §5.13) · Max: 90 · Notes: Reload · state lost"
+  },
+  "reloadCardNotInStock": "This card is not in stock yet. Confirm the delivery first.",
+  "@reloadCardNotInStock": {
+    "description": "Spec key: reload.card.notInStock (12 §5.13) · Max: 90 · Notes: Reload · state shipped, delivered"
+  },
+  "reloadCardOtherCard": "This is a different card. Hold the same card to the phone to confirm.",
+  "@reloadCardOtherCard": {
+    "description": "Spec key: reload.card.otherCard (12 §5.13) · Max: 90 · Notes: Reload · the confirming tap found another card"
+  },
+  "reloadNewCardTitle": "New card – load a balance",
+  "@reloadNewCardTitle": {
+    "description": "Spec key: reload.newCard.title (12 §5.13) · Max: 36 · Notes: Reload · a card from stock was tapped: it is sold (card voucher)"
+  },
+  "reloadNewCardBody": "Card {number} from stock. With this amount it is sold and activated.",
+  "@reloadNewCardBody": {
+    "description": "Spec key: reload.newCard.body (12 §5.13) · Max: 90 · Notes: Reload · inventory number; range message sale.amount.range",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "reloadNewCardDoneBody": "Card {number} is active · balance {balance}",
+  "@reloadNewCardDoneBody": {
+    "description": "Spec key: reload.newCard.done.body (12 §5.13) · Max: 60 · Notes: Reload · title sale.card.done.title",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "reloadNewCardNotAllowedBody": "This is a new card. Someone who may sell vouchers activates it.",
+  "@reloadNewCardNotAllowedBody": {
+    "description": "Spec key: reload.newCard.notAllowed.body (12 §5.13) · Max: 90 · Notes: Reload · no vouchers.sell / cards.bind, or 403 on the sale; title sale.card.failed.title"
   },
   "reloadLeaveUncertainTitle": "Top-up open – close anyway?",
   "@reloadLeaveUncertainTitle": {

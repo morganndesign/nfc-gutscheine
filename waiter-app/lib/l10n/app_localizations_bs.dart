@@ -973,8 +973,41 @@ class AppLocalizationsBs extends AppLocalizations {
       'Ova prijava ne smije dopunjavati kartice ili restoran ne dozvoljava dopunu.';
 
   @override
-  String get reloadCardNotUsable =>
-      'Ova kartica se ne može dopuniti (blokirana ili nije prodana).';
+  String get reloadCardReplaced =>
+      'Ova kartica je zamijenjena. Prislonite novu karticu gosta uz telefon.';
+
+  @override
+  String get reloadCardRevoked =>
+      'Ova kartica je van upotrebe i ne može se dopuniti.';
+
+  @override
+  String get reloadCardLost =>
+      'Ova kartica je prijavljena kao izgubljena. Menadžer može pomoći.';
+
+  @override
+  String get reloadCardNotInStock =>
+      'Ova kartica još nije na zalihi. Prvo potvrdite isporuku.';
+
+  @override
+  String get reloadCardOtherCard =>
+      'Ovo je druga kartica. Za potvrdu prislonite istu karticu uz telefon.';
+
+  @override
+  String get reloadNewCardTitle => 'Nova kartica – dopunite stanje';
+
+  @override
+  String reloadNewCardBody(String number) {
+    return 'Kartica $number sa zalihe. Uz ovaj iznos se prodaje i aktivira.';
+  }
+
+  @override
+  String reloadNewCardDoneBody(String number, String balance) {
+    return 'Kartica $number je aktivna · stanje $balance';
+  }
+
+  @override
+  String get reloadNewCardNotAllowedBody =>
+      'Ovo je nova kartica. Aktivira je osoba koja smije prodavati vaučere.';
 
   @override
   String get reloadLeaveUncertainTitle => 'Dopuna otvorena – ipak zatvoriti?';

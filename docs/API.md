@@ -248,7 +248,7 @@ POST /presentments/cards/{authentication}
 | Purpose | Permission | Card state | `voucher` |
 |---|---|---|---|
 | `spend` | vouchers.redeem | `active`, linked to a `card` voucher | the voucher |
-| `reload` | vouchers.reload | `active`, linked to a `card` voucher | the voucher |
+| `reload` | vouchers.reload | `active`, linked to a `card` voucher; or `available` (a new card from stock: the app sells it, below) | the voucher; `null` for an `available` card |
 | `bind` | cards.bind | `available` | `null` |
 | `receive` | cards.receive | `delivered` | `null` |
 | `surrender` | cards.manage | `active`, `suspended` (the guest's card, handed in for its replacement) | `null` |
@@ -259,7 +259,9 @@ NDEF on another chip), the restaurant and the state (`422 CARD_NOT_USABLE`, `con
 `context.state`, `other_restaurant` or `not_bound`). Step 2 is bound to the same user, device and restaurant, valid
 30 seconds and single use; a wrong answer is `403 CARD_AUTHENTICATION_FAILED`. Failures count towards the same
 lockout as failed scans (`429 PRESENTMENT_THROTTLED`). A redemption refuses a card suspended after its tap
-(`PRESENTMENT_INVALID`, `card_not_active`).
+(`PRESENTMENT_INVALID`, `card_not_active`). A `reload` tap of an `available` card (`card.state` `available`, `voucher`
+`null`) is the till's "top up card" on a new card: it can only sell that card (`POST /vouchers`, `form: card`, needs
+`vouchers.sell` + `cards.bind`); a reload refuses it (`PRESENTMENT_INVALID`, `card_not_active`).
 
 ### Vouchers
 
@@ -307,7 +309,7 @@ Idempotency-Key: 7b1c…
 | Field | |
 |---|---|
 | `value` | Minor units; within the restaurant's `min_voucher_value` and `max_voucher_balance` |
-| `form` | `printable` (a digital voucher with a printable QR) or `card` (needs `cards.bind` and `presentment_id`: the `bind` presentment of the stock card tapped for this sale) |
+| `form` | `printable` (a digital voucher with a printable QR) or `card` (needs `cards.bind` and `presentment_id`: a fresh `bind` or `reload` presentment of the stock card tapped for this sale; `422 PRESENTMENT_INVALID` `card_state` when the card is no longer `available`, `wrong_purpose` for any other purpose) |
 | `payment.method` | `cash`, `card_terminal` (needs `reference`: terminal receipt), `bank_transfer` (needs `reference`), `complimentary` (needs `reason`, 3–500 characters, and `vouchers.sell_complimentary`) |
 | `customer_id` or `customer` | Optional: an existing customer, or a new one (`first_name, last_name, email, phone, marketing_consent`) |
 | `recipient_name`, `notes` | Optional |

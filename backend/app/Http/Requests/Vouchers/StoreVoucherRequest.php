@@ -10,7 +10,8 @@ use App\Models\User;
 
 /**
  * Sale of a voucher. Amounts are integers in minor units; floats, strings and booleans are refused (audit P9).
- * A card sale (`form: card`) also needs `cards.bind` and the `bind` presentment of the tapped card.
+ * A card sale (`form: card`) also needs `cards.bind` and a fresh presentment of the tapped stock card: a `bind` tap, or
+ * the till's top-up tap (`reload`) of a card that turned out to be new.
  */
 final class StoreVoucherRequest extends ApiRequest
 {

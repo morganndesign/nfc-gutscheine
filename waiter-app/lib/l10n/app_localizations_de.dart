@@ -977,8 +977,41 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Anmeldung darf keine Karten aufladen, oder das Restaurant erlaubt kein Aufladen.';
 
   @override
-  String get reloadCardNotUsable =>
-      'Diese Karte kann nicht aufgeladen werden (gesperrt oder nicht verkauft).';
+  String get reloadCardReplaced =>
+      'Diese Karte wurde ersetzt. Die neue Karte des Gastes ans Handy halten.';
+
+  @override
+  String get reloadCardRevoked =>
+      'Diese Karte ist außer Betrieb und kann nicht aufgeladen werden.';
+
+  @override
+  String get reloadCardLost =>
+      'Diese Karte ist als verloren gemeldet. Die Betriebsleitung kann helfen.';
+
+  @override
+  String get reloadCardNotInStock =>
+      'Diese Karte ist noch nicht im Lager. Zuerst die Lieferung bestätigen.';
+
+  @override
+  String get reloadCardOtherCard =>
+      'Das ist eine andere Karte. Zum Bestätigen dieselbe Karte ans Handy halten.';
+
+  @override
+  String get reloadNewCardTitle => 'Neue Karte – Guthaben aufladen';
+
+  @override
+  String reloadNewCardBody(String number) {
+    return 'Karte $number aus dem Lager. Mit dem Betrag wird sie verkauft und aktiviert.';
+  }
+
+  @override
+  String reloadNewCardDoneBody(String number, String balance) {
+    return 'Karte $number ist aktiv · Guthaben $balance';
+  }
+
+  @override
+  String get reloadNewCardNotAllowedBody =>
+      'Das ist eine neue Karte. Aktivieren kann sie, wer Gutscheine verkaufen darf.';
 
   @override
   String get reloadLeaveUncertainTitle =>

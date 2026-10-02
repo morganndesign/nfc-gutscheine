@@ -689,19 +689,28 @@ class SoldVoucher {
   final String? cardNumber;
 }
 
-/// A card presented for binding or receiving (a live-authenticated tap without a voucher yet).
+/// A live-authenticated card tap. Binding, receiving and surrendering name no voucher; a `reload` tap names the
+/// voucher of a guest's active card, and none for a new card from stock (which is then sold).
 @immutable
 class CardPresented {
-  const CardPresented({required this.id, required this.cardNumber, required this.cardState, required this.expiresIn});
+  const CardPresented({
+    required this.id,
+    required this.cardNumber,
+    required this.cardState,
+    required this.expiresIn,
+    this.voucher,
+  });
 
   factory CardPresented.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> data = _map(json['data'], 'data');
     final Map<String, Object?> card = _map(data['card'], 'card');
+    final Object? voucher = data['voucher'];
     return CardPresented(
       id: _string(data, 'id'),
       cardNumber: _string(card, 'card_number'),
       cardState: _string(card, 'state'),
       expiresIn: Duration(seconds: _int(data, 'expires_in')),
+      voucher: voucher == null ? null : PresentedVoucher.fromJson(_map(voucher, 'voucher')),
     );
   }
 
@@ -709,6 +718,10 @@ class CardPresented {
   final String cardNumber;
   final String cardState;
   final Duration expiresIn;
+  final PresentedVoucher? voucher;
+
+  /// A card from the restaurant's stock, not sold yet.
+  bool get isNew => voucher == null && cardState == 'available';
 }
 
 /// A delivery of cards for this restaurant (`GET /card-batches`).

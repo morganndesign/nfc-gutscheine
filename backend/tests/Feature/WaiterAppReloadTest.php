@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
+use App\Enums\CardState;
 use App\Enums\RoleSlug;
 use App\Enums\TransactionType;
+use App\Enums\VoucherKind;
 use App\Models\Card;
+use App\Models\Payment;
 use App\Models\Restaurant;
+use App\Models\Role;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
 use Illuminate\Support\Str;
@@ -19,6 +23,7 @@ use Tests\TestCase;
 /**
  * Topping up a guest's card in GiftCard Waiter: a manager or owner taps the card (purpose `reload`), enters the
  * amount and books the payment. The till never tops up a card it has not just seen; waiters cannot top up.
+ * A new card from stock tapped there is sold instead (a card sale with that tap), never booked as a reload.
  */
 final class WaiterAppReloadTest extends TestCase
 {
@@ -152,5 +157,90 @@ final class WaiterAppReloadTest extends TestCase
     {
         $this->actingAsStaff($this->restaurant, RoleSlug::Manager);
         $this->reload($this->voucher->id, null, 500)->assertCreated()->assertJsonPath('data.voucher.balance', 2500);
+    }
+
+    /** @param  array<string, mixed>  $extra */
+    private function sellCard(string $presentmentId, int $value = 3000, array $extra = [], ?string $key = null): TestResponse
+    {
+        return $this->postJson('/api/v1/vouchers', [
+            'value' => $value,
+            'form' => 'card',
+            'presentment_id' => $presentmentId,
+            'payment' => ['method' => 'cash'],
+            ...$extra,
+        ], $this->idempotency($key));
+    }
+
+    public function test_a_top_up_tap_of_a_new_card_sells_it_and_never_books_a_reload(): void
+    {
+        $stock = $this->availableCard($this->restaurant);
+        $this->signInApp(RoleSlug::Manager, 'mia@example.com');
+
+        // The app tells the two apart: a stock card names no voucher.
+        $tap = $this->tapCard($this->chip($stock), 'reload')->assertCreated()
+            ->assertJsonPath('data.purpose', 'reload')
+            ->assertJsonPath('data.card.state', 'available')
+            ->assertJsonPath('data.voucher', null);
+        $presentment = (string) $tap->json('data.id');
+
+        // That tap books no reload, on any voucher.
+        $this->reload($this->voucher->id, $presentment)->assertStatus(422)
+            ->assertJsonPath('code', 'PRESENTMENT_INVALID')->assertJsonPath('context.reason', 'card_not_active');
+
+        $key = (string) Str::uuid();
+        $sale = $this->sellCard($presentment, 4500, ['payment' => ['method' => 'card_terminal', 'reference' => 'TID-9']], $key)->assertCreated()
+            ->assertJsonPath('data.kind', 'card')->assertJsonPath('data.balance', 4500)->assertJsonPath('card.state', 'active');
+        $voucherId = (string) $sale->json('data.id');
+        // A lost answer is retried with the same key: one sale.
+        $this->sellCard($presentment, 4500, ['payment' => ['method' => 'card_terminal', 'reference' => 'TID-9']], $key)->assertOk()
+            ->assertJsonPath('data.id', $voucherId)->assertJsonPath('replayed', true);
+
+        $voucher = Voucher::query()->findOrFail($voucherId);
+        $this->assertSame(VoucherKind::Card, $voucher->kind);
+        $this->assertSame(4500, $voucher->balance);
+        $this->assertSame(CardState::Active, $stock->refresh()->state);
+        $this->assertSame(1, Payment::query()->where('voucher_id', $voucherId)->where('method', 'card_terminal')->count());
+        $this->assertSame(0, VoucherTransaction::query()->where('type', TransactionType::Reload->value)->count());
+        $this->assertSame(2000, $this->voucher->refresh()->balance);
+        // Single use: the tap is spent.
+        $this->sellCard($presentment)->assertStatus(422)->assertJsonPath('context.reason', 'already_used');
+        $this->assertLedgerConsistent($voucher);
+
+        // Now active, the same card is topped up by its next tap.
+        $next = $this->tapCard($this->chip($stock), 'reload')->assertCreated()->assertJsonPath('data.voucher.id', $voucherId);
+        $this->reload($voucherId, (string) $next->json('data.id'), 500)->assertCreated()->assertJsonPath('data.voucher.balance', 5000);
+    }
+
+    public function test_only_a_stock_card_tapped_for_a_top_up_or_a_sale_is_sold(): void
+    {
+        $stock = $this->availableCard($this->restaurant);
+        $this->signInApp(RoleSlug::Manager, 'mia@example.com');
+
+        // A top-up tap of a guest's active card cannot sell it again.
+        $active = (string) $this->tapCard($this->chip, 'reload')->assertCreated()->json('data.id');
+        $this->sellCard($active)->assertStatus(422)->assertJsonPath('code', 'PRESENTMENT_INVALID')->assertJsonPath('context.reason', 'card_state');
+        // A pay tap neither reaches a stock card nor sells a guest's card.
+        $this->tapCard($this->chip($stock))->assertStatus(422)->assertJsonPath('code', 'CARD_NOT_USABLE')->assertJsonPath('context.state', 'available');
+        $spend = (string) $this->tapCard($this->chip)->assertCreated()->json('data.id');
+        $this->sellCard($spend)->assertStatus(422)->assertJsonPath('context.reason', 'wrong_purpose');
+
+        $this->assertSame(1, Voucher::query()->count());
+        $this->assertSame(CardState::Available, $stock->refresh()->state);
+    }
+
+    public function test_someone_who_may_not_sell_cannot_activate_a_new_card(): void
+    {
+        $stock = $this->availableCard($this->restaurant);
+        $this->signInApp(RoleSlug::Manager, 'mia@example.com');
+        $tap = (string) $this->tapCard($this->chip($stock), 'reload')->assertCreated()->json('data.id');
+
+        // The role loses vouchers.sell: the role is checked on every request, whatever the token says.
+        $role = Role::query()->where('slug', RoleSlug::Manager->value)->firstOrFail();
+        $permissions = $role->permissions();
+        $role->syncPermissions($permissions->where('slug', '!=', 'vouchers.sell')->pluck($permissions->getRelated()->getQualifiedKeyName())->all());
+
+        $this->sellCard($tap)->assertForbidden();
+        $this->assertSame(CardState::Available, $stock->refresh()->state);
+        $this->assertSame(1, Voucher::query()->count());
     }
 }

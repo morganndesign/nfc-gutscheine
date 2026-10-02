@@ -962,7 +962,36 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get reloadNotAllowedBody => pseudoLocalize(base.reloadNotAllowedBody);
 
   @override
-  String get reloadCardNotUsable => pseudoLocalize(base.reloadCardNotUsable);
+  String get reloadCardReplaced => pseudoLocalize(base.reloadCardReplaced);
+
+  @override
+  String get reloadCardRevoked => pseudoLocalize(base.reloadCardRevoked);
+
+  @override
+  String get reloadCardLost => pseudoLocalize(base.reloadCardLost);
+
+  @override
+  String get reloadCardNotInStock => pseudoLocalize(base.reloadCardNotInStock);
+
+  @override
+  String get reloadCardOtherCard => pseudoLocalize(base.reloadCardOtherCard);
+
+  @override
+  String get reloadNewCardTitle => pseudoLocalize(base.reloadNewCardTitle);
+
+  @override
+  String reloadNewCardBody(String number) =>
+      pseudoLocalize(base.reloadNewCardBody(pseudoMarker(0)), <String>[number]);
+
+  @override
+  String reloadNewCardDoneBody(String number, String balance) => pseudoLocalize(
+    base.reloadNewCardDoneBody(pseudoMarker(0), pseudoMarker(1)),
+    <String>[number, balance],
+  );
+
+  @override
+  String get reloadNewCardNotAllowedBody =>
+      pseudoLocalize(base.reloadNewCardNotAllowedBody);
 
   @override
   String get reloadLeaveUncertainTitle =>

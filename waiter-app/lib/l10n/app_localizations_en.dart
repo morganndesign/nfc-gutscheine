@@ -971,8 +971,41 @@ class AppLocalizationsEn extends AppLocalizations {
       'This sign-in may not top up cards, or the restaurant does not allow top-ups.';
 
   @override
-  String get reloadCardNotUsable =>
-      'This card cannot be topped up (suspended or not sold).';
+  String get reloadCardReplaced =>
+      'This card was replaced. Hold the guest\'s new card to the phone.';
+
+  @override
+  String get reloadCardRevoked =>
+      'This card is out of service and cannot be topped up.';
+
+  @override
+  String get reloadCardLost =>
+      'This card is reported lost. A manager can help.';
+
+  @override
+  String get reloadCardNotInStock =>
+      'This card is not in stock yet. Confirm the delivery first.';
+
+  @override
+  String get reloadCardOtherCard =>
+      'This is a different card. Hold the same card to the phone to confirm.';
+
+  @override
+  String get reloadNewCardTitle => 'New card – load a balance';
+
+  @override
+  String reloadNewCardBody(String number) {
+    return 'Card $number from stock. With this amount it is sold and activated.';
+  }
+
+  @override
+  String reloadNewCardDoneBody(String number, String balance) {
+    return 'Card $number is active · balance $balance';
+  }
+
+  @override
+  String get reloadNewCardNotAllowedBody =>
+      'This is a new card. Someone who may sell vouchers activates it.';
 
   @override
   String get reloadLeaveUncertainTitle => 'Top-up open – close anyway?';

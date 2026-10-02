@@ -22,10 +22,13 @@ enum PresentmentPurpose: string
     /** Hand in a guest's card for its replacement: proves the old card is at the till. */
     case Surrender = 'surrender';
 
-    /** Top up the voucher of a guest's card: the card at the till names the voucher, consumed by the reload. */
+    /**
+     * The "top up" tap at the till: an active card names its voucher, consumed by the reload; a card from stock
+     * names none and is sold instead (a card sale accepts it like a `bind` tap). Never books a reload on a stock card.
+     */
     case Reload = 'reload';
 
-    /** Purposes whose presentment names the card's voucher (and is consumed by an operation on it). */
+    /** Purposes whose presentment names the card's voucher when the card is active (consumed by an operation on it). */
     public function namesVoucher(): bool
     {
         return in_array($this, [self::Spend, self::Reload], true);
@@ -44,7 +47,7 @@ enum PresentmentPurpose: string
             // Delivered as well: batches marked delivered before the receipt step was simplified hold delivered cards.
             self::Receive => [CardState::Shipped, CardState::Delivered],
             self::Surrender => [CardState::Active, CardState::Suspended],
-            self::Reload => [CardState::Active],
+            self::Reload => [CardState::Active, CardState::Available],
         };
     }
 

@@ -423,8 +423,8 @@ abstract final class Payloads {
     ],
   };
 
-  static Map<String, Object?> cardPresentment({int balance = 5000, String status = 'active'}) {
-    final Map<String, Object?> p = presentment(balance: balance, status: status);
+  static Map<String, Object?> cardPresentment({int balance = 5000, String status = 'active', String id = presentmentId}) {
+    final Map<String, Object?> p = presentment(balance: balance, status: status, id: id);
     final Map<String, Object?> data = Map<String, Object?>.of(p['data']! as Map<String, Object?>)
       ..['method'] = 'live_auth'
       ..['level'] = 'A3'

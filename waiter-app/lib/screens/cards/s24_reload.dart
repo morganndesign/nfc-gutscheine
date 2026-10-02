@@ -18,7 +18,8 @@ import '../charge/voucher_data.dart';
 import 'card_tap_view.dart';
 
 /// S24 · Top up card — managers and owners (`vouchers.reload`) on a phone that reads cards, Android and iPhone
-/// alike: tap the guest's card → amount → how the guest paid → booked. The server checks role, tap and limits.
+/// alike: tap the card → amount → how the guest paid → booked. A guest's card is topped up; a new card from stock
+/// is sold and activated with that amount. The server checks role, tap and limits.
 Future<void> openReload(BuildContext context) => Navigator.of(
   context,
 ).push<void>(MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => const ReloadScreen()));
@@ -49,7 +50,7 @@ class _ReloadScreenState extends State<ReloadScreen> {
         prompt: l10n.reloadTap,
         again: l10n.reloadTapAgain,
         checking: l10n.cardChecking,
-        done: l10n.reloadDoneTitle,
+        done: l10n.scanDetected, // the iPhone sheet closes before any amount: nothing is topped up yet
         failed: l10n.reloadFailedTitle,
       ),
     );
@@ -157,8 +158,13 @@ class _ReloadScreenState extends State<ReloadScreen> {
   // ------------------------------------------------------------------ amount
 
   Widget _amount(BuildContext context, AppLocalizations l10n, ReloadAmount s) {
-    final MoneyContext money = context.moneyFor(s.voucher.currency);
-    final String? limit = s.max == null ? null : l10n.reloadAmountMax(money.format(s.max!));
+    final MoneyContext money = context.moneyFor(_c.currencyOf(s.card));
+    final PresentedVoucher? voucher = s.card.voucher;
+    final String? limit = switch (s.max) {
+      null => null,
+      final int max when voucher == null => l10n.saleAmountRange(money.format(s.min ?? 1), money.format(max)),
+      final int max => l10n.reloadAmountMax(money.format(max)),
+    };
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
         const SingleActivator(LogicalKeyboardKey.enter): _c.continueToDetails,
@@ -176,8 +182,11 @@ class _ReloadScreenState extends State<ReloadScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: <Widget>[
-                          // The guest's card with its balance now, as at the till.
-                          BalanceCard(data: balanceCardDataOf(context, s.voucher), money: money, maxHeight: 160),
+                          if (voucher == null)
+                            _newCard(l10n, s.card)
+                          else
+                            // The guest's card with its balance now, as at the till.
+                            BalanceCard(data: balanceCardDataOf(context, voucher), money: money, maxHeight: 160),
                           const SizedBox(height: Space.s5),
                           ScaledText(
                             l10n.reloadAmountLabel,
@@ -225,11 +234,18 @@ class _ReloadScreenState extends State<ReloadScreen> {
     );
   }
 
+  /// A card from stock: said before the amount, so no one expects a balance on it.
+  Widget _newCard(AppLocalizations l10n, CardPresented card) => StatusBanner(
+    tone: BannerTone.info,
+    title: l10n.reloadNewCardTitle,
+    body: l10n.reloadNewCardBody(card.cardNumber),
+  );
+
   // ------------------------------------------------------------------ details
 
   Widget _details(BuildContext context, AppLocalizations l10n, ReloadDetails s) {
     final WaiterColors c = context.colors;
-    final String amount = context.moneyFor(s.voucher.currency).format(s.amount.cents);
+    final String amount = context.moneyFor(_c.currencyOf(s.card)).format(s.amount.cents);
     return Padding(
       padding: _pagePadding(context.layout),
       child: Center(
@@ -243,6 +259,7 @@ class _ReloadScreenState extends State<ReloadScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
                       const SizedBox(height: Space.s4),
+                      if (s.newCard) ...<Widget>[_newCard(l10n, s.card), const SizedBox(height: Space.s4)],
                       Semantics(
                         header: true,
                         child: ScaledText(l10n.salePaymentLabel, type: TypeTokens.caption, color: c.fgSecondary),
@@ -313,7 +330,7 @@ class _ReloadScreenState extends State<ReloadScreen> {
           l10n,
           s.card!,
           notUsableTitle: l10n.reloadFailedTitle,
-          notUsableBody: l10n.reloadCardNotUsable,
+          notUsableBody: _notUsableBody(l10n, s.card!.cardState),
         );
         return ProblemScreen(
           family: t.family,
@@ -347,6 +364,16 @@ class _ReloadScreenState extends State<ReloadScreen> {
         supportCode: hasCode ? code : null,
         requestId: hasCode ? s.requestId : null,
       ),
+      // A new card, and this sign-in may not sell: nothing to retry here.
+      ReloadProblemKind.cannotSell => ProblemScreen(
+        family: ProblemFamily.account,
+        title: l10n.saleCardFailedTitle,
+        body: l10n.reloadNewCardNotAllowedBody,
+        primary: close,
+        onClose: () => unawaited(_close()),
+        supportCode: hasCode ? code : null,
+        requestId: hasCode ? s.requestId : null,
+      ),
       ReloadProblemKind.notAllowed => ProblemScreen(
         family: ProblemFamily.account,
         title: l10n.reloadNotAllowedTitle,
@@ -360,10 +387,25 @@ class _ReloadScreenState extends State<ReloadScreen> {
     };
   }
 
+  /// Why this card cannot be topped up, from the state the server sent (or the refused tap's reason).
+  static String _notUsableBody(AppLocalizations l10n, String? state) => switch (state) {
+    'suspended' || 'card_not_active' => l10n.problemCardNotUsableSuspended,
+    'other_restaurant' => l10n.problemCardNotUsableOtherRestaurant,
+    'replaced' => l10n.reloadCardReplaced,
+    'revoked' || 'destroyed' => l10n.reloadCardRevoked,
+    'lost' => l10n.reloadCardLost,
+    'shipped' || 'delivered' => l10n.reloadCardNotInStock,
+    CardPresentException.otherCard => l10n.reloadCardOtherCard,
+    // The new card was sold at another till meanwhile.
+    'card_state' => l10n.saleCardNotUsable,
+    _ => l10n.problemCardNotUsableInvalid,
+  };
+
   // ------------------------------------------------------------------ done
 
   Widget _done(BuildContext context, AppLocalizations l10n, ReloadDone s) {
-    final MoneyContext money = context.moneyFor(s.result.currency);
+    final MoneyContext money = context.moneyFor(s.currency);
+    final String? activated = s.activatedCard;
     return Padding(
       padding: _pagePadding(context.layout),
       child: Center(
@@ -382,11 +424,17 @@ class _ReloadScreenState extends State<ReloadScreen> {
                         Semantics(
                           liveRegion: true,
                           header: true,
-                          child: ScaledText(l10n.reloadDoneTitle, type: TypeTokens.titleL, textAlign: TextAlign.center),
+                          child: ScaledText(
+                            activated == null ? l10n.reloadDoneTitle : l10n.saleCardDoneTitle,
+                            type: TypeTokens.titleL,
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                         const SizedBox(height: Space.s2),
                         ScaledText(
-                          l10n.reloadDoneBody(money.format(s.result.amount), money.format(s.result.balance)),
+                          activated == null
+                              ? l10n.reloadDoneBody(money.format(s.amount), money.format(s.balance))
+                              : l10n.reloadNewCardDoneBody(activated, money.format(s.balance)),
                           type: TypeTokens.bodyL,
                           color: context.colors.fgSecondary,
                           textAlign: TextAlign.center,

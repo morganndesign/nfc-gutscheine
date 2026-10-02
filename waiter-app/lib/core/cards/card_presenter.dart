@@ -41,8 +41,12 @@ class CardPresentException implements Exception {
 
   final CardPresentFailure failure;
 
-  /// For [CardPresentFailure.notUsable]: the card's state, or the reason (`other_restaurant`).
+  /// For [CardPresentFailure.notUsable]: the card's state, or the reason (`other_restaurant`, a refused
+  /// presentment's `card_not_active` / `card_state`, [otherCard]).
   final String? cardState;
+
+  /// A tap to confirm an entry found another card than the one it was made for.
+  static const String otherCard = 'other_card';
   final String? requestId;
 
   /// The API failure behind it, for the session (401, device revoked).
@@ -52,8 +56,8 @@ class CardPresentException implements Exception {
   String toString() => 'CardPresentException(${failure.name})';
 }
 
-/// A card held to the phone — `bind` (sale, replacement), `receive` (delivery), `surrender` or `reload`: the phone reads the card's URL, starts AuthenticateEV2First with K3 and relays the server's
-/// challenge. The server answers with a single-use, 60-second presentment. Android and iPhone alike; the phone
+/// A card held to the phone — `bind` (sale, replacement), `receive` (delivery), `surrender` or `reload`: the phone
+/// reads the card's URL, starts AuthenticateEV2First with K3 and relays the server's challenge. The server answers with a single-use, 60-second presentment. Android and iPhone alike; the phone
 /// never holds a key.
 class CardPresenter {
   CardPresenter({required WaiterApi api, required NfcRelay nfc}) : _api = api, _nfc = nfc;
@@ -61,37 +65,24 @@ class CardPresenter {
   final WaiterApi _api;
   final NfcRelay _nfc;
 
-  /// [onDetected] runs when a card is on the phone (the screen switches to "checking").
+  /// [onDetected] runs when a card is on the phone (the screen switches to "checking"). A `reload` tap of a guest's
+  /// card carries its voucher ([CardPresented.voucher]).
   Future<CardPresented> present(
     String purpose, {
     required ({String prompt, String checking, String done, String failed}) texts,
     void Function()? onDetected,
-  }) => _present(purpose, texts, onDetected, _api.completeCardPresentmentForCard);
-
-  /// A guest's card for a purpose that names its voucher (`reload`): the presentment carries the voucher.
-  Future<Presentment> presentVoucher(
-    String purpose, {
-    required ({String prompt, String checking, String done, String failed}) texts,
-    void Function()? onDetected,
-  }) => _present(purpose, texts, onDetected, _api.completeCardPresentment);
-
-  Future<T> _present<T>(
-    String purpose,
-    ({String prompt, String checking, String done, String failed}) texts,
-    void Function()? onDetected,
-    Future<T> Function(String authentication, String answer) complete,
-  ) async {
+  }) async {
     CardLink? card;
     try {
       card = await _nfc.start(prompt: texts.prompt);
       onDetected?.call();
       final CardLink link = card;
       // Once a card is on the phone the exchange ends — with a result or a message — never an endless spinner.
-      final T presented = await () async {
+      final CardPresented presented = await () async {
         final CardTap tap = await Ntag424Session.read(link);
         final CardChallenge challenge = await _api.beginCardPresentment(tap, purpose: purpose);
         final String answer = await Ntag424Session.answer(link, challenge.commandHex);
-        return complete(challenge.authentication, answer);
+        return _api.completeCardPresentmentForCard(challenge.authentication, answer);
       }().timeout(exchangeTimeout);
       await card.close(message: texts.done);
       return presented;

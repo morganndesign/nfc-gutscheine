@@ -56,7 +56,7 @@ final class CardService
 
         return $this->guarded($actor, 'receipt', null, $batch->batch_code, fn (): CardBatch => DB::transaction(function () use ($actor, $batch, $counted, $presentmentId): CardBatch {
             $presentment = $this->presentments->lockForUse($presentmentId);
-            $card = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Receive);
+            $card = $this->presentments->consumeCard($presentment, $actor, [PresentmentPurpose::Receive], PresentmentPurpose::Receive->cardStates());
             if ($card->batch_id !== $batch->getKey()) {
                 throw new PresentmentInvalidException('', ['reason' => 'other_batch']);
             }
@@ -113,8 +113,8 @@ final class CardService
                 // Lock order: presentments → cards → voucher.
                 $presentment = $this->presentments->lockForUse($presentmentId);
                 $surrender = $surrenderId !== null ? $this->presentments->lockForUse($surrenderId) : null;
-                $new = $this->presentments->consumeCard($presentment, $actor, PresentmentPurpose::Bind);
-                if ($surrenderId !== null && $this->presentments->consumeCard($surrender, $actor, PresentmentPurpose::Surrender)->getKey() !== $old->getKey()) {
+                $new = $this->presentments->consumeCard($presentment, $actor, [PresentmentPurpose::Bind], PresentmentPurpose::Bind->cardStates());
+                if ($surrenderId !== null && $this->presentments->consumeCard($surrender, $actor, [PresentmentPurpose::Surrender], PresentmentPurpose::Surrender->cardStates())->getKey() !== $old->getKey()) {
                     throw new PresentmentInvalidException('', ['reason' => 'other_card']);
                 }
 
