@@ -31,7 +31,9 @@ final class TapPageController
         $language = GuestCopy::language($request->getPreferredLanguage(['de', 'en', 'bs', 'hr', 'sr']));
 
         try {
-            $card = $taps->verify($keySet, (string) $request->query('e'), (string) $request->query('m'), Actor::fromRequest($request));
+            // `e[]=…` makes a parameter an array: refused like any other malformed tap, not an error.
+            [$e, $m] = [$request->query('e'), $request->query('m')];
+            $card = $taps->verify($keySet, is_string($e) ? $e : '', is_string($m) ? $m : '', Actor::fromRequest($request));
         } catch (DomainException) {
             return $this->page($language, null, GuestCopy::for($language)['not_verified'], status: 403);
         }

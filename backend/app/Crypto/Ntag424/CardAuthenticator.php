@@ -68,12 +68,18 @@ final class CardAuthenticator
         $state = json_decode($this->encrypter->decryptString($sealed), true, 4, JSON_THROW_ON_ERROR);
         $uid = (string) hex2bin($state['uid']);
 
-        $session = Ev2FirstAuthentication::complete(
-            $keys($state['context'])->challengeKey($uid),
-            (string) base64_decode($state['a'], true),
-            (string) base64_decode($state['b'], true),
-            $encryptedCardResponse,
-        );
+        try {
+            $session = Ev2FirstAuthentication::complete(
+                $keys($state['context'])->challengeKey($uid),
+                (string) base64_decode($state['a'], true),
+                (string) base64_decode($state['b'], true),
+                $encryptedCardResponse,
+            );
+        } catch (CardAuthenticationFailedException) {
+            // The tap was genuine but the chip does not hold the card's key: a copied URL on a chip that also copies
+            // the UID (an emulator). Named for fraud monitoring, like a mismatching radio UID.
+            throw new CardAuthenticationFailedException('', ['reason' => 'wrong_answer']);
+        }
 
         return [$session, $state['context']];
     }

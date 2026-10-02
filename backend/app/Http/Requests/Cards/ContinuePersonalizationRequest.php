@@ -12,8 +12,9 @@ final class ContinuePersonalizationRequest extends ApiRequest
     public function rules(): array
     {
         return [
-            // The chip's answers to the last round's commands, in order, each with its status word.
-            'responses' => ['required', 'array', 'min:1', 'max:12'],
+            // The chip's answers to the last round's commands, in order, each with its status word. A list: answers
+            // numbered by the relay could leave out one (Read_Sig) and still look complete.
+            'responses' => ['required', 'list', 'min:1', 'max:12'],
             'responses.*' => ['required', 'string', 'regex:/^(?:[0-9A-Fa-f]{2}){2,258}$/'],
         ];
     }
