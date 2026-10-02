@@ -209,7 +209,7 @@
       "m": { "$type": "dimension", "$value": 56, "$description": "Regular button height." }
     },
     "key": {
-      "$root": { "$type": "dimension", "$value": 72, "$description": "Keypad key height.", "$extensions": { "compactHeight": 64 } },
+      "$root": { "$type": "dimension", "$value": 72, "$description": "Keypad key height.", "$extensions": { "compactHeight": 52 } },
       "gap": { "$type": "dimension", "$value": 8, "$description": "Keypad gap (≥ 8)." }
     },
     "topBar": { "$type": "dimension", "$value": 56, "$description": "+ safe area." },
@@ -426,7 +426,7 @@
     "$description": "Tier 3 — 05 §2.1.",
     "$extensions": { "tier": 3 },
     "key": {
-      "height": { "$type": "dimension", "$value": "{size.key}", "$extensions": { "compactHeight": 64 } },
+      "height": { "$type": "dimension", "$value": "{size.key}", "$extensions": { "compactHeight": 52 } },
       "radius": { "$type": "dimension", "$value": "{radius.l}" }
     },
     "gap": { "$type": "dimension", "$value": "{size.key.gap}" },

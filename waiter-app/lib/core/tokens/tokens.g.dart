@@ -992,7 +992,7 @@ abstract final class Sizes {
   static const double key = 72;
 
   /// `size.key` at compact height (< 700 pt).
-  static const double keyCompact = 64;
+  static const double keyCompact = 52;
 
   /// `size.key.gap` — Keypad gap (≥ 8).
   static const double keyGap = 8;
@@ -1798,7 +1798,7 @@ abstract final class KeypadTokens {
   static const double keyHeight = 72;
 
   /// `keypad.key.height` at compact height (< 700 pt).
-  static const double keyHeightCompact = 64;
+  static const double keyHeightCompact = 52;
 
   /// `keypad.key.radius` —
   static const double keyRadius = 20;

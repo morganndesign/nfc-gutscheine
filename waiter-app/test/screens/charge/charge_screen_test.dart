@@ -285,6 +285,7 @@ void main() {
       expect(hapticCount(app) - before, 2, reason: 'key + over-balance');
 
       await realPause(tester);
+      await tester.pump(Motion.durationBase); // the quick-amount row opens
       before = hapticCount(app);
       await tester.tap(find.byType(QuickAmountChip));
       await settle(tester, 2);
@@ -530,7 +531,7 @@ void main() {
     });
 
     testWidgets(
-      '375 × 667 compact: a (smaller) real card, 64-pt keys, no overflow',
+      '375 × 667 compact: a (smaller) real card, 52-pt keys, no overflow',
       (WidgetTester tester) async {
         final TestApp app = await openCharge(
           tester,
@@ -558,12 +559,12 @@ void main() {
         );
         expect(
           tester.getRect(find.byType(Keypad)).top - amountLine.bottom,
-          greaterThanOrEqualTo(Space.s4),
+          greaterThanOrEqualTo(Space.s2),
         );
         await typeDigits(tester, '6000');
         expect(rich('Use balance'), findsOneWidget);
         await tester.pump(const Duration(seconds: 1));
-        expect(tester.getSize(find.byType(Keypad)).height, 4 * 64 + 3 * 8);
+        expect(tester.getSize(find.byType(Keypad)).height, 4 * 52 + 3 * 8);
         final Rect button = tester.getRect(find.byType(PrimaryButton));
         expect(button.bottom, lessThanOrEqualTo(667 - 16));
         await finishApp(tester, app);

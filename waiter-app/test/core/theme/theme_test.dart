@@ -102,7 +102,7 @@ void main() {
     test('iPhone SE is compact height; iPhone 15 is regular', () {
       final WaiterLayout se = at(375, 667, top: 20);
       expect(se.heightClass, HeightClass.compact);
-      expect(se.keyHeight, 64);
+      expect(se.keyHeight, 52);
       expect(se.largeButtonHeight, 56);
       expect(se.ctaBottomPadding, 20);
       expect(se.contentWidth, 335);

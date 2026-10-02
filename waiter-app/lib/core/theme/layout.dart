@@ -136,7 +136,7 @@ class WaiterLayout {
   /// Keypad width: content width, max 400 pt (05 §2.1, 08 §2).
   double get keypadWidth => math.min(contentWidth, LayoutTokens.maxKeypad);
 
-  /// Keypad key height: 72 pt, 64 pt at compact height (04 §4.3).
+  /// Keypad key height: 72 pt, 52 pt at compact height (a small phone gives the height to the card).
   double get keyHeight => heightClass.isCompact ? Sizes.keyCompact : Sizes.key;
 
   /// Large button / CTA height: 64 pt, 56 pt at compact height (04 §4.3).

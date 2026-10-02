@@ -81,14 +81,14 @@ void main() {
     });
   }
 
-  testWidgets('keys are 64 pt at compact height', (WidgetTester tester) async {
+  testWidgets('keys are 52 pt at compact height', (WidgetTester tester) async {
     final SemanticsHandle handle = tester.ensureSemantics();
     await pumpComponent(
       tester,
       const _AmountHost(),
       size: const Size(375, 667),
     );
-    expect(tester.getSize(_key('5')).height, 64);
+    expect(tester.getSize(_key('5')).height, 52);
     handle.dispose();
   });
 

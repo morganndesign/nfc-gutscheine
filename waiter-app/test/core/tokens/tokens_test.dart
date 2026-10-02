@@ -246,7 +246,7 @@ void main() {
       expect(Sizes.buttonLCompact, 56);
       expect(Sizes.buttonM, 56);
       expect(Sizes.key, 72);
-      expect(Sizes.keyCompact, 64);
+      expect(Sizes.keyCompact, 52);
       expect(Sizes.keyGap, 8);
       expect(Sizes.chip, 40);
       expect(Sizes.iconButtonFill, 44);
@@ -286,7 +286,7 @@ void main() {
       expect(ButtonTokens.largeHeight, Sizes.buttonL);
       expect(ButtonTokens.largeRadius, Radii.l);
       expect(KeypadTokens.keyHeight, 72);
-      expect(KeypadTokens.keyHeightCompact, 64);
+      expect(KeypadTokens.keyHeightCompact, 52);
       expect(BalanceCardTokens.padding, Space.s6);
       expect(BalanceCardTokens.compactHeight, 88);
       expect(HoldButtonTokens.slop, 12);

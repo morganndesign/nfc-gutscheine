@@ -988,16 +988,24 @@ class _EntryBlock extends StatelessWidget {
       );
     }
     final Widget? assist = _assist();
-    return SizedBox(
-      height: metrics.messageArea + _chipOverhang,
+    final HelperMessage? helper = _helper(l10n);
+    // Nothing to say: the row gives its height to the card (a small phone shows a card twice as large). When a
+    // warning or quick amount appears the card shrinks smoothly; amount and keypad never move.
+    return AnimatedSize(
+      duration: Motion.durationBase,
+      curve: Motion.easeStandard,
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+      height: helper == null && assist == null ? 0 : metrics.messageArea + _chipOverhang,
       child: Stack(
+        clipBehavior: Clip.hardEdge,
         children: <Widget>[
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: metrics.helperLine,
-            child: ChargeHelperLine(message: _helper(l10n)),
+            child: ChargeHelperLine(message: helper),
           ),
           Positioned(
             top: metrics.helperLine + metrics.helperGap - _chipOverhang,
@@ -1013,6 +1021,7 @@ class _EntryBlock extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

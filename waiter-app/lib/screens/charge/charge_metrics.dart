@@ -68,8 +68,9 @@ class ChargeMetrics {
   /// Assist row → keypad and keypad → button: `space.3`, compact `space.2`.
   double get rowGap => compact ? Space.s2 : Space.s3;
 
-  /// AmountDisplay → keypad: room to breathe so the amount never sits on the keys (`space.4`, regular `space.6`).
-  double get amountGap => compact ? Space.s4 : Space.s6;
+  /// AmountDisplay → keypad: room to breathe so the amount never sits on the keys (`space.2` compact, regular
+  /// `space.6`); a small phone gives its height to the card instead.
+  double get amountGap => compact ? Space.s2 : Space.s6;
 
   /// Assist row (QuickAmountChip visual height).
   double get assistRow => Sizes.chip;
