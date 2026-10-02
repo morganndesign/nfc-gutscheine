@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { errorMessage } from "@/lib/api/client"
-import { homeFor, safeRedirectPath, useAuth } from "@/lib/auth"
+import { destinationFor, useAuth } from "@/lib/auth"
 import { useT, type Translate } from "@/lib/i18n"
 
 function loginSchema(t: Translate) {
@@ -35,7 +35,7 @@ function LoginForm() {
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { email: "", password: "", remember: false } })
 
   useEffect(() => {
-    if (user) router.replace(safeRedirectPath(next) ?? homeFor(user))
+    if (user) router.replace(destinationFor(user, next))
   }, [user, next, router])
 
   const onSubmit = form.handleSubmit(async (values) => {

@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { api, ApiError, prefetchCsrfCookie } from "@/lib/api/client"
 import { setRegional } from "@/lib/regional"
 import type { Permission, SessionUser } from "@/lib/api/types"
+import { MANAGE_NAV, PLATFORM_NAV, RESTAURANT_NAV } from "@/components/layout/nav"
 
 interface AuthContextValue {
   user: SessionUser | null
@@ -90,6 +91,26 @@ export function useAuth(): AuthContextValue {
 export function safeRedirectPath(next: string | null): string | null {
   if (!next || !/^\/(?![\/\\])[^\s\\]*$/.test(next)) return null
   return next
+}
+
+/**
+ * Whether `path` is a page this user may open: the navigation entry it belongs to (longest matching prefix) must be
+ * one of theirs. A link left over from another account (e.g. `?next=/settings` after an owner's session expired,
+ * then a platform administrator signs in) must not land them on "no access".
+ */
+export function mayOpen(user: SessionUser, path: string): boolean {
+  const pathname = path.split(/[?#]/)[0]
+  const item = [...RESTAURANT_NAV, ...MANAGE_NAV, ...PLATFORM_NAV]
+    .filter((i) => pathname === i.href || pathname.startsWith(`${i.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0]
+  if (!item) return !pathname.startsWith("/admin") || user.is_platform_admin
+  return user.permissions.includes(item.permission) && (!item.requiresRestaurant || !!user.restaurant)
+}
+
+/** After sign-in: the requested page when this user may open it, else their home. */
+export function destinationFor(user: SessionUser, next: string | null): string {
+  const path = safeRedirectPath(next)
+  return path && mayOpen(user, path) ? path : homeFor(user)
 }
 
 /** Where a user lands after login, based on what they are allowed to do. */

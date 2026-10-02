@@ -223,6 +223,8 @@ export const manage = defineMessages({
     "notFound.home": "Go home",
 
     "accessGuard.title": "No access",
+    "accessGuard.platformText": "This page belongs to a restaurant's own area; platform administration has no access to it.",
+    "accessGuard.home": "Go to start page",
     "accessGuard.text": "Your role does not include this area. Ask the restaurant owner if you need access.",
     "reasonDialog.reason": "Reason",
     "reasonDialog.optional": "(optional)",
@@ -462,6 +464,8 @@ export const manage = defineMessages({
     "notFound.home": "Zur Startseite",
 
     "accessGuard.title": "Kein Zugriff",
+    "accessGuard.platformText": "Diese Seite gehört zum Bereich eines Restaurants; die Plattformverwaltung hat darauf keinen Zugriff.",
+    "accessGuard.home": "Zur Startseite",
     "accessGuard.text": "Ihre Rolle umfasst diesen Bereich nicht. Wenden Sie sich an den Inhaber, wenn Sie Zugriff benötigen.",
     "reasonDialog.reason": "Grund",
     "reasonDialog.optional": "(optional)",
@@ -695,6 +699,8 @@ export const manage = defineMessages({
     "notFound.home": "Na početnu",
 
     "accessGuard.title": "Nema pristupa",
+    "accessGuard.platformText": "Ova stranica pripada dijelu restorana; administracija platforme nema pristup.",
+    "accessGuard.home": "Na početnu stranicu",
     "accessGuard.text": "Vaša uloga ne uključuje ovo područje. Ako vam treba pristup, obratite se vlasniku restorana.",
     "reasonDialog.reason": "Razlog",
     "reasonDialog.optional": "(neobavezno)",
