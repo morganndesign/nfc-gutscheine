@@ -15,6 +15,7 @@ const COPY = {
     keepSafe: "Wie Bargeld aufbewahren: Wer den Code besitzt, kann den Gutschein einlösen.",
     noExpiry: "Unbefristet gültig",
     validUntil: "Gültig bis",
+    qrCode: "QR-Code des Gutscheins",
   },
   en: {
     voucher: "Voucher",
@@ -26,6 +27,7 @@ const COPY = {
     keepSafe: "Keep it safe like cash: whoever holds the code can redeem the voucher.",
     noExpiry: "No expiry date",
     validUntil: "Valid until",
+    qrCode: "Voucher QR code",
   },
   bhs: {
     voucher: "Vaučer",
@@ -37,6 +39,7 @@ const COPY = {
     keepSafe: "Čuvajte ga kao gotovinu: ko ima kôd, može iskoristiti vaučer.",
     noExpiry: "Bez roka važenja",
     validUntil: "Vrijedi do",
+    qrCode: "QR kôd vaučera",
   },
 } satisfies Record<string, Record<string, string>>
 

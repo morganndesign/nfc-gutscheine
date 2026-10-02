@@ -127,7 +127,7 @@ function sampleQr(): string {
 
 const SAMPLE_QR = sampleQr()
 
-function Qr({ svg, size, frame }: { svg: string | null; size: number; frame?: string }) {
+function Qr({ svg, size, frame, locale }: { svg: string | null; size: number; frame?: string; locale: string | null | undefined }) {
   return (
     <div
       style={{
@@ -139,7 +139,11 @@ function Qr({ svg, size, frame }: { svg: string | null; size: number; frame?: st
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- generated QR, never optimised or cached */}
-      <img src={svgSrc(svg ?? SAMPLE_QR)} alt="QR" style={{ width: u(size), height: u(size), display: "block", imageRendering: "pixelated" }} />
+      <img
+        src={svgSrc(svg ?? SAMPLE_QR)}
+        alt={guestCopy(locale).qrCode}
+        style={{ width: u(size), height: u(size), display: "block", imageRendering: "pixelated" }}
+      />
     </div>
   )
 }
@@ -247,7 +251,7 @@ function Classic({ look, content }: { look: VoucherLook; content: VoucherContent
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: u(6), padding: `${u(6)} ${u(9)} ${u(8)}` }}>
-        <Qr svg={content.qrSvg} size={30} frame={rule} />
+        <Qr svg={content.qrSvg} locale={content.locale} size={30} frame={rule} />
         <div style={{ display: "grid", gap: u(1.6) }}>
           <div style={{ fontSize: u(3), fontWeight: 600 }}>{t.copy.howTo}</div>
           <Fine color="#5b5b5b">{t.validity}</Fine>
@@ -305,7 +309,7 @@ function Minimal({ look, content }: { look: VoucherLook; content: VoucherContent
           <Fine color="#6b6b6b">{t.validity}</Fine>
           <Fine color="#6b6b6b">{t.copy.keepSafe}</Fine>
         </div>
-        <Qr svg={content.qrSvg} size={28} />
+        <Qr svg={content.qrSvg} locale={content.locale} size={28} />
       </div>
     </div>
   )
@@ -387,7 +391,7 @@ function Bold({ look, content }: { look: VoucherLook; content: VoucherContent })
           alignItems: "center",
         }}
       >
-        <Qr svg={content.qrSvg} size={27} />
+        <Qr svg={content.qrSvg} locale={content.locale} size={27} />
         <div style={{ display: "grid", gap: u(1.6) }}>
           <div style={{ fontSize: u(3), fontWeight: 700 }}>{t.copy.howTo}</div>
           <Fine color="#5b5b5b">{t.validity}</Fine>
@@ -440,7 +444,7 @@ function Elegant({ look, content }: { look: VoucherLook; content: VoucherContent
           </div>
           {look.message ? <div style={{ marginTop: u(3), fontSize: u(2.6), lineHeight: 1.45, opacity: 0.88, maxWidth: "82%" }}>{look.message}</div> : null}
           <div style={{ flex: "1 1 auto", minHeight: u(4) }} />
-          <Qr svg={content.qrSvg} size={23} frame={accent} />
+          <Qr svg={content.qrSvg} locale={content.locale} size={23} frame={accent} />
           <div style={{ marginTop: u(3), fontSize: u(2.5), fontWeight: 500 }}>{t.copy.howTo}</div>
           <div style={{ marginTop: u(1.2), display: "grid", gap: u(0.8) }}>
             <Fine color={mix(ink, ground, 0.3)} align="center">
