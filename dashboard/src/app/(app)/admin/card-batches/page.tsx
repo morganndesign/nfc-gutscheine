@@ -98,12 +98,25 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="b-man">{t("admin.batches.printer")}</Label>
-              <Input id="b-man" value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} maxLength={120} required />
+              <Input id="b-man" value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} maxLength={120} required aria-describedby="b-man-hint" />
             </div>
           </div>
+          <p id="b-man-hint" className="text-muted-foreground -mt-2 text-xs">
+            {t("admin.batches.printerHint")}
+          </p>
           <div className="space-y-2">
             <Label htmlFor="b-design">{t("admin.batches.artwork")}</Label>
-            <Input id="b-design" value={design} onChange={(e) => setDesign(e.target.value)} maxLength={120} placeholder={t("admin.batches.optional")} />
+            <Input
+              id="b-design"
+              value={design}
+              onChange={(e) => setDesign(e.target.value)}
+              maxLength={120}
+              placeholder={t("admin.batches.optional")}
+              aria-describedby="b-design-hint"
+            />
+            <p id="b-design-hint" className="text-muted-foreground text-xs">
+              {t("admin.batches.artworkHint")}
+            </p>
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
