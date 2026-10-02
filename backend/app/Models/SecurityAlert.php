@@ -27,6 +27,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $acknowledged_by
  * @property Carbon|null $acknowledged_at
  * @property string|null $note
+ * @property Carbon|null $notified_at when operations were e-mailed (high and critical alerts)
  */
 class SecurityAlert extends Model
 {
@@ -43,6 +44,7 @@ class SecurityAlert extends Model
             'first_seen_at' => 'datetime',
             'last_seen_at' => 'datetime',
             'acknowledged_at' => 'datetime',
+            'notified_at' => 'datetime',
         ];
     }
 }

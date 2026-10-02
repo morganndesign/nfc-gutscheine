@@ -25,6 +25,13 @@ final class SendVoucherNotification implements ShouldBeUnique, ShouldQueue
     /** @var list<int> */
     public array $backoff = [30, 120, 600, 1800];
 
+    /**
+     * The unique lock outlives every retry (about 45 minutes) but not a day: a job lost from the queue (Redis data
+     * loss, a cleared queue) never released its lock, and without an expiry the voucher's reminder could never be
+     * queued again. The daily reminder run then simply queues it once more.
+     */
+    public int $uniqueFor = 43200;
+
     public function __construct(
         public readonly string $voucherId,
         public readonly string $templateKey,

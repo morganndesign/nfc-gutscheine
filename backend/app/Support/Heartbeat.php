@@ -28,8 +28,9 @@ final class Heartbeat
 
     public static function fresh(string $service): bool
     {
+        // The Redis store returns a stored number as a numeric string, the array store as an int.
         $last = Cache::get('ops:heartbeat:'.$service);
 
-        return is_int($last) && Carbon::now()->getTimestamp() - $last <= self::STALE_SECONDS;
+        return is_numeric($last) && Carbon::now()->getTimestamp() - (int) $last <= self::STALE_SECONDS;
     }
 }

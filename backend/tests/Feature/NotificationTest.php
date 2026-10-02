@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\RoleSlug;
+use App\Jobs\SendVoucherNotification;
 use App\Mail\TemplatedMail;
 use App\Models\NotificationLog;
 use App\Models\Voucher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 final class NotificationTest extends TestCase
@@ -125,6 +127,27 @@ final class NotificationTest extends TestCase
         Carbon::setTestNow('2029-09-26 12:00:00');
         $this->artisan('vouchers:notify-expiring')->assertSuccessful();
         $this->assertSame(1, NotificationLog::query()->where('template_key', 'voucher_expiring')->where('status', '!=', 'failed')->count());
+    }
+
+    public function test_a_reminder_whose_queued_job_was_lost_is_queued_again_the_next_day(): void
+    {
+        Queue::fake();
+        Carbon::setTestNow('2026-10-01 12:00:00');
+        $restaurant = $this->restaurant();
+        $restaurant->settings->forceFill(['validity_months' => 36])->save();
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => 'soon@example.com']], $this->idempotency())->assertCreated();
+        $reminders = static fn (): int => Queue::pushed(SendVoucherNotification::class, static fn (SendVoucherNotification $job): bool => $job->templateKey === 'voucher_expiring')->count();
+
+        Carbon::setTestNow('2029-09-25 10:00:00');
+        $this->artisan('vouchers:notify-expiring')->assertSuccessful();
+        $this->artisan('vouchers:notify-expiring')->assertSuccessful();
+        $this->assertSame(1, $reminders(), 'queued once while the first job waits');
+
+        // The job never ran (lost with Redis, cleared from the queue): its unique lock must not block the voucher for ever.
+        Carbon::setTestNow('2029-09-26 10:00:00');
+        $this->artisan('vouchers:notify-expiring')->assertSuccessful();
+        $this->assertSame(2, $reminders());
     }
 
     public function test_the_guest_e_mail_declares_the_language_it_is_written_in(): void

@@ -77,7 +77,28 @@ final class SecurityMonitor
 
         DB::table('security_monitor_cursors')->updateOrInsert(['name' => self::CURSOR], ['seq' => $settled, 'updated_at' => Carbon::now()]);
 
+        $this->notifyPending($now ?? Carbon::now());
+
         return $checked;
+    }
+
+    /**
+     * Mails every high and critical alert that operations have not been told about yet. An alert is raised once, so
+     * a mail that failed then (mail server down, worker killed) would otherwise never be sent; this tries again on
+     * every run for a day. After that the platform's alert list is the only place it shows.
+     */
+    private function notifyPending(Carbon $now): void
+    {
+        SecurityAlert::query()
+            ->whereNull('notified_at')
+            ->where('severity', '!=', 'warning')
+            ->where('created_at', '>=', $now->copy()->subDay())
+            ->orderBy('created_at')
+            ->each(function (SecurityAlert $alert): void {
+                if ($this->notify($alert)) {
+                    $alert->forceFill(['notified_at' => Carbon::now()])->save();
+                }
+            });
     }
 
     /**
@@ -95,9 +116,11 @@ final class SecurityMonitor
         $restaurant = static fn (SecurityEvent $e): ?string => $e->restaurant_id !== null ? 'restaurant:'.$e->restaurant_id : null;
 
         return [
-            // A card's URL presented on another chip: a cloned NDEF (anti-cloning refused it).
+            // A card's URL presented on another chip: a cloned NDEF (anti-cloning refused it), or a chip that also
+            // copies the UID but cannot answer the card's challenge.
             ['name' => 'card.clone_attempt', 'severity' => 'critical', 'subject' => $card,
-                'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardAuthenticate, 'CARD_AUTHENTICATION_FAILED:rf_uid_mismatch')],
+                'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardAuthenticate, 'CARD_AUTHENTICATION_FAILED:rf_uid_mismatch')
+                    || $refused($e, T::CardAuthenticate, 'CARD_AUTHENTICATION_FAILED:wrong_answer')],
             // The same genuine card's URL replayed again and again: someone collected it.
             ['name' => 'card.url_replay', 'severity' => 'high', 'subject' => $card, 'threshold' => 3, 'window' => 60,
                 'match' => static fn (SecurityEvent $e): bool => $refused($e, T::CardTap, 'SUN_REPLAYED') && $card($e) !== null],
@@ -196,16 +219,13 @@ final class SecurityMonitor
             'last_seen_at' => $event->occurred_at,
             'status' => 'open',
         ]);
+        // High and critical alerts are mailed at the end of the run ({@see notifyPending()}).
         Log::warning('Security alert', ['rule' => $rule, 'severity' => $severity, 'subject' => $subject, 'alert' => $alert->id]);
-
-        if ($severity !== 'warning') {
-            $this->notify($alert);
-        }
     }
 
-    private function notify(SecurityAlert $alert): void
+    private function notify(SecurityAlert $alert): bool
     {
-        OpsAlert::send(
+        return OpsAlert::send(
             'security-alert:'.$alert->id,
             "{$alert->severity}: {$alert->rule}",
             "Rule: {$alert->rule} ({$alert->severity})\nSubject: {$alert->subject}\nFirst seen: {$alert->first_seen_at->toIso8601String()}\n\n"

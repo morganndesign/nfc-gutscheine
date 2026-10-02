@@ -184,6 +184,28 @@ final class SecurityMonitorTest extends TestCase
         $this->assertSame(1, $this->rawMails());
     }
 
+    public function test_an_alert_whose_mail_failed_is_mailed_by_a_later_run(): void
+    {
+        // The mail server is down when the alert is raised.
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => '127.0.0.1', 'mail.mailers.smtp.port' => 1, 'mail.mailers.smtp.timeout' => 1]);
+        [$card] = $this->activeCardVoucher($this->restaurant);
+        $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
+        $this->postJson('/api/v1/presentments/cards', ['purpose' => 'spend', 'tap_url' => $this->chip($card)->readNdefUrl(), 'rf_uid' => '04DEADBEEF0000', 'challenge' => str_repeat('00', 16)]);
+        $this->monitor();
+        $this->assertSame(0, $this->rawMails());
+        $this->assertNull(SecurityAlert::query()->sole()->notified_at);
+
+        // It is back: the next run mails the alert, later runs do not repeat it.
+        config(['mail.default' => 'array']);
+        app('mail.manager')->forgetMailers();
+        $this->monitor();
+        $this->monitor();
+
+        $this->assertSame(1, $this->rawMails());
+        $this->assertStringContainsString('critical: card.clone_attempt', (string) $this->sent[0]->getSubject());
+        $this->assertNotNull(SecurityAlert::query()->sole()->notified_at);
+    }
+
     private function rawMails(): int
     {
         return count($this->sent);

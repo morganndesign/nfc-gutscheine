@@ -162,6 +162,9 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_DB', '0'),
+            // A hung Redis must fail fast (closed), not hold every request for 60 s past php-fpm's 30 s limit.
+            'timeout' => env('REDIS_TIMEOUT', 3),
+            'read_timeout' => env('REDIS_READ_TIMEOUT', 3),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),
@@ -175,6 +178,9 @@ return [
             'password' => env('REDIS_PASSWORD'),
             'port' => env('REDIS_PORT', '6379'),
             'database' => env('REDIS_CACHE_DB', '1'),
+            // A hung Redis must fail fast (closed), not hold every request for 60 s past php-fpm's 30 s limit.
+            'timeout' => env('REDIS_TIMEOUT', 3),
+            'read_timeout' => env('REDIS_READ_TIMEOUT', 3),
             'max_retries' => env('REDIS_MAX_RETRIES', 3),
             'backoff_algorithm' => env('REDIS_BACKOFF_ALGORITHM', 'decorrelated_jitter'),
             'backoff_base' => env('REDIS_BACKOFF_BASE', 100),

@@ -9,6 +9,7 @@ use App\Support\Heartbeat;
 use Illuminate\Contracts\Queue\Job;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use RuntimeException;
 use Tests\TestCase;
@@ -29,6 +30,15 @@ final class OperationsHealthTest extends TestCase
         $this->get('/api/v1/health/operations')->assertStatus(503);
 
         $this->artisan('schedule:list')->expectsOutputToContain('heartbeat:scheduler')->expectsOutputToContain('heartbeat:worker');
+    }
+
+    public function test_beats_read_back_from_redis_count(): void
+    {
+        // The Redis cache store keeps numbers unserialized and returns them as numeric strings.
+        Cache::put('ops:heartbeat:'.Heartbeat::SCHEDULER, (string) now()->getTimestamp(), 3600);
+        Cache::put('ops:heartbeat:'.Heartbeat::WORKER, (string) now()->getTimestamp(), 3600);
+
+        $this->get('/api/v1/health/operations')->assertOk()->assertSeeText('ok');
     }
 
     public function test_a_job_that_failed_for_good_is_mailed_to_operations_once_an_hour(): void

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\RoleSlug;
+use App\Jobs\SendStaffInvitation;
 use App\Models\NotificationLog;
 use App\Models\Restaurant;
 use App\Models\User;
+use Illuminate\Queue\MaxAttemptsExceededException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
@@ -288,6 +290,20 @@ final class OwnerInvitationTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonPath('code', 'INVITATION_NOT_DELIVERED')
             ->assertJsonPath('data.invitation.delivery', 'failed');
+    }
+
+    public function test_an_invitation_job_lost_with_its_worker_is_reported_failed_not_queued_forever(): void
+    {
+        $owner = User::factory()->create(['email' => 'crash@bistro.test']);
+        $log = NotificationLog::query()->create(['template_key' => 'staff_invitation', 'channel' => 'mail', 'recipient' => $owner->email, 'status' => 'queued']);
+        $job = new SendStaffInvitation($owner->id, (string) $owner->restaurant_id, null, $log->id);
+
+        // The worker was killed during the job: the queue gives up with MaxAttemptsExceeded and calls failed().
+        $job->failed(new MaxAttemptsExceededException('App\Jobs\SendStaffInvitation has been attempted too many times.'));
+
+        $log->refresh();
+        $this->assertSame('failed', $log->status);
+        $this->assertStringContainsString('attempted too many times', (string) $log->error);
     }
 
     public function test_log_mailer_is_reported_as_not_delivered(): void

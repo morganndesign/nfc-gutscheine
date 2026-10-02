@@ -183,8 +183,6 @@ final class LocalKeystore
             throw new KeystoreException("The keystore directory {$directory} cannot be created.");
         }
 
-        // Written next to the target and renamed: a crash never leaves half a keystore.
-        $temporary = $this->path.'.'.bin2hex(random_bytes(4)).'.tmp';
         $json = json_encode([
             'format' => self::FORMAT,
             'version' => self::VERSION,
@@ -192,10 +190,42 @@ final class LocalKeystore
             'iv' => base64_encode($iv),
             'tag' => base64_encode($tag),
             'ciphertext' => base64_encode($ciphertext),
-        ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
-        if (file_put_contents($temporary, $json."\n", LOCK_EX) === false || ! chmod($temporary, 0600) || ! rename($temporary, $this->path)) {
+        ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR)."\n";
+
+        // Written next to the target (owner-only from the start), forced to disk, then renamed: a crash or a full disk
+        // never leaves half a keystore, nor a new name pointing at data that never reached the disk. Inside the
+        // application a failing file call throws (warnings are exceptions), so the clean-up must not depend on a
+        // return value.
+        $temporary = $this->path.'.'.bin2hex(random_bytes(4)).'.tmp';
+        try {
+            $umask = umask(0077);
+            try {
+                $handle = fopen($temporary, 'xb');
+            } finally {
+                umask($umask);
+            }
+            if ($handle === false) {
+                throw new KeystoreException('The temporary keystore cannot be created.');
+            }
+            try {
+                $complete = fwrite($handle, $json) === strlen($json) && fflush($handle) && fsync($handle);
+            } finally {
+                fclose($handle);
+            }
+            if (! $complete || ! rename($temporary, $this->path)) {
+                throw new KeystoreException('The temporary keystore cannot be written or renamed.');
+            }
+        } catch (\Throwable $e) {
             @unlink($temporary);
-            throw new KeystoreException("The keystore {$this->path} cannot be written.");
+
+            throw new KeystoreException("The keystore {$this->path} cannot be written: {$e->getMessage()}", 0, $e);
+        }
+
+        // The rename itself is durable once the directory is on disk (best effort: not every filesystem allows it).
+        $dir = @fopen($directory, 'r');
+        if ($dir !== false) {
+            @fsync($dir);
+            fclose($dir);
         }
     }
 }
