@@ -39,6 +39,8 @@ const ACTIONS = new Set([
   "restaurant.reactivated",
   "restaurant.restored",
   "restaurant.settings_updated",
+  "restaurant.logo_updated",
+  "restaurant.logo_removed",
   "restaurant.suspended",
   "restaurant.updated",
   "security_alert.acknowledged",
