@@ -16,7 +16,8 @@ final class StoreCardBatchRequest extends ApiRequest
             'restaurant_id' => ['required', 'uuid', Rule::exists('restaurants', 'id')->whereNull('deleted_at')],
             // Defaults to the one active key set.
             'key_set' => ['nullable', 'string', 'max:32', Rule::exists('key_sets', 'version')->where('status', 'active')],
-            'manufacturer' => ['required', 'string', 'min:2', 'max:120'],
+            // Who prints the cards; empty = printed in-house.
+            'manufacturer' => ['nullable', 'string', 'max:120'],
             'quantity' => ['required', 'integer:strict', 'min:1', 'max:100000'],
             'card_design_ref' => ['nullable', 'string', 'max:120'],
         ];

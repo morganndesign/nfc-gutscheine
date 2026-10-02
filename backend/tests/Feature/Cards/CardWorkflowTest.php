@@ -96,6 +96,16 @@ final class CardWorkflowTest extends TestCase
         return [$batch->refresh(), array_map(static fn (Card $c): Card => $c->refresh(), $cards)];
     }
 
+    public function test_a_batch_printed_in_house_needs_no_printer(): void
+    {
+        Sanctum::actingAs(User::factory()->platformAdmin()->create(), ['*']);
+        foreach ([[], ['manufacturer' => ''], ['manufacturer' => '   ']] as $printer) {
+            $id = $this->postJson('/api/v1/admin/card-batches', ['restaurant_id' => $this->restaurant->id, 'quantity' => 5] + $printer)
+                ->assertCreated()->json('data.id');
+            $this->assertSame('in-house', CardBatch::query()->withoutGlobalScopes()->findOrFail($id)->manufacturer);
+        }
+    }
+
     public function test_the_platform_orders_personalises_accepts_and_ships_a_batch(): void
     {
         $first = User::factory()->platformAdmin()->create();

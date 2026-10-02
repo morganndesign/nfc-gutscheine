@@ -66,7 +66,7 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
               await order.mutateAsync({
                 restaurant_id: restaurant,
                 quantity: Number(quantity),
-                manufacturer: manufacturer.trim(),
+                manufacturer: manufacturer.trim() || undefined,
                 card_design_ref: design.trim() || undefined,
               })
               toast.success(t("admin.batches.ordered"))
@@ -98,7 +98,14 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="b-man">{t("admin.batches.printer")}</Label>
-              <Input id="b-man" value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} maxLength={120} required aria-describedby="b-man-hint" />
+              <Input
+                id="b-man"
+                value={manufacturer}
+                onChange={(e) => setManufacturer(e.target.value)}
+                maxLength={120}
+                placeholder={t("admin.batches.optional")}
+                aria-describedby="b-man-hint"
+              />
             </div>
           </div>
           <p id="b-man-hint" className="text-muted-foreground -mt-2 text-xs">
@@ -122,7 +129,7 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
             <Button type="button" variant="outline" onClick={onClose}>
               {t("common.cancel")}
             </Button>
-            <Button type="submit" disabled={order.isPending || !restaurant || !quantity || manufacturer.trim().length < 2}>
+            <Button type="submit" disabled={order.isPending || !restaurant || !quantity}>
               {order.isPending ? <Loader2 className="animate-spin" /> : null} {t("admin.batches.orderSubmit")}
             </Button>
           </DialogFooter>

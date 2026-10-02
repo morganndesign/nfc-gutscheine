@@ -58,7 +58,7 @@ final class CardBatchController extends Controller
             ? KeySet::query()->where('version', $v['key_set'])->firstOrFail()
             : (KeySet::query()->where('status', KeySetStatus::Active->value)->latest()->first() ?? throw new CardStateException('There is no active key set.'));
 
-        $batch = $this->batches->order($restaurant, $keySet, (string) $v['manufacturer'], (int) $v['quantity'], Actor::fromRequest($request), $v['card_design_ref'] ?? null);
+        $batch = $this->batches->order($restaurant, $keySet, trim((string) ($v['manufacturer'] ?? '')) ?: 'in-house', (int) $v['quantity'], Actor::fromRequest($request), $v['card_design_ref'] ?? null);
 
         return CardBatchResource::make($this->find($batch->id))->forPlatform()->response()->setStatusCode(201);
     }

@@ -790,7 +790,7 @@ export function useAdminCardBatches(page: number, status?: CardBatchStatus) {
 export function useOrderCardBatch() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { restaurant_id: string; manufacturer: string; quantity: number; card_design_ref?: string }) =>
+    mutationFn: (input: { restaurant_id: string; manufacturer?: string; quantity: number; card_design_ref?: string }) =>
       api<{ data: CardBatch }>("/admin/card-batches", { method: "POST", body: input }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.adminCardBatches }),
   })
