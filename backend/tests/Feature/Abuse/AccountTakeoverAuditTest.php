@@ -104,6 +104,26 @@ final class AccountTakeoverAuditTest extends TestCase
     }
 
     /**
+     * The per-account login limiter (5/min) must bucket every spelling that signs in as the same account. MySQL's
+     * utf8mb4_unicode_ci folds case, width and compatibility forms, so "ｏwner@…" and "owner@…" are one account; if the
+     * throttle keyed on a plain lower-case, an attacker could cycle fullwidth letters for a fresh bucket per spelling
+     * and keep guessing past the limit. The throttle runs before validation, so this holds whatever the DB collation.
+     */
+    public function test_login_throttle_is_not_bypassed_by_unicode_email_variants(): void
+    {
+        $this->staff($this->restaurant, RoleSlug::Manager, ['email' => 'owner-throttle@example.com']);
+
+        foreach (range(1, 5) as $i) {
+            $this->login('owner-throttle@example.com', 'wrong', '10.9.9.9')->assertUnprocessable();
+        }
+
+        // A fullwidth "o" (U+FF4F) and an accented "ó" both fold to the same account under utf8mb4_unicode_ci;
+        // the bucket is already spent, so these spellings are throttled too.
+        $this->login("\u{FF4F}wner-throttle@example.com", 'wrong', '10.9.9.9')->assertStatus(429);
+        $this->login("\u{00F3}wner-throttle@example.com", 'wrong', '10.9.9.9')->assertStatus(429);
+    }
+
+    /**
      * A 2 MB PNG can declare 12000 × 12000 pixels: decoding it allocates hundreds of megabytes (PHP-FPM workers have
      * 128 MB), so the dimensions are checked from the header before anything is decoded.
      */

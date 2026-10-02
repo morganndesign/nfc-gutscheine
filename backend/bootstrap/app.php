@@ -43,6 +43,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        // An API has no login page to redirect to: a guest always gets 401 JSON, whatever Accept header it sends
+        // (the framework default looked up a `login` route and answered 500).
+        $middleware->redirectGuestsTo(static fn (): ?string => null);
         // Only the reverse proxy (Caddy on the private Docker network) may set X-Forwarded-* headers;
         // anything else could spoof client IPs and bypass IP-based rate limits.
         $middleware->trustProxies(at: ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', 'fd00::/8']);

@@ -109,7 +109,7 @@ final class AppServiceProvider extends ServiceProvider
         RateLimiter::for('api', static fn (Request $request): Limit => Limit::perMinute(240)->by($request->user()?->getAuthIdentifier() ?? $request->ip()));
 
         RateLimiter::for('login', static fn (Request $request): array => [
-            Limit::perMinute(5)->by(Str::lower((string) $request->input('email')).'|'.$request->ip()),
+            Limit::perMinute(5)->by(self::throttleEmail((string) $request->input('email')).'|'.$request->ip()),
             Limit::perMinute(30)->by('login-ip:'.$request->ip()),
         ]);
 
@@ -129,6 +129,26 @@ final class AppServiceProvider extends ServiceProvider
         // Asking for the outcome of an earlier attempt: its own budget, so a phone with several unresolved
         // attempts never slows down real redemptions.
         RateLimiter::for('redemption-outcome', static fn (Request $request): Limit => Limit::perMinute(60)->by($perTerminal($request)));
+    }
+
+    /**
+     * Canonical e-mail for the per-account login throttle. The bucket must cover every spelling that signs in
+     * as the same account: the lookup matches under MySQL's utf8mb4_unicode_ci, which folds case, width, accents
+     * and other compatibility forms, so "ｏwner@…", "ówner@…" and "owner@…" are one account. Keying on a plain
+     * lower-case left them in separate buckets, so cycling fullwidth/accented letters handed an attacker a fresh
+     * 5/min bucket per spelling and defeated the per-account limit. Compatibility-decompose, drop the combining
+     * marks and lower-case to mirror that folding and collapse the variants back into one key.
+     */
+    private static function throttleEmail(string $email): string
+    {
+        if (class_exists(\Normalizer::class)) {
+            $decomposed = \Normalizer::normalize($email, \Normalizer::FORM_KD);
+            if ($decomposed !== false) {
+                $email = (string) preg_replace('/\p{Mn}+/u', '', $decomposed);
+            }
+        }
+
+        return Str::lower(trim($email));
     }
 
     private function configureRouteBindings(): void

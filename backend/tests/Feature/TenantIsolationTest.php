@@ -6,6 +6,7 @@ namespace Tests\Feature;
 
 use App\Enums\RoleSlug;
 use App\Models\Customer;
+use App\Models\Device;
 use Tests\TestCase;
 
 /**
@@ -70,6 +71,41 @@ final class TenantIsolationTest extends TestCase
 
         $this->postJson('/api/v1/vouchers', ['value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer_id' => $foreignCustomer->id], $this->idempotency())
             ->assertStatus(422)->assertJsonValidationErrors('customer_id');
+    }
+
+    public function test_restaurant_id_in_body_or_query_cannot_cross_tenants(): void
+    {
+        $mine = $this->restaurant();
+        $theirs = $this->restaurant();
+        $theirVoucher = $this->issueVoucher($theirs);
+
+        $this->actingAsStaff($mine, RoleSlug::Owner);
+
+        // A forged restaurant_id in the body is ignored: the row is stamped with the caller's tenant.
+        $created = $this->postJson('/api/v1/customers', [
+            'first_name' => 'Planted', 'last_name' => 'Row', 'restaurant_id' => $theirs->id,
+        ])->assertCreated()->json('data.id');
+        $this->assertDatabaseHas('customers', ['id' => $created, 'restaurant_id' => $mine->id]);
+        $this->assertDatabaseMissing('customers', ['id' => $created, 'restaurant_id' => $theirs->id]);
+
+        // A restaurant_id filter on a scoped index cannot widen the scope: only the caller's rows come back.
+        $this->getJson('/api/v1/vouchers?restaurant_id='.$theirs->id)
+            ->assertOk()
+            ->assertJsonMissing(['id' => $theirVoucher->id]);
+    }
+
+    public function test_devices_of_other_restaurants_are_isolated(): void
+    {
+        $mine = $this->restaurant();
+        $theirs = $this->restaurant();
+        $foreignDevice = Device::factory()->create(['restaurant_id' => $theirs->id]);
+
+        $this->actingAsStaff($mine, RoleSlug::Owner);
+
+        $this->getJson('/api/v1/devices')->assertOk()->assertJsonMissing(['id' => $foreignDevice->id]);
+        $this->patchJson("/api/v1/devices/{$foreignDevice->id}", ['name' => 'hijacked'])->assertNotFound();
+        $this->postJson("/api/v1/devices/{$foreignDevice->id}/revoke")->assertNotFound();
+        $this->postJson("/api/v1/devices/{$foreignDevice->id}/restore")->assertNotFound();
     }
 
     public function test_idempotency_keys_are_scoped_per_restaurant(): void
