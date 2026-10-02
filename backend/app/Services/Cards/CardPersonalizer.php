@@ -157,8 +157,8 @@ final class CardPersonalizer
                 // A chip that answers these plain commands with an error is no NXP NTAG 424 DNA (a chip that left the
                 // field gives no answer at all): it never gets keys and gives its place in the order back.
                 match ($kind) {
-                    'select', 'version1', 'version2', 'version3' => $this->reject($card, 'not_ntag424', 'not an NXP NTAG 424 DNA', $actor),
-                    'signature' => $this->reject($card, 'not_genuine', 'not a genuine NXP chip', $actor),
+                    'select', 'version1', 'version2', 'version3' => $this->reject($card, 'not_ntag424', 'not an NXP NTAG 424 DNA', $actor, "{$kind}:{$sw}"),
+                    'signature' => $this->reject($card, 'not_genuine', 'not a genuine NXP chip', $actor, "signature:{$sw}"),
                     default => $this->fail("{$kind}:{$sw}"),
                 };
             }
@@ -367,15 +367,17 @@ final class CardPersonalizer
                 'card_number' => $card?->card_number,
                 'batch_code' => $batch?->batch_code,
                 'stage' => $stage,
+                'detail' => is_string($refusal->context()['detail'] ?? null) ? $refusal->context()['detail'] : null,
             ], static fn (?string $v): bool => $v !== null), restaurantId: $card->restaurant_id ?? $batch?->restaurant_id);
 
             throw $refusal;
         }
     }
 
-    private function fail(string $reason): never
+    /** @param  string|null  $detail  what the chip answered (status word, version bytes) — no secret, for diagnosis */
+    private function fail(string $reason, ?string $detail = null): never
     {
-        throw new CardPersonalizationFailedException('', ['reason' => $reason]);
+        throw new CardPersonalizationFailedException('', array_filter(['reason' => $reason, 'detail' => $detail]));
     }
 
     /** @param list<string> $responses */
@@ -422,7 +424,8 @@ final class CardPersonalizer
     {
         $refusal = count($version) === 2 ? ChipVersion::refusal($version[0], $version[1], $production, $card->uid) : 'version_length';
         if ($refusal !== null) {
-            $this->reject($card, $refusal, 'not an NXP NTAG 424 DNA', $actor);
+            $this->reject($card, $refusal, 'not an NXP NTAG 424 DNA', $actor,
+                strtoupper(implode(' ', array_map(bin2hex(...), [...$version, substr($production, 7)]))));
         }
 
         return true;
@@ -443,12 +446,12 @@ final class CardPersonalizer
     }
 
     /** Out of the batch for good: it never gets keys, and it frees its place for a genuine chip. */
-    private function reject(Card $card, string $reason, string $cause, Actor $actor): never
+    private function reject(Card $card, string $reason, string $cause, Actor $actor, ?string $detail = null): never
     {
         if ($card->state === CardState::Manufactured) {
             $this->lifecycle->transition($card, CardState::QaFailed, $cause, $actor);
         }
-        $this->fail($reason);
+        $this->fail($reason, $detail);
     }
 
     private static function selectApplication(): string

@@ -222,7 +222,10 @@ class StationController extends ChangeNotifier {
   }
 
   static String? _detailOf(ApiFailure e) => switch (e) {
-    ApiRejected(code: 'CARD_PERSONALIZATION_FAILED') => e.contextString('reason'),
+    ApiRejected(code: 'CARD_PERSONALIZATION_FAILED') => <String?>[
+      e.contextString('reason'),
+      e.contextString('detail'),
+    ].whereType<String>().join(' · '),
     ApiRejected() => e.code,
     ApiUnauthorized() => e.code,
     _ => null,

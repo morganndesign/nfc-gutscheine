@@ -28,7 +28,12 @@ void main() {
     app.backend.on('GET', '/admin/station/batches', FakeReply(200, Payloads.stationBatches()));
     unawaited(app.session.start());
     await settle(tester);
-    station = StationController(api: app.services.api, nfc: app.nfc, prompt: () => 'Hold a blank card', pause: Duration.zero);
+    station = StationController(
+      api: app.services.api,
+      nfc: app.nfc,
+      prompt: () => 'Hold a blank card',
+      pause: Duration.zero,
+    );
     unawaited(station.load());
     await settle(tester);
   }
@@ -156,6 +161,26 @@ void main() {
       await settle(tester);
     }
 
+    // What the chip answered is shown with the reason.
+    app.backend.only(
+      'POST',
+      begin,
+      FakeReply(
+        422,
+        Payloads.error('CARD_PERSONALIZATION_FAILED', <String, Object?>{
+          'reason': 'not_ntag424',
+          'detail': 'select:6A82',
+        }),
+      ),
+    );
+    app.nfc.queue.add(chip(const <String, String>{}));
+    unawaited(station.choose(station.batches!.single));
+    await settle(tester);
+    expect(station.last!.failure, StationFailure.unknownChip);
+    expect(station.last!.detail, 'not_ntag424 · select:6A82');
+    unawaited(station.finish());
+    await settle(tester);
+
     // The card left the phone in the middle of a round.
     app.backend.only('POST', begin, FakeReply(200, Payloads.round(id: 'P1', commands: <String>['DD000000'])));
     app.nfc.queue.add(chip(const <String, String>{})..loseOn = 'DD');
@@ -196,4 +221,3 @@ void main() {
     await finish(tester);
   });
 }
-

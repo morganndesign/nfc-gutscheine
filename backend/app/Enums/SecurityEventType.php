@@ -119,7 +119,7 @@ enum SecurityEventType: string
             self::CardTap => ['key_set', 'card_number', 'counter', 'counter_gap', 'purpose'],
             self::CardAuthenticate => ['card_number', 'purpose', 'counter', 'presentment_id', 'stage'],
             self::CardBatchStatus => ['batch_code', 'from_status', 'to_status', 'cards_moved'],
-            self::CardPersonalize => ['card_number', 'batch_code', 'stage'],
+            self::CardPersonalize => ['card_number', 'batch_code', 'stage', 'detail'],
             self::RestaurantSuspend, self::RestaurantReactivate => [],
         };
     }

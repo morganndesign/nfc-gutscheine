@@ -281,7 +281,9 @@ final class StationPersonalizationTest extends TestCase
         // Another NXP product (a DESFire: HW type 01) with a valid-looking signature.
         $desfire = Ntag424Chip::factory();
         $desfire->hardwareVersion = "\x04\x01\x01\x33\x00\x1A\x05";
-        $this->station($desfire, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_ntag424');
+        $this->station($desfire, $batch)->assertStatus(422)->assertJsonPath('context.reason', 'not_ntag424')
+            // What the chip answered is named (hardware, software, production data after the UID), for diagnosis.
+            ->assertJsonPath('context.detail', fn (string $d): bool => str_starts_with($d, '04010133001A05 '));
         $this->assertSame(0, $desfire->keyVersion(0));
 
         // An emulator replaying another chip's production data.
