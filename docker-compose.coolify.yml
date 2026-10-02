@@ -326,6 +326,9 @@ services:
       # with binary logging on, MySQL requires this for a non-SUPER user to create triggers.
       - --log-bin-trust-function-creators=1
       - --innodb-buffer-pool-size=512M
+      # A request waiting for a row lock gives up after 8 s (default 50 s) and ends with a clean error inside php-fpm's
+      # 30-s limit instead of being killed mid-request (502).
+      - --innodb-lock-wait-timeout=8
     environment:
       MYSQL_DATABASE: ${DB_DATABASE:-giftcard_pro}
       MYSQL_USER: ${DB_USERNAME:-giftcard}
