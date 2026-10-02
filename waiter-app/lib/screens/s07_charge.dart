@@ -909,7 +909,7 @@ class _EntryBlock extends StatelessWidget {
       // Same area as helper + assist row + keypad (03b §3.4); with the
       // full-only layout it takes that height from the card region.
       below = SizedBox(
-        height: metrics.messageArea + metrics.rowGap + keypadHeight,
+        height: metrics.messageArea + _chipOverhang + metrics.amountGap + keypadHeight,
         child: UncertainPanel(
           finalState: s.phase == RedeemPhase.uncertainFinal,
           attempt: s.attempt,
@@ -922,7 +922,7 @@ class _EntryBlock extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (!s.fullOnly) ...<Widget>[
-            SizedBox(height: metrics.rowGap - _chipOverhang),
+            SizedBox(height: metrics.amountGap),
             IgnorePointer(
               ignoring: s.isLocked,
               child: Keypad(

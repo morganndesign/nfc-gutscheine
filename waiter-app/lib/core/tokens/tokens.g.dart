@@ -1924,8 +1924,8 @@ abstract final class BalanceCardTokens {
   /// `balanceCard.aspectRatio` — ID-1 width ÷ height.
   static const double aspectRatio = 1.586;
 
-  /// `balanceCard.minFullHeight` — Below this the compact strip is used (13 · R11).
-  static const double minFullHeight = 136;
+  /// `balanceCard.minFullHeight` — Below this the compact strip is used; above it the full card face scales down as a whole.
+  static const double minFullHeight = 96;
 
   /// `balanceCard.radius` —
   static const double radius = 28;

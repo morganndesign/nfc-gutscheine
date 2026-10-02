@@ -529,21 +529,46 @@ void main() {
       await finishApp(tester, app);
     });
 
-    testWidgets('375 × 667 compact: strip card, 64-pt keys, no overflow', (
-      WidgetTester tester,
-    ) async {
-      final TestApp app = await openCharge(tester, size: const Size(375, 667));
-      final BalanceCard card = tester.widget(find.byType(BalanceCard));
-      expect(card.density, BalanceCardDensity.compact);
-      expect(tester.getSize(find.byType(BalanceCard)).height, 88);
-      await typeDigits(tester, '6000');
-      expect(rich('Use balance'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 1));
-      expect(tester.getSize(find.byType(Keypad)).height, 4 * 64 + 3 * 8);
-      final Rect button = tester.getRect(find.byType(PrimaryButton));
-      expect(button.bottom, lessThanOrEqualTo(667 - 16));
-      await finishApp(tester, app);
-    });
+    testWidgets(
+      '375 × 667 compact: a (smaller) real card, 64-pt keys, no overflow',
+      (WidgetTester tester) async {
+        final TestApp app = await openCharge(
+          tester,
+          size: const Size(375, 667),
+        );
+        final BalanceCard card = tester.widget(find.byType(BalanceCard));
+        expect(card.density, BalanceCardDensity.full);
+        final Size size = tester.getSize(find.byType(BalanceCard));
+        expect(
+          size.height,
+          greaterThanOrEqualTo(BalanceCardTokens.minFullHeight),
+        );
+        expect(
+          size.width / size.height,
+          closeTo(BalanceCardTokens.aspectRatio, 0.01),
+        );
+        // The amount keeps its distance from the keys.
+        final Rect amountLine = tester.getRect(
+          find
+              .ancestor(
+                of: find.byType(AmountDisplay),
+                matching: find.byType(SizedBox),
+              )
+              .first,
+        );
+        expect(
+          tester.getRect(find.byType(Keypad)).top - amountLine.bottom,
+          greaterThanOrEqualTo(Space.s4),
+        );
+        await typeDigits(tester, '6000');
+        expect(rich('Use balance'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 1));
+        expect(tester.getSize(find.byType(Keypad)).height, 4 * 64 + 3 * 8);
+        final Rect button = tester.getRect(find.byType(PrimaryButton));
+        expect(button.bottom, lessThanOrEqualTo(667 - 16));
+        await finishApp(tester, app);
+      },
+    );
 
     testWidgets('text scale 200 %: strip card and nothing overflows', (
       WidgetTester tester,
