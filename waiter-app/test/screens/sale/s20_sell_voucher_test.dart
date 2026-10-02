@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
@@ -285,6 +287,29 @@ void main() {
     await settle(tester);
     expect(app.printer.jobs, hasLength(2));
     expect(text(en.salePrinted), findsOneWidget);
+    await finishApp(tester, app);
+  });
+
+  testWidgets('signed out while the stock card is awaited: the screen closes and the reader stops', (
+    WidgetTester tester,
+  ) async {
+    final TestApp app = await TestApp.create(user: Payloads.cardManager(), nfc: FakeNfcRelay()..card = null);
+    app.backend.on('POST', '/auth/logout', FakeReply(200, <String, Object?>{'message': 'Logged out.'}));
+    await pumpWaiterApp(tester, app);
+    await tester.tap(text(en.readySell));
+    await settle(tester);
+    await tester.tap(text(en.saleFormCard));
+    await settle(tester);
+    await continueWith(tester, '5000');
+    await tester.tap(primary(en.saleCardSubmit('€\u00A050.00').split(' ').first));
+    await settle(tester);
+    expect(app.nfc.prompts, hasLength(1), reason: 'the reader waits for the stock card');
+
+    unawaited(app.session.signOut());
+    await settle(tester, 20);
+    expect(find.byType(SellVoucherScreen), findsNothing);
+    expect(app.nfc.cancels, 1, reason: 'no reader mode or iPhone sheet left behind');
+    expect(app.backend.to('POST', '/vouchers'), isEmpty);
     await finishApp(tester, app);
   });
 

@@ -459,4 +459,66 @@ void main() {
     expect(charge().amount, 3200);
     await finish(tester);
   });
+
+  testWidgets('a booking is shown even when protected storage fails to record the answer', (WidgetTester tester) async {
+    final FlakySecretStore secrets = FlakySecretStore();
+    app = await TestApp.create(secretStore: secrets);
+    unawaited(app.session.start());
+    await settle(tester);
+    await settle(tester);
+    app.backend
+      ..on('POST', '/presentments', FakeReply(201, Payloads.presentment()))
+      ..on('POST', redeemPath, FakeReply.transport())
+      ..on('POST', redeemPath, FakeReply(201, Payloads.redeemed(amount: 2490, balanceAfter: 2510)));
+
+    await scan(tester);
+    typeAmount(2490);
+    unawaited(app.loop.redeem());
+    await settle(tester);
+    expect(charge().phase, RedeemPhase.uncertainAuto);
+    expect(app.pending.entries, hasLength(1), reason: 'stored before the first request');
+
+    // From now on the Keystore refuses writes: neither the retry nor its answer may get stuck on it.
+    secrets.failingKeys.add('pending_redemptions_v1');
+    await tester.pump(LoopController.retryWaits.first);
+    await settle(tester);
+
+    final SuccessState success = app.loop.state as SuccessState;
+    expect(success.entry.amount, 2490);
+    final List<RecordedRequest> sent = app.backend.to('POST', redeemPath);
+    expect(sent, hasLength(2));
+    expect(sent.last.header('Idempotency-Key'), sent.first.header('Idempotency-Key'), reason: 'the same key');
+    expect(app.pending.entries, isEmpty, reason: 'resolved in memory for this run');
+    await finish(tester);
+  });
+
+  testWidgets('an earlier booking found on S07 is shown even when Recent cannot be written', (WidgetTester tester) async {
+    final FlakySecretStore secrets = FlakySecretStore();
+    app = await TestApp.create(secretStore: secrets);
+    unawaited(app.session.start());
+    await settle(tester);
+    await settle(tester);
+    final PendingRedemption pending = await app.pending.open(
+      voucherId: Payloads.voucherId,
+      amount: 2490,
+      currency: 'EUR',
+      last4: '6488',
+      restaurantName: 'Trattoria Bella Vista',
+    );
+    app.backend
+      ..on('POST', '/presentments', FakeReply(201, Payloads.presentment()))
+      ..on('GET', outcomePath(pending.key), FakeReply(200, Payloads.outcome(amount: 2490, balanceAfter: 2510)));
+    secrets.failingKeys.add('recent_v1');
+
+    await scan(tester);
+    await settle(tester);
+
+    expect(charge().phase, RedeemPhase.entering);
+    expect(charge().checking, isFalse);
+    expect(charge().notice, isA<EarlierBookedNotice>());
+    expect(app.services.recent.entries.single.amount, 2490);
+    expect(app.pending.entries, isEmpty);
+    await finish(tester);
+  });
 }
+

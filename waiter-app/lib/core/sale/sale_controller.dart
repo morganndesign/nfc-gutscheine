@@ -317,6 +317,8 @@ class SaleController extends ChangeNotifier {
           texts: _cardTexts,
           onDetected: () => _set(SaleTapCard(details: details.copyWith(submitting: false), checking: true)),
         );
+        // The screen was closed meanwhile (signed out, blocked): nothing is sold that no one sees.
+        if (_disposed) return;
         _cardPresentmentId = card.id;
       } on CardPresentException catch (e) {
         if (e.api != null) _session.handleFailure(e.api!, SessionContext.lookup);

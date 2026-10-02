@@ -199,7 +199,7 @@ class PendingRedemptionStore extends ChangeNotifier {
         .where((PendingRedemption e) => e.key != p.key)
         .toList();
     _sentThisRun.remove(p.key);
-    await _persist();
+    await _persistKnown();
   }
 
   Future<PendingRedemption> _replace(PendingRedemption old, PendingRedemption next) async {
@@ -208,8 +208,20 @@ class PendingRedemptionStore extends ChangeNotifier {
     _byUser[user] = <PendingRedemption>[
       for (final PendingRedemption e in _byUser[user] ?? const <PendingRedemption>[]) e.key == old.key ? next : e,
     ];
-    await _persist();
+    await _persistKnown();
     return next;
+  }
+
+  /// Persists a change to an attempt that is already stored ([resend], [resolve]). A failing write (a Keystore
+  /// or Keychain error) must not stop the redemption: the server's answer — a booking — would otherwise never be
+  /// shown and the charge would spin forever. This app run goes on with the state in memory; after a restart
+  /// the stored attempt is asked about again (never debited again), which is always safe.
+  Future<void> _persistKnown() async {
+    try {
+      await _persist();
+    } on Object {
+      notifyListeners();
+    }
   }
 
   Future<void> _persist() async {

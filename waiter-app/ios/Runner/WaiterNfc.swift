@@ -16,8 +16,9 @@ final class WaiterNfc: NSObject, NFCTagReaderSessionDelegate {
   private static let channelName = "giftcard_waiter/nfc"
 
   private let channel: FlutterMethodChannel
+  // Touched on the main queue only (method calls and the delegate callbacks, which hop to it).
   private var session: NFCTagReaderSession?
-  private var card: NFCISO7816Tag?
+  private var card: Card?
   private var pendingStart: FlutterResult?
 
   init(messenger: FlutterBinaryMessenger) {
@@ -73,7 +74,7 @@ final class WaiterNfc: NSObject, NFCTagReaderSessionDelegate {
       result(FlutterError(code: "tag_lost", message: "No card is open.", details: nil))
       return
     }
-    card.sendCommand(apdu: apdu) { response, sw1, sw2, error in
+    card.send(apdu) { response, sw1, sw2, error in
       DispatchQueue.main.async {
         if let error {
           result(FlutterError(code: Self.code(of: error), message: error.localizedDescription, details: nil))
@@ -87,6 +88,12 @@ final class WaiterNfc: NSObject, NFCTagReaderSessionDelegate {
   }
 
   private func stop(message: String?, failed: Bool) {
+    // A start still waiting for a card ends now: the session's own invalidation arrives later and asynchronously,
+    // and must not answer (or block as "busy") the next start.
+    if let pending = pendingStart {
+      pendingStart = nil
+      pending(FlutterError(code: "cancelled", message: "The card session ended.", details: nil))
+    }
     guard let session else { return }
     if failed {
       session.invalidate(errorMessage: message ?? "")
@@ -103,20 +110,21 @@ final class WaiterNfc: NSObject, NFCTagReaderSessionDelegate {
   func tagReaderSessionDidBecomeActive(_ session: NFCTagReaderSession) {}
 
   func tagReaderSession(_ session: NFCTagReaderSession, didDetect tags: [NFCTag]) {
-    guard let first = tags.first, case let .iso7816(tag) = first else {
+    guard let first = tags.first, let found = Card(first) else {
       // Not an ISO 7816 card (an old NTAG 21x, a payment card behind a wallet): keep looking.
       session.restartPolling()
       return
     }
     session.connect(to: first) { [weak self] error in
       DispatchQueue.main.async {
-        guard let self else { return }
+        // A session that was stopped meanwhile (the waiter left) never answers the next one's start.
+        guard let self, self.session === session else { return }
         if error != nil {
           session.restartPolling()
           return
         }
-        self.card = tag
-        let uid = tag.identifier.map { String(format: "%02X", $0) }.joined()
+        self.card = found
+        let uid = found.identifier.map { String(format: "%02X", $0) }.joined()
         self.pendingStart?(["uid": uid])
         self.pendingStart = nil
       }
@@ -125,14 +133,15 @@ final class WaiterNfc: NSObject, NFCTagReaderSessionDelegate {
 
   func tagReaderSession(_ session: NFCTagReaderSession, didInvalidateWithError error: Error) {
     DispatchQueue.main.async {
+      // Only the current session's end answers a waiting start; a stopped one's late invalidation would otherwise
+      // cancel the start of the session that replaced it while its sheet stays open.
+      guard self.session === session else { return }
       if let pending = self.pendingStart {
         pending(FlutterError(code: Self.code(of: error), message: error.localizedDescription, details: nil))
       }
       self.pendingStart = nil
-      if self.session === session {
-        self.session = nil
-        self.card = nil
-      }
+      self.session = nil
+      self.card = nil
     }
   }
 
@@ -150,6 +159,39 @@ final class WaiterNfc: NSObject, NFCTagReaderSessionDelegate {
       return "unsupported"
     default:
       return "io"
+    }
+  }
+}
+
+/// A card the relay can send ISO 7816 commands to. NTAG 424 DNA is reported as an ISO 7816 tag once its
+/// application (Info.plist `select-identifiers`, D2760000850101) was selected; CoreNFC may also report it as a
+/// MIFARE tag of the DESFire family, which takes the same commands wrapped by `sendMiFareISO7816Command`.
+private enum Card {
+  case iso7816(NFCISO7816Tag)
+  case desfire(NFCMiFareTag)
+
+  init?(_ tag: NFCTag) {
+    switch tag {
+    case let .iso7816(card):
+      self = .iso7816(card)
+    case let .miFare(card) where card.mifareFamily == .desfire:
+      self = .desfire(card)
+    default:
+      return nil
+    }
+  }
+
+  var identifier: Data {
+    switch self {
+    case let .iso7816(card): return card.identifier
+    case let .desfire(card): return card.identifier
+    }
+  }
+
+  func send(_ apdu: NFCISO7816APDU, completion: @escaping (Data, UInt8, UInt8, Error?) -> Void) {
+    switch self {
+    case let .iso7816(card): card.sendCommand(apdu: apdu, completionHandler: completion)
+    case let .desfire(card): card.sendMiFareISO7816Command(apdu, completionHandler: completion)
     }
   }
 }

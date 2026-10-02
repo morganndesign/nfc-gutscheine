@@ -230,7 +230,8 @@ class CardLookupController extends ChangeNotifier {
 
   Future<void> _change(String action, String reason, String outcome) async {
     final CardInfo? current = card;
-    if (current == null) return;
+    // A second press before the button disabled itself sends nothing (a second "suspend" is refused as a failure).
+    if (current == null || phase != DeskPhase.idle) return;
     await _request(() async {
       card = await _api.changeCard(current.cardNumber, action, reason);
       done = outcome;

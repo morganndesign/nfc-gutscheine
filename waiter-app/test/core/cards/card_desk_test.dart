@@ -85,6 +85,30 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('the screen closes while the stock card is checked: nothing is sold that no one sees', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    app.nfc.card = null;
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
+      ..on('POST', '/vouchers', FakeReply(201, Payloads.soldCard()));
+    final SaleController sale = cardSale();
+    await toDetails(sale, tester);
+
+    unawaited(sale.sell());
+    await settle(tester);
+    expect(sale.state, isA<SaleTapCard>());
+
+    sale.dispose(); // signed out, blocked: the screen is gone
+    app.nfc.tapLate(FakeCard());
+    await settle(tester);
+    expect(app.backend.to('POST', complete), hasLength(1), reason: 'the card was checked');
+    expect(app.backend.to('POST', '/vouchers'), isEmpty);
+    await finish(tester);
+  });
+
   testWidgets('a lost answer is retried with the same key and the same tap, never a second card', (
     WidgetTester tester,
   ) async {
@@ -219,6 +243,7 @@ void main() {
     expect(desk.card!.voucherBalance, 3200);
 
     unawaited(desk.suspend('Lost'));
+    unawaited(desk.suspend('Lost')); // a double press sends one request
     await settle(tester);
     expect(desk.card!.state, 'suspended');
     expect(desk.done, 'suspended');

@@ -220,4 +220,32 @@ void main() {
       },
     );
   }
+
+  testWidgets('language: saved for the account, the app switches at once', (WidgetTester tester) async {
+    final TestApp app = await _openMenu(tester);
+    app.backend
+      ..on('PUT', '/auth/language', FakeReply(200, <String, Object?>{'data': <String, Object?>{'locale': 'de'}}))
+      ..on('GET', '/auth/me', FakeReply(200, <String, Object?>{'data': <String, Object?>{...Payloads.user(), 'locale': 'de'}}));
+    await tester.tap(text('Language'));
+    await settle(tester, 20);
+    await tester.tap(text('Deutsch'));
+    await settle(tester, 20);
+    expect(app.backend.to('PUT', '/auth/language').single.body, <String, Object?>{'locale': 'de'});
+    expect(app.session.user!.locale, 'de');
+    expect(text('Darstellung'), findsOneWidget);
+    await finishApp(tester, app);
+  });
+
+  testWidgets('language: a 401 opens the session sheet instead of "could not change"', (WidgetTester tester) async {
+    final TestApp app = await _openMenu(tester);
+    app.backend.on('PUT', '/auth/language', FakeReply(401, <String, Object?>{'message': 'x', 'code': 'UNAUTHENTICATED'}));
+    await tester.tap(text('Language'));
+    await settle(tester, 20);
+    await tester.tap(text('Deutsch'));
+    await settle(tester, 20);
+    expect(app.session.expired, SessionContext.lookup);
+    expect(text('Language not changed. Please try again.'), findsNothing);
+    await finishApp(tester, app);
+  });
 }
+

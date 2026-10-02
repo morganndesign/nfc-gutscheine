@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:giftcard_waiter/core/cards/card_presenter.dart';
 import 'package:giftcard_waiter/core/platform/nfc_relay.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
 
@@ -203,6 +204,57 @@ void main() {
     await settle(tester);
     expect(app.loop.state, isA<ReadyState>());
     expect(app.backend.to('POST', begin), isEmpty);
+    await finish(tester);
+  });
+
+  testWidgets('a card that never answers ends with "card moved" after the exchange limit, not an endless spinner', (
+    WidgetTester tester,
+  ) async {
+    final FakeNfcRelay nfc = FakeNfcRelay()..card = (FakeCard()..hangOn = '00B0');
+    await started(tester, nfc: nfc);
+
+    app.loop.openCardTap();
+    await settle(tester);
+    expect((app.loop.state as CardTapState).phase, CardTapPhase.checking);
+
+    await tester.pump(CardPresenter.exchangeTimeout + const Duration(milliseconds: 1));
+    await settle(tester);
+    final ProblemState problem = app.loop.state as ProblemState;
+    expect(problem.kind, ProblemKind.cardMoved);
+    expect(problem.retryCard, isTrue);
+    expect(nfc.closed.single.failed, isTrue, reason: 'the card session is ended');
+    expect(app.backend.to('POST', begin), isEmpty);
+    await finish(tester);
+  });
+
+  testWidgets('signed out while the reader waits for a card: the reader is stopped', (WidgetTester tester) async {
+    final FakeNfcRelay nfc = FakeNfcRelay()..card = null;
+    await started(tester, nfc: nfc);
+    app.backend.on('POST', '/auth/logout', FakeReply(200, <String, Object?>{'message': 'Logged out.'}));
+
+    app.loop.openCardTap();
+    await settle(tester);
+    expect(app.loop.state, isA<CardTapState>());
+
+    unawaited(app.session.signOut());
+    await settle(tester);
+    expect(app.loop.state, isA<ReadyState>());
+    expect(nfc.cancels, 1, reason: 'no Android reader mode or iPhone sheet left open');
+    await finish(tester);
+  });
+
+  testWidgets('signed out while the card is being read: the card session is closed', (WidgetTester tester) async {
+    await started(tester, nfc: FakeNfcRelay()..card = (FakeCard()..hangOn = '00B0'));
+    app.backend.on('POST', '/auth/logout', FakeReply(200, <String, Object?>{'message': 'Logged out.'}));
+
+    app.loop.openCardTap();
+    await settle(tester);
+    expect((app.loop.state as CardTapState).phase, CardTapPhase.checking);
+
+    unawaited(app.session.signOut());
+    await settle(tester);
+    expect(app.loop.state, isA<ReadyState>());
+    expect(app.nfc.closed, isNotEmpty, reason: 'no card session stays open after sign-out');
     await finish(tester);
   });
 }

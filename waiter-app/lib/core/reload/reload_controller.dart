@@ -295,7 +295,8 @@ class ReloadController extends ChangeNotifier {
     if (!_unanswered && (_presentmentId == null || validUntil == null || _clock().isAfter(validUntil))) {
       _presentmentId = null;
       _set(const ReloadTapCard(again: true));
-      if (await _present(again: true) == null) return;
+      // The screen was closed meanwhile (signed out, blocked): nothing is booked that no one sees.
+      if (await _present(again: true) == null || _disposed) return;
     }
 
     _set(details.copyWith(submitting: true));

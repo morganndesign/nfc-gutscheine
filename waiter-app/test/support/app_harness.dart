@@ -188,6 +188,23 @@ class FakeVoucherPrinter implements VoucherPrinter {
 
 class MockLocalAuthentication extends Mock implements LocalAuthentication {}
 
+/// Protected storage whose writes of some keys fail (a Keystore or Keychain error).
+class FlakySecretStore extends MemorySecretStore {
+  final Set<String> failingKeys = <String>{};
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (failingKeys.contains(key)) throw PlatformException(code: 'keystore', message: 'write failed');
+    await super.write(key, value);
+  }
+
+  @override
+  Future<void> delete(String key) async {
+    if (failingKeys.contains(key)) throw PlatformException(code: 'keystore', message: 'delete failed');
+    await super.delete(key);
+  }
+}
+
 /// Sample payloads matching the backend resources.
 abstract final class Payloads {
   static const String voucherId = '9f1c7a0e-3b2d-4c1a-9e8f-0a1b2c3d4e5f';
@@ -510,6 +527,7 @@ class TestApp {
     DateTime Function()? wallClock,
     AppEnvironment environment = const AppEnvironment(apiBaseUrl: 'https://cards.example.at/api/v1'),
     FakeNfcRelay? nfc,
+    MemorySecretStore? secretStore,
   }) async {
     final FakeNfcRelay cardReader = nfc ?? FakeNfcRelay();
     SharedPreferencesAsyncPlatform.instance = InMemorySharedPreferencesAsync.withData(<String, Object>{
@@ -537,7 +555,7 @@ class TestApp {
       return null;
     });
 
-    final MemorySecretStore secrets = MemorySecretStore();
+    final MemorySecretStore secrets = secretStore ?? MemorySecretStore();
     if (signedIn) {
       secrets.values['token'] = 'gcp_test';
       secrets.values['profile'] = jsonEncode(user ?? Payloads.user());

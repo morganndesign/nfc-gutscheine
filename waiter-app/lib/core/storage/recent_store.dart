@@ -104,7 +104,12 @@ class RecentStore extends ChangeNotifier {
     if (_entries.any((RecentEntry e) => e.transactionId == entry.transactionId)) return;
     final List<RecentEntry> next = <RecentEntry>[entry, ..._entries];
     _entries = List<RecentEntry>.unmodifiable(next.take(maxRows));
-    await _persist();
+    try {
+      await _persist();
+    } on Object {
+      // A Keystore or Keychain error: the row is shown for this app run. It never stops the redemption flow that
+      // added it (an earlier booking found on S07 would otherwise stay "checking" forever).
+    }
     notifyListeners();
   }
 

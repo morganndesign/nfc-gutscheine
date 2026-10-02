@@ -14,6 +14,7 @@ import io.flutter.plugin.common.MethodChannel
 import java.io.IOException
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
 
 /**
  * The NTAG 424 DNA relay (Android): it finds an ISO 14443-4 card with reader mode and forwards command bytes
@@ -36,6 +37,8 @@ internal class WaiterNfc(private val activity: Activity, messenger: BinaryMessen
     /** Card I/O blocks; it never runs on the main thread. One card at a time, in order. */
     private val io: ExecutorService = Executors.newSingleThreadExecutor()
 
+    // Touched on the main thread only (method calls, onPause, and the io executor's main.post callbacks); the
+    // binder thread (onTag) and the io thread never read or write them.
     private var pendingStart: MethodChannel.Result? = null
     private var card: IsoDep? = null
     private var readerMode = false
@@ -78,35 +81,47 @@ internal class WaiterNfc(private val activity: Activity, messenger: BinaryMessen
             !adapter.isEnabled -> return result.error("disabled", "NFC is switched off.", null)
             pendingStart != null || card != null -> return result.error("busy", "A card session is already open.", null)
         }
-        pendingStart = result
         val flags = NfcAdapter.FLAG_READER_NFC_A or
             NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
             NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
         val extras = Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250) }
-        adapter!!.enableReaderMode(activity, { tag -> onTag(tag) }, flags, extras)
+        try {
+            adapter!!.enableReaderMode(activity, { tag -> onTag(tag) }, flags, extras)
+        } catch (e: IllegalStateException) {
+            // The activity is not resumed (the app went to the background while Dart asked for a card). Without
+            // this, the start stayed pending and every later start answered "busy" until the app was restarted.
+            return result.error("cancelled", "The app is not in the foreground.", null)
+        }
+        pendingStart = result
         readerMode = true
     }
 
     /** Called on a binder thread for every tag that comes into the field while reader mode is on. */
     private fun onTag(tag: Tag) {
         val isoDep = IsoDep.get(tag) ?: return // Not ISO 14443-4 (e.g. an old NTAG 21x): keep looking.
-        io.execute {
-            try {
-                isoDep.connect()
-                isoDep.timeout = TIMEOUT_MS
-                main.post {
-                    val result = pendingStart
-                    if (result == null) {
-                        closeQuietly(isoDep)
-                        return@post
-                    }
-                    pendingStart = null
-                    card = isoDep
-                    result.success(mapOf("uid" to tag.id.toHex()))
+        try {
+            io.execute { connect(tag, isoDep) }
+        } catch (e: RejectedExecutionException) {
+            // The engine went away (dispose) while this tag was being reported on the binder thread.
+        }
+    }
+
+    private fun connect(tag: Tag, isoDep: IsoDep) {
+        try {
+            isoDep.connect()
+            isoDep.timeout = TIMEOUT_MS
+            main.post {
+                val result = pendingStart
+                if (result == null) {
+                    closeQuietly(isoDep)
+                    return@post
                 }
-            } catch (e: IOException) {
-                closeQuietly(isoDep) // Moved away while connecting: wait for the next tap.
+                pendingStart = null
+                card = isoDep
+                result.success(mapOf("uid" to tag.id.toHex()))
             }
+        } catch (e: IOException) {
+            closeQuietly(isoDep) // Moved away while connecting: wait for the next tap.
         }
     }
 

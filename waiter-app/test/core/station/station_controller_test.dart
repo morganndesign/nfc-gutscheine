@@ -174,4 +174,21 @@ void main() {
     expect(app.nfc.prompts, isEmpty);
     await finish(tester);
   });
+
+  testWidgets('a second tap on the batch row starts no second run on the one reader', (WidgetTester tester) async {
+    await started(tester);
+    final StationBatch batch = station.batches!.single;
+
+    unawaited(station.choose(batch));
+    unawaited(station.choose(batch));
+    await settle(tester);
+    unawaited(station.choose(batch));
+    await settle(tester);
+
+    expect(app.nfc.prompts, hasLength(1), reason: 'one reader session, never "busy"');
+    expect(station.phase, StationPhase.waiting);
+    expect(station.last, isNull);
+    await finish(tester);
+  });
 }
+

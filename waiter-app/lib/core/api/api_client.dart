@@ -89,7 +89,7 @@ class ApiClient {
     });
 
     final String? bearer = authenticated ? _identity.token : null;
-    _log?.record('http.request', '$method $path $requestId');
+    _log?.record('http.request', '$method ${loggablePath(path)} $requestId');
 
     try {
       final Response<Object?> response = await _dio.request<Object?>(
@@ -132,6 +132,41 @@ class ApiClient {
       timer.cancel();
     }
   }
+
+  /// The fixed words of the app's routes ([WaiterApi]); every other path segment is a value.
+  static const Set<String> _routeWords = <String>{
+    'app',
+    'config',
+    'auth',
+    'token',
+    'me',
+    'logout',
+    'language',
+    'devices',
+    'current',
+    'presentments',
+    'cards',
+    'card-batches',
+    'receipt',
+    'suspend',
+    'resume',
+    'replacement',
+    'admin',
+    'station',
+    'batches',
+    'personalizations',
+    'vouchers',
+    'redemptions',
+    'reloads',
+  };
+
+  /// [path] as the diagnostic log keeps it: the values in it — voucher and batch ids, card numbers, idempotency
+  /// keys, card authentication handles — become `*` (the log never holds card data or idempotency keys).
+  @visibleForTesting
+  static String loggablePath(String path) => path
+      .split('/')
+      .map((String segment) => segment.isEmpty || _routeWords.contains(segment) ? segment : '*')
+      .join('/');
 
   /// GET of a binary resource (the restaurant's logo) with the same identity headers as [send].
   Future<Uint8List> bytes(String path, {Duration timeout = ApiTimeouts.standard}) async {

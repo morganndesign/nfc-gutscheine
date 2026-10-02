@@ -127,6 +127,28 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('the screen closes while the card is confirmed once more: nothing is booked that no one sees', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    cardAnswers(times: 2);
+    app.backend.on('POST', reloads, FakeReply(201, Payloads.reloaded()));
+    final ReloadController c = await toDetails(tester);
+
+    app.nfc.card = null;
+    now = now.add(const Duration(seconds: 55));
+    unawaited(c.submit());
+    await settle(tester);
+    expect(c.state, isA<ReloadTapCard>());
+
+    c.dispose(); // signed out, blocked: the screen is gone
+    app.nfc.tapLate(FakeCard());
+    await settle(tester);
+    expect(app.backend.to('POST', begin), hasLength(2), reason: 'the card was checked');
+    expect(app.backend.to('POST', reloads), isEmpty);
+    await finish(tester);
+  });
+
   testWidgets('a lost answer is retried with the same key and tap, never booked twice', (WidgetTester tester) async {
     await started(tester);
     cardAnswers();

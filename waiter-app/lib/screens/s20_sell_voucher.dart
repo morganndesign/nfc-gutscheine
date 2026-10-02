@@ -72,6 +72,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
 
   @override
   void dispose() {
+    // Closed without "✕" (signed out, blocked): a reader still waiting for the stock card is stopped.
+    unawaited(_controller?.cancelTap());
     _controller?.dispose();
     _reference.dispose();
     _reason.dispose();

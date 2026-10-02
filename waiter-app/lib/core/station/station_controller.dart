@@ -87,6 +87,7 @@ class StationController extends ChangeNotifier {
   StationOutcome? _last;
   int _finished = 0;
   int _run = 0;
+  bool _choosing = false;
   bool _disposed = false;
 
   StationPhase get phase => _phase;
@@ -113,9 +114,18 @@ class StationController extends ChangeNotifier {
     }
   }
 
-  /// Starts a batch run: waits for cards until [finish].
+  /// Starts a batch run: waits for cards until [finish]. A second tap on a batch row while one run starts or
+  /// runs is ignored (two runs would fight over the one reader: "busy", shown as a failed card).
   Future<void> choose(StationBatch batch) async {
-    final NfcAvailability availability = await _nfc.availability();
+    if (_choosing || _batch != null) return;
+    _choosing = true;
+    final NfcAvailability availability;
+    try {
+      availability = await _nfc.availability();
+    } finally {
+      _choosing = false;
+    }
+    if (_disposed) return;
     if (availability != NfcAvailability.ready) {
       _last = StationOutcome.failed(
         availability == NfcAvailability.disabled ? StationFailure.nfcOff : StationFailure.nfcUnsupported,

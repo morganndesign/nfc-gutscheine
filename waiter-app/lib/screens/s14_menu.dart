@@ -6,7 +6,9 @@ import 'package:flutter/widgets.dart';
 import '../app/app_scope.dart';
 import '../components/components.dart';
 import '../components/support/text_emphasis.dart';
+import '../core/api/api_failure.dart';
 import '../core/api/models.dart';
+import '../core/state/session_state.dart';
 import '../core/storage/settings_store.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
@@ -371,7 +373,12 @@ class _LanguageChoiceState extends State<_LanguageChoice> {
       await services.api.setLanguage(code);
       await services.session.refreshUser();
       if (mounted) Navigator.of(context).pop();
-    } on Object {
+    } on ApiFailure catch (e) {
+      // Signed out elsewhere, device revoked, restaurant suspended: the session sheet or S15, like every request.
+      if (services.session.handleFailure(e, SessionContext.lookup)) {
+        if (mounted) setState(() => _saving = null);
+        return;
+      }
       snackbar?.show(SnackbarData(message: failed));
       if (mounted) setState(() => _saving = null);
     }

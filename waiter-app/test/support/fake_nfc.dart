@@ -52,6 +52,13 @@ class FakeNfcRelay implements NfcRelay {
     if (waiting != null && !waiting.isCompleted) waiting.completeError(const NfcRelayException(NfcFailure.cancelled));
   }
 
+  /// A card arrives while the reader waits (the waiter tapped later).
+  void tapLate(FakeCard card) {
+    final Completer<CardLink>? waiting = _waiting;
+    _waiting = null;
+    if (waiting != null && !waiting.isCompleted) waiting.complete(_FakeLink(this, card));
+  }
+
   /// How often the app ended a waiting session.
   int cancels = 0;
 
@@ -78,6 +85,9 @@ class FakeCard {
   /// The card moves away when this command (hex prefix) is sent.
   String? loseOn;
 
+  /// The radio never answers this command (hex prefix): the call stays open.
+  String? hangOn;
+
   /// Answers this command (hex prefix) with this status word instead.
   ({String prefix, String sw})? refuse;
 
@@ -100,6 +110,7 @@ class _FakeLink implements CardLink {
     final String hex = apdu.map((int b) => b.toRadixString(16).padLeft(2, '0')).join().toUpperCase();
     _relay.sent.add(hex);
     if (_card.loseOn != null && hex.startsWith(_card.loseOn!)) throw const NfcRelayException(NfcFailure.tagLost);
+    if (_card.hangOn != null && hex.startsWith(_card.hangOn!)) return Completer<Uint8List>().future;
     final ({String prefix, String sw})? refuse = _card.refuse;
     if (refuse != null && hex.startsWith(refuse.prefix)) return _bytes(refuse.sw);
     final String? scripted = _card.script?.call(hex);

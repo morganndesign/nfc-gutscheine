@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../api/api_failure.dart';
 import '../api/models.dart';
 import '../api/waiter_api.dart';
+import '../cards/card_presenter.dart';
 import '../cards/ntag424_session.dart';
 import '../diagnostics/diagnostic_log.dart';
 import '../format/amount_entry.dart';
@@ -302,16 +303,27 @@ class LoopController extends ChangeNotifier {
         if (_generation == generation && _state is CardTapState) _go((_state as CardTapState).copyWith(slow: true));
       });
 
-      final CardTap tap = await Ntag424Session.read(card);
+      final CardLink link = card;
       final CancelToken token = CancelToken();
       _inFlight = token;
-      final CardChallenge challenge = await _api.beginCardPresentment(tap, cancelToken: token);
-      if (_generation != generation) return;
-      final String answer = await Ntag424Session.answer(card, challenge.commandHex);
-      final Presentment presentment = await _api.completeCardPresentment(challenge.authentication, answer, cancelToken: token);
-      if (_generation != generation) return;
+      // Once a card is on the phone the exchange ends — with a result or a message — never an endless spinner
+      // (a radio call that never answers), as for every other card tap (CardPresenter).
+      final Presentment? presentment = await () async {
+        final CardTap tap = await Ntag424Session.read(link);
+        final CardChallenge challenge = await _api.beginCardPresentment(tap, cancelToken: token);
+        if (_generation != generation) return null;
+        final String answer = await Ntag424Session.answer(link, challenge.commandHex);
+        return _api.completeCardPresentment(challenge.authentication, answer, cancelToken: token);
+      }().timeout(CardPresenter.exchangeTimeout);
+      // Left (back, signed out): the card session was ended there.
+      if (presentment == null || _generation != generation) return;
       await card.close(message: _cardTexts.done);
       _enterCharge(presentment);
+    } on TimeoutException {
+      if (_generation != generation) return;
+      _inFlight?.cancel();
+      await _closeQuietly(card, _cardTexts.failed);
+      _cardFailed(const ProblemState(kind: ProblemKind.cardMoved, retryCard: true));
     } on NfcRelayException catch (e) {
       if (_generation != generation) return;
       await card?.close(message: _cardTexts.failed, failed: true);
@@ -337,6 +349,22 @@ class LoopController extends ChangeNotifier {
       if (identical(_card, card)) _card = null;
       _slowTimer?.cancel();
     }
+  }
+
+  static Future<void> _closeQuietly(CardLink? card, String message) async {
+    try {
+      await card?.close(message: message, failed: true);
+    } on Object {
+      // The card session is already gone.
+    }
+  }
+
+  /// Ends S11's card session: the card on the phone, or the reader still waiting for one (Android reader mode,
+  /// the iPhone sheet). An answer that arrives later is ignored (the caller moved the generation on).
+  void _endCardSession() {
+    final CardLink? card = _card;
+    _card = null;
+    unawaited(card != null ? card.close() : _nfc.cancel());
   }
 
   void _cardFailed(ProblemState? problem) {
@@ -1054,10 +1082,7 @@ class LoopController extends ChangeNotifier {
         _generation++;
         _inFlight?.cancel();
         _slowTimer?.cancel();
-        final CardLink? card = _card;
-        _card = null;
-        // No card yet: end the waiting session (Android reader mode, the iPhone sheet).
-        unawaited(card != null ? card.close() : _nfc.cancel());
+        _endCardSession();
         _go(const ReadyState());
         return true;
       case QrScanState() || ProblemState():
@@ -1075,7 +1100,10 @@ class LoopController extends ChangeNotifier {
       case SessionSignal.signedOut || SessionSignal.contextDropped:
         _generation++;
         _inFlight?.cancel();
-        _retryWait?.complete();
+        // Signed out or locked while S11 was open: no reader stays on (Android reader mode, the iPhone sheet).
+        if (_state is CardTapState) _endCardSession();
+        final Completer<void>? wait = _retryWait;
+        if (wait != null && !wait.isCompleted) wait.complete();
         _carry = null;
         _cancelTimers();
         _resolveTimer?.cancel();
