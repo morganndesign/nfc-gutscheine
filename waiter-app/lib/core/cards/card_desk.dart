@@ -67,7 +67,7 @@ class ReceiveDeliveryController extends ChangeNotifier {
     try {
       final List<CardBatchSummary> all = await _api.cardBatches();
       _update(
-        () => batches = all.where((CardBatchSummary b) => b.status == 'delivered' || b.status == 'on_hold').toList(),
+        () => batches = all.where((CardBatchSummary b) => b.status == 'shipped' || b.status == 'on_hold').toList(),
       );
     } on ApiFailure catch (e) {
       _session.handleFailure(e, SessionContext.lookup);
@@ -78,7 +78,7 @@ class ReceiveDeliveryController extends ChangeNotifier {
   }
 
   void choose(CardBatchSummary b) {
-    if (b.status != 'delivered') return;
+    if (b.status != 'shipped') return;
     _update(() {
       batch = b;
       count = '';

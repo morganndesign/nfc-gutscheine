@@ -38,7 +38,6 @@ use Illuminate\Support\Carbon;
  * @property string|null $tracking_ref
  * @property array<string, mixed>|null $qa_report
  * @property string|null $accepted_by
- * @property string|null $accepted_second_by
  * @property string|null $received_by
  * @property-read KeySet $keySet
  * @property-read Restaurant $restaurant

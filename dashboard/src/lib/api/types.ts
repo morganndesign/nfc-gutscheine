@@ -173,22 +173,7 @@ export interface Card {
   history?: { from_state: CardState | null; to_state: CardState; reason: string; at: string | null }[]
 }
 
-export type CardBatchStatus =
-  | "ordered"
-  | "in_production"
-  | "personalized"
-  | "qa_testing"
-  | "accepted"
-  | "rejected"
-  | "assigned"
-  | "shipped"
-  | "delivered"
-  | "on_hold"
-  | "in_service"
-  | "depleted"
-  | "compromised"
-  | "lost"
-  | "closed"
+export type CardBatchStatus = "in_production" | "accepted" | "rejected" | "shipped" | "on_hold" | "in_service" | "depleted" | "compromised" | "lost" | "closed"
 
 export interface CardBatchCounts {
   in_production: number
@@ -221,7 +206,8 @@ export interface CardBatch {
   key_set?: string
   manufacturer?: string
   accepted_at?: string | null
-  approvals?: string[]
+  /** The platform admin who released the batch (user id). */
+  released_by?: string | null
   qa_report?: Record<string, unknown> | null
 }
 

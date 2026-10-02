@@ -88,7 +88,7 @@ final class CardWorkflowTest extends TestCase
     /** @return array{0: CardBatch, 1: list<Card>} three cards in the restaurant's stock */
     private function stock(int $count = 3): array
     {
-        [$batch, $cards] = $this->deliveredCards($this->restaurant, $count);
+        [$batch, $cards] = $this->shippedCards($this->restaurant, $count);
         $this->asManager();
         $this->postJson("/api/v1/card-batches/{$batch->id}/receipt", ['count' => $count, 'presentment_id' => $this->tapped($this->chip($cards[0]), 'receive')])
             ->assertOk()->assertJsonPath('data.status', 'in_service');
@@ -106,49 +106,64 @@ final class CardWorkflowTest extends TestCase
         }
     }
 
-    public function test_the_platform_orders_personalises_accepts_and_ships_a_batch(): void
+    public function test_the_platform_orders_personalises_releases_and_ships_a_batch(): void
     {
-        $first = User::factory()->platformAdmin()->create();
-        $second = User::factory()->platformAdmin()->create();
-        Sanctum::actingAs($first, ['*']);
+        Sanctum::actingAs($admin = User::factory()->platformAdmin()->create(), ['*']);
 
         $batch = $this->postJson('/api/v1/admin/card-batches', [
             'restaurant_id' => $this->restaurant->id,
             'manufacturer' => 'Card Co',
             'quantity' => 3,
             'card_design_ref' => 'stern-2026',
-        ])->assertCreated()->assertJsonPath('data.status', 'ordered')->assertJsonPath('data.key_set', 'ks-2026-01')->json('data.id');
-        $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => 'in_production', 'reason' => 'print run'])->assertOk();
+        ])->assertCreated()->assertJsonPath('data.status', 'in_production')->assertJsonPath('data.key_set', 'ks-2026-01')->json('data.id');
 
-        // Two chips pass the station; the third is left half done and must not be accepted.
+        // Nothing personalised yet: nothing to release.
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/release")->assertStatus(409)->assertJsonPath('code', 'CARD_STATE_INVALID');
+        // Shipping comes after the release.
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/shipment")->assertStatus(409)->assertJsonPath('code', 'CARD_STATE_INVALID');
+
+        // Two chips pass the station; the third is left half done and is dropped at the release.
         $model = CardBatch::query()->withoutGlobalScopes()->findOrFail($batch);
-        $admin = new Actor($first);
-        $this->personalizeAtStation($model, Ntag424Chip::factory(), $admin);
-        $this->personalizeAtStation($model, Ntag424Chip::factory(), $admin);
-        $this->lifecycleRegister($model, $admin);
+        $actor = new Actor($admin);
+        $this->personalizeAtStation($model, Ntag424Chip::factory(), $actor);
+        $this->personalizeAtStation($model, Ntag424Chip::factory(), $actor);
+        $this->lifecycleRegister($model, $actor);
 
-        foreach (['personalized', 'qa_testing'] as $status) {
-            $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => $status, 'reason' => 'station done'])->assertOk();
-        }
-        $this->postJson("/api/v1/admin/card-batches/{$batch}/approval")->assertOk()->assertJsonPath('data.status', 'qa_testing');
-        $this->postJson("/api/v1/admin/card-batches/{$batch}/approval")->assertStatus(409)->assertJsonPath('code', 'CARD_STATE_INVALID');
-        Sanctum::actingAs($second, ['*']);
-        $this->postJson("/api/v1/admin/card-batches/{$batch}/approval")->assertOk()
+        // One person releases: no second approval.
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/release")->assertOk()
             ->assertJsonPath('data.status', 'accepted')
+            ->assertJsonPath('data.released_by', $admin->id)
             ->assertJsonPath('data.counts.central_stock', 2)
-            ->assertJsonPath('data.counts.qa_failed', 1);
+            ->assertJsonPath('data.counts.qa_failed', 1)
+            ->assertJsonMissingPath('data.approvals');
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/release")->assertStatus(409);
 
-        foreach (['assigned', 'shipped', 'delivered'] as $status) {
-            $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => $status, 'reason' => 'logistics', 'tracking_ref' => 'AT-1'])->assertOk();
-        }
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/shipment", ['tracking_ref' => 'AT-1'])->assertOk()
+            ->assertJsonPath('data.status', 'shipped');
         $this->getJson("/api/v1/admin/card-batches/{$batch}")->assertOk()
             ->assertJsonPath('data.counts.in_transit', 2)
             ->assertJsonPath('data.tracking_ref', 'AT-1')
             ->assertJsonPath('data.restaurant.name', 'Gasthaus Stern');
-        $this->getJson('/api/v1/admin/card-batches?status=delivered')->assertOk()->assertJsonCount(1, 'data');
+        $this->getJson('/api/v1/admin/card-batches?status=shipped')->assertOk()->assertJsonCount(1, 'data');
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/shipment")->assertStatus(409);
 
         // Receipt belongs to the restaurant; the platform cannot skip it.
         $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => 'in_service', 'reason' => 'skip'])->assertStatus(422);
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/approval")->assertNotFound();
+    }
+
+    public function test_the_status_endpoint_takes_only_special_transitions(): void
+    {
+        Sanctum::actingAs(User::factory()->platformAdmin()->create(), ['*']);
+        $batch = $this->postJson('/api/v1/admin/card-batches', ['restaurant_id' => $this->restaurant->id, 'quantity' => 1])->assertCreated()->json('data.id');
+
+        foreach (['ordered', 'personalized', 'qa_testing', 'assigned', 'delivered', 'in_production', 'accepted', 'shipped', 'in_service', 'on_hold'] as $status) {
+            $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => $status, 'reason' => 'by hand'])
+                ->assertStatus(422)->assertJsonValidationErrors('status');
+        }
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => 'lost', 'reason' => 'never shipped'])->assertStatus(409);
+        $this->postJson("/api/v1/admin/card-batches/{$batch}/status", ['status' => 'rejected', 'reason' => 'order cancelled'])->assertOk()
+            ->assertJsonPath('data.status', 'rejected');
     }
 
     private function lifecycleRegister(CardBatch $batch, Actor $actor): void
@@ -158,10 +173,10 @@ final class CardWorkflowTest extends TestCase
 
     public function test_a_restaurant_confirms_a_delivery_with_a_count_and_one_tapped_card(): void
     {
-        [$batch, $cards] = $this->deliveredCards($this->restaurant, 3);
+        [$batch, $cards] = $this->shippedCards($this->restaurant, 3);
         $this->asManager();
 
-        $this->getJson('/api/v1/card-batches')->assertOk()->assertJsonPath('data.0.status', 'delivered')->assertJsonPath('data.0.counts.in_transit', 3);
+        $this->getJson('/api/v1/card-batches')->assertOk()->assertJsonPath('data.0.status', 'shipped')->assertJsonPath('data.0.counts.in_transit', 3);
 
         // A presentment for another purpose, or reused, does not confirm anything.
         $bind = $this->tapCard($this->chip($cards[1]), 'bind');
@@ -178,10 +193,11 @@ final class CardWorkflowTest extends TestCase
 
     public function test_a_wrong_count_puts_the_batch_on_hold_until_the_platform_resolves_it(): void
     {
-        [$batch, $cards] = $this->deliveredCards($this->restaurant, 3);
+        [$batch, $cards] = $this->shippedCards($this->restaurant, 3);
         $this->asManager();
         $this->postJson("/api/v1/card-batches/{$batch->id}/receipt", ['count' => 2, 'presentment_id' => $this->tapped($this->chip($cards[0]), 'receive')])
             ->assertOk()->assertJsonPath('data.status', 'on_hold');
+        // The cards arrived but are not sellable until the platform resolves the count.
         $this->assertSame(CardState::Delivered, $cards[0]->refresh()->state);
 
         Sanctum::actingAs(User::factory()->platformAdmin()->create(), ['*']);
@@ -392,7 +408,7 @@ final class CardWorkflowTest extends TestCase
 
         // New keys, new cards: the owner moves the guest's balance to one.
         $this->artisan('cards:key-set:create', ['version' => 'ks-2027-01'])->assertSuccessful();
-        [$batch, $fresh] = $this->deliveredCards($this->restaurant, 1, 'ks-2027-01');
+        [$batch, $fresh] = $this->shippedCards($this->restaurant, 1, 'ks-2027-01');
         $this->postJson("/api/v1/card-batches/{$batch->id}/receipt", ['count' => 1, 'presentment_id' => $this->tapped($this->chip($fresh[0]), 'receive')])->assertOk();
         $this->asOwner();
         $this->postJson("/api/v1/cards/{$cards[0]->card_number}/replacement", ['presentment_id' => $this->tapped($this->chip($fresh[0]), 'bind'), 'reason' => 'keys compromised'])
@@ -415,7 +431,7 @@ final class CardWorkflowTest extends TestCase
     public function test_replacement_needs_a_stock_card_of_this_restaurant(): void
     {
         $other = $this->restaurant(['name' => 'Anderswo']);
-        [, $foreign] = $this->deliveredCards($other, 1);
+        [, $foreign] = $this->shippedCards($other, 1);
         [, $cards] = $this->stock();
         $this->sellCard($this->chip($cards[0]), 2000);
         $this->sellCard($this->chip($cards[1]), 2000);
@@ -475,14 +491,14 @@ final class CardWorkflowTest extends TestCase
 
     public function test_receipt_is_bound_to_its_batch(): void
     {
-        [$first, $firstCards] = $this->deliveredCards($this->restaurant, 1);
-        [$second] = $this->deliveredCards($this->restaurant, 1);
+        [$first, $firstCards] = $this->shippedCards($this->restaurant, 1);
+        [$second] = $this->shippedCards($this->restaurant, 1);
         $this->asManager();
 
         $this->postJson("/api/v1/card-batches/{$second->id}/receipt", ['count' => 1, 'presentment_id' => $this->tapped($this->chip($firstCards[0]), 'receive')])
             ->assertStatus(422)->assertJsonPath('context.reason', 'other_batch');
-        $this->assertSame(CardBatchStatus::Delivered, $second->refresh()->status);
-        $this->assertSame(CardBatchStatus::Delivered, $first->refresh()->status, 'the refused receipt consumed nothing');
+        $this->assertSame(CardBatchStatus::Shipped, $second->refresh()->status);
+        $this->assertSame(CardBatchStatus::Shipped, $first->refresh()->status, 'the refused receipt consumed nothing');
         $this->assertNotNull(app(CardBatchLifecycle::class));
     }
 }

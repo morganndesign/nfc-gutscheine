@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
-/** Status of a card batch (architecture §8.2). One batch = one restaurant order = one print run = one shipment. */
+/**
+ * Status of a card batch (architecture §8.2). One batch = one restaurant order = one print run = one shipment.
+ * The main path is in_production → accepted (release) → shipped (ship) → in_service / on_hold (the restaurant's
+ * receipt); the other statuses are special transitions set by the platform with a reason.
+ */
 enum CardBatchStatus: string
 {
-    case Ordered = 'ordered';
     case InProduction = 'in_production';
-    case Personalized = 'personalized';
-    case QaTesting = 'qa_testing';
     case Accepted = 'accepted';
     case Rejected = 'rejected';
-    case Assigned = 'assigned';
     case Shipped = 'shipped';
-    case Delivered = 'delivered';
     case OnHold = 'on_hold';
     case InService = 'in_service';
     case Depleted = 'depleted';
@@ -27,15 +26,10 @@ enum CardBatchStatus: string
     public function next(): array
     {
         $next = match ($this) {
-            // Before acceptance a batch can be stopped (a cancelled order, a leaked key set): its cards fail QA.
-            self::Ordered => [self::InProduction, self::Rejected],
-            self::InProduction => [self::Personalized, self::Rejected],
-            self::Personalized => [self::QaTesting, self::Rejected],
-            self::QaTesting => [self::Accepted, self::Rejected],
-            self::Accepted => [self::Assigned],
-            self::Assigned => [self::Shipped],
-            self::Shipped => [self::Delivered, self::Lost],
-            self::Delivered => [self::InService, self::OnHold],
+            // Before shipping a batch can be stopped (a cancelled order, a leaked key set): its cards never leave.
+            self::InProduction => [self::Accepted, self::Rejected],
+            self::Accepted => [self::Shipped, self::Rejected],
+            self::Shipped => [self::InService, self::OnHold, self::Lost],
             self::OnHold => [self::InService],
             self::InService => [self::Depleted],
             self::Depleted => [self::InService, self::Closed],
@@ -43,8 +37,8 @@ enum CardBatchStatus: string
             self::Closed => [],
         };
 
-        // A key leak can be declared from acceptance onwards (§8.2).
-        if (in_array($this, [self::Accepted, self::Assigned, self::Shipped, self::Delivered, self::OnHold, self::InService, self::Depleted], true)) {
+        // A key leak can be declared from release onwards (§8.2).
+        if (in_array($this, [self::Accepted, self::Shipped, self::OnHold, self::InService, self::Depleted], true)) {
             $next[] = self::Compromised;
         }
 
@@ -56,22 +50,29 @@ enum CardBatchStatus: string
         return in_array($to, $this->next(), true);
     }
 
+    /** Statuses reached only through their own step (release, ship, the restaurant's receipt), never set by hand. */
+    public function hasOwnStep(): bool
+    {
+        return in_array($this, [self::Accepted, self::Shipped, self::InService, self::OnHold], true);
+    }
+
     /**
-     * How a batch status change moves its cards: target card state => card states it applies to (§8.2).
+     * How a special status change moves the batch's cards: list of [target card state, card states it applies to]
+     * (§8.2). Release, shipping and receipt move their cards themselves.
      *
-     * @return array{0: CardState, 1: list<CardState>}|null
+     * @return list<array{0: CardState, 1: list<CardState>}>
      */
-    public function cardMove(): ?array
+    public function cardMoves(): array
     {
         return match ($this) {
-            self::Accepted => [CardState::InInventory, [CardState::QaPassed]],
-            self::Assigned => [CardState::Assigned, [CardState::InInventory]],
-            self::Shipped => [CardState::Shipped, [CardState::Assigned]],
-            self::Delivered => [CardState::Delivered, [CardState::Shipped]],
-            self::Rejected => [CardState::QaFailed, [CardState::Manufactured, CardState::Personalized, CardState::QaPassed]],
-            self::Lost => [CardState::Lost, [CardState::Shipped]],
-            self::Compromised => [CardState::Revoked, [CardState::InInventory, CardState::Assigned, CardState::Shipped, CardState::Delivered, CardState::Available, CardState::Bound]],
-            default => null,
+            // Unreleased cards fail QA; released stock cards that never left the platform are revoked.
+            self::Rejected => [
+                [CardState::QaFailed, [CardState::Manufactured, CardState::Personalized, CardState::QaPassed]],
+                [CardState::Revoked, [CardState::InInventory]],
+            ],
+            self::Lost => [[CardState::Lost, [CardState::Shipped]]],
+            self::Compromised => [[CardState::Revoked, [CardState::InInventory, CardState::Assigned, CardState::Shipped, CardState::Delivered, CardState::Available, CardState::Bound]]],
+            default => [],
         };
     }
 }

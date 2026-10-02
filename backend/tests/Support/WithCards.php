@@ -9,7 +9,6 @@ use App\Crypto\Local\LocalKeystore;
 use App\Crypto\Ntag424\CardKeys;
 use App\Crypto\Ntag424\SunVerifier;
 use App\Crypto\Primitives\Aes;
-use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
@@ -64,29 +63,22 @@ trait WithCards
     }
 
     /**
-     * A batch of `$count` cards, taken through production, acceptance and shipping to `$restaurant`.
+     * A batch of `$count` cards, personalised, released and shipped to `$restaurant` (cards `shipped`).
      *
      * @return array{0: CardBatch, 1: list<Card>}
      */
-    protected function deliveredCards(Restaurant $restaurant, int $count = 1, string $keySet = 'ks-2026-01'): array
+    protected function shippedCards(Restaurant $restaurant, int $count = 1, string $keySet = 'ks-2026-01'): array
     {
         $admin = new Actor(User::factory()->platformAdmin()->create());
-        $second = new Actor(User::factory()->platformAdmin()->create());
         $batches = app(CardBatchLifecycle::class);
 
         $batch = $batches->order($restaurant, KeySet::query()->where('version', $keySet)->firstOrFail(), 'Card Co', $count, $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::InProduction, 'printing', $admin);
         $cards = [];
         for ($i = 0; $i < $count; $i++) {
             $cards[] = $this->personalizeAtStation($batch, Ntag424Chip::factory(), $admin);
         }
-        $batch = $batches->changeStatus($batch, CardBatchStatus::Personalized, 'done', $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::QaTesting, 'sample', $admin);
-        $batches->approve($batch, $admin);
-        $batch = $batches->approve($batch, $second);
-        foreach ([CardBatchStatus::Assigned, CardBatchStatus::Shipped, CardBatchStatus::Delivered] as $status) {
-            $batch = $batches->changeStatus($batch, $status, $status->value, $admin);
-        }
+        $batches->release($batch, $admin);
+        $batch = $batches->ship($batch, $admin);
 
         return [$batch, array_map(static fn (Card $c): Card => $c->refresh(), $cards)];
     }
@@ -120,7 +112,7 @@ trait WithCards
     /** One card in the restaurant's stock (`available`). */
     protected function availableCard(Restaurant $restaurant, string $keySet = 'ks-2026-01'): Card
     {
-        [$batch, $cards] = $this->deliveredCards($restaurant, 1, $keySet);
+        [$batch, $cards] = $this->shippedCards($restaurant, 1, $keySet);
         app(CardBatchLifecycle::class)->receive($batch, 1, $cards[0], Actor::system());
 
         return $cards[0]->refresh();

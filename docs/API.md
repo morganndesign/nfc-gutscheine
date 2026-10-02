@@ -384,7 +384,7 @@ Physical cards are addressed by their inventory number (`B-2026-0001-0042`); ids
 | POST | `/cards/{number}/replacement` | cards.manage + cards.bind | `{presentment_id, surrender_presentment_id?, reason}` — the `bind` presentment of a stock card and, when the old card is at hand, its `surrender` presentment (without it: cards.replace_lost, owners — lost or stolen card); the guest gets a `card_replaced` e-mail; the old card (active or suspended) becomes `replaced` for good, the new one takes over the voucher and its balance. Answers the new card |
 | POST | `/cards/{number}/revoke` | cards.manage | `{reason}` — a stock card (delivered, available) out of service for good; a guest's card is suspended and replaced instead |
 | GET | `/card-batches` | cards.view | The restaurant's batches with `counts` |
-| POST | `/card-batches/{id}/receipt` | cards.receive | `{count, presentment_id}` — the counted quantity and the `receive` presentment of one card of the batch. Matching count → `in_service`, every card `available`; otherwise `on_hold` for the platform |
+| POST | `/card-batches/{id}/receipt` | cards.receive | `{count, presentment_id}` — for a `shipped` batch: the counted quantity and the `receive` presentment of one card of the batch. The cards become `delivered`; matching count → `in_service`, every card `available`; otherwise `on_hold` for the platform |
 
 A refused change is `409 CARD_STATE_INVALID` (`context.state`) and a `card.transition` security event with
 outcome `refused`.
@@ -393,10 +393,11 @@ outcome `refused`.
 
 | Method | Path | Body / notes |
 |---|---|---|
-| GET | `/admin/card-batches?status=&restaurant_id=` | Batches with `counts`, `restaurant`, `key_set`, `approvals`, `qa_report` |
-| POST | `/admin/card-batches` | `{restaurant_id, manufacturer, quantity, key_set?, card_design_ref?}` → `201`, `ordered`; the key set defaults to the active one |
-| POST | `/admin/card-batches/{id}/status` | `{status, reason, tracking_ref?, production_date?}` — in_production, personalized, qa_testing, rejected, assigned, shipped, delivered, lost, depleted, compromised, closed, along the lifecycle |
-| POST | `/admin/card-batches/{id}/approval` | Acceptance needs two different platform staff; the second approval moves the QA-passed cards to stock and every chip that did not pass the station to `qa_failed` |
+| GET | `/admin/card-batches?status=&restaurant_id=` | Batches with `counts`, `restaurant`, `key_set`, `released_by`, `qa_report` |
+| POST | `/admin/card-batches` | `{restaurant_id, manufacturer, quantity, key_set?, card_design_ref?}` → `201`, `in_production` (the station can start at once); the key set defaults to the active one |
+| POST | `/admin/card-batches/{id}/release` | One platform admin, from `in_production` → `accepted`: the QA-passed cards go to stock, cards not finished at the station become `qa_failed`. `409` while no card is QA-passed |
+| POST | `/admin/card-batches/{id}/shipment` | `{tracking_ref?}` — from `accepted` → `shipped`; the restaurant then confirms the receipt |
+| POST | `/admin/card-batches/{id}/status` | `{status, reason, production_date?}` — special transitions only: rejected (from in_production, accepted), lost (from shipped), compromised (from accepted onwards), depleted, closed. `accepted`, `shipped`, `in_service`, `on_hold` → `422` (own steps) |
 | POST | `/admin/card-batches/{id}/hold-resolution` | `{missing: [card_number]}` — those cards become `lost`, the other delivered cards `available` |
 
 Key sets are created at a key ceremony on the server: `php artisan cards:key-set:create ks-2027-01` (generates the

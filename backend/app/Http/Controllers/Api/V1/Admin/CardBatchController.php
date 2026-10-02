@@ -10,6 +10,7 @@ use App\Exceptions\Domain\CardStateException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ChangeCardBatchStatusRequest;
 use App\Http\Requests\Admin\ResolveCardBatchHoldRequest;
+use App\Http\Requests\Admin\ShipCardBatchRequest;
 use App\Http\Requests\Admin\StoreCardBatchRequest;
 use App\Http\Resources\CardBatchResource;
 use App\Models\Card;
@@ -23,8 +24,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * Platform operations on card batches (architecture §8): order, production and shipping, the two-person
- * acceptance, holds after a disputed receipt. The station personalises; the restaurant receives.
+ * Platform operations on card batches (architecture §8): order, release, shipping, the special status changes and
+ * holds after a disputed receipt. The station personalises; the restaurant receives.
  */
 final class CardBatchController extends Controller
 {
@@ -67,16 +68,23 @@ final class CardBatchController extends Controller
     {
         $v = $request->validated();
         $this->batches->changeStatus($this->find($batch), CardBatchStatus::from((string) $v['status']), (string) $v['reason'], Actor::fromRequest($request), array_filter([
-            'tracking_ref' => $v['tracking_ref'] ?? null,
             'production_date' => $v['production_date'] ?? null,
         ], static fn (mixed $x): bool => $x !== null));
 
         return CardBatchResource::make($this->find($batch))->forPlatform();
     }
 
-    public function approve(Request $request, string $batch): CardBatchResource
+    public function release(Request $request, string $batch): CardBatchResource
     {
-        $this->batches->approve($this->find($batch), Actor::fromRequest($request));
+        $this->batches->release($this->find($batch), Actor::fromRequest($request));
+
+        return CardBatchResource::make($this->find($batch))->forPlatform();
+    }
+
+    public function ship(ShipCardBatchRequest $request, string $batch): CardBatchResource
+    {
+        $tracking = trim((string) $request->validated('tracking_ref'));
+        $this->batches->ship($this->find($batch), Actor::fromRequest($request), $tracking !== '' ? $tracking : null);
 
         return CardBatchResource::make($this->find($batch))->forPlatform();
     }

@@ -44,7 +44,7 @@ final class EscalationAttackTest extends TestCase
     public function test_another_restaurants_cards_batches_and_devices_are_out_of_reach(): void
     {
         [$card, $voucher] = $this->activeCardVoucher($this->theirs, 7000);
-        [$batch] = $this->deliveredCards($this->theirs, 1);
+        [$batch] = $this->shippedCards($this->theirs, 1);
         $device = Device::factory()->create(['restaurant_id' => $this->theirs->id]);
         $this->actingAsStaff($this->mine, RoleSlug::Owner);
 

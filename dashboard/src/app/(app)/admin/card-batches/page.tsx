@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { CheckCircle2, Loader2, Package, Plus } from "lucide-react"
+import { useState, type ReactNode } from "react"
+import { CheckCircle2, Loader2, MoreHorizontal, Package, Plus, Truck } from "lucide-react"
 import { toast } from "sonner"
 import { BatchStatusBadge, batchStatusLabel } from "@/components/cards/card-state"
 import { useConfirm } from "@/components/common/confirm"
@@ -21,26 +21,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { useAdminCardBatches, useAdminRestaurants, useCardBatchAction, useOrderCardBatch } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { CardBatch, CardBatchStatus } from "@/lib/api/types"
+import { BATCH_STATUSES, nextStep, SPECIAL_TRANSITIONS, type BatchStep } from "@/lib/card-batch-steps"
 import { formatDate, formatNumber } from "@/lib/format"
 import { useT } from "@/lib/i18n"
-
-/** The next steps the platform takes for a batch (the server checks every transition). */
-const NEXT: Partial<Record<CardBatchStatus, CardBatchStatus[]>> = {
-  ordered: ["in_production", "rejected"],
-  in_production: ["personalized", "rejected"],
-  personalized: ["qa_testing", "rejected"],
-  qa_testing: ["rejected"],
-  accepted: ["assigned", "compromised"],
-  assigned: ["shipped", "compromised"],
-  shipped: ["delivered", "lost", "compromised"],
-  delivered: ["compromised"],
-  on_hold: ["compromised"],
-  in_service: ["depleted", "compromised"],
-  depleted: ["in_service", "closed", "compromised"],
-  compromised: ["closed"],
-  rejected: ["closed"],
-  lost: ["closed"],
-}
 
 function OrderDialog({ onClose }: { onClose: () => void }) {
   const t = useT()
@@ -139,20 +122,22 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
   )
 }
 
-function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void }) {
+/** The exceptions (stop, lost, leaked keys, close …), with a reason. The main steps have their own buttons. */
+function SpecialStatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void }) {
   const t = useT()
   const action = useCardBatchAction()
-  const options = NEXT[batch.status] ?? []
+  const options = SPECIAL_TRANSITIONS[batch.status] ?? []
   const [status, setStatus] = useState<CardBatchStatus | "">(options[0] ?? "")
   const [reason, setReason] = useState("")
-  const [tracking, setTracking] = useState(batch.tracking_ref ?? "")
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{batch.batch_code}</DialogTitle>
-          <DialogDescription>{batch.restaurant?.name}</DialogDescription>
+          <DialogTitle>
+            {batch.batch_code} · {batch.restaurant?.name}
+          </DialogTitle>
+          <DialogDescription>{t("admin.batches.moreDescription")}</DialogDescription>
         </DialogHeader>
         <form
           className="space-y-4"
@@ -160,7 +145,7 @@ function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => voi
             e.preventDefault()
             if (!status) return
             try {
-              await action.mutateAsync({ id: batch.id, kind: "status", status, reason: reason.trim(), tracking_ref: tracking.trim() || undefined })
+              await action.mutateAsync({ id: batch.id, kind: "status", status, reason: reason.trim() })
               toast.success(`${batch.batch_code}: ${batchStatusLabel(status)}`)
               onClose()
             } catch (err) {
@@ -184,12 +169,6 @@ function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => voi
             </Select>
             {status === "compromised" ? <p className="text-destructive text-xs">{t("admin.batches.compromisedWarning")}</p> : null}
           </div>
-          {status === "shipped" ? (
-            <div className="space-y-2">
-              <Label htmlFor="b-track">{t("admin.batches.tracking")}</Label>
-              <Input id="b-track" value={tracking} onChange={(e) => setTracking(e.target.value)} maxLength={120} />
-            </div>
-          ) : null}
           <div className="space-y-2">
             <Label htmlFor="b-reason">{t("admin.batches.reason")}</Label>
             <Input id="b-reason" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={120} required />
@@ -200,10 +179,55 @@ function StatusDialog({ batch, onClose }: { batch: CardBatch; onClose: () => voi
             </Button>
             <Button
               type="submit"
-              variant={status === "compromised" ? "destructive" : "default"}
+              variant={status === "compromised" || status === "rejected" || status === "lost" ? "destructive" : "default"}
               disabled={action.isPending || !status || reason.trim().length < 3}
             >
               {action.isPending ? <Loader2 className="animate-spin" /> : null} {t("common.save")}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function ShipDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void }) {
+  const t = useT()
+  const action = useCardBatchAction()
+  const [tracking, setTracking] = useState(batch.tracking_ref ?? "")
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t("admin.batches.shipTitle", { code: batch.batch_code })}</DialogTitle>
+          <DialogDescription>
+            {t("admin.batches.shipDescription", { count: batch.counts.central_stock, restaurant: batch.restaurant?.name ?? "" })}
+          </DialogDescription>
+        </DialogHeader>
+        <form
+          className="space-y-4"
+          onSubmit={async (e) => {
+            e.preventDefault()
+            try {
+              await action.mutateAsync({ id: batch.id, kind: "shipment", tracking_ref: tracking.trim() || undefined })
+              toast.success(t("admin.batches.shipped", { code: batch.batch_code }))
+              onClose()
+            } catch (err) {
+              toast.error(errorMessage(err))
+            }
+          }}
+        >
+          <div className="space-y-2">
+            <Label htmlFor="b-track">{t("admin.batches.tracking")}</Label>
+            <Input id="b-track" value={tracking} onChange={(e) => setTracking(e.target.value)} maxLength={120} placeholder={t("admin.batches.optional")} />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              {t("common.cancel")}
+            </Button>
+            <Button type="submit" disabled={action.isPending}>
+              {action.isPending ? <Loader2 className="animate-spin" /> : <Truck />} {t("admin.batches.ship")}
             </Button>
           </DialogFooter>
         </form>
@@ -254,6 +278,10 @@ function HoldDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void 
   )
 }
 
+function StepHint({ children }: { children: ReactNode }) {
+  return <p className="text-muted-foreground max-w-56 text-xs">{children}</p>
+}
+
 function Content() {
   const t = useT()
   const confirm = useConfirm()
@@ -263,20 +291,61 @@ function Content() {
   const action = useCardBatchAction()
   const [ordering, setOrdering] = useState(false)
   const [changing, setChanging] = useState<CardBatch | null>(null)
+  const [shipping, setShipping] = useState<CardBatch | null>(null)
   const [resolving, setResolving] = useState<CardBatch | null>(null)
 
-  const approve = async (b: CardBatch) => {
+  const release = async (b: CardBatch, step: Extract<BatchStep, { kind: "release" }>) => {
     const ok = await confirm({
-      title: t("admin.batches.approveTitle", { code: b.batch_code }),
-      description: t("admin.batches.approveDescription"),
-      confirmLabel: t("admin.batches.approve"),
+      title: t("admin.batches.releaseTitle", { code: b.batch_code }),
+      description: t("admin.batches.releaseDescription", { ready: step.ready, ordered: b.quantity_ordered, unfinished: step.unfinished }),
+      confirmLabel: t("admin.batches.release"),
     })
     if (!ok) return
     try {
-      const res = await action.mutateAsync({ id: b.id, kind: "approval" })
-      toast.success(res.data.status === "accepted" ? t("admin.batches.accepted", { code: b.batch_code }) : t("admin.batches.firstApproval"))
+      await action.mutateAsync({ id: b.id, kind: "release" })
+      toast.success(t("admin.batches.released", { code: b.batch_code }))
     } catch (e) {
       toast.error(errorMessage(e))
+    }
+  }
+
+  /** The one main button of a row and the line under it that says what happens next. */
+  const stepCell = (b: CardBatch) => {
+    const step = nextStep(b)
+    switch (step.kind) {
+      case "release":
+        return (
+          <>
+            <Button size="sm" onClick={() => void release(b, step)} disabled={action.isPending || step.ready === 0}>
+              <CheckCircle2 /> {t("admin.batches.release")}
+            </Button>
+            <StepHint>
+              {step.ready === 0 ? t("admin.batches.releaseBlocked") : t("admin.batches.releaseHint", { ready: step.ready, ordered: b.quantity_ordered })}
+            </StepHint>
+          </>
+        )
+      case "ship":
+        return (
+          <>
+            <Button size="sm" onClick={() => setShipping(b)}>
+              <Truck /> {t("admin.batches.ship")}
+            </Button>
+            <StepHint>{t("admin.batches.shipHint")}</StepHint>
+          </>
+        )
+      case "awaiting-receipt":
+        return <StepHint>{t("admin.batches.awaitingReceipt")}</StepHint>
+      case "on-hold":
+        return (
+          <>
+            <Button size="sm" variant="outline" onClick={() => setResolving(b)}>
+              {t("admin.batches.resolve")}
+            </Button>
+            <StepHint>{t("admin.batches.holdHint")}</StepHint>
+          </>
+        )
+      default:
+        return null
     }
   }
 
@@ -299,7 +368,7 @@ function Content() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("admin.batches.allStatuses")}</SelectItem>
-              {(Object.keys(NEXT) as CardBatchStatus[]).concat(["closed"]).map((s) => (
+              {BATCH_STATUSES.map((s) => (
                 <SelectItem key={s} value={s}>
                   {batchStatusLabel(s)}
                 </SelectItem>
@@ -323,6 +392,7 @@ function Content() {
                   <TableHead className="text-right">{t("admin.batches.colPersonalised")}</TableHead>
                   <TableHead className="text-right">{t("admin.batches.colQaFailed")}</TableHead>
                   <TableHead className="hidden lg:table-cell">{t("admin.batches.colOrderedOn")}</TableHead>
+                  <TableHead>{t("admin.batches.colNextStep")}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -338,20 +408,19 @@ function Content() {
                     <TableCell className="text-right tabular-nums">{formatNumber(b.counts.registered - b.counts.qa_failed - b.counts.in_production)}</TableCell>
                     <TableCell className="text-right tabular-nums">{formatNumber(b.counts.qa_failed)}</TableCell>
                     <TableCell className="hidden lg:table-cell">{formatDate(b.ordered_at)}</TableCell>
-                    <TableCell className="text-right whitespace-nowrap">
-                      {b.status === "qa_testing" ? (
-                        <Button size="sm" variant="outline" onClick={() => void approve(b)} disabled={action.isPending}>
-                          <CheckCircle2 /> {b.approvals?.length ? t("admin.batches.approveSecond") : t("admin.batches.approve")}
-                        </Button>
-                      ) : null}
-                      {b.status === "on_hold" ? (
-                        <Button size="sm" variant="outline" onClick={() => setResolving(b)}>
-                          {t("admin.batches.resolve")}
-                        </Button>
-                      ) : null}
-                      {NEXT[b.status]?.length ? (
-                        <Button size="sm" variant="ghost" onClick={() => setChanging(b)}>
-                          {t("admin.batches.changeStatus")}
+                    <TableCell>
+                      <div className="flex max-w-60 flex-col items-start gap-1 whitespace-normal">{stepCell(b)}</div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {SPECIAL_TRANSITIONS[b.status]?.length ? (
+                        <Button
+                          size="icon-sm"
+                          variant="ghost"
+                          onClick={() => setChanging(b)}
+                          aria-label={`${t("admin.batches.more")}: ${b.batch_code}`}
+                          title={t("admin.batches.more")}
+                        >
+                          <MoreHorizontal />
                         </Button>
                       ) : null}
                     </TableCell>
@@ -366,7 +435,8 @@ function Content() {
         )}
       </div>
       {ordering ? <OrderDialog onClose={() => setOrdering(false)} /> : null}
-      {changing ? <StatusDialog batch={changing} onClose={() => setChanging(null)} /> : null}
+      {changing ? <SpecialStatusDialog batch={changing} onClose={() => setChanging(null)} /> : null}
+      {shipping ? <ShipDialog batch={shipping} onClose={() => setShipping(null)} /> : null}
       {resolving ? <HoldDialog batch={resolving} onClose={() => setResolving(null)} /> : null}
     </div>
   )

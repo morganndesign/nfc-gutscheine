@@ -16,7 +16,7 @@ enum PresentmentPurpose: string
     /** Link an available card to a paid voucher (sale with a card, adding a card, replacement). */
     case Bind = 'bind';
 
-    /** Confirm a delivery: one card of the delivered batch, tapped by a manager of its restaurant. */
+    /** Confirm a delivery: one card of the shipped batch, tapped by a manager of its restaurant. */
     case Receive = 'receive';
 
     /** Hand in a guest's card for its replacement: proves the old card is at the till. */
@@ -41,7 +41,8 @@ enum PresentmentPurpose: string
         return match ($this) {
             self::Spend => [CardState::Active],
             self::Bind => [CardState::Available],
-            self::Receive => [CardState::Delivered],
+            // Delivered as well: batches marked delivered before the receipt step was simplified hold delivered cards.
+            self::Receive => [CardState::Shipped, CardState::Delivered],
             self::Surrender => [CardState::Active, CardState::Suspended],
             self::Reload => [CardState::Active],
         };

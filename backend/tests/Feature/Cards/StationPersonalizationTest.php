@@ -58,13 +58,14 @@ final class StationPersonalizationTest extends TestCase
         parent::tearDown();
     }
 
+    /** A batch in production (as ordered), or one already stopped (`rejected`) that takes no chips. */
     private function stationBatch(int $quantity = 3, bool $inProduction = true): CardBatch
     {
         $admin = new Actor(User::factory()->platformAdmin()->create());
         $batches = app(CardBatchLifecycle::class);
         $batch = $batches->order($this->restaurant, KeySet::query()->where('version', 'ks-2026-01')->firstOrFail(), 'Card Co', $quantity, $admin);
 
-        return $inProduction ? $batches->changeStatus($batch, CardBatchStatus::InProduction, 'station run', $admin) : $batch;
+        return $inProduction ? $batch : $batches->changeStatus($batch, CardBatchStatus::Rejected, 'order cancelled', $admin);
     }
 
     private function actingAsStation(): User

@@ -181,7 +181,7 @@ final class LiveAuthenticationTest extends TestCase
 
     public function test_a_manager_confirms_a_delivery_with_a_tapped_card_and_waiters_cannot(): void
     {
-        [, $cards] = $this->deliveredCards($this->restaurant, 2);
+        [, $cards] = $this->shippedCards($this->restaurant, 2);
 
         $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
         $this->postJson('/api/v1/presentments/cards', ['purpose' => 'receive', 'tap_url' => 'x', 'rf_uid' => '04AAAAAAAAAAAA', 'challenge' => str_repeat('0', 32)])
@@ -191,7 +191,7 @@ final class LiveAuthenticationTest extends TestCase
         $this->tap($this->chip($cards[0]), 'receive')->assertCreated()
             ->assertJsonPath('data.purpose', 'receive')
             ->assertJsonPath('data.voucher', null)
-            ->assertJsonPath('data.card.state', 'delivered');
+            ->assertJsonPath('data.card.state', 'shipped');
     }
 
     public function test_repeated_failures_lock_out_the_same_user_and_device(): void

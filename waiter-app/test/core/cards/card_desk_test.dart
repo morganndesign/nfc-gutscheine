@@ -201,7 +201,7 @@ void main() {
 
     expect(desk.batches!.map((CardBatchSummary b) => b.batchCode), <String>[
       'B-2026-0001',
-    ], reason: 'only deliveries still to confirm');
+    ], reason: 'only shipped deliveries are still to confirm');
     desk.choose(desk.batches!.single);
     desk.digit(5);
     desk.digit(0);

@@ -63,7 +63,7 @@ enum Permission: string
     case PlatformAuditView = 'platform.audit.view';
     /** Personalise blank cards at the station (internal, Android). */
     case PlatformCardsPersonalize = 'platform.cards.personalize';
-    /** Order card batches, move them through production and shipping, approve and resolve them. */
+    /** Order card batches, release and ship them, resolve holds. */
     case PlatformCardsManage = 'platform.cards.manage';
 
     public function group(): string

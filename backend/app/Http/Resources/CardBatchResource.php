@@ -47,7 +47,7 @@ final class CardBatchResource extends JsonResource
                 'key_set' => $batch->keySet->version,
                 'manufacturer' => $batch->manufacturer,
                 'accepted_at' => $batch->accepted_at?->toIso8601String(),
-                'approvals' => array_values(array_filter([$batch->accepted_by, $batch->accepted_second_by])),
+                'released_by' => $batch->accepted_by,
                 'qa_report' => $batch->qa_report,
             ]),
         ];

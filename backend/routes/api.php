@@ -203,7 +203,8 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/', 'store');
             Route::get('{batch}', 'show')->whereUuid('batch');
             Route::post('{batch}/status', 'status')->whereUuid('batch');
-            Route::post('{batch}/approval', 'approve')->whereUuid('batch');
+            Route::post('{batch}/release', 'release')->whereUuid('batch');
+            Route::post('{batch}/shipment', 'ship')->whereUuid('batch');
             Route::post('{batch}/hold-resolution', 'resolveHold')->whereUuid('batch');
         });
 

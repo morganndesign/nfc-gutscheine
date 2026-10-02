@@ -48,7 +48,7 @@ final class CardLifecycle
         return DB::transaction(function () use ($batch, $uid, $initial, $actor, $originalitySignature): Card {
             /** @var CardBatch $locked */
             $locked = CardBatch::query()->withoutGlobalScopes()->whereKey($batch->getKey())->lockForUpdate()->firstOrFail();
-            if (! in_array($locked->status, [CardBatchStatus::Ordered, CardBatchStatus::InProduction, CardBatchStatus::Personalized], true)) {
+            if ($locked->status !== CardBatchStatus::InProduction) {
                 throw new CardStateException('Cards are registered only while their batch is in production.');
             }
             $registered = Card::query()->withoutGlobalScopes()->where('batch_id', $locked->getKey())->count();

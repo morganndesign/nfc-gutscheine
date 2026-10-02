@@ -714,7 +714,7 @@ class CardPresented {
 /// A delivery of cards for this restaurant (`GET /card-batches`).
 @immutable
 class CardBatchSummary {
-  const CardBatchSummary({required this.id, required this.batchCode, required this.status, required this.inTransit, this.deliveredAt});
+  const CardBatchSummary({required this.id, required this.batchCode, required this.status, required this.inTransit});
 
   factory CardBatchSummary.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> counts = _map(json['counts'], 'counts');
@@ -723,7 +723,6 @@ class CardBatchSummary {
       batchCode: _string(json, 'batch_code'),
       status: _string(json, 'status'),
       inTransit: _int(counts, 'in_transit'),
-      deliveredAt: _dateOrNull(json, 'delivered_at'),
     );
   }
 
@@ -736,12 +735,11 @@ class CardBatchSummary {
   final String id;
   final String batchCode;
 
-  /// `delivered` waits for the receipt; `on_hold` after a count that did not match.
+  /// `shipped` waits for the receipt; `on_hold` after a count that did not match.
   final String status;
 
   /// Cards shipped and not yet received.
   final int inTransit;
-  final DateTime? deliveredAt;
 }
 
 /// A card as staff see it (`GET /cards/{number}`): no id, no UID.

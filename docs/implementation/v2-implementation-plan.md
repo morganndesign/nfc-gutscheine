@@ -177,7 +177,7 @@ Effort is for one engineer **[Assessment]**. Dependencies are listed; phases wit
 |---|---|
 | P6-01 | Station mode (Android, `station_operator` role, enrolled station device only): intake with the originality signature, personalisation, per-card outsider QA |
 | P6-02 | Recovery of interrupted personalisation (deterministic keys, step journal) |
-| P6-03 | Platform batch administration: create, two-person approval, ship, deliver, compromise playbook |
+| P6-03 | Platform batch administration: create, release (one person), ship, compromise playbook |
 | P6-04 | Manufacturer manifest import and sample acceptance (built when the first manufacturer batch is ordered) |
 
 **Scheduling note:** P6-01 starts as soon as P1-04 and P4-01 exist, so lab cards are ready for the P4-03 tests.
@@ -304,7 +304,7 @@ These are engineer-days, not calendar time. With two engineers, the complete pla
 - [ ] Risk engine live with baselines in warm-up; alerts reach the owner; staff notice given (L8)
 
 **Product**
-- [ ] First batch accepted by two people and received by count + tap
+- [ ] First batch released and received by count + tap
 - [ ] Android and iPhone apps in the stores (or TestFlight / internal testing for the first restaurant), feature parity verified on the matrix
 - [ ] Guest terms (anonymous card = cash); staff trained
 

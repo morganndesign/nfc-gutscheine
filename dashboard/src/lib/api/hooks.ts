@@ -803,16 +803,18 @@ export function useCardBatchAction() {
       id,
       ...input
     }: { id: string } & (
-      { kind: "status"; status: CardBatchStatus; reason: string; tracking_ref?: string } | { kind: "approval" } | { kind: "hold-resolution"; missing: string[] }
+      | { kind: "release" }
+      | { kind: "shipment"; tracking_ref?: string }
+      | { kind: "status"; status: CardBatchStatus; reason: string }
+      | { kind: "hold-resolution"; missing: string[] }
     )) =>
-      input.kind === "status"
-        ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/status`, {
-            method: "POST",
-            body: { status: input.status, reason: input.reason, tracking_ref: input.tracking_ref },
-          })
-        : input.kind === "approval"
-          ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/approval`, { method: "POST" })
-          : api<{ data: CardBatch }>(`/admin/card-batches/${id}/hold-resolution`, { method: "POST", body: { missing: input.missing } }),
+      input.kind === "release"
+        ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/release`, { method: "POST" })
+        : input.kind === "shipment"
+          ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/shipment`, { method: "POST", body: { tracking_ref: input.tracking_ref } })
+          : input.kind === "status"
+            ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/status`, { method: "POST", body: { status: input.status, reason: input.reason } })
+            : api<{ data: CardBatch }>(`/admin/card-batches/${id}/hold-resolution`, { method: "POST", body: { missing: input.missing } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.adminCardBatches }),
   })
 }

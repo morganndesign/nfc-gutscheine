@@ -416,8 +416,10 @@ abstract final class Payloads {
 
   static Map<String, Object?> cardBatches() => <String, Object?>{
     'data': <Object?>[
-      <String, Object?>{'id': 'b-1', 'batch_code': 'B-2026-0001', 'status': 'delivered', 'quantity_ordered': 50, 'counts': <String, Object?>{'in_transit': 50, 'available': 0}, 'delivered_at': '2026-09-28T10:00:00+00:00'},
+      <String, Object?>{'id': 'b-1', 'batch_code': 'B-2026-0001', 'status': 'shipped', 'quantity_ordered': 50, 'counts': <String, Object?>{'in_transit': 50, 'available': 0}},
       <String, Object?>{'id': 'b-0', 'batch_code': 'B-2026-0000', 'status': 'in_service', 'quantity_ordered': 20, 'counts': <String, Object?>{'in_transit': 0, 'available': 12}},
+      // Released but not yet sent: nothing to confirm yet.
+      <String, Object?>{'id': 'b-2', 'batch_code': 'B-2026-0002', 'status': 'accepted', 'quantity_ordered': 30, 'counts': <String, Object?>{'in_transit': 0, 'available': 0}},
     ],
   };
 

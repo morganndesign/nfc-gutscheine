@@ -39,7 +39,7 @@ sold. This page is the operational reference and the **validation procedure for 
 - **Station (internal):** platform staff sign into the waiter app (station token), choose a batch in production and
   hold blank chips to the phone one after the other: originality check, tap URL, SDM settings, keys K1–K3 then K0,
   a guest-style SUN read and a K3 check → `qa_passed`. Interrupted chips are finished by holding them again.
-- **Platform dashboard:** *Card batches* (order, production, two-person acceptance, shipping, hold resolution),
+- **Platform dashboard:** *Card batches* (order, release, ship, hold resolution; one next-step button per batch),
   *Security alerts*.
 - **Restaurant, waiter app:** confirm a delivery (count + one tapped card), sell a gift card (tapped after payment),
   *Tap card* to pay, find / suspend / resume / replace a card.
@@ -76,20 +76,20 @@ attack tests. Staging server, test restaurant. Record every result in the sign-o
 
 | # | Step | Expected |
 |---|---|---|
-| A1 | Dashboard → *Card batches* → order 20 cards for the test restaurant; *Status…* → *In production* | Batch `in_production`; the station lists it |
+| A1 | Dashboard → *Card batches* → order 20 cards for the test restaurant | Batch `in_production`; the station lists it |
 | A2 | Station: choose the batch, personalise 15 cards one after the other | Each shows "Card B-…-00nn done" in under 3 s; dashboard counts 15 personalised |
 | A3 | Pull a card away while "Personalising" is shown (after ~0.5 s); hold it again | First attempt "not finished", second one done; key versions and counter consistent (A6) |
 | A4 | Hold a card from another system | "Unknown card – set it aside"; alert `card.unknown_keys`. A chip of the batch that can never be keyed (unknown keys at personalisation) is set to `qa_failed` and gives its place in the order back |
 | A5 | Hold the NTAG 213/215 sticker | Nothing happens or "not finished" (not an ISO 7816 card); no card registered |
 | A6 | Open a personalised card's URL with any phone (tap it) | Guest page "not activated yet"; tapping again works; each tap increments the counter (`card_events`/`security_events` `card.tap`) |
 | A7 | Personalise 5 cards on the **iPhone** station (same account) | Same as A2 (one system sheet per card) |
-| A8 | Move the batch to *Personalised*, *QA testing*; approve by person 1, then person 2 | Accepted; cards not finished at the station are `qa_failed`; the same person cannot approve twice |
+| A8 | *Release* (one person; the dialog shows how many cards are ready) | Released (`accepted`); cards not finished at the station are `qa_failed`. With no personalised card the button is disabled |
 
 ### B · Delivery (waiter app, manager)
 
 | # | Step | Expected |
 |---|---|---|
-| B1 | *Status…* → *Assigned*, *Shipped* (tracking number), *Delivered* | The restaurant sees the delivery |
+| B1 | *Ship* (optional tracking number) | Batch `shipped`, hint "Waiting for the restaurant"; the restaurant sees the delivery |
 | B2 | App → Menu → *Confirm a delivery*, count one less than delivered, tap a card | "The count does not match…"; batch `on_hold` |
 | B3 | Dashboard → *Resolve* with the missing card number | That card `lost`, the others `available` |
 | B4 | Repeat with a second small batch and the right count, tapping a card of **another** batch | "This card is not from this delivery" |

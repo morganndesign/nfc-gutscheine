@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Cards;
 
-use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
 use App\Enums\MediumRole;
 use App\Enums\MediumStatus;
@@ -154,9 +153,9 @@ final class TapPageTest extends TestCase
     {
         // docs/NFC.md A6: a card fresh from the station opens "not activated yet"; so does one on its way to the
         // restaurant. "No longer valid" is for cards that are out of service for good.
-        [, $cards] = $this->deliveredCards($this->restaurant);
+        [, $cards] = $this->shippedCards($this->restaurant);
         $this->card = $cards[0];
-        $this->assertSame(CardState::Delivered, $this->card->state);
+        $this->assertSame(CardState::Shipped, $this->card->state);
         $this->get($this->tapUrl(2))->assertOk()->assertSee('noch nicht aktiviert')->assertDontSee('nicht mehr gültig');
 
         $this->card = $this->cardFreshFromTheStation();
@@ -169,7 +168,6 @@ final class TapPageTest extends TestCase
         $admin = new Actor(User::factory()->platformAdmin()->create());
         $batches = app(CardBatchLifecycle::class);
         $batch = $batches->order($this->restaurant, KeySet::query()->where('version', 'ks-2026-01')->firstOrFail(), 'Card Co', 1, $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::InProduction, 'printing', $admin);
 
         return $this->personalizeAtStation($batch, Ntag424Chip::factory(), $admin)->refresh();
     }

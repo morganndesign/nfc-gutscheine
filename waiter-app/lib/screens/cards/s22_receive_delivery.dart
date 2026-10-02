@@ -128,7 +128,7 @@ class _ReceiveDeliveryScreenState extends State<ReceiveDeliveryScreen> {
             label: b.batchCode,
             caption: b.status == 'on_hold' ? l10n.cardsReceiveOnHold : null,
             value: l10n.cardsReceiveBatch(b.inTransit),
-            onPressed: b.status == 'delivered' ? () => _c.choose(b) : null,
+            onPressed: b.status == 'shipped' ? () => _c.choose(b) : null,
             showDivider: b != batches.last,
           ),
       ],

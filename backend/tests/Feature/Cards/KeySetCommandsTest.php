@@ -91,7 +91,7 @@ final class KeySetCommandsTest extends TestCase
     {
         $this->artisan('cards:key-set:create', ['version' => 'ks-2026-01'])->assertSuccessful();
         $restaurant = $this->restaurant();
-        [, $cards] = $this->deliveredCards($restaurant, 1);
+        [, $cards] = $this->shippedCards($restaurant, 1);
 
         $this->artisan('cards:key-set:status', ['version' => 'ks-2026-01', 'status' => 'retired'])->assertFailed();
         $this->artisan('cards:key-set:status', ['version' => 'ks-2026-01', 'status' => 'active'])->assertFailed();

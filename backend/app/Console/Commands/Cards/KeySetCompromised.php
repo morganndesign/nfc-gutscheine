@@ -49,7 +49,7 @@ final class KeySetCompromised extends Command
             $open = CardBatch::query()->withoutGlobalScopes()->where('key_set_id', $set->getKey())->orderBy('batch_code')->get();
             foreach ($open as $batch) {
                 /** @var CardBatch $batch */
-                // Accepted onwards: compromised. Still at the manufacturer or in QA: rejected, its cards never leave.
+                // Released onwards: compromised. Still in production: rejected, its cards never leave.
                 $to = $batch->status->canBecome(CardBatchStatus::Compromised) ? CardBatchStatus::Compromised : CardBatchStatus::Rejected;
                 if ($batch->status->canBecome($to)) {
                     $batches->changeStatus($batch, $to, "key set {$set->version} compromised", $actor);

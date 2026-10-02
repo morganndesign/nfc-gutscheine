@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Abuse;
 
-use App\Enums\CardBatchStatus;
 use App\Enums\CardState;
 use App\Enums\RoleSlug;
 use App\Models\Card;
@@ -47,7 +46,6 @@ final class NfcAttackTest extends TestCase
         $admin = new Actor(User::factory()->platformAdmin()->create());
         $batches = app(CardBatchLifecycle::class);
         $batch = $batches->order($this->restaurant, KeySet::query()->where('version', 'ks-2026-01')->firstOrFail(), 'Card Co', 1, $admin);
-        $batch = $batches->changeStatus($batch, CardBatchStatus::InProduction, 'station run', $admin);
         Sanctum::actingAs(User::factory()->platformAdmin()->create(), ['*']);
         $fake = Ntag424Chip::counterfeit();
 

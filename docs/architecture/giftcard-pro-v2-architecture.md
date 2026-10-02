@@ -397,7 +397,7 @@ stateDiagram-v2
     manufactured --> qa_failed: personalisation failed twice
     personalized --> qa_passed: per-card test (in-house) / batch accepted (manufacturer)
     personalized --> qa_failed: test failed / batch rejected
-    qa_passed --> in_inventory: batch accepted (two approvers)
+    qa_passed --> in_inventory: batch released (one platform admin)
     in_inventory --> assigned: batch packed for its restaurant
     assigned --> shipped: dispatched
     shipped --> delivered: carrier delivered
@@ -503,7 +503,7 @@ Every transition is written to `card_events`: from state, to state, reason, acto
 | `personalization` | `in_house_station` or `manufacturer` |
 | `production_date` | From the supplier |
 | `ordered_at`, `personalized_at`, `accepted_at`, `shipped_at`, `delivered_at`, `received_at` | Lifecycle dates |
-| `accepted_by`, `accepted_second_by` | Two approvers |
+| `accepted_by` | The platform admin who released the batch |
 | `received_by` | Restaurant manager who confirmed |
 | `tracking_ref` | Carrier reference |
 | `manifest_sha256` | Signed manufacturer manifest (UID, originality signature, initial counter, key version per card) |
@@ -515,18 +515,14 @@ Every transition is written to `card_events`: from state, to state, reason, acto
 ```mermaid
 stateDiagram-v2
     direction TB
-    [*] --> ordered
-    ordered --> in_production
-    in_production --> personalized
-    personalized --> qa_testing
-    qa_testing --> accepted: 2 approvals
-    qa_testing --> rejected: any failure
-    accepted --> assigned: packed
-    assigned --> shipped
-    shipped --> delivered
+    [*] --> in_production: ordered
+    in_production --> accepted: released (one person)
+    in_production --> rejected: stopped
+    accepted --> rejected: stopped
+    accepted --> shipped
     shipped --> lost: shipment lost
-    delivered --> in_service: receipt confirmed
-    delivered --> on_hold: count mismatch
+    shipped --> in_service: receipt confirmed
+    shipped --> on_hold: count mismatch
     on_hold --> in_service: missing cards marked lost
     in_service --> depleted: no card left available
     in_service --> compromised: key leak
@@ -540,11 +536,13 @@ stateDiagram-v2
 
 `compromised` can be set from any status from `accepted` onwards; the diagram shows only the most common path. **Terminal card states** are `lost`, `replaced`, `revoked` and `destroyed`.
 
+The main path has its own steps (one dashboard button each): release (`accepted`), ship (`shipped`), and the restaurant's receipt (`in_service` / `on_hold`). The other statuses are set by hand with a reason.
+
 A batch status change moves all its cards in one transaction and writes their `card_events` in bulk:
-- `accepted` → cards `in_inventory`;
-- `assigned` → `assigned`;
-- `shipped` → `shipped`;
-- `rejected` → `qa_failed`;
+- `accepted` → QA-passed cards `in_inventory`; cards not finished at the station `qa_failed`;
+- `shipped` → `assigned` → `shipped` (both steps recorded);
+- receipt → `delivered`, then `available` on a matching count (they stay `delivered` on hold);
+- `rejected` → `qa_failed` (stock cards of a released batch `revoked`);
 - `lost` → `lost`;
 - `compromised` → every card not yet with a guest (`in_inventory` to `bound`) `revoked`; `active` and `suspended` cards limited to possession proof and replacement (§8.4).
 
@@ -568,11 +566,11 @@ Counts are **computed**, not stored (R21): an indexed `GROUP BY batch_id, state`
 - **Reconciliation invariant:** the sum of all buckets equals the number of cards registered for the batch (`quantity_registered`). Registered compared with `quantity_ordered` shows any production shortfall. A nightly check alerts on any difference.
 - **Platform admin:** all batches, per supplier, per restaurant.
 - **Owner or manager:** their batches and their `available` count.
-- **Low-stock alert** when `available` drops below a threshold (default 20). It offers "Order more cards", which creates a batch in `ordered` for the platform to confirm. Commercial terms are handled outside the system.
+- **Low-stock alert** when `available` drops below a threshold (default 20). It offers "Order more cards", which creates a batch in `in_production` for the platform. Commercial terms are handled outside the system.
 
 ### 8.4 Batch-level security
 
-- **Acceptance:** the sample test and two approvals are needed before any card leaves central stock (earlier design §8.4).
+- **Release:** one platform admin releases a batch once the station has QA-passed its cards; no card leaves central stock before.
 - **Compromise playbook:** batch → `compromised`.
   - Its `active` cards can still be tapped to **prove possession**, but they cannot spend.
   - The manager app offers an immediate replacement card (§11.6), and registered guests are invited.
