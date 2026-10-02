@@ -9,7 +9,6 @@ void main() {
   const Color white = Color(0xFFFFFFFF);
   const Color dark = Color(0xFF0A0A0C);
   const WaiterColors light = WaiterColors.light;
-  final WaiterElevation lightElev = WaiterElevation.resolve(light);
 
   BrandCardColors resolve(
     String? hex, {
@@ -112,16 +111,8 @@ void main() {
         expect(c.fill, light.brandInk);
         expect(c.text, white);
         expect(c.textContrast, greaterThanOrEqualTo(4.5));
-        // The glow uses ink for the fallback case.
-        expect(c.shadows, lightElev.cardBrand(light.brandInk));
       });
     }
-  });
-
-  test('glow uses the original brand colour at 28 % (light only)', () {
-    final BrandCardColors c = resolve('#7F1D1D');
-    expect(c.shadows, lightElev.cardBrand(const Color(0xFF7F1D1D)));
-    expect(c.shadows.single.color.a, closeTo(0.28, 1e-6));
   });
 
   group('desaturated states (blocked, expired)', () {
@@ -153,16 +144,15 @@ void main() {
       );
     });
 
-    test('recomputes text and swaps glow for elev.2', () {
+    test('recomputes text', () {
       final BrandCardColors c = resolve('#7F1D1D', desaturated: true);
       expect(c.isContrastFallback, isFalse);
       expect(c.fill, desaturateOklch(const Color(0xFF7F1D1D), 0.4));
       expect(c.textContrast, greaterThanOrEqualTo(4.5));
-      expect(c.shadows, lightElev.level2.shadows);
     });
   });
 
-  test('dark theme: same card colour, outline, no shadow', () {
+  test('dark theme: same card colour, outline', () {
     final BrandCardColors lightCard = resolve('#1E3A8A');
     final BrandCardColors darkCard = resolve(
       '#1E3A8A',
@@ -170,7 +160,6 @@ void main() {
     );
     expect(darkCard.fill, lightCard.fill);
     expect(darkCard.text, lightCard.text);
-    expect(darkCard.shadows, isEmpty);
     expect(darkCard.outline, const Color(0xFF26262B));
     // Saffron is evaluated with the dark-theme token.
     expect(darkCard.nfcGlyph, WaiterColors.dark.accentSaffron);

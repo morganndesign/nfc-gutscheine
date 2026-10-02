@@ -604,7 +604,7 @@ No letters under digits (this is not a phone dialler). No key borders (HC: 1-pt 
 │ ⑤ •••• 6488 · Valid until 26.09.2029        │  ⑤ meta (type.caption)
 │ ⑥ [⊘ Blocked]                               │  ⑥ StatusBadge, bottom-left (only when not active)
 └─────────────────────────────────────────────┘
-  ⑦ fill: brand_color with sheen   ⑧ shadow elev.card-brand (light) / 1-px outline (dark)
+  ⑦ fill: brand_color with sheen   ⑧ no shadow (lies flat like a real card); 1-px outline (dark); corners 3.18/85.6 of the width (ID-1)
 ```
 
 **Variant `BalanceCard / compact`** (the "strip"; binding height **88 pt**, per [03b §2.4](03b-screens-charge-redeem-success-problems.md))
@@ -658,7 +658,7 @@ No letters under digits (this is not a phone dialler). No key borders (HC: 1-pt 
 | Primary text (③ ④) | auto: #FFFFFF or #0A0A0C, ≥ 4.5 : 1 against the worst sheen stop; else fallback to ink card |
 | Secondary text (① ⑤) | same colour at `opacity.cardSecondary` 0.76 if still ≥ 4.5 : 1, else 100 % |
 | NFC glyph ② | `color.accent.saffron` if ≥ 3 : 1 against both stops, else primary text colour |
-| Shadow ⑧ light | `elev.card-brand` (0 16 40, brand @ 28 %); desaturated states: `elev.2` |
+| Shadow ⑧ | none — the card lies flat like a real card (owner decision 2026-10-02) |
 | Dark theme | no shadow; 1-px `color.card.borderDark` #26262B |
 | Very light brand colours | + 1-px `border.subtle` in light theme (04 §8.6 step 9) |
 

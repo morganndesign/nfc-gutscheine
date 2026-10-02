@@ -286,7 +286,7 @@
     "1": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 1, "blur": 2, "spread": 0, "color": "rgba(0,0,0,0.04)" }], "dark": { "surfaceStep": "{color.bg.surface}", "border": "{color.border.subtle}" } }, "$description": "HistoryCard, Avatar on imagery. Dark: surface step 1 + hairline (04 §6.2)." },
     "2": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 4, "blur": 16, "spread": 0, "color": "rgba(0,0,0,0.08)" }], "dark": { "surfaceStep": "{color.bg.raised}", "border": "{color.border.subtle}" } }, "$description": "Desaturated BalanceCard, skeleton, Dialog. Dark: surface step 2 + hairline." },
     "3": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 12, "blur": 32, "spread": 0, "color": "rgba(0,0,0,0.12)" }], "dark": { "surfaceStep": "{color.bg.surface}", "border": "{color.border.subtle}" } }, "$description": "BottomSheet (cast upward: 0 −12 32), Snackbar. Dark: sheet surface + hairline.", "$extensions": { "upward": true } },
-    "card-brand": { "$type": "shadow", "$value": { "light": [{ "x": 0, "y": 16, "blur": 40, "spread": 0, "color": "brand", "alpha": 0.28 }], "dark": { "surfaceStep": null, "border": "{color.card.borderDark}" } }, "$description": "BalanceCard brand glow: original brand colour at 28 % (light only); dark: no shadow, 1-px card.borderDark." }
+    "card": { "$type": "shadow", "$value": { "light": [], "dark": { "surfaceStep": null, "border": "{color.card.borderDark}" } }, "$description": "BalanceCard: lies flat like a real card, no shadow; dark: 1-px card.borderDark outline." }
   },
   "opacity": {
     "disabled": { "$type": "number", "$value": 0.40, "$description": "➕ Disabled groups only." },
@@ -481,7 +481,6 @@
     "$extensions": { "tier": 3 },
     "aspectRatio": { "$type": "number", "$value": 1.586, "$description": "ID-1 width ÷ height." },
     "minFullHeight": { "$type": "dimension", "$value": 96, "$description": "Below this the compact strip is used; above it the full card face scales down as a whole." },
-    "radius": { "$type": "dimension", "$value": "{radius.xl}" },
     "padding": { "$type": "dimension", "$value": "{space.6}" },
     "glyphSize": { "$type": "dimension", "$value": "{icon.32}" },
     "nameGlyphClearance": { "$type": "dimension", "$value": 40 },

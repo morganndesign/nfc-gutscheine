@@ -342,11 +342,13 @@ Size _cardSize(BalanceCardDensity density, double maxWidth, double maxHeight) {
   return Size(height * BalanceCardTokens.aspectRatio, height);
 }
 
-BorderRadius _cardRadius(BalanceCardDensity density) => BorderRadius.circular(
-  density == BalanceCardDensity.compact
-      ? BalanceCardTokens.compactRadius
-      : BalanceCardTokens.radius,
+/// A real ID-1 card: 3.18 mm corners on 85.6 mm, so the corner grows with the card instead of a fixed, much
+/// rounder radius. The compact strip is no card and keeps its token radius.
+BorderRadius _cardRadius(BalanceCardDensity density, double width) => BorderRadius.circular(
+  density == BalanceCardDensity.compact ? BalanceCardTokens.compactRadius : width * _cornerPerWidth,
 );
+
+const double _cornerPerWidth = 3.18 / 85.6;
 
 class _CardShell extends StatelessWidget {
   const _CardShell({
@@ -354,13 +356,11 @@ class _CardShell extends StatelessWidget {
     required this.maxHeight,
     required this.colors,
     required this.child,
-    this.shadows,
   });
 
   final BalanceCardDensity density;
   final double maxHeight;
   final BrandCardColors colors;
-  final List<BoxShadow>? shadows;
   final Widget child;
 
   @override
@@ -397,11 +397,10 @@ class _CardShell extends StatelessWidget {
             width: size.width,
             height: size.height,
             child: WaiterSurface(
-              radius: _cardRadius(density),
+              radius: _cardRadius(density, size.width),
               color: colors.fill,
               gradient: flat ? null : colors.sheen,
               outline: colors.outline,
-              shadows: shadows ?? colors.shadows,
               clip: true,
               child: face,
             ),
@@ -704,7 +703,6 @@ class _CardSkeleton extends StatelessWidget {
         density: density,
         maxHeight: maxHeight,
         colors: colors,
-        shadows: theme.elevation.level2.shadows,
         child: content,
       ),
     );

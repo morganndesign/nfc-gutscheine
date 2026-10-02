@@ -164,7 +164,6 @@ class BrandCardColors {
     required this.usedDefault,
     required this.needsLightEdge,
     required this.outline,
-    required this.shadows,
     required this.badgeOutline,
   });
 
@@ -208,10 +207,6 @@ class BrandCardColors {
   /// 1-px outline colour, or `null` for none: `color.card.borderDark` in
   /// dark theme, `color.border.subtle` for light edges in light theme.
   final Color? outline;
-
-  /// Shadow: `elev.card-brand` (light, not desaturated), `elev.2`
-  /// (light, desaturated), none (dark).
-  final List<BoxShadow> shadows;
 
   /// StatusBadge outline on a dark-text card: [text] at 16 % (05 §3.2).
   final Color? badgeOutline;
@@ -318,17 +313,6 @@ BrandCardColors resolveBrandCardColors({
       ? elevation.cardOutline
       : (lightEdge ? colors.borderSubtle : null);
 
-  final List<BoxShadow> shadows;
-  if (dark) {
-    shadows = const <BoxShadow>[];
-  } else if (desaturated) {
-    // A desaturated card must not glow (04 §8.6).
-    shadows = elevation.level2.shadows;
-  } else {
-    // The glow uses the original brand colour; ink for the fallback.
-    shadows = elevation.cardBrand(fallback ? colors.brandInk : original);
-  }
-
   return BrandCardColors(
     fill: fill,
     sheenStart: start,
@@ -344,7 +328,6 @@ BrandCardColors resolveBrandCardColors({
     usedDefault: parsed == null,
     needsLightEdge: lightEdge,
     outline: outline,
-    shadows: shadows,
     badgeOutline: text == BalanceCardTokens.textDark
         ? text.withValues(alpha: StatusBadgeTokens.darkTextOutlineOpacity)
         : null,

@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'dart:ui' show Brightness, Color;
 
 import 'package:flutter/animation.dart';
-import 'package:flutter/painting.dart' show BoxShadow;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/core/tokens/tokens.dart';
 
@@ -289,7 +288,6 @@ void main() {
       expect(KeypadTokens.keyHeight, 72);
       expect(KeypadTokens.keyHeightCompact, 64);
       expect(BalanceCardTokens.padding, Space.s6);
-      expect(BalanceCardTokens.radius, Radii.xl);
       expect(BalanceCardTokens.compactHeight, 88);
       expect(HoldButtonTokens.slop, 12);
       expect(HoldButtonTokens.thresholdCents, 10000);
@@ -309,10 +307,6 @@ void main() {
       expect(e.level2.shadows.single.blurRadius, 16);
       expect(e.level3.shadows.single.offset.dy, 12);
       expect(e.level3Upward.shadows.single.offset.dy, -12);
-      final BoxShadow brand = e.cardBrand(const Color(0xFF0F172A)).single;
-      expect(brand.offset.dy, 16);
-      expect(brand.blurRadius, 40);
-      expect(brand.color.a, closeTo(0.28, 1e-6));
       expect(e.usesShadows, isTrue);
       expect(e.cardOutline, isNull);
     });
@@ -324,7 +318,6 @@ void main() {
       expect(e.level1.surface, WaiterColors.dark.bgSurface);
       expect(e.level2.surface, WaiterColors.dark.bgRaised);
       expect(e.level2.outline, WaiterColors.dark.borderSubtle);
-      expect(e.cardBrand(const Color(0xFF0F172A)), isEmpty);
       expect(e.cardOutline, const Color(0xFF26262B));
       final WaiterElevation hc = WaiterElevation.resolve(
         WaiterColors.darkHighContrast,

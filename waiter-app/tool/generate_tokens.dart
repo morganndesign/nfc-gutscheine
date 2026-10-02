@@ -442,12 +442,7 @@ class _Generator {
         }
       }
       final Object? color = s['color'];
-      if (color == 'brand') {
-        final Object? alpha = s['alpha'];
-        if (alpha is! num || alpha < 0 || alpha > 1) {
-          errors.add('${t.name}: brand shadow needs alpha in [0, 1].');
-        }
-      } else if (color is! String || _parseColor(color) == null) {
+      if (color is! String || _parseColor(color) == null) {
         errors.add('${t.name}: invalid shadow colour "$color".');
       }
     }
@@ -1032,14 +1027,12 @@ class _Generator {
     final List<String> fields = <String>[];
     final StringBuffer lightInit = StringBuffer();
     final StringBuffer darkInit = StringBuffer();
-    _Token? brand;
+    _Token? card;
     for (final _Token t in levels) {
       final Map<String, Object?> v = t.value! as Map<String, Object?>;
       final List<Object?> light = v['light']! as List<Object?>;
-      if (light.any(
-        (Object? l) => (l! as Map<String, Object?>)['color'] == 'brand',
-      )) {
-        brand = t;
+      if (t.localPath.join('-') == 'card') {
+        card = t;
         continue;
       }
       final String name = 'level${_pascal(t.localPath.join('-'))}';
@@ -1066,14 +1059,11 @@ class _Generator {
         );
       }
     }
-    if (brand == null) {
-      errors.add('elev: a brand shadow token (color "brand") is required.');
+    if (card == null) {
+      errors.add('elev: the balance card token (elevation.card) is required.');
       return;
     }
-    final Map<String, Object?> brandLayer =
-        ((brand.value! as Map<String, Object?>)['light']! as List<Object?>)
-                .single!
-            as Map<String, Object?>;
+    final _Token brand = card;
     final Map<String, Object?> brandDark =
         (brand.value! as Map<String, Object?>)['dark']! as Map<String, Object?>;
 
@@ -1130,27 +1120,6 @@ class _Generator {
       ..writeln()
       ..writeln('  /// Whether this theme expresses elevation with shadows.')
       ..writeln('  bool get usesShadows => brightness == Brightness.light;')
-      ..writeln()
-      ..writeln('  /// `${brand.name}`: ${brand.description ?? ''}')
-      ..writeln('  List<BoxShadow> cardBrand(Color brand) {')
-      ..writeln(
-        '    if (brightness == Brightness.dark) return const <BoxShadow>[];',
-      )
-      ..writeln('    return <BoxShadow>[')
-      ..writeln('      BoxShadow(')
-      ..writeln(
-        '        color: brand.withValues(alpha: '
-        '${_num(brandLayer['alpha']! as num)}),',
-      )
-      ..writeln(
-        '        offset: const Offset(${_num(brandLayer['x']! as num)}, '
-        '${_num(brandLayer['y']! as num)}),',
-      )
-      ..writeln('        blurRadius: ${_num(brandLayer['blur']! as num)},')
-      ..writeln('        spreadRadius: ${_num(brandLayer['spread']! as num)},')
-      ..writeln('      ),')
-      ..writeln('    ];')
-      ..writeln('  }')
       ..writeln()
       ..writeln('  /// Interpolates for the theme cross-fade.')
       ..writeln('  static WaiterElevation lerp(')

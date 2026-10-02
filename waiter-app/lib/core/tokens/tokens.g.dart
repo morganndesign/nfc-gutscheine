@@ -1257,24 +1257,11 @@ class WaiterElevation {
   /// `elev.3` cast upward (sheets).
   final ElevationLevel level3Upward;
 
-  /// `elev.card-brand` dark treatment: 1-px outline, no glow.
+  /// `elev.card` dark treatment: 1-px outline, no glow.
   final Color? cardOutline;
 
   /// Whether this theme expresses elevation with shadows.
   bool get usesShadows => brightness == Brightness.light;
-
-  /// `elev.card-brand`: BalanceCard brand glow: original brand colour at 28 % (light only); dark: no shadow, 1-px card.borderDark.
-  List<BoxShadow> cardBrand(Color brand) {
-    if (brightness == Brightness.dark) return const <BoxShadow>[];
-    return <BoxShadow>[
-      BoxShadow(
-        color: brand.withValues(alpha: 0.28),
-        offset: const Offset(0, 16),
-        blurRadius: 40,
-        spreadRadius: 0,
-      ),
-    ];
-  }
 
   /// Interpolates for the theme cross-fade.
   static WaiterElevation lerp(WaiterElevation a, WaiterElevation b, double t) {
@@ -1926,9 +1913,6 @@ abstract final class BalanceCardTokens {
 
   /// `balanceCard.minFullHeight` — Below this the compact strip is used; above it the full card face scales down as a whole.
   static const double minFullHeight = 96;
-
-  /// `balanceCard.radius` —
-  static const double radius = 28;
 
   /// `balanceCard.padding` —
   static const double padding = 24;
