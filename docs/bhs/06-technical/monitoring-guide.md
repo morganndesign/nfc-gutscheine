@@ -103,7 +103,7 @@ U kontejneru **api**: `php artisan schedule:list`. Očekivani zapisi (vremena u 
 | Naredba | Raspored |
 |---|---|
 | `vouchers:expire` | dnevno 00:15 |
-| `giftcard:verify-chains` | dnevno 02:30 |
+| `giftcard:verify-chains` | dnevno 04:00 |
 | `queue:prune-failed --hours=720` | dnevno 03:30 |
 | `vouchers:notify-expiring` | dnevno 10:00 |
 | `auth:clear-resets` | svakih 15 minuta |

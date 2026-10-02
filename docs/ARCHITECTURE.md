@@ -179,7 +179,7 @@ printable vouchers (S20) and print them with the system print dialog. Details:
 | Job | Schedule (`SCHEDULE_TIMEZONE`) | Purpose |
 |---|---|---|
 | `vouchers:expire` | daily 00:15 | Expire active vouchers whose last valid day has ended; balances are kept, blocked vouchers are skipped |
-| `giftcard:verify-chains` | daily 02:30 | Recompute every hash chain and every voucher balance; e-mail `OPS_ALERT_EMAIL` on a problem |
+| `giftcard:verify-chains` | daily 04:00 | Recompute every hash chain and every voucher balance; e-mail `OPS_ALERT_EMAIL` on a problem |
 | `queue:prune-failed --hours=720` | daily 03:30 | Housekeeping |
 | `vouchers:notify-expiring` | daily 10:00 | One reminder per voucher with a balance, `VOUCHER_EXPIRING_NOTICE_DAYS` before expiry |
 | `auth:clear-resets` | every 15 min | Remove expired reset tokens |

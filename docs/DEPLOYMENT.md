@@ -161,7 +161,7 @@ configured at all.
 1. Container **backup**:
    `mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE restore_test; GRANT SELECT ON restore_test.* TO '<DB_USERNAME>'@'%'"`,
    then `gunzip -c /backups/<newest>.sql.gz | mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" restore_test`.
-2. Container **api**: `DB_DATABASE=restore_test php artisan giftcard:verify-chains` → "All hash chains and voucher
+2. Container **api**: `APP_CONFIG_CACHE=/tmp/none.php DB_DATABASE=restore_test php artisan giftcard:verify-chains` → "All hash chains and voucher
    balances are intact." (a one-off read-only command; the running services keep their database).
 3. Container **backup**: `mysql -h mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "DROP DATABASE restore_test"`.
 Record date, dump file and result in the operations log. The same drill run on MySQL 8.4 with the demo data
@@ -180,7 +180,7 @@ Record date, dump file and result in the operations log. The same drill run on M
 
 Scheduled jobs (times in `SCHEDULE_TIMEZONE`, default Europe/Vienna): every minute `giftcard:seal-security-events`
 and `giftcard:monitor-security-events` (fraud rules → *Security alerts*, high/critical mailed), 00:15
-`vouchers:expire`, 02:30 `giftcard:verify-chains`, 02:40 `cards:key-set:verify` (card keys against their key check
+`vouchers:expire`, 04:00 `giftcard:verify-chains`, 04:10 `cards:key-set:verify` (card keys against their key check
 values), 03:30 `queue:prune-failed`, 10:00 `vouchers:notify-expiring`, hourly `ops:check-backups`, every 15 min
 `auth:clear-resets`, every 5 min `queue:monitor`. Check with `php artisan schedule:list` in the api container.
 

@@ -155,6 +155,11 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 | `presentment` | 90/min per user and `X-Device-Id` | `POST /presentments` |
 | `voucher-operation` | 90/min per user and `X-Device-Id` | sale, redemption, reload, redemption outcome |
 | `api` | 240/min per user | every authenticated request |
+| `tap` | 30/min per IP | the public card tap page |
+| `redemption-outcome` | 60/min per user and `X-Device-Id` | redemption outcome reports |
+| `password-change` | 5/min per user | `PUT /auth/password` |
+| `exports` | 10/min per user | `/vouchers/export`, `/transactions/export`, `/reports/payments/export` |
+| `logo` | 10/min per user | `POST /settings/logo` |
 
 Failed presentments (the scanned text proves nothing) count separately: after `PRESENTMENT_FAILURE_LIMIT` (10)
 within `PRESENTMENT_FAILURE_DECAY` (300 s) per restaurant, user and device, `POST /presentments` answers
@@ -183,8 +188,9 @@ endpoints also require a restaurant (platform administrators get `403 TENANT_NOT
 | POST | `/auth/token` | Native waiter app sign-in (above) → `201 {data: {token, expires_at, user}}` |
 | POST | `/auth/logout` | Ends the session, or revokes the current token |
 | GET | `/auth/me` | `SessionUser`: `id, name, email, locale, role {slug, name}, is_platform_admin, permissions[]` (with a token: only what the token may do), `restaurant {id, name, slug, currency, timezone, locale, status, settings}`, `platform {support_email, notice}` |
-| PUT | `/auth/profile` | `{name?, locale? (en \| de)}` |
-| PUT | `/auth/password` | `{current_password, password, password_confirmation}` — revokes every token and "remember me" of this person |
+| PUT | `/auth/profile` | `{name?, locale? (de \| en \| bs)}` |
+| PUT | `/auth/language` | `{locale: de \| en \| bs}` — the language alone; the waiter app's token may call it |
+| PUT | `/auth/password` | `{current_password, password, password_confirmation}` — browser session only (an API or app token gets `403`), 5/min; revokes every token and "remember me" of this person |
 | POST | `/auth/forgot-password` | `{email}` — always the same `200`; the link is sent from the queue, only to active accounts that accepted their invitation |
 | POST | `/auth/reset-password` | `{token, email, password, password_confirmation}` — also accepts an invitation (activates the account); revokes every token and "remember me". Every failure answers the same `422` |
 
@@ -460,7 +466,7 @@ Guest e-mails confirm a sale or reload like a receipt: amount, restaurant, date 
 
 | Method | Path | Permission | |
 |---|---|---|---|
-| GET / POST | `/api-tokens` | api_tokens.manage | POST `{name, abilities[], expires_at?}` → `{data: ApiToken, plain_text_token}` (shown **once**) |
+| GET / POST | `/api-tokens` | api_tokens.manage | POST `{name, abilities[], expires_at?}` → `{data: ApiToken, plain_text_token}` (shown **once**). A token can never grant more than its creator's session: called with a token, the new abilities must be a subset of that token's own, otherwise the request is refused. |
 | POST | `/api-tokens/{id}/revoke` | api_tokens.manage | |
 | GET | `/audit-logs` | audit.view | `action` (prefix), `user_id`, `auditable_id`, `from`, `to` |
 

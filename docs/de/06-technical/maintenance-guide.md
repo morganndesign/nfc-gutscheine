@@ -19,7 +19,7 @@ Befehle laufen im Coolify-*Terminal* der Ressource (Container **api** für `php 
 | Aufgabe | Mechanismus | Zeit |
 |---|---|---|
 | Abgelaufene Gutscheine auf `expired` setzen (Guthaben bleibt) | Scheduler `vouchers:expire` | täglich 00:15 (Wien) |
-| Integritätsprüfung: Hash-Ketten und Guthaben | Scheduler `giftcard:verify-chains` | täglich 02:30 (Wien) |
+| Integritätsprüfung: Hash-Ketten und Guthaben | Scheduler `giftcard:verify-chains` | täglich 04:00 (Wien) |
 | Fehlgeschlagene Jobs älter als 30 Tage entfernen | Scheduler `queue:prune-failed --hours=720` | täglich 03:30 (Wien) |
 | Erinnerungs-E-Mails vor Ablauf | Scheduler `vouchers:notify-expiring` | täglich 10:00 (Wien) |
 | Abgelaufene Passwort-Reset-Tokens entfernen | Scheduler `auth:clear-resets` | alle 15 Minuten |
@@ -139,7 +139,7 @@ Jedes Deployment baut die Images neu und übernimmt dabei Patch-Updates von PHP 
 | Wartung mit längerer Unterbrechung | Di oder Mi 06:00–08:00 | 7 Tage vorher per Wartungshinweis und E-Mail an alle Inhaberinnen und Inhaber |
 | Notfallwartung | sofort | so früh wie möglich |
 
-Nicht warten: Freitag bis Sonntag, an Feiertagen, um 00:15 (Gutscheinablauf), 02:30 (Integritätsprüfung) und in der Adventzeit nur im Notfall.
+Nicht warten: Freitag bis Sonntag, an Feiertagen, um 00:15 (Gutscheinablauf), 04:00 (Integritätsprüfung) und in der Adventzeit nur im Notfall.
 
 ### 7.2 Wartungshinweis in der App
 

@@ -46,7 +46,7 @@ Selbst 500 Lokale mit 2 Einlösungen pro Minute ergeben rund 17 Einlösungen pro
 
 - **Arbeitsspeicher**: 24 PHP-Prozesse, MySQL-Buffer-Pool 512 MB, Redis, Next.js teilen sich den Arbeitsspeicher.
 - **Exporte und Dashboards großer Lokale** (Aggregationen über viele Buchungen).
-- **Integritätsprüfung** (`giftcard:verify-chains`, 02:30): berechnet jede Hash-Kette vollständig neu; die Laufzeit wächst linear mit Ledger, Zahlungen und Audit-Log.
+- **Integritätsprüfung** (`giftcard:verify-chains`, 04:00): berechnet jede Hash-Kette vollständig neu; die Laufzeit wächst linear mit Ledger, Zahlungen und Audit-Log.
 - **E-Mail-Spitzen** (z. B. Erinnerungen um 10:00) – laufen über die Queue und blockieren keine Requests.
 
 ## 4. Rate Limits

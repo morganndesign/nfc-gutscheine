@@ -45,7 +45,7 @@ Izmjene stupaju na snagu tek nakon *Redeploy*, jer kontejneri pri pokretanju ke�
 | `FRONTEND_URL` | `http://localhost:3000` | `https://app.giftcardpro.at` | Osnova linkova za pozivnice i reset lozinke. |
 | `BCRYPT_ROUNDS` | `12` | — (`12`) | Faktor troška za hash lozinki. |
 | `APP_TIMEZONE` | `UTC` | — | Zadržati `UTC`: vremenske oznake pohranjuju se u UTC i preračunavaju po restoranu. |
-| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | `Europe/Vienna` | Lokalni sat noćnih poslova: istek 00:15, provjera integriteta 02:30, čišćenje 03:30, podsjetnici o isteku 10:00. |
+| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | `Europe/Vienna` | Lokalni sat noćnih poslova: istek 00:15, provjera integriteta 04:00, čišćenje 03:30, podsjetnici o isteku 10:00. |
 | `APP_LOCALE` | `en` | `en` | Jezik aplikacije. |
 | `APP_FALLBACK_LOCALE` | `en` | — (`en`) | Rezervni jezik. |
 | `APP_FAKER_LOCALE` | `de_AT` | — | Samo za demo podatke i testove. |

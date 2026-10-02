@@ -94,7 +94,7 @@ MySQL radi s `--log-bin-trust-function-creators=1` (postavljeno u `docker-compos
 3. Push na `main` (ili *Redeploy*). Coolify gradi nove imageove, zatim zamjenjuje kontejnere; prvi novi Laravel kontejner izvršava migracije na čekanju, a `api`/`worker`/`scheduler` tek nakon toga opslužuju zahtjeve. Tokom zamjene kontejnera nastaje prekid od nekoliko sekundi.
 4. Uradite provjere nakon deploymenta (odjeljak 8).
 
-Deployment ne pokrećite tokom glavnog radnog vremena restorana (preporuka: prije podne prije 11:00 ili poslije podne između 14:30 i 17:00 po bečkom vremenu) i ne u 00:15 (istek vaučera), 01:30 UTC (backup) ili 02:30 (provjera integriteta).
+Deployment ne pokrećite tokom glavnog radnog vremena restorana (preporuka: prije podne prije 11:00 ili poslije podne između 14:30 i 17:00 po bečkom vremenu) i ne u 00:15 (istek vaučera), 01:30 UTC (backup) ili 04:00 (provjera integriteta).
 
 Novčane transakcije su idempotentne: ako iskorištavanje tokom zamjene kontejnera naiđe na grešku, aplikacija za konobare i web kasa provjeravaju ishod s istim `Idempotency-Key` (`GET /vouchers/{id}/redemptions/{key}`) – nikada se ne knjiži dvaput.
 
@@ -164,7 +164,7 @@ Kontejner `scheduler` izvršava `schedule:work`. Vremena važe u `SCHEDULE_TIMEZ
 | Vrijeme | Posao |
 |---|---|
 | 00:15 | `vouchers:expire` – aktivni vaučeri čiji je posljednji dan važenja prošao postaju `expired`; stanje ostaje sačuvano, blokirani vaučeri se preskaču |
-| 02:30 | `giftcard:verify-chains` – ponovo izračunava svaki hash lanac i svako stanje; kod nalaza e-mail na `OPS_ALERT_EMAIL` |
+| 04:00 | `giftcard:verify-chains` – ponovo izračunava svaki hash lanac i svako stanje; kod nalaza e-mail na `OPS_ALERT_EMAIL` |
 | 03:30 | `queue:prune-failed --hours=720` – uklanja neuspjele poslove starije od 30 dana |
 | 10:00 | `vouchers:notify-expiring` – jedan podsjetnik po vaučeru sa stanjem, `VOUCHER_EXPIRING_NOTICE_DAYS` prije isteka |
 | svakih 15 minuta | `auth:clear-resets` |

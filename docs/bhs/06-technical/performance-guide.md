@@ -46,7 +46,7 @@ Sljedeći proračun je **procjena** i prije rasta izvan pilot rada treba ga potv
 
 - **Radna memorija**: 24 PHP procesa, MySQL buffer pool od 512 MB, Redis i Next.js dijele memoriju.
 - **Izvozi i dashboardi velikih restorana** (agregacije preko mnogo knjiženja).
-- **Provjera integriteta** (`giftcard:verify-chains`, 02:30): u potpunosti ponovo izračunava svaki hash lanac; trajanje raste linearno s ledgerom, plaćanjima i zapisnikom aktivnosti.
+- **Provjera integriteta** (`giftcard:verify-chains`, 04:00): u potpunosti ponovo izračunava svaki hash lanac; trajanje raste linearno s ledgerom, plaćanjima i zapisnikom aktivnosti.
 - **Vršni periodi e-mailova** (npr. podsjetnici u 10:00) – idu preko reda čekanja i ne blokiraju zahtjeve.
 
 ## 4. Ograničenja broja zahtjeva

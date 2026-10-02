@@ -94,7 +94,7 @@ MySQL läuft mit `--log-bin-trust-function-creators=1` (gesetzt in `docker-compo
 3. Push auf `main` (oder *Redeploy*). Coolify baut die neuen Images und ersetzt danach die Container; der erste neue Laravel-Container führt offene Migrationen aus, `api`/`worker`/`scheduler` bedienen erst danach Anfragen. Beim Austausch der Container gibt es wenige Sekunden Unterbrechung.
 4. Kontrollen nach dem Deployment (Abschnitt 8) durchführen.
 
-Deployments nicht während der Hauptservicezeiten der Lokale auslösen (Empfehlung: vormittags vor 11:00 oder nachmittags zwischen 14:30 und 17:00 Uhr Wiener Zeit) und nicht um 00:15 (Gutscheinablauf), 01:30 UTC (Backup) oder 02:30 (Integritätsprüfung).
+Deployments nicht während der Hauptservicezeiten der Lokale auslösen (Empfehlung: vormittags vor 11:00 oder nachmittags zwischen 14:30 und 17:00 Uhr Wiener Zeit) und nicht um 00:15 (Gutscheinablauf), 01:30 UTC (Backup) oder 04:00 (Integritätsprüfung).
 
 Geldbewegungen sind idempotent: Trifft eine Einlösung während des Container-Tauschs auf einen Fehler, fragen Kellner-App und Web-Kassa das Ergebnis mit demselben `Idempotency-Key` ab (`GET /vouchers/{id}/redemptions/{key}`) – es wird nie doppelt gebucht.
 
@@ -164,7 +164,7 @@ Der Container `scheduler` führt `schedule:work` aus. Zeiten gelten in `SCHEDULE
 | Zeit | Job |
 |---|---|
 | 00:15 | `vouchers:expire` – aktive Gutscheine, deren letzter Gültigkeitstag vorbei ist, werden `expired`; das Guthaben bleibt erhalten, gesperrte Gutscheine werden übersprungen |
-| 02:30 | `giftcard:verify-chains` – berechnet jede Hash-Kette und jedes Guthaben neu; bei einem Befund E-Mail an `OPS_ALERT_EMAIL` |
+| 04:00 | `giftcard:verify-chains` – berechnet jede Hash-Kette und jedes Guthaben neu; bei einem Befund E-Mail an `OPS_ALERT_EMAIL` |
 | 03:30 | `queue:prune-failed --hours=720` – fehlgeschlagene Jobs älter als 30 Tage entfernen |
 | 10:00 | `vouchers:notify-expiring` – eine Erinnerung je Gutschein mit Guthaben, `VOUCHER_EXPIRING_NOTICE_DAYS` vor Ablauf |
 | alle 15 Minuten | `auth:clear-resets` |

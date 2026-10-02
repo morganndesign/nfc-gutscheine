@@ -40,7 +40,7 @@ Keep in step within one environment: the app's `API_BASE_URL` = `APP_URL` + `/ap
 | `FRONTEND_URL` | `https://app.example.com` | Base of invitation and password-reset links. |
 | `BCRYPT_ROUNDS` | `12` | Password hashing cost. |
 | `APP_TIMEZONE` | `UTC` | Keep `UTC`: timestamps are stored in UTC and converted per restaurant. |
-| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | Local clock of the nightly jobs: expiry 00:15, integrity check 02:30, cleanup 03:30, expiry reminders 10:00. |
+| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | Local clock of the nightly jobs: expiry 00:15, integrity check 04:00, cleanup 03:30, expiry reminders 10:00. |
 | `LOG_LEVEL` | `info` | `info` in production (locked accounts are logged as `warning`, a failed integrity check as `critical`). Use `debug` locally: the `log` mailer writes e-mails at debug level. |
 
 ### Database, cache, queues

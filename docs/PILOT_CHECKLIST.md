@@ -9,7 +9,7 @@ Use this list for the first restaurant. Tick each item. The journey in section B
 - [ ] **E-mail:** real SMTP configured (`MAIL_MAILER=smtp` — Coolify pre-fills `log`). **System settings → Send test
       e-mail** succeeds (to a mailbox you can check) and the mail does not land in spam.
 - [ ] **Scheduler:** `SCHEDULE_TIMEZONE=Europe/Vienna`; `php artisan schedule:list` in the api container shows
-      `vouchers:expire` 00:15 and `giftcard:verify-chains` 02:30.
+      `vouchers:expire` 00:15 and `giftcard:verify-chains` 04:00.
 - [ ] **Integrity:** `php artisan giftcard:verify-chains` reports "All hash chains and voucher balances are intact",
       and `OPS_ALERT_EMAIL` (or the platform support e-mail) reaches someone who reads it.
 - [ ] **Backups:** nightly dump, keystore copy and the encrypted off-site copy configured (`OFFSITE_*`);

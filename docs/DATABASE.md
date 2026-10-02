@@ -181,7 +181,7 @@ that aborts the statement (MySQL `SIGNAL SQLSTATE '45000'`, SQLite `RAISE(ABORT)
 
 ## Invariants
 
-Asserted by tests and by `php artisan giftcard:verify-chains` (nightly, 02:30):
+Asserted by tests and by `php artisan giftcard:verify-chains` (nightly, 04:00):
 
 - `vouchers.balance` = sum of that voucher's ledger amounts, and every ledger row's arithmetic is right.
 - Every hash chain verifies from its first row to its head: no row changed, deleted, inserted or reordered.

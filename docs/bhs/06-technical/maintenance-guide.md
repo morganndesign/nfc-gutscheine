@@ -19,7 +19,7 @@ Naredbe se izvršavaju u Coolify *Terminal* resursa (kontejner **api** za `php a
 | Zadatak | Mehanizam | Vrijeme |
 |---|---|---|
 | Istekle vaučere postaviti na `expired` (stanje ostaje) | Scheduler `vouchers:expire` | dnevno 00:15 (Beč) |
-| Provjera integriteta: hash lanci i stanja | Scheduler `giftcard:verify-chains` | dnevno 02:30 (Beč) |
+| Provjera integriteta: hash lanci i stanja | Scheduler `giftcard:verify-chains` | dnevno 04:00 (Beč) |
 | Uklanjanje neuspjelih poslova starijih od 30 dana | Scheduler `queue:prune-failed --hours=720` | dnevno 03:30 (Beč) |
 | Podsjetnici e-mailom prije isteka | Scheduler `vouchers:notify-expiring` | dnevno 10:00 (Beč) |
 | Uklanjanje isteklih tokena za reset lozinke | Scheduler `auth:clear-resets` | svakih 15 minuta |
@@ -139,7 +139,7 @@ Svaki deployment ponovo gradi imageove i pri tome preuzima patch ažuriranja za 
 | Održavanje s dužim prekidom | uto ili sri 06:00–08:00 | 7 dana ranije putem obavještenja o održavanju i e-maila svim vlasnicima i vlasnicama |
 | Hitno održavanje | odmah | što je ranije moguće |
 
-Ne održavati: od petka do nedjelje, praznicima, u 00:15 (istek vaučera), 02:30 (provjera integriteta), a u vrijeme adventa samo u hitnim slučajevima.
+Ne održavati: od petka do nedjelje, praznicima, u 00:15 (istek vaučera), 04:00 (provjera integriteta), a u vrijeme adventa samo u hitnim slučajevima.
 
 ### 7.2 Obavještenje o održavanju u aplikaciji
 

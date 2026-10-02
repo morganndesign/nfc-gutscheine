@@ -45,7 +45,7 @@ Innerhalb einer Umgebung abgestimmt halten: `API_BASE_URL` der App = `APP_URL` +
 | `FRONTEND_URL` | `http://localhost:3000` | `https://app.giftcardpro.at` | Basis der Einladungs- und Passwort-Reset-Links. |
 | `BCRYPT_ROUNDS` | `12` | — (`12`) | Kostenfaktor für Passwort-Hashes. |
 | `APP_TIMEZONE` | `UTC` | — | `UTC` beibehalten: Zeitstempel werden in UTC gespeichert und je Lokal umgerechnet. |
-| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | `Europe/Vienna` | Lokale Uhr der nächtlichen Jobs: Ablauf 00:15, Integritätsprüfung 02:30, Bereinigung 03:30, Ablauferinnerungen 10:00. |
+| `SCHEDULE_TIMEZONE` | `Europe/Vienna` | `Europe/Vienna` | Lokale Uhr der nächtlichen Jobs: Ablauf 00:15, Integritätsprüfung 04:00, Bereinigung 03:30, Ablauferinnerungen 10:00. |
 | `APP_LOCALE` | `en` | `en` | Sprache der Anwendung. |
 | `APP_FALLBACK_LOCALE` | `en` | — (`en`) | Ersatzsprache. |
 | `APP_FAKER_LOCALE` | `de_AT` | — | Nur für Demodaten und Tests. |

@@ -103,7 +103,7 @@ Im Container **api**: `php artisan schedule:list`. Erwartete Einträge (Zeiten i
 | Befehl | Zeitplan |
 |---|---|
 | `vouchers:expire` | täglich 00:15 |
-| `giftcard:verify-chains` | täglich 02:30 |
+| `giftcard:verify-chains` | täglich 04:00 |
 | `queue:prune-failed --hours=720` | täglich 03:30 |
 | `vouchers:notify-expiring` | täglich 10:00 |
 | `auth:clear-resets` | alle 15 Minuten |
