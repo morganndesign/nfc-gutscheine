@@ -7,6 +7,7 @@ namespace App\Support;
 use App\Models\Device;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 
 /**
  * Who performs an operation, from where. Passed into the service layer so that
@@ -20,6 +21,8 @@ final readonly class Actor
         public ?string $ipAddress = null,
         public ?string $userAgent = null,
         public ?string $requestId = null,
+        // True for the waiter app (a device-bound token). The dashboard also reports a device, but it is not a till.
+        public bool $atTill = false,
     ) {}
 
     public static function fromRequest(Request $request): self
@@ -27,6 +30,7 @@ final readonly class Actor
         /** @var User|null $user */
         $user = $request->user();
         $device = $request->attributes->get('device');
+        $token = $user?->currentAccessToken();
 
         return new self(
             user: $user,
@@ -34,13 +38,14 @@ final readonly class Actor
             ipAddress: $request->ip(),
             userAgent: mb_substr((string) $request->userAgent(), 0, 500),
             requestId: $request->attributes->get('request_id'),
+            atTill: $token instanceof PersonalAccessToken && is_string($token->device_id),
         );
     }
 
     /** The same request, attributed to [$user] (right after they signed in). */
     public function withUser(User $user): self
     {
-        return new self($user, $this->device, $this->ipAddress, $this->userAgent, $this->requestId);
+        return new self($user, $this->device, $this->ipAddress, $this->userAgent, $this->requestId, $this->atTill);
     }
 
     public static function system(): self

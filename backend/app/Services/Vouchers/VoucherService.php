@@ -416,7 +416,7 @@ final class VoucherService
             return $this->replay($replay, $matches);
         }
 
-        if ($presentmentId !== null || $actor->deviceId() !== null) {
+        if ($presentmentId !== null || $actor->atTill) {
             // A till never tops up a card it has not seen.
             $presentment = $this->presentments->consume($presentment, $actor, $locked, PresentmentPurpose::Reload);
         }

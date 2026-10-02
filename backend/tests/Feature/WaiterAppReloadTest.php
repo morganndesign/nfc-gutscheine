@@ -155,8 +155,19 @@ final class WaiterAppReloadTest extends TestCase
 
     public function test_the_dashboard_still_reloads_without_a_tap(): void
     {
+        // The browser sends its device id like the app does (found by the pilot journey, 2026-10-03): that alone
+        // does not make it a till, so no tap is required there.
         $this->actingAsStaff($this->restaurant, RoleSlug::Manager);
+        $this->withHeaders(['X-Device-Id' => 'web-'.str_repeat('a', 32)]);
         $this->reload($this->voucher->id, null, 500)->assertCreated()->assertJsonPath('data.voucher.balance', 2500);
+        $this->assertNotNull(VoucherTransaction::query()->where('type', TransactionType::Reload)->latest('created_at')->value('device_id'));
+    }
+
+    public function test_the_app_never_reloads_without_a_tap(): void
+    {
+        $this->signInApp(RoleSlug::Manager, 'mia@example.com');
+        $this->reload($this->voucher->id, null, 500)->assertStatus(422)->assertJsonPath('code', 'PRESENTMENT_INVALID');
+        $this->assertSame(2000, $this->voucher->refresh()->balance);
     }
 
     /** @param  array<string, mixed>  $extra */
