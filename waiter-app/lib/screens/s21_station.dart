@@ -189,12 +189,13 @@ class _OutcomeBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
     final String? number = outcome.cardNumber;
+    final String? code = outcome.detail == null ? null : 'Code: ${outcome.detail}';
     if (number != null) {
       return StatusBanner(tone: BannerTone.success, title: l10n.stationDone(number));
     }
     return switch (outcome.failure!) {
-      StationFailure.rejected => StatusBanner(tone: BannerTone.danger, title: l10n.stationRejected),
-      StationFailure.unknownChip => StatusBanner(tone: BannerTone.danger, title: l10n.stationUnknownChip),
+      StationFailure.rejected => StatusBanner(tone: BannerTone.danger, title: l10n.stationRejected, body: code),
+      StationFailure.unknownChip => StatusBanner(tone: BannerTone.danger, title: l10n.stationUnknownChip, body: code),
       StationFailure.nfcOff => StatusBanner(
         tone: BannerTone.warning,
         title: l10n.problemNfcOffTitle,
@@ -212,7 +213,7 @@ class _OutcomeBanner extends StatelessWidget {
       ),
       StationFailure.tagLost ||
       StationFailure.refused ||
-      StationFailure.server => StatusBanner(tone: BannerTone.warning, title: l10n.stationFailed),
+      StationFailure.server => StatusBanner(tone: BannerTone.warning, title: l10n.stationFailed, body: code),
     };
   }
 }

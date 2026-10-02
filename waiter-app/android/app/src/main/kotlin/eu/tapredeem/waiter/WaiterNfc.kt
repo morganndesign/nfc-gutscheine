@@ -24,7 +24,11 @@ import java.util.concurrent.RejectedExecutionException
  * - `availability` → "ready" | "disabled" | "unsupported"
  * - `start` → { uid: hex } once a card is on the phone (IsoDep connected)
  * - `transceive` { apdu: bytes } → bytes (data ‖ SW1 SW2)
- * - `stop` → closes the card and leaves reader mode
+ * - `stop` → closes the card (reader mode stays on)
+ *
+ * Reader mode is on for as long as the app is in the foreground, also between two cards: a card nobody is
+ * waiting for is ignored. Otherwise a card still lying on the phone after its tap (or after a failed one at
+ * the station) went to Android itself — "New tag detected", or the browser opening the card's link.
  *
  * Errors: "unsupported", "disabled", "busy", "cancelled", "tag_lost", "io".
  */
@@ -46,12 +50,19 @@ internal class WaiterNfc(private val activity: Activity, messenger: BinaryMessen
     fun dispose() {
         channel.setMethodCallHandler(null)
         closeSession("cancelled")
+        leaveReaderMode()
         io.shutdown()
+    }
+
+    /** The activity is in the foreground: cards are the app's, not Android's. */
+    fun onResume() {
+        enterReaderMode()
     }
 
     /** The activity went to the background: reader mode ends with it. */
     fun onPause() {
-        if (readerMode || card != null) closeSession("cancelled")
+        closeSession("cancelled")
+        leaveReaderMode()
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -81,22 +92,48 @@ internal class WaiterNfc(private val activity: Activity, messenger: BinaryMessen
             !adapter.isEnabled -> return result.error("disabled", "NFC is switched off.", null)
             pendingStart != null || card != null -> return result.error("busy", "A card session is already open.", null)
         }
-        val flags = NfcAdapter.FLAG_READER_NFC_A or
-            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
-            NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
-        val extras = Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250) }
-        try {
-            adapter!!.enableReaderMode(activity, { tag -> onTag(tag) }, flags, extras)
-        } catch (e: IllegalStateException) {
+        // Already on since the app came to the foreground; NFC may have been switched on only just now. A card
+        // already lying on the phone is not reported again: it is taken away and held again.
+        if (!enterReaderMode()) {
             // The activity is not resumed (the app went to the background while Dart asked for a card). Without
             // this, the start stayed pending and every later start answered "busy" until the app was restarted.
             return result.error("cancelled", "The app is not in the foreground.", null)
         }
         pendingStart = result
-        readerMode = true
     }
 
-    /** Called on a binder thread for every tag that comes into the field while reader mode is on. */
+    /** Turns reader mode on (once); false when the activity is not in the foreground or NFC is off. */
+    private fun enterReaderMode(): Boolean {
+        if (readerMode) return true
+        val adapter = adapter() ?: return false
+        if (!adapter.isEnabled) return false
+        val flags = NfcAdapter.FLAG_READER_NFC_A or
+            NfcAdapter.FLAG_READER_SKIP_NDEF_CHECK or
+            NfcAdapter.FLAG_READER_NO_PLATFORM_SOUNDS
+        val extras = Bundle().apply { putInt(NfcAdapter.EXTRA_READER_PRESENCE_CHECK_DELAY, 250) }
+        return try {
+            adapter.enableReaderMode(activity, { tag -> onTag(tag) }, flags, extras)
+            readerMode = true
+            true
+        } catch (e: IllegalStateException) {
+            false
+        }
+    }
+
+    private fun leaveReaderMode() {
+        if (!readerMode) return
+        try {
+            adapter()?.disableReaderMode(activity)
+        } catch (_: IllegalStateException) {
+            // Activity no longer resumed: reader mode already ended.
+        }
+        readerMode = false
+    }
+
+    /**
+     * Called on a binder thread for every tag that comes into the field while reader mode is on. Whether anyone
+     * waits for it is decided on the main thread after connecting (a card nobody waits for is closed again).
+     */
     private fun onTag(tag: Tag) {
         val isoDep = IsoDep.get(tag) ?: return // Not ISO 14443-4 (e.g. an old NTAG 21x): keep looking.
         try {
@@ -145,16 +182,14 @@ internal class WaiterNfc(private val activity: Activity, messenger: BinaryMessen
     private fun closeSession(pendingError: String?) {
         pendingStart?.error(pendingError ?: "cancelled", "The card session ended.", null)
         pendingStart = null
-        card?.let { closing -> io.execute { closeQuietly(closing) } }
-        card = null
-        if (readerMode) {
+        card?.let { closing ->
             try {
-                adapter()?.disableReaderMode(activity)
-            } catch (_: IllegalStateException) {
-                // Activity no longer resumed: reader mode already ended.
+                io.execute { closeQuietly(closing) }
+            } catch (_: RejectedExecutionException) {
+                closeQuietly(closing)
             }
-            readerMode = false
         }
+        card = null
     }
 
     private fun closeQuietly(isoDep: IsoDep) {

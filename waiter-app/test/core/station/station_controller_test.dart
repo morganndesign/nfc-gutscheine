@@ -135,6 +135,9 @@ void main() {
     await started(tester);
     for (final (String reason, StationFailure failure) in <(String, StationFailure)>[
       ('auth:91AE', StationFailure.unknownChip),
+      ('not_ntag424', StationFailure.unknownChip),
+      ('not_genuine', StationFailure.unknownChip),
+      ('qa_failed', StationFailure.unknownChip),
       ('other_batch', StationFailure.rejected),
       ('already_personalized', StationFailure.rejected),
       ('expired', StationFailure.refused),
@@ -148,6 +151,7 @@ void main() {
       unawaited(station.choose(station.batches!.single));
       await settle(tester);
       expect(station.last!.failure, failure, reason: reason);
+      expect(station.last!.detail, reason, reason: 'the reason is shown to the operator');
       unawaited(station.finish());
       await settle(tester);
     }
@@ -158,6 +162,7 @@ void main() {
     unawaited(station.choose(station.batches!.single));
     await settle(tester);
     expect(station.last!.failure, StationFailure.tagLost);
+    expect(station.last!.detail, 'tagLost');
     expect(app.backend.to('POST', '/admin/personalizations/P1'), isEmpty);
     await finish(tester);
   });

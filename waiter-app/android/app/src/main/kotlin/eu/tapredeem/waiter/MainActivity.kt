@@ -19,7 +19,7 @@ class MainActivity : FlutterFragmentActivity() {
         val messenger = flutterEngine.dartExecutor.binaryMessenger
         feedback = WaiterFeedback(this, messenger).also { it.foreground = isResumedState }
         system = WaiterSystem(this, messenger)
-        nfc = WaiterNfc(this, messenger)
+        nfc = WaiterNfc(this, messenger).also { if (isResumedState) it.onResume() }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
@@ -36,6 +36,7 @@ class MainActivity : FlutterFragmentActivity() {
         super.onResume()
         isResumedState = true
         feedback?.foreground = true
+        nfc?.onResume()
     }
 
     override fun onPause() {

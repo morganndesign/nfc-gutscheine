@@ -44,12 +44,16 @@ enum StationFailure {
 /// The outcome of the last card, shown while the station waits for the next one.
 @immutable
 class StationOutcome {
-  const StationOutcome.done(String this.cardNumber) : failure = null;
+  const StationOutcome.done(String this.cardNumber) : failure = null, detail = null;
 
-  const StationOutcome.failed(StationFailure this.failure) : cardNumber = null;
+  const StationOutcome.failed(StationFailure this.failure, {this.detail}) : cardNumber = null;
 
   final String? cardNumber;
   final StationFailure? failure;
+
+  /// The technical reason (the server's refusal reason or the reader's error), shown small to platform staff
+  /// so a failing chip can be diagnosed: e.g. `not_ntag424`, `auth:91AE`, `tag_lost`.
+  final String? detail;
 }
 
 /// The internal personalisation station (Android; platform staff with a station token). The phone relays the
@@ -210,12 +214,19 @@ class StationController extends ChangeNotifier {
         round = await _api.continuePersonalization(round.id!, answers);
       }
       return StationOutcome.done(round.cardNumber);
-    } on NfcRelayException {
-      return const StationOutcome.failed(StationFailure.tagLost);
+    } on NfcRelayException catch (e) {
+      return StationOutcome.failed(StationFailure.tagLost, detail: e.failure.name);
     } on ApiFailure catch (e) {
-      return StationOutcome.failed(_failureOf(e));
+      return StationOutcome.failed(_failureOf(e), detail: _detailOf(e));
     }
   }
+
+  static String? _detailOf(ApiFailure e) => switch (e) {
+    ApiRejected(code: 'CARD_PERSONALIZATION_FAILED') => e.contextString('reason'),
+    ApiRejected() => e.code,
+    ApiUnauthorized() => e.code,
+    _ => null,
+  };
 
   StationFailure _failureOf(ApiFailure e) {
     if (e is ApiTransportFailure) return StationFailure.offline;
@@ -226,7 +237,10 @@ class StationController extends ChangeNotifier {
     if (e is ApiRejected) {
       if (e.code == 'CARD_PERSONALIZATION_FAILED') {
         final String reason = e.contextString('reason') ?? '';
-        if (reason == 'auth:91AE') return StationFailure.unknownChip;
+        // Never keyable: foreign keys, not an NTAG 424 DNA, not a genuine NXP chip, failed before. Set aside.
+        if (const <String>{'auth:91AE', 'not_ntag424', 'not_genuine', 'qa_failed'}.contains(reason)) {
+          return StationFailure.unknownChip;
+        }
         if (reason == 'other_batch' || reason == 'already_personalized') return StationFailure.rejected;
         return StationFailure.refused;
       }
