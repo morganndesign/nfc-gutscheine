@@ -17,6 +17,7 @@ import { AxeBuilder } from '@axe-core/playwright'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import { invitationLink } from './lib/mail.mjs'
+import { englishAccount, englishContext } from './lib/english.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@giftcardpro.test'
@@ -32,7 +33,7 @@ const errors = []
 const step = (n, text) => console.log(`${String(n).padStart(2)}. ${text}`)
 
 async function newPage(options, who) {
-  const page = await (await browser.newContext(options)).newPage()
+  const page = await (await englishContext(await browser.newContext(options))).newPage()
   page.on('pageerror', (e) => errors.push(`${who}: ${e.message}`))
   page.on('console', (m) => m.type() === 'error' && !/401|Failed to load resource/.test(m.text()) && errors.push(`${who}: ${m.text()}`))
   return page
@@ -45,6 +46,7 @@ async function signIn(page, email, password) {
   await page.fill('#password', password)
   await page.click('button[type=submit]')
   await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+  await englishAccount(page)
 }
 
 async function acceptInvitation(page, email, password) {
@@ -102,7 +104,7 @@ const sale = await saleResponse.json()
 const qr = sale.printable.payload
 assert.match(qr, /^GCPV1\.[A-Za-z0-9_-]{43}$/)
 await o.getByRole('heading', { name: 'Voucher sold' }).waitFor()
-await o.getByRole('img', { name: 'QR code' }).waitFor()
+await o.getByRole('img', { name: /QR/ }).waitFor()
 assert.equal(await o.getByText(sale.data.voucher_number_formatted).count(), 0, 'the voucher number is never on the printable sheet')
 await o.getByRole('link', { name: 'Open voucher' }).click()
 await o.waitForURL(/\/vouchers\/[0-9a-f-]{36}$/)

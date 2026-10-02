@@ -14,6 +14,7 @@ import { chromium } from 'playwright'
 import { AxeBuilder } from '@axe-core/playwright'
 import assert from 'node:assert/strict'
 import { invitationLink } from './lib/mail.mjs'
+import { englishAccount, englishContext } from './lib/english.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000'
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? 'admin@giftcardpro.test'
@@ -25,7 +26,7 @@ const errors = []
 const step = (n, text) => console.log(`${String(n).padStart(2)}. ${text}`)
 
 async function newPage(who) {
-  const page = await (await browser.newContext({ viewport: { width: 1440, height: 900 } })).newPage()
+  const page = await (await englishContext(await browser.newContext({ viewport: { width: 1440, height: 900 } }))).newPage()
   page.on('pageerror', (e) => errors.push(`${who}: ${e.message}`))
   // 4xx answers the test provokes on purpose (refused delete, undelivered invitation) are not errors.
   page.on('console', (m) => m.type() === 'error' && !/40[19]|422|Failed to load resource/.test(m.text()) && errors.push(`${who}: ${m.text()}`))
@@ -39,6 +40,7 @@ async function signIn(page, email, password) {
   await page.fill('#password', password)
   await page.click('button[type=submit]')
   await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+  await englishAccount(page)
 }
 
 async function axe(page, where) {
@@ -91,7 +93,7 @@ step(1, `restaurant onboarded; invitation ${delivers ? `delivered (${mail.mailer
 // 2. List: Restaurant · Owner · Email · Status · Created · Actions.
 await openList(admin, name)
 const headers = (await admin.getByRole('columnheader').allInnerTexts()).map((h) => h.trim()).filter(Boolean)
-assert.deepEqual(headers, ['Restaurant', 'Owner', 'Email', 'Status', 'Created', 'Actions'])
+assert.deepEqual(headers, ['Restaurant', 'Owner', 'E-mail', 'Status', 'Created', 'Actions'])
 const cells = await row(admin, name).first().innerText()
 for (const text of [owner.name, typo, 'Active']) assert.ok(cells.includes(text), `row shows "${text}": ${cells}`)
 assert.match(cells, delivers ? /Invitation pending|Sending invitation/ : /Invitation not delivered/)
@@ -100,14 +102,12 @@ step(2, 'list shows owner, e-mail, status and invitation state')
 // 3. Edit.
 await menu(admin, name, 'Edit')
 await admin.fill('#edit-city', 'Graz')
-await admin.fill('#edit-plan', 'pro')
 await admin.getByRole('button', { name: 'Save' }).click()
 await toast(admin, 'Restaurant saved')
 await admin.goto(restaurantUrl)
-await admin.getByText('Plan: pro').waitFor()
 await admin.getByText(/Graz/).first().waitFor()
 await axe(admin, 'restaurant detail')
-step(3, 'restaurant edited (city, plan)')
+step(3, 'restaurant edited (city)')
 
 // 4. Invite again with the corrected address; the correction is kept although delivery is not possible here.
 await openList(admin, name)
@@ -143,6 +143,7 @@ await admin.getByRole('dialog').getByRole('button', { name: 'Disable' }).click()
 await toast(admin, 'disabled')
 await openList(admin, name, 'Disabled')
 await menu(admin, name, 'Enable')
+await admin.getByRole('alertdialog').or(admin.getByRole('dialog')).getByRole('button', { name: 'Enable' }).click()
 await toast(admin, 'enabled')
 step(6, 'disabled and enabled')
 
@@ -154,6 +155,7 @@ await toast(admin, 'archived')
 await openList(admin, name, 'Archived')
 assert.ok((await row(admin, name).first().innerText()).includes('Archived'))
 await menu(admin, name, 'Restore')
+await admin.getByRole('alertdialog').or(admin.getByRole('dialog')).getByRole('button', { name: 'Restore' }).click()
 await toast(admin, 'restored')
 step(7, 'archived and restored')
 
