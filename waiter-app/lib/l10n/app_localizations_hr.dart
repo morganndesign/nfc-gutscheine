@@ -362,7 +362,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get readyScan => 'Skeniraj vaučer';
 
   @override
-  String get readyTapCard => 'Prislonite karticu';
+  String get readyTapCard => 'Plati karticom';
 
   @override
   String get readySell => 'Prodaj vaučer';
@@ -647,6 +647,9 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get successNext => 'Skeniraj sljedeći vaučer';
+
+  @override
+  String get successNextCard => 'Sljedeća kartica';
 
   @override
   String get successShowGuest => 'Pokaži gostu';

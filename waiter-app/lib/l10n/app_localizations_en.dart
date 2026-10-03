@@ -362,7 +362,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get readyScan => 'Scan voucher';
 
   @override
-  String get readyTapCard => 'Tap card';
+  String get readyTapCard => 'Pay with card';
 
   @override
   String get readySell => 'Sell voucher';
@@ -646,6 +646,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get successNext => 'Scan next voucher';
+
+  @override
+  String get successNextCard => 'Next card';
 
   @override
   String get successShowGuest => 'Show guest';

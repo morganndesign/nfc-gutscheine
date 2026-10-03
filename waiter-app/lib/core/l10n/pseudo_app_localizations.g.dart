@@ -643,6 +643,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get successNext => pseudoLocalize(base.successNext);
 
   @override
+  String get successNextCard => pseudoLocalize(base.successNextCard);
+
+  @override
   String get successShowGuest => pseudoLocalize(base.successShowGuest);
 
   @override

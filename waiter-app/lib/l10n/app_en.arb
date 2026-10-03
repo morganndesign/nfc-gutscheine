@@ -495,9 +495,9 @@
   "@readyScan": {
     "description": "Spec key: ready.scan (12 §5.6) · Max: 24 · Notes: ADR-002 · primary"
   },
-  "readyTapCard": "Tap card",
+  "readyTapCard": "Pay with card",
   "@readyTapCard": {
-    "description": "Spec key: ready.tapCard (12 §5.6) · Max: 24 · Notes: Phase 4 · secondary, only with NFC"
+    "description": "Spec key: ready.tapCard (12 §5.6) · Max: 24 · Notes: Phase 4 · secondary, only with NFC; names the action, not the gesture (top-up also taps the card)"
   },
   "readySell": "Sell voucher",
   "@readySell": {
@@ -937,6 +937,10 @@
   "successNext": "Scan next voucher",
   "@successNext": {
     "description": "Spec key: success.next (12 §5.11) · Max: 24 · Notes: B · ADR-002 wording"
+  },
+  "successNextCard": "Next card",
+  "@successNextCard": {
+    "description": "Spec key: success.nextCard (12 §5.11) · Max: 24 · Notes: 03b · after a card payment: opens the card reader again"
   },
   "successShowGuest": "Show guest",
   "@successShowGuest": {

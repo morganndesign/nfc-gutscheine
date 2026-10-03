@@ -710,10 +710,10 @@ abstract class AppLocalizations {
   /// **'Scan voucher'**
   String get readyScan;
 
-  /// Spec key: ready.tapCard (12 §5.6) · Max: 24 · Notes: Phase 4 · secondary, only with NFC
+  /// Spec key: ready.tapCard (12 §5.6) · Max: 24 · Notes: Phase 4 · secondary, only with NFC; names the action, not the gesture (top-up also taps the card)
   ///
   /// In en, this message translates to:
-  /// **'Tap card'**
+  /// **'Pay with card'**
   String get readyTapCard;
 
   /// Spec key: ready.sell (12 §5.6) · Max: 24 · Notes: ADR-002 · opens S20; only with vouchers.sell
@@ -1165,6 +1165,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Scan next voucher'**
   String get successNext;
+
+  /// Spec key: success.nextCard (12 §5.11) · Max: 24 · Notes: 03b · after a card payment: opens the card reader again
+  ///
+  /// In en, this message translates to:
+  /// **'Next card'**
+  String get successNextCard;
 
   /// Spec key: success.showGuest (12 §5.11) · Max: 24 · Notes: 03b · presentation mode
   ///

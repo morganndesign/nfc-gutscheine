@@ -541,7 +541,7 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `ready.title` | Gutschein scannen | Scan the voucher | Skenirajte vaučer | 32 | ADR-002 |
 | `ready.hint` | Kamera auf den QR-Code des Gutscheins richten – gedruckt oder am Handy des Gastes. | Point the camera at the voucher's QR code – printed or on the guest's phone. | Usmjerite kameru na QR kôd vaučera – ispisan ili na telefonu gosta. | 90 | ADR-002 |
 | `ready.scan` | Gutschein scannen | Scan voucher | Skeniraj vaučer | 24 | ADR-002 · primary |
-| `ready.tapCard` | Karte ans Handy halten | Tap card | Prislonite karticu | 24 | Phase 4 · secondary, only with NFC |
+| `ready.tapCard` | Mit Karte bezahlen | Pay with card | Plati karticom | 24 | Phase 4 · secondary, only with NFC; names the action, not the gesture (top-up also taps the card) |
 | `ready.sell` | Gutschein verkaufen | Sell voucher | Prodaj vaučer | 24 | ADR-002 · opens S20; only with `vouchers.sell` |
 | `ready.pending.title` | Einlösung noch nicht bestätigt | Redemption not confirmed yet | Iskorištavanje još nije potvrđeno | 32 | ADR-002 · banner while an attempt is unresolved (audit M1, M2, M6) |
 | `ready.pending.body` | {amount} auf Gutschein •••• {last4}. Wird automatisch geprüft – es wird nie doppelt gebucht. | {amount} on voucher •••• {last4}. Checked automatically – nothing is ever booked twice. | {amount} na vaučeru •••• {last4}. Provjerava se automatski – ništa se ne knjiži dvaput. | 90 | ADR-002 |
@@ -642,6 +642,7 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `success.remaining` | Restguthaben {amount} | Remaining balance {amount} | Preostalo stanje {amount} | 36 | **B** |
 | `success.empty` | Gutschein ist jetzt leer | Voucher is now empty | Vaučer je sada prazan | 28 | 03b · replaces the remaining line at 0 |
 | `success.next` | Nächsten Gutschein scannen | Scan next voucher | Skeniraj sljedeći vaučer | 24 | **B** · ADR-002 wording |
+| `success.nextCard` | Nächste Karte | Next card | Sljedeća kartica | 24 | 03b · after a card payment: opens the card reader again |
 | `success.showGuest` | Dem Gast zeigen | Show guest | Pokaži gostu | 24 | 03b · presentation mode |
 | `success.card` | Gutschein •••• {last4} | Voucher •••• {last4} | Vaučer •••• {last4} | 20 | 12 · caption |
 | `guest.remaining.label` | Restguthaben | Remaining balance | Preostalo stanje | 20 | 03b · Show-guest mode |
@@ -949,7 +950,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **415 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **416 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

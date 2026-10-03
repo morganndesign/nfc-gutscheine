@@ -6,6 +6,7 @@ import 'package:giftcard_waiter/app/app_scope.dart';
 import 'package:giftcard_waiter/app/money.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/components/support/announce.dart';
+import 'package:giftcard_waiter/core/api/models.dart';
 import 'package:giftcard_waiter/core/format/format.dart';
 import 'package:giftcard_waiter/core/state/loop_controller.dart';
 import 'package:giftcard_waiter/core/state/loop_state.dart';
@@ -13,6 +14,7 @@ import 'package:giftcard_waiter/core/storage/recent_store.dart';
 import 'package:giftcard_waiter/core/theme/theme.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
 
+import 'card_texts.dart';
 import 'charge/entrance.dart';
 import 'charge/money_text.dart';
 
@@ -110,7 +112,11 @@ class _SuccessScreenState extends State<SuccessScreen> {
   void _finish() => _loop.finishSuccess();
 
   /// Straight to the QR scanner for the next voucher.
-  void _scanNext() => _loop.openQr();
+  /// A card voucher can only be spent with a tap, so the next guest most likely holds a card too.
+  bool get _paidByCard => _shown?.voucher.kind == VoucherKind.card;
+
+  void _scanNext() =>
+      _paidByCard ? _loop.openCardTap(texts: cardTexts(AppLocalizations.of(context))) : _loop.openQr();
 
   @override
   Widget build(BuildContext context) {
@@ -147,6 +153,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
                   onFinish: _finish,
                   onShowGuest: () => _loop.presentToGuest(true),
                   onScanNext: _scanNext,
+                  nextIsCard: _paidByCard,
                 ),
         ),
       ),
@@ -180,6 +187,7 @@ class _SuccessView extends StatelessWidget {
     required this.onFinish,
     required this.onShowGuest,
     required this.onScanNext,
+    required this.nextIsCard,
     super.key,
   });
 
@@ -189,6 +197,7 @@ class _SuccessView extends StatelessWidget {
   final VoidCallback onFinish;
   final VoidCallback onShowGuest;
   final VoidCallback onScanNext;
+  final bool nextIsCard;
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +297,11 @@ class _SuccessView extends StatelessWidget {
       children: <Widget>[
         TertiaryButton(label: l10n.successShowGuest, large: true, onPressed: onShowGuest),
         const SizedBox(height: Space.s2),
-        PrimaryButton(label: l10n.successNext, icon: WaiterIcon.scanQrCode, onPressed: onScanNext),
+        PrimaryButton(
+          label: nextIsCard ? l10n.successNextCard : l10n.successNext,
+          icon: nextIsCard ? WaiterIcon.nfcArcs : WaiterIcon.scanQrCode,
+          onPressed: onScanNext,
+        ),
       ],
     );
 

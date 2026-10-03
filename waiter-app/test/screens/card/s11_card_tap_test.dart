@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/core/platform/nfc_relay.dart';
+import 'package:giftcard_waiter/core/state/loop_state.dart';
+import 'package:giftcard_waiter/core/theme/waiter_icons.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
 import 'package:giftcard_waiter/screens/s07_charge.dart';
 import 'package:giftcard_waiter/screens/s11_card_tap.dart';
@@ -45,6 +47,45 @@ void main() {
       await finishApp(tester, app);
     });
   }
+
+  // Found in the first iPhone test (2026-10-03): after a card payment the next action opened the QR camera.
+  testWidgets('after a card payment the next action is the next card, not the QR camera', (WidgetTester tester) async {
+    final FakeNfcRelay nfc = FakeNfcRelay()..card = FakeCard();
+    final TestApp app = await TestApp.create(nfc: nfc);
+    app.backend
+      ..on('POST', '/presentments/cards', FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', '/presentments/cards/${Payloads.cardAuthentication}', FakeReply(201, Payloads.cardPresentment()))
+      ..on(
+        'POST',
+        '/vouchers/${Payloads.voucherId}/redemptions',
+        FakeReply(201, Payloads.redeemed(amount: 100, balanceAfter: 4900)),
+      );
+    await pumpWaiterApp(tester, app);
+
+    expect(text('Pay with card'), findsOneWidget, reason: 'the button names the action: top-up taps the card too');
+    await tester.tap(text(en.readyTapCard));
+    await settle(tester, 20);
+    expect(find.byType(ChargeScreen), findsOneWidget);
+    await tester.tap(find.descendant(of: find.byType(Keypad), matching: text('1')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(find.descendant(of: find.byType(Keypad), matching: text('00')));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.tap(
+      find.ancestor(of: find.textContaining('Redeem', findRichText: true), matching: find.byType(PrimaryButton)).first,
+    );
+    await settle(tester);
+    expect(app.loop.state, isA<SuccessState>());
+    await tester.pump(const Duration(milliseconds: 600));
+
+    final PrimaryButton next = tester.widget<PrimaryButton>(find.byType(PrimaryButton));
+    expect(next.label, en.successNextCard);
+    expect(next.icon, WaiterIcon.nfcArcs);
+    await tester.tap(find.byType(PrimaryButton));
+    await settle(tester, 20);
+    expect(app.loop.state, isNot(isA<QrScanState>()));
+    expect(nfc.prompts.length, 2, reason: 'the card reader opens again');
+    await finishApp(tester, app);
+  });
 
   testWidgets('no "Tap card" on a phone without NFC', (WidgetTester tester) async {
     final TestApp app = await TestApp.create(nfc: FakeNfcRelay(available: NfcAvailability.unsupported));

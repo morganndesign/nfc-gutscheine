@@ -425,10 +425,13 @@ abstract final class Payloads {
 
   static Map<String, Object?> cardPresentment({int balance = 5000, String status = 'active', String id = presentmentId}) {
     final Map<String, Object?> p = presentment(balance: balance, status: status, id: id);
-    final Map<String, Object?> data = Map<String, Object?>.of(p['data']! as Map<String, Object?>)
+    final Map<String, Object?> spend = p['data']! as Map<String, Object?>;
+    final Map<String, Object?> data = Map<String, Object?>.of(spend)
       ..['method'] = 'live_auth'
       ..['level'] = 'A3'
-      ..['card'] = <String, Object?>{'card_number': 'B-2026-0001-0001', 'state': 'active'};
+      ..['card'] = <String, Object?>{'card_number': 'B-2026-0001-0001', 'state': 'active'}
+      // A card voucher: only a tap can spend it.
+      ..['voucher'] = <String, Object?>{...spend['voucher']! as Map<String, Object?>, 'kind': 'card'};
     return <String, Object?>{'data': data};
   }
 

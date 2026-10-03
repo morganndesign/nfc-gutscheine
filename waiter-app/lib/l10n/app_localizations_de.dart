@@ -363,7 +363,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get readyScan => 'Gutschein scannen';
 
   @override
-  String get readyTapCard => 'Karte ans Handy halten';
+  String get readyTapCard => 'Mit Karte bezahlen';
 
   @override
   String get readySell => 'Gutschein verkaufen';
@@ -648,6 +648,9 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get successNext => 'Nächsten Gutschein scannen';
+
+  @override
+  String get successNextCard => 'Nächste Karte';
 
   @override
   String get successShowGuest => 'Dem Gast zeigen';
