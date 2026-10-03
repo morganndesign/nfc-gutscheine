@@ -108,7 +108,7 @@ request, so iOS build problems appear before a merge.
 | Deployment target | iOS 16.0 (app and Pods) |
 | Devices | iPhone and iPad |
 | Signing | **Automatic**; no team stored in the project — CI passes `DEVELOPMENT_TEAM`, local builds select it in Xcode or write it to the uncommitted `ios/Flutter/Team.xcconfig` |
-| Entitlements | none (`Runner.entitlements` is empty: no NFC, no Associated Domains) |
+| Entitlements | NFC tag reading (`com.apple.developer.nfc.readersession.formats` = TAG); ISO 7816 AID `D2760000850101` in Info.plist; no Associated Domains |
 | Info.plist | camera and Face ID usage texts (localised DE/EN/BS/HR/SR), `ITSAppUsesNonExemptEncryption = NO` (HTTPS only), `FlutterDeepLinkingEnabled = NO` |
 | Privacy manifest | `Runner/PrivacyInfo.xcprivacy`: no tracking; e-mail, user ID, device ID, purchase history for app functionality |
 | App icon | single-size 1024 px, opaque, with dark and tinted variants; launch screen storyboard (light/dark) |
@@ -116,7 +116,9 @@ request, so iOS build problems appear before a merge.
 
 ### First release (needs your Apple Developer account)
 
-1. **App ID:** created on the first signed build (automatic signing). No capabilities need to be enabled.
+1. **App ID:** created on the first signed build (automatic signing). It needs the **NFC Tag Reading** capability
+   (developer.apple.com → Identifiers → `eu.tapredeem.waiter`); Xcode enables it from the entitlements, check it there
+   if signing fails.
 2. **App Store Connect → Apps → +**: platform iOS, name, primary language, bundle id `eu.tapredeem.waiter`, SKU.
    Note the **Apple ID** (App Information) and put `https://apps.apple.com/app/id<Apple ID>` into `APP_STORE_URL`
    in `config/production.json`.
