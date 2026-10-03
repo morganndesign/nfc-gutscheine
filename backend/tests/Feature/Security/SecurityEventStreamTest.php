@@ -97,6 +97,7 @@ final class SecurityEventStreamTest extends TestCase
     {
         $restaurant = $this->restaurant();
         $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $this->withHeaders(['X-Device-Id' => 'web-'.str_repeat('b', 32)]);
         $sale = $this->postJson('/api/v1/vouchers', [
             'value' => 3000,
             'form' => 'printable',
@@ -106,6 +107,8 @@ final class SecurityEventStreamTest extends TestCase
         $qr = (string) $sale->json('printable.payload');
 
         $issued = $this->event(SecurityEventType::VoucherIssue);
+        // The dashboard sends a device id too; a browser session is still a person, not the waiter app.
+        $this->assertSame(SecurityActorKind::User, $issued->actor_kind);
         $this->assertSame($voucherId, $issued->subject_id);
         $this->assertSame('voucher', $issued->subject_type);
         $this->assertSame(3000, $issued->amount);
@@ -162,7 +165,8 @@ final class SecurityEventStreamTest extends TestCase
         ])->assertCreated()->json('data.token');
         $this->assertSame('android', $this->event(SecurityEventType::DeviceTokenIssue)->data['platform']);
         $this->assertSame('app', $this->event(SecurityEventType::SignIn)->data['channel']);
-        $this->assertSame(SecurityEventType::DeviceRegister, SecurityEvent::query()->where('type', SecurityEventType::DeviceRegister->value)->sole()->type);
+        $this->assertSame(SecurityActorKind::Device, SecurityEvent::query()->where('type', SecurityEventType::DeviceRegister->value)->sole()->actor_kind);
+        $this->assertSame(SecurityActorKind::Device, $this->event(SecurityEventType::DeviceTokenIssue)->actor_kind);
 
         $this->app['auth']->forgetGuards();
         $this->withHeaders(['Authorization' => 'Bearer '.$token, 'X-Device-Id' => 'b1a2c3d4-e5f6-4711-8899-aabbccddeeff'])

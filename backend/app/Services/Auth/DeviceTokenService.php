@@ -79,9 +79,9 @@ final class DeviceTokenService
             throw new AuthorizationException;
         }
 
-        $device = $this->devices->resolve($station ? null : $restaurant, $user, $deviceId, $request->userAgent(), $request->ip(), $deviceName);
+        $device = $this->devices->resolve($station ? null : $restaurant, $user, $deviceId, $request->userAgent(), $request->ip(), $deviceName, atTill: true);
 
-        $actor = new Actor($user, $device, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'));
+        $actor = new Actor($user, $device, $request->ip(), mb_substr((string) $request->userAgent(), 0, 500), $request->attributes->get('request_id'), atTill: true);
 
         if (! $device->isActive()) {
             $this->events->refused(SecurityEventType::DeviceTokenIssue, $actor, new DeviceRevokedException, $device, data: ['platform' => $platform]);

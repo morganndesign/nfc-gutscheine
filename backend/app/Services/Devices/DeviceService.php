@@ -35,7 +35,7 @@ final class DeviceService
      * @param  Restaurant|null  $restaurant  null: a platform device (the personalisation station)
      * @param  string|null  $name  Name reported by a native app on first sign-in ("Pixel 7"); browsers get a name derived from the user agent.
      */
-    public function resolve(?Restaurant $restaurant, User $user, string $deviceId, ?string $userAgent, ?string $ip, ?string $name = null): Device
+    public function resolve(?Restaurant $restaurant, User $user, string $deviceId, ?string $userAgent, ?string $ip, ?string $name = null, bool $atTill = false): Device
     {
         $fingerprint = self::fingerprint($restaurant?->getKey(), $deviceId);
         $scoped = fn () => $restaurant !== null
@@ -62,8 +62,8 @@ final class DeviceService
                 'last_user_id' => $user->getKey(),
             ])->save();
 
-            $this->audit->log('device.registered', new Actor($user, $device, $ip, $userAgent), $device, null, ['name' => $device->name], restaurantId: $restaurant?->getKey());
-            $this->events->record(SecurityEventType::DeviceRegister, new Actor($user, $device, $ip, $userAgent), subject: $device, data: [
+            $this->audit->log('device.registered', new Actor($user, $device, $ip, $userAgent, atTill: $atTill), $device, null, ['name' => $device->name], restaurantId: $restaurant?->getKey());
+            $this->events->record(SecurityEventType::DeviceRegister, new Actor($user, $device, $ip, $userAgent, atTill: $atTill), subject: $device, data: [
                 'platform' => $device->type,
             ], restaurantId: $restaurant?->getKey());
 

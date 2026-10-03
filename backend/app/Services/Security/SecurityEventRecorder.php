@@ -144,7 +144,7 @@ final class SecurityEventRecorder
     private function actorKind(Actor $actor): SecurityActorKind
     {
         return match (true) {
-            $actor->device !== null => SecurityActorKind::Device,
+            $actor->atTill => SecurityActorKind::Device,
             $actor->user !== null => SecurityActorKind::User,
             $actor->ipAddress === null => SecurityActorKind::System,
             default => SecurityActorKind::Anonymous,
