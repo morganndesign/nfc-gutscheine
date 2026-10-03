@@ -1,6 +1,6 @@
 {
   "APP_ENV": "production",
   "API_BASE_URL": "https://app.giftcardpro.at/api/v1",
-  "APP_STORE_URL": "",
+  "APP_STORE_URL": "https://apps.apple.com/app/id6818771811",
   "PLAY_STORE_URL": ""
 }
