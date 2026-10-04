@@ -1987,12 +1987,36 @@
   "@stationEmpty": {
     "description": "Spec key: station.empty (12 §5.19) · Max: 60 · Notes: Station · empty list"
   },
-  "stationBatch": "{count, plural, one {{count} card done} other {{count} cards done}}",
-  "@stationBatch": {
-    "description": "Spec key: station.batch (12 §5.19) · Max: 28 · Notes: Station · list row subtitle",
+  "stationChooseHint": "Tap a batch, then hold the blank cards to the phone one after the other.",
+  "@stationChooseHint": {
+    "description": "Spec key: station.chooseHint (12 §5.19) · Max: 90 · Notes: Station · under the batch list title"
+  },
+  "stationProgress": "{done} of {total} done",
+  "@stationProgress": {
+    "description": "Spec key: station.progress (12 §5.19) · Max: 28 · Notes: Station · list row and run; {total} = cards ordered",
     "placeholders": {
-      "count": {
-        "type": "int"
+      "done": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      }
+    }
+  },
+  "stationNoCard": "No card detected. Tap the batch again.",
+  "@stationNoCard": {
+    "description": "Spec key: station.noCard (12 §5.19) · Max: 60 · Notes: Station · the reader closed without a card (iPhone sheet closed or timed out)"
+  },
+  "stationCompleteTitle": "Batch complete",
+  "@stationCompleteTitle": {
+    "description": "Spec key: station.complete.title (12 §5.19) · Max: 28 · Notes: Station · every ordered card is personalised"
+  },
+  "stationCompleteBody": "All {total} cards are personalised. Now release the batch in the dashboard under \"Card batches\".",
+  "@stationCompleteBody": {
+    "description": "Spec key: station.complete.body (12 §5.19) · Max: 120 · Notes: Station · batch_complete; no more cards are taken",
+    "placeholders": {
+      "total": {
+        "type": "String"
       }
     }
   },

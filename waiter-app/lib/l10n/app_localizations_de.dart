@@ -1460,14 +1460,23 @@ class AppLocalizationsDe extends AppLocalizations {
   String get stationEmpty => 'Keine Charge wartet auf Personalisierung.';
 
   @override
-  String stationBatch(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count Karten fertig',
-      one: '$count Karte fertig',
-    );
-    return '$_temp0';
+  String get stationChooseHint =>
+      'Charge antippen, dann die leeren Karten nacheinander ans Handy halten.';
+
+  @override
+  String stationProgress(String done, String total) {
+    return '$done von $total fertig';
+  }
+
+  @override
+  String get stationNoCard => 'Keine Karte erkannt. Charge erneut antippen.';
+
+  @override
+  String get stationCompleteTitle => 'Charge fertig';
+
+  @override
+  String stationCompleteBody(String total) {
+    return 'Alle $total Karten sind personalisiert. Jetzt im Dashboard unter „Kartenserien\" freigeben.';
   }
 
   @override

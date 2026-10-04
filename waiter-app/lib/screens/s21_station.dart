@@ -9,8 +9,9 @@ import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'scan/sheet_rows.dart';
 
-/// S21 · Personalisation station (internal; platform staff with a station token, Android). Choose a batch, then
-/// hold blank cards to the phone one after the other: the server keys and checks each card through the phone.
+/// S21 · Personalisation station (internal; platform staff with a station token, Android and iPhone). Choose a
+/// batch, then hold blank cards to the phone one after the other: the server keys and checks each card through the
+/// phone. The run ends by itself when the batch has every card it ordered.
 class StationScreen extends StatefulWidget {
   const StationScreen({super.key});
 
@@ -58,7 +59,11 @@ class _StationScreenState extends State<StationScreen> {
               TopBar.task(onClose: batch != null ? station.finish : null, title: batch?.batchCode ?? l10n.stationTitle),
               if (station.last case final StationOutcome last) _OutcomeBanner(outcome: last),
               Expanded(
-                child: batch == null ? _BatchList(station: station) : _Run(station: station),
+                child: batch == null
+                    ? _BatchList(station: station)
+                    : station.phase == StationPhase.complete
+                    ? _Complete(station: station)
+                    : _Run(station: station),
               ),
             ],
           ),
@@ -86,6 +91,11 @@ class _BatchList extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: layout.margin),
           child: ScaledText(l10n.stationChoose, type: TypeTokens.titleM),
         ),
+        const SizedBox(height: Space.s1),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: layout.margin),
+          child: ScaledText(l10n.stationChooseHint, type: TypeTokens.bodyM, color: context.colors.fgSecondary),
+        ),
         const SizedBox(height: Space.s2),
         if (station.loading && batches == null)
           const Padding(
@@ -112,7 +122,8 @@ class _BatchList extends StatelessWidget {
             SheetRow(
               label: b.restaurant,
               caption: b.batchCode,
-              value: l10n.stationBatch(b.qaPassed),
+              value: l10n.stationProgress('${b.qaPassed}', '${b.quantityOrdered}'),
+              trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s20, color: context.colors.fgTertiary),
               showDivider: b != batches!.last,
               onPressed: () => station.choose(b),
             ),
@@ -167,12 +178,57 @@ class _Run extends StatelessWidget {
                         : ScaledText(l10n.stationWaiting, type: TypeTokens.bodyL, textAlign: TextAlign.center),
                   ),
                   const SizedBox(height: Space.s4),
-                  ScaledText(l10n.stationBatch(station.finished), type: TypeTokens.bodyM, color: c.fgSecondary),
+                  ScaledText(l10n.stationProgress('${station.done}', '${station.total}'), type: TypeTokens.bodyM, color: c.fgSecondary),
                 ],
               ),
             ),
           ),
           SecondaryButton(label: l10n.stationFinish, onPressed: station.finish),
+          const SizedBox(height: Space.s6),
+        ],
+      ),
+    );
+  }
+}
+
+/// Every card the batch ordered is personalised: the next step is the release in the dashboard.
+class _Complete extends StatelessWidget {
+  const _Complete({required this.station});
+
+  final StationController station;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppLocalizations l10n = AppLocalizations.of(context);
+    final WaiterColors c = context.colors;
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: context.layout.margin),
+      child: Column(
+        children: <Widget>[
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const SuccessMark(),
+                  const SizedBox(height: Space.s6),
+                  Semantics(
+                    liveRegion: true,
+                    header: true,
+                    child: ScaledText(l10n.stationCompleteTitle, type: TypeTokens.titleL, textAlign: TextAlign.center),
+                  ),
+                  const SizedBox(height: Space.s2),
+                  ScaledText(
+                    l10n.stationCompleteBody('${station.total}'),
+                    type: TypeTokens.bodyM,
+                    color: c.fgSecondary,
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          PrimaryButton(label: l10n.commonDone, onPressed: station.finish),
           const SizedBox(height: Space.s6),
         ],
       ),
@@ -196,6 +252,8 @@ class _OutcomeBanner extends StatelessWidget {
     return switch (outcome.failure!) {
       StationFailure.rejected => StatusBanner(tone: BannerTone.danger, title: l10n.stationRejected, body: code),
       StationFailure.unknownChip => StatusBanner(tone: BannerTone.danger, title: l10n.stationUnknownChip, body: code),
+      StationFailure.noCard => StatusBanner(tone: BannerTone.info, title: l10n.stationNoCard),
+      StationFailure.complete => StatusBanner(tone: BannerTone.success, title: l10n.stationCompleteTitle),
       StationFailure.nfcOff => StatusBanner(
         tone: BannerTone.warning,
         title: l10n.problemNfcOffTitle,

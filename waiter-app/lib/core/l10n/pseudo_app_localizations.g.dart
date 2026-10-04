@@ -1405,8 +1405,25 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get stationEmpty => pseudoLocalize(base.stationEmpty);
 
   @override
-  String stationBatch(int count) =>
-      pseudoLocalize(base.stationBatch(count), <String>[]);
+  String get stationChooseHint => pseudoLocalize(base.stationChooseHint);
+
+  @override
+  String stationProgress(String done, String total) => pseudoLocalize(
+    base.stationProgress(pseudoMarker(0), pseudoMarker(1)),
+    <String>[done, total],
+  );
+
+  @override
+  String get stationNoCard => pseudoLocalize(base.stationNoCard);
+
+  @override
+  String get stationCompleteTitle => pseudoLocalize(base.stationCompleteTitle);
+
+  @override
+  String stationCompleteBody(String total) => pseudoLocalize(
+    base.stationCompleteBody(pseudoMarker(0)),
+    <String>[total],
+  );
 
   @override
   String get stationWaiting => pseudoLocalize(base.stationWaiting);

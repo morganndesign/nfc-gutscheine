@@ -245,15 +245,15 @@ abstract final class Payloads {
     'restaurant': null,
   };
 
-  static Map<String, Object?> stationBatches() => <String, Object?>{
+  static Map<String, Object?> stationBatches({int ordered = 50, int done = 2}) => <String, Object?>{
     'data': <Object?>[
       <String, Object?>{
         'id': 'b-1',
         'batch_code': 'B-2026-001',
         'restaurant': 'Zum Goldenen Hirschen',
-        'quantity_ordered': 50,
-        'registered': 3,
-        'qa_passed': 2,
+        'quantity_ordered': ordered,
+        'registered': done + 1,
+        'qa_passed': done,
       },
     ],
   };

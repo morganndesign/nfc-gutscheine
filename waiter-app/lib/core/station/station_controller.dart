@@ -18,6 +18,9 @@ enum StationPhase {
 
   /// A card is on the phone; the server's rounds are running.
   working,
+
+  /// Every card the batch ordered is personalised: the reader stops; the batch is released in the dashboard.
+  complete,
 }
 
 /// Why the last card is not finished. Every one of them is resumable by holding the card again, except
@@ -32,8 +35,14 @@ enum StationFailure {
   /// Not a chip of this batch, or already finished.
   rejected,
 
+  /// The reader closed without a card (the iPhone sheet was closed or timed out).
+  noCard,
+
   /// A chip whose keys are neither factory nor ours.
   unknownChip,
+
+  /// The batch already has every card it ordered (another phone finished it).
+  complete,
 
   offline,
   server,
@@ -106,6 +115,12 @@ class StationController extends ChangeNotifier {
   /// Cards finished in this batch run.
   int get finished => _finished;
 
+  /// Cards of the chosen batch that are done, before this run and in it.
+  int get done => (_batch?.qaPassed ?? 0) + _finished;
+
+  /// Cards the chosen batch ordered.
+  int get total => _batch?.quantityOrdered ?? 0;
+
   Future<void> load() async {
     _loading = true;
     _loadFailure = null;
@@ -143,6 +158,11 @@ class StationController extends ChangeNotifier {
     _last = null;
     _finished = 0;
     final int run = ++_run;
+    if (done >= total) {
+      _phase = StationPhase.complete;
+      _notify();
+      return;
+    }
     unawaited(_cards(run));
   }
 
@@ -167,9 +187,10 @@ class StationController extends ChangeNotifier {
       } on NfcRelayException catch (e) {
         if (run != _run || _disposed) return;
         if (e.failure == NfcFailure.cancelled || e.failure == NfcFailure.timeout) {
-          // iPhone sheet closed: the operator decides (finish or choose again).
+          // iPhone sheet closed or timed out: the operator decides (finish or choose again) and is told why.
           _batch = null;
           _phase = StationPhase.batches;
+          _last = const StationOutcome.failed(StationFailure.noCard);
           _notify();
           return;
         }
@@ -197,6 +218,13 @@ class StationController extends ChangeNotifier {
       if (run != _run || _disposed) return;
       _last = outcome;
       if (outcome.cardNumber != null) _finished++;
+      if ((outcome.cardNumber != null && done >= total) || outcome.failure == StationFailure.complete) {
+        // The batch has every card it ordered: no more blanks are taken (the server refuses them anyway).
+        if (outcome.failure != null) _last = null;
+        _phase = StationPhase.complete;
+        _notify();
+        return;
+      }
       _notify();
       await Future<void>.delayed(_pause);
     }
@@ -247,6 +275,7 @@ class StationController extends ChangeNotifier {
           return StationFailure.unknownChip;
         }
         if (reason == 'other_batch' || reason == 'already_personalized') return StationFailure.rejected;
+        if (reason == 'batch_complete') return StationFailure.complete;
         return StationFailure.refused;
       }
       if (e.status == 403) _onAuthFailure?.call(e);

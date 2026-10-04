@@ -1451,14 +1451,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get stationEmpty => 'No batch is waiting for personalisation.';
 
   @override
-  String stationBatch(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count cards done',
-      one: '$count card done',
-    );
-    return '$_temp0';
+  String get stationChooseHint =>
+      'Tap a batch, then hold the blank cards to the phone one after the other.';
+
+  @override
+  String stationProgress(String done, String total) {
+    return '$done of $total done';
+  }
+
+  @override
+  String get stationNoCard => 'No card detected. Tap the batch again.';
+
+  @override
+  String get stationCompleteTitle => 'Batch complete';
+
+  @override
+  String stationCompleteBody(String total) {
+    return 'All $total cards are personalised. Now release the batch in the dashboard under \"Card batches\".';
   }
 
   @override

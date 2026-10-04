@@ -2521,11 +2521,35 @@ abstract class AppLocalizations {
   /// **'No batch is waiting for personalisation.'**
   String get stationEmpty;
 
-  /// Spec key: station.batch (12 §5.19) · Max: 28 · Notes: Station · list row subtitle
+  /// Spec key: station.chooseHint (12 §5.19) · Max: 90 · Notes: Station · under the batch list title
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, one {{count} card done} other {{count} cards done}}'**
-  String stationBatch(int count);
+  /// **'Tap a batch, then hold the blank cards to the phone one after the other.'**
+  String get stationChooseHint;
+
+  /// Spec key: station.progress (12 §5.19) · Max: 28 · Notes: Station · list row and run; {total} = cards ordered
+  ///
+  /// In en, this message translates to:
+  /// **'{done} of {total} done'**
+  String stationProgress(String done, String total);
+
+  /// Spec key: station.noCard (12 §5.19) · Max: 60 · Notes: Station · the reader closed without a card (iPhone sheet closed or timed out)
+  ///
+  /// In en, this message translates to:
+  /// **'No card detected. Tap the batch again.'**
+  String get stationNoCard;
+
+  /// Spec key: station.complete.title (12 §5.19) · Max: 28 · Notes: Station · every ordered card is personalised
+  ///
+  /// In en, this message translates to:
+  /// **'Batch complete'**
+  String get stationCompleteTitle;
+
+  /// Spec key: station.complete.body (12 §5.19) · Max: 120 · Notes: Station · batch_complete; no more cards are taken
+  ///
+  /// In en, this message translates to:
+  /// **'All {total} cards are personalised. Now release the batch in the dashboard under \"Card batches\".'**
+  String stationCompleteBody(String total);
 
   /// Spec key: station.waiting (12 §5.19) · Max: 48 · Notes: Station · also the iPhone sheet
   ///

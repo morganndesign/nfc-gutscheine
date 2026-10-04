@@ -1455,15 +1455,24 @@ class AppLocalizationsSr extends AppLocalizations {
   String get stationEmpty => 'Nijedna serija ne čeka personalizaciju.';
 
   @override
-  String stationBatch(int count) {
-    String _temp0 = intl.Intl.pluralLogic(
-      count,
-      locale: localeName,
-      other: '$count kartica gotovo',
-      few: '$count kartice gotove',
-      one: '$count kartica gotova',
-    );
-    return '$_temp0';
+  String get stationChooseHint =>
+      'Dodirnite seriju, pa prislanjajte prazne kartice uz telefon jednu po jednu.';
+
+  @override
+  String stationProgress(String done, String total) {
+    return '$done od $total gotovo';
+  }
+
+  @override
+  String get stationNoCard =>
+      'Kartica nije prepoznata. Ponovo dodirnite seriju.';
+
+  @override
+  String get stationCompleteTitle => 'Serija gotova';
+
+  @override
+  String stationCompleteBody(String total) {
+    return 'Svih $total kartica je personalizovano. Sada seriju oslobodite u dashboardu pod „Kartenserien\".';
   }
 
   @override

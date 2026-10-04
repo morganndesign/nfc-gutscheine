@@ -427,4 +427,20 @@ final class StationPersonalizationTest extends TestCase
         $this->postJson("/api/v1/admin/card-batches/{$batch->id}/personalizations", ['rf_uid' => '04A1B2C3D4E5F6'])->assertForbidden();
         $this->postJson('/api/v1/admin/personalizations/01J0000000000000000000000A', ['responses' => ['9000']])->assertForbidden();
     }
+
+    public function test_a_complete_batch_takes_no_further_chip_and_raises_no_alert(): void
+    {
+        $batch = $this->stationBatch(quantity: 1);
+        $this->actingAsStation();
+        $this->station(Ntag424Chip::factory(), $batch)->assertOk()->assertJsonPath('data.stage', 'done');
+        $alerts = SecurityEvent::query()->count();
+
+        $this->postJson("/api/v1/admin/card-batches/{$batch->id}/personalizations", ['rf_uid' => Ntag424Chip::factory()->uidHex()])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'CARD_PERSONALIZATION_FAILED')
+            ->assertJsonPath('context.reason', 'batch_complete');
+
+        $this->assertSame(1, Card::query()->withoutGlobalScopes()->where('batch_id', $batch->id)->count());
+        $this->assertSame($alerts, SecurityEvent::query()->count(), 'the end of a run is not an incident');
+    }
 }

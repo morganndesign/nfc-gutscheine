@@ -63,6 +63,12 @@ final class CardPersonalizer
 
     public function begin(CardBatch $batch, string $rfUid, Actor $actor): PersonalizationStep
     {
+        // A batch with every card it ordered takes no new chip. That is the end of the run, not an attack: no alert.
+        if (strlen($rfUid) === 7 && ! Card::query()->withoutGlobalScopes()->where('uid', $rfUid)->exists()
+            && Card::query()->withoutGlobalScopes()->where('batch_id', $batch->getKey())->where('state', '!=', CardState::QaFailed->value)->count() >= $batch->quantity_ordered) {
+            throw new CardPersonalizationFailedException('', ['reason' => 'batch_complete']);
+        }
+
         return $this->guard($actor, 'begin', $batch, null, function () use ($batch, $rfUid, $actor): PersonalizationStep {
             if ($batch->status !== CardBatchStatus::InProduction) {
                 $this->fail('batch_not_in_production');

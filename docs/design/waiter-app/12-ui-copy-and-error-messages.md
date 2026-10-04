@@ -919,7 +919,11 @@ S21 is the internal personalisation station (platform staff, station token only;
 | `station.title` | Karten personalisieren | Personalise cards | Personalizacija kartica | 28 | Station · S21 title |
 | `station.choose` | Charge wählen | Choose a batch | Odaberite seriju | 28 | Station · batch list |
 | `station.empty` | Keine Charge wartet auf Personalisierung. | No batch is waiting for personalisation. | Nijedna serija ne čeka personalizaciju. | 60 | Station · empty list |
-| `station.batch` | {count, plural, one {# Karte fertig} other {# Karten fertig}} | {count, plural, one {# card done} other {# cards done}} | {count, plural, one {# kartica gotova} few {# kartice gotove} other {# kartica gotovo}} | 28 | Station · list row subtitle |
+| `station.chooseHint` | Charge antippen, dann die leeren Karten nacheinander ans Handy halten. | Tap a batch, then hold the blank cards to the phone one after the other. | Dodirnite seriju, pa prislanjajte prazne kartice uz telefon jednu po jednu. | 90 | Station · under the batch list title |
+| `station.progress` | {done} von {total} fertig | {done} of {total} done | {done} od {total} gotovo | 28 | Station · list row and run; `{total}` = cards ordered |
+| `station.noCard` | Keine Karte erkannt. Charge erneut antippen. | No card detected. Tap the batch again. | Kartica nije prepoznata. Ponovo dodirnite seriju. | 60 | Station · the reader closed without a card (iPhone sheet closed or timed out) |
+| `station.complete.title` | Charge fertig | Batch complete | Serija gotova | 28 | Station · every ordered card is personalised |
+| `station.complete.body` | Alle {total} Karten sind personalisiert. Jetzt im Dashboard unter „Kartenserien" freigeben. | All {total} cards are personalised. Now release the batch in the dashboard under "Card batches". | Svih {total} kartica je personalizovano. Sada seriju oslobodite u dashboardu pod „Kartenserien". | 120 | Station · `batch_complete`; no more cards are taken |
 | `station.waiting` | Leere Karte ans Handy halten. | Hold a blank card to the phone. | Prislonite praznu karticu uz telefon. | 48 | Station · also the iPhone sheet |
 | `station.working` | Wird personalisiert – Karte nicht bewegen. | Personalising – keep the card still. | Personalizacija – ne pomičite karticu. | 48 | Station · rounds running |
 | `station.done` | Karte {number} fertig | Card {number} done | Kartica {number} gotova | 40 | Station · `{number}` = inventory number |
@@ -953,7 +957,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **419 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **423 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|
