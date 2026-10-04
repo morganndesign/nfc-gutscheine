@@ -730,7 +730,8 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.card.done.title` | Karte aktiviert | Card activated | Kartica aktivirana | 28 | Cards |
 | `sale.card.done.body` | Karte {number} ist aktiv. | Card {number} is active. | Kartica {number} je aktivna. | 48 | Cards · inventory number |
 | `sale.card.failed.title` | Karte nicht aktiviert | Card not activated | Kartica nije aktivirana | 32 | Cards · nothing was sold |
-| `sale.card.notUsable` | Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen. | This card cannot be sold. Take another card from stock. | Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe. | 90 | Cards · not in stock, other restaurant |
+| `sale.card.notUsable` | Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen. | This card cannot be sold. Take another card from stock. | Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe. | 90 | Cards · any other state (bound, replaced, revoked, destroyed, …) |
+| `sale.card.alreadySold` | Diese Karte ist schon verkauft. Zum Aufladen „Karte aufladen“ wählen. | This card is already sold. To add value, choose “Top up card”. | Ova kartica je već prodana. Za dopunu izaberite „Dopuni karticu“. | 90 | Cards · state `active`; other states reuse `reload.card.notInStock`, `reload.card.lost`, `problem.cardNotUsable.suspended` / `.otherRestaurant` |
 | `reload.ready` | Karte aufladen | Top up card | Dopuni karticu | 24 | Reload · S05 button; only with `vouchers.reload` and a card reader |
 | `reload.title` | Karte aufladen | Top up card | Dopuna kartice | 28 | Reload · TopBar |
 | `reload.tap` | Die Karte des Gastes ans Handy halten. | Hold the guest's card to the phone. | Prislonite gostovu karticu uz telefon. | 64 | Reload · step 1, also the iPhone sheet |
@@ -950,7 +951,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **416 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **417 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

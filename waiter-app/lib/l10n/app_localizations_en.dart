@@ -915,6 +915,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This card cannot be sold. Take another card from stock.';
 
   @override
+  String get saleCardAlreadySold =>
+      'This card is already sold. To add value, choose “Top up card”.';
+
+  @override
   String get reloadReady => 'Top up card';
 
   @override

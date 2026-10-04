@@ -1295,7 +1295,11 @@
   },
   "saleCardNotUsable": "This card cannot be sold. Take another card from stock.",
   "@saleCardNotUsable": {
-    "description": "Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · not in stock, other restaurant"
+    "description": "Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · any other state (bound, replaced, revoked, destroyed, …)"
+  },
+  "saleCardAlreadySold": "This card is already sold. To add value, choose “Top up card”.",
+  "@saleCardAlreadySold": {
+    "description": "Spec key: sale.card.alreadySold (12 §5.13) · Max: 90 · Notes: Cards · state active; other states reuse reload.card.notInStock, reload.card.lost, problem.cardNotUsable.suspended / .otherRestaurant"
   },
   "reloadReady": "Top up card",
   "@reloadReady": {

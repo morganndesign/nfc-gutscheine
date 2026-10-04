@@ -41,8 +41,8 @@ void main() {
     }
   });
 
-  test('key count: 416 table keys (12 §5.22) = 413 ARB + 3 OS strings', () {
-    expect(messageKeys(template).length, 413);
+  test('key count: 417 table keys (12 §5.22) = 414 ARB + 3 OS strings', () {
+    expect(messageKeys(template).length, 414);
     final Set<String> plistKeys = <String>{};
     final String strings = File(
       'ios/Runner/en.lproj/InfoPlist.strings',

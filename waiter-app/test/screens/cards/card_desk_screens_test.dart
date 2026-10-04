@@ -52,6 +52,39 @@ void main() {
     });
   }
 
+  // Found in the first iPhone test (2026-10-04): a sold card only said "cannot be sold"; staff need the reason.
+  for (final (String state, String Function(AppLocalizations) body) c in <(String, String Function(AppLocalizations))>[
+    ('active', (AppLocalizations l) => l.saleCardAlreadySold),
+    ('shipped', (AppLocalizations l) => l.reloadCardNotInStock),
+    ('suspended', (AppLocalizations l) => l.problemCardNotUsableSuspended),
+    ('other_restaurant', (AppLocalizations l) => l.problemCardNotUsableOtherRestaurant),
+    ('replaced', (AppLocalizations l) => l.saleCardNotUsable),
+  ]) {
+    testWidgets('a card that cannot be sold says why: ${c.$1}', (WidgetTester tester) async {
+      final TestApp app = await TestApp.create(user: Payloads.cardManager(), nfc: FakeNfcRelay());
+      final Map<String, Object?> context = c.$1 == 'other_restaurant'
+          ? <String, Object?>{'reason': 'other_restaurant'}
+          : <String, Object?>{'reason': 'state', 'state': c.$1};
+      app.backend.on('POST', begin, FakeReply(422, Payloads.error('CARD_NOT_USABLE', context)));
+      await pumpWaiterApp(tester, app);
+
+      await tester.tap(text(en.readySell));
+      await settle(tester);
+      await tester.tap(text(en.saleFormCard));
+      await settle(tester);
+      await typeDigits(tester, '5000');
+      await tester.tap(primary('Continue'));
+      await settle(tester);
+      await tester.tap(primary('Tap card'));
+      await settle(tester, 20);
+
+      expect(text(en.saleCardFailedTitle), findsOneWidget);
+      expect(text(c.$2(en)), findsOneWidget);
+      expect(app.backend.to('POST', '/vouchers'), isEmpty, reason: 'nothing is sold');
+      await finishApp(tester, app);
+    });
+  }
+
   testWidgets('without card permissions the sale goes straight to the printed voucher', (WidgetTester tester) async {
     final TestApp app = await TestApp.create(user: Payloads.manager(), nfc: FakeNfcRelay());
     await pumpWaiterApp(tester, app);

@@ -1622,11 +1622,17 @@ abstract class AppLocalizations {
   /// **'Card not activated'**
   String get saleCardFailedTitle;
 
-  /// Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · not in stock, other restaurant
+  /// Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · any other state (bound, replaced, revoked, destroyed, …)
   ///
   /// In en, this message translates to:
   /// **'This card cannot be sold. Take another card from stock.'**
   String get saleCardNotUsable;
+
+  /// Spec key: sale.card.alreadySold (12 §5.13) · Max: 90 · Notes: Cards · state active; other states reuse reload.card.notInStock, reload.card.lost, problem.cardNotUsable.suspended / .otherRestaurant
+  ///
+  /// In en, this message translates to:
+  /// **'This card is already sold. To add value, choose “Top up card”.'**
+  String get saleCardAlreadySold;
 
   /// Spec key: reload.ready (12 §5.13) · Max: 24 · Notes: Reload · S05 button; only with vouchers.reload and a card reader
   ///

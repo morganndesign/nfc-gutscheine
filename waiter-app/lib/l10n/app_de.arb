@@ -254,6 +254,7 @@
   "saleCardDoneBody": "Karte {number} ist aktiv.",
   "saleCardFailedTitle": "Karte nicht aktiviert",
   "saleCardNotUsable": "Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen.",
+  "saleCardAlreadySold": "Diese Karte ist schon verkauft. Zum Aufladen „Karte aufladen“ wählen.",
   "reloadReady": "Karte aufladen",
   "reloadTitle": "Karte aufladen",
   "reloadTap": "Die Karte des Gastes ans Handy halten.",

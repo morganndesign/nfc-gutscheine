@@ -919,6 +919,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen.';
 
   @override
+  String get saleCardAlreadySold =>
+      'Diese Karte ist schon verkauft. Zum Aufladen „Karte aufladen“ wählen.';
+
+  @override
   String get reloadReady => 'Karte aufladen';
 
   @override

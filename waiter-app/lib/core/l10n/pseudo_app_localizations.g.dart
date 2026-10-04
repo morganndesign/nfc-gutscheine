@@ -908,6 +908,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleCardNotUsable => pseudoLocalize(base.saleCardNotUsable);
 
   @override
+  String get saleCardAlreadySold => pseudoLocalize(base.saleCardAlreadySold);
+
+  @override
   String get reloadReady => pseudoLocalize(base.reloadReady);
 
   @override

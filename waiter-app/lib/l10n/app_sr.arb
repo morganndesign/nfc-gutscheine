@@ -254,6 +254,7 @@
   "saleCardDoneBody": "Kartica {number} je aktivna.",
   "saleCardFailedTitle": "Kartica nije aktivirana",
   "saleCardNotUsable": "Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe.",
+  "saleCardAlreadySold": "Ova kartica je već prodana. Za dopunu izaberite „Dopuni karticu“.",
   "reloadReady": "Dopuni karticu",
   "reloadTitle": "Dopuna kartice",
   "reloadTap": "Prislonite gostovu karticu uz telefon.",

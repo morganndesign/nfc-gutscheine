@@ -917,6 +917,10 @@ class AppLocalizationsSr extends AppLocalizations {
       'Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe.';
 
   @override
+  String get saleCardAlreadySold =>
+      'Ova kartica je već prodana. Za dopunu izaberite „Dopuni karticu“.';
+
+  @override
   String get reloadReady => 'Dopuni karticu';
 
   @override

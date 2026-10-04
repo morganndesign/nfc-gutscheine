@@ -377,13 +377,24 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
     };
   }
 
+  /// Why a tapped card cannot be sold, so staff know what to do (found in the first iPhone test, 2026-10-04: an
+  /// already sold card only said "cannot be sold").
+  static String _notUsableBody(AppLocalizations l10n, String? state) => switch (state) {
+    'active' => l10n.saleCardAlreadySold,
+    'shipped' || 'delivered' => l10n.reloadCardNotInStock,
+    'suspended' => l10n.problemCardNotUsableSuspended,
+    'lost' => l10n.reloadCardLost,
+    'other_restaurant' => l10n.problemCardNotUsableOtherRestaurant,
+    _ => l10n.saleCardNotUsable,
+  };
+
   /// The tapped card could not be sold: nothing was booked; hold the card again or take another one.
   Widget _cardProblem(AppLocalizations l10n, SaleProblem s) {
     final ({ProblemFamily family, String title, String body}) t = cardFailureTexts(
       l10n,
       s.card!,
       notUsableTitle: l10n.saleCardFailedTitle,
-      notUsableBody: l10n.saleCardNotUsable,
+      notUsableBody: _notUsableBody(l10n, s.card!.cardState),
     );
     return ProblemScreen(
       family: t.family,
