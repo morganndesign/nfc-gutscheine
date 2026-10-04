@@ -13,6 +13,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
@@ -31,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { useAdminCardOrders } from "@/lib/api/hooks"
 import { useAuth } from "@/lib/auth"
 import { LANGUAGES, useI18n } from "@/lib/i18n"
 import type { MessageKey } from "@/lib/i18n/catalog"
@@ -51,6 +53,9 @@ export function AppSidebar() {
   const router = useRouter()
   const { theme, setTheme } = useTheme()
   const { t, language, setLanguage } = useI18n()
+  // Restaurants waiting for an answer to a card order (refreshed every minute).
+  const cardOrders = useAdminCardOrders(!!user && can("platform.cards.manage"))
+  const openCardOrders = (cardOrders.data ?? []).filter((o) => o.status === "requested").length
 
   if (!user) return null
   const hasRestaurant = !!user.restaurant
@@ -73,6 +78,14 @@ export function AppSidebar() {
                     <span>{t(item.label)}</span>
                   </Link>
                 </SidebarMenuButton>
+                {item.badge === "openCardOrders" && openCardOrders > 0 ? (
+                  <SidebarMenuBadge
+                    className="bg-primary text-primary-foreground peer-hover/menu-button:text-primary-foreground peer-data-[active=true]/menu-button:text-primary-foreground rounded-full"
+                    aria-label={t("admin.orders.notice", { count: String(openCardOrders) })}
+                  >
+                    {openCardOrders}
+                  </SidebarMenuBadge>
+                ) : null}
               </SidebarMenuItem>
             ))}
           </SidebarMenu>

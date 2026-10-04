@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Check, Loader2, X } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, Check, Loader2, PackagePlus, X } from "lucide-react"
 import { toast } from "sonner"
 import { ReasonDialog } from "@/components/common/reason-dialog"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,7 @@ import { useAdminCardOrders, useDecideCardOrder } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { CardOrder } from "@/lib/api/types"
 import { formatDateTime, formatNumber } from "@/lib/format"
+import { useAuth } from "@/lib/auth"
 import { useT } from "@/lib/i18n"
 
 /** Accepting orders the batch: the quantity can be changed (as agreed with the restaurant), the printer is optional. */
@@ -91,7 +93,7 @@ export function CardOrderInbox() {
   if (!open.length) return null
 
   return (
-    <div className="bg-card overflow-hidden rounded-2xl border">
+    <div id="orders" className="bg-card scroll-mt-20 overflow-hidden rounded-2xl border">
       <div className="border-b px-4 py-3">
         <h2 className="text-sm font-medium">{t("admin.orders.title", { count: formatNumber(open.length) })}</h2>
         <p className="text-muted-foreground text-xs">{t("admin.orders.hint")}</p>
@@ -139,6 +141,38 @@ export function CardOrderInbox() {
           }
         }}
       />
+    </div>
+  )
+}
+
+/** On the platform's start page: restaurants waiting for an answer to a card order; hidden when there are none. */
+export function NewCardOrdersNotice() {
+  const t = useT()
+  const { can } = useAuth()
+  const { data } = useAdminCardOrders(can("platform.cards.manage"))
+  const open = (data ?? []).filter((o) => o.status === "requested")
+  if (!open.length) return null
+  const names = [...new Set(open.map((o) => o.restaurant?.name).filter(Boolean))]
+
+  return (
+    <div role="status" className="bg-card flex flex-col gap-3 rounded-2xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 gap-3">
+        <span className="bg-primary text-primary-foreground flex size-9 shrink-0 items-center justify-center rounded-xl">
+          <PackagePlus className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t("admin.orders.notice", { count: formatNumber(open.length) })}</p>
+          <p className="text-muted-foreground truncate text-xs">
+            {names.slice(0, 3).join(", ")}
+            {names.length > 3 ? ` +${names.length - 3}` : ""} · {t("admin.orders.noticeHint")}
+          </p>
+        </div>
+      </div>
+      <Button asChild size="sm" className="self-start sm:self-center">
+        <Link href="/admin/card-batches#orders">
+          {t("admin.orders.review")} <ArrowRight />
+        </Link>
+      </Button>
     </div>
   )
 }

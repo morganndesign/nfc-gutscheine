@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Building2, CreditCard, Euro, Loader2, Plus, Receipt, Search } from "lucide-react"
 import { toast } from "sonner"
+import { NewCardOrdersNotice } from "@/components/admin/card-order-inbox"
 import { InvitationBadge, invitationDetail } from "@/components/admin/invitation-badge"
 import { MailWarning } from "@/components/admin/mail-warning"
 import { RestaurantActions, RestaurantStatusBadge } from "@/components/admin/restaurant-actions"
@@ -160,6 +161,7 @@ function AdminContent() {
         }
       />
       <MailWarning />
+      <NewCardOrdersNotice />
       <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         <StatCard
           label={t("nav.restaurants")}

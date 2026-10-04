@@ -26,6 +26,8 @@ export interface NavItem {
   icon: LucideIcon
   permission: Permission
   requiresRestaurant?: boolean
+  /** Number shown next to the entry, e.g. open card orders waiting for the platform. */
+  badge?: "openCardOrders"
 }
 
 export const RESTAURANT_NAV: NavItem[] = [
@@ -47,7 +49,7 @@ export const MANAGE_NAV: NavItem[] = [
 
 export const PLATFORM_NAV: NavItem[] = [
   { href: "/admin", label: "nav.restaurants", icon: Building2, permission: "platform.restaurants.manage" },
-  { href: "/admin/card-batches", label: "nav.cardBatches", icon: Package, permission: "platform.cards.manage" },
+  { href: "/admin/card-batches", label: "nav.cardBatches", icon: Package, permission: "platform.cards.manage", badge: "openCardOrders" },
   { href: "/admin/security", label: "nav.securityAlerts", icon: ShieldAlert, permission: "platform.audit.view" },
   { href: "/admin/audit", label: "nav.platformAudit", icon: ShieldCheck, permission: "platform.audit.view" },
   { href: "/admin/settings", label: "nav.systemSettings", icon: SlidersHorizontal, permission: "platform.settings.manage" },

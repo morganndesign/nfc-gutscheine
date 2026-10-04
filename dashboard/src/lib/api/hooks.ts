@@ -836,9 +836,10 @@ export function useCardBatchAction() {
   })
 }
 
-export function useAdminCardOrders() {
+export function useAdminCardOrders(enabled = true) {
   return useQuery({
     queryKey: keys.adminCardOrders,
+    enabled,
     queryFn: async () => (await api<{ data: CardOrder[] }>("/admin/card-orders")).data,
     refetchInterval: 60_000,
   })
