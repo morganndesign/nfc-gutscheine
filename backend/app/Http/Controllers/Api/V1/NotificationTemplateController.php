@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\UpdateNotificationTemplateRequest;
 use App\Http\Resources\NotificationTemplateResource;
 use App\Models\NotificationTemplate;
+use App\Models\Restaurant;
 use App\Services\Audit\AuditLogger;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
@@ -21,27 +22,29 @@ final class NotificationTemplateController extends Controller
 {
     public function __construct(private readonly AuditLogger $audit) {}
 
+    /** The e-mails the restaurant's guests get, in the restaurant's language only. */
     public function index(Request $request): JsonResponse
     {
-        $restaurantId = $this->tenant()->id();
-
-        $templates = NotificationTemplate::query()
-            ->where(static fn ($q) => $q->whereNull('restaurant_id')->orWhere('restaurant_id', $restaurantId))
-            ->orderBy('key')
-            ->orderBy('locale')
-            ->get()
-            ->groupBy(static fn (NotificationTemplate $t): string => $t->key.'|'.$t->channel.'|'.$t->locale)
-            ->map(static fn ($group) => $group->sortBy(static fn (NotificationTemplate $t): int => $t->restaurant_id === null ? 1 : 0)->first())
+        $restaurant = Restaurant::query()->findOrFail($this->tenant()->id());
+        $templates = NotificationTemplate::effective((string) $restaurant->getKey(), $restaurant->locale)
+            ->filter(static fn (NotificationTemplate $t): bool => array_key_exists($t->key, NotificationTemplate::PLACEHOLDERS))
+            ->sortBy(static fn (NotificationTemplate $t): int|false => array_search($t->key, array_keys(NotificationTemplate::PLACEHOLDERS), true))
             ->values();
 
-        return response()->json(['data' => NotificationTemplateResource::collection($templates)->resolve($request)]);
+        return response()->json([
+            'language' => NotificationTemplate::languageOf($restaurant->locale),
+            'data' => NotificationTemplateResource::collection($templates)->resolve($request),
+        ]);
     }
 
     public function update(UpdateNotificationTemplateRequest $request, string $key): NotificationTemplateResource
     {
         abort_unless(array_key_exists($key, NotificationTemplate::PLACEHOLDERS), 404);
-        $locale = (string) $request->input('locale', 'en');
         $restaurantId = (string) $this->tenant()->id();
+        $restaurant = Restaurant::query()->findOrFail($restaurantId);
+        // The restaurant edits the version its guests get: the language of the template that applies now.
+        $locale = NotificationTemplate::effective($restaurantId, $restaurant->locale)->get($key)->locale
+            ?? NotificationTemplate::languageOf($restaurant->locale);
 
         $template = NotificationTemplate::query()->firstOrNew([
             'restaurant_id' => $restaurantId,

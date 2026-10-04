@@ -38,9 +38,7 @@ function TemplateEditor({ template, onClose }: { template: NotificationTemplate;
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {templateLabel(t, template.key)} · {template.locale.toUpperCase()}
-          </DialogTitle>
+          <DialogTitle>{templateLabel(t, template.key)}</DialogTitle>
           <DialogDescription>{t("emailTemplates.placeholders", { list: template.placeholders.map((p) => `{{ ${p} }}`).join(", ") })}</DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
@@ -64,7 +62,7 @@ function TemplateEditor({ template, onClose }: { template: NotificationTemplate;
             disabled={save.isPending}
             onClick={async () => {
               try {
-                await save.mutateAsync({ key: template.key, locale: template.locale, subject, body, is_active: active })
+                await save.mutateAsync({ key: template.key, subject, body, is_active: active })
                 toast.success(t("emailTemplates.saved"))
                 onClose()
               } catch (e) {
@@ -85,18 +83,18 @@ export function NotificationTemplates() {
   const { user } = useAuth()
   const { data, isLoading, error, refetch } = useNotificationTemplates()
   const [editing, setEditing] = useState<NotificationTemplate | null>(null)
-  // The restaurant's own language first, then the e-mails in the order a guest receives them.
-  const language = (user?.restaurant?.locale ?? "de").slice(0, 2)
-  const templates = [...(data ?? [])].sort(
-    (a, b) => Number(b.locale === language) - Number(a.locale === language) || KEY_ORDER.indexOf(a.key) - KEY_ORDER.indexOf(b.key),
-  )
+  // Only the restaurant's language (decision 2026-10-04), in the order a guest receives them.
+  const templates = [...(data?.data ?? [])].sort((a, b) => KEY_ORDER.indexOf(a.key) - KEY_ORDER.indexOf(b.key))
+  const languageKey = `emailTemplates.language.${data?.language ?? ""}`
   const preview = (text: string) => text.replaceAll("{{ restaurant_name }}", user?.restaurant?.name ?? "")
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>{t("emailTemplates.title")}</CardTitle>
-        <CardDescription>{t("emailTemplates.description")}</CardDescription>
+        <CardDescription>
+          {t("emailTemplates.description", { language: hasMessage(languageKey) ? t(languageKey) : (data?.language ?? "").toUpperCase() })}
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -109,7 +107,7 @@ export function NotificationTemplates() {
               <li key={tpl.id} className="flex items-center justify-between gap-4 p-4">
                 <div className="min-w-0">
                   <p className="flex items-center gap-2 text-sm font-medium">
-                    {templateLabel(t, tpl.key)} <Badge variant="outline">{tpl.locale.toUpperCase()}</Badge>
+                    {templateLabel(t, tpl.key)}
                     {tpl.is_default ? <Badge variant="secondary">{t("emailTemplates.default")}</Badge> : <Badge>{t("emailTemplates.customized")}</Badge>}
                     {!tpl.is_active ? <Badge variant="destructive">{t("emailTemplates.off")}</Badge> : null}
                   </p>

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Collection;
 
 /**
  * Restaurant-specific templates override system defaults (restaurant_id = null).
@@ -64,19 +65,36 @@ class NotificationTemplate extends Model
         return $this->belongsTo(Restaurant::class);
     }
 
-    public static function resolve(?string $restaurantId, string $key, string $locale, string $channel = 'mail'): ?self
+    /** The template language guests of a restaurant with [locale] get (Bosnian, Croatian and Serbian share BHS). */
+    public static function languageOf(string $locale): string
     {
         $language = strtolower(substr($locale, 0, 2));
-        // Bosnian, Croatian and Serbian share the BHS templates.
-        if (in_array($language, ['hr', 'sr'], true)) {
-            $language = 'bs';
-        }
 
-        /** @var self|null */
-        return static::query()
-            ->where('key', $key)
+        return in_array($language, ['hr', 'sr'], true) ? 'bs' : $language;
+    }
+
+    /**
+     * The template a restaurant's guests get for [key]: the guest language before English, the restaurant's own
+     * version before the system default. Null when that template is switched off — then nothing is sent.
+     */
+    public static function resolve(?string $restaurantId, string $key, string $locale, string $channel = 'mail'): ?self
+    {
+        $template = self::effective($restaurantId, $locale, $channel)->get($key);
+
+        return $template !== null && $template->is_active ? $template : null;
+    }
+
+    /**
+     * Per key, the one template that applies to a restaurant with [locale] (switched off ones included).
+     *
+     * @return Collection<string, self>
+     */
+    public static function effective(?string $restaurantId, string $locale, string $channel = 'mail'): Collection
+    {
+        $language = self::languageOf($locale);
+
+        return self::query()
             ->where('channel', $channel)
-            ->where('is_active', true)
             ->whereIn('locale', array_unique([$locale, $language, 'en']))
             ->where(static function (Builder $q) use ($restaurantId): void {
                 $q->whereNull('restaurant_id');
@@ -85,8 +103,10 @@ class NotificationTemplate extends Model
                 }
             })
             ->get()
-            ->sortBy(static fn (self $t): string => ($t->restaurant_id === null ? '1' : '0')
-                .($t->locale === $locale ? '0' : ($t->locale === $language ? '1' : '2')))
-            ->first();
+            ->sortBy(static fn (self $t): string => ($t->locale === $locale ? '0' : ($t->locale === $language ? '1' : '2'))
+                .($t->restaurant_id === null ? '1' : '0'))
+            ->unique('key')
+            ->toBase()
+            ->mapWithKeys(static fn (self $t): array => [$t->key => $t]);
     }
 }

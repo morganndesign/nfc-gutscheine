@@ -418,6 +418,8 @@ export function useUpdateRestaurantProfile() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.settings })
       void qc.invalidateQueries({ queryKey: keys.session })
+      // A new restaurant language changes which e-mails the guests get.
+      void qc.invalidateQueries({ queryKey: keys.templates })
     },
   })
 }
@@ -485,14 +487,15 @@ export function useLogoImage(path: string | null | undefined) {
 export function useNotificationTemplates() {
   return useQuery({
     queryKey: keys.templates,
-    queryFn: async () => (await api<{ data: NotificationTemplate[] }>("/settings/notification-templates")).data,
+    // Only the e-mails the guests get: the restaurant's language.
+    queryFn: () => api<{ language: string; data: NotificationTemplate[] }>("/settings/notification-templates"),
   })
 }
 
 export function useSaveTemplate() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ key, ...input }: { key: string; locale: string; subject: string; body: string; is_active: boolean }) =>
+    mutationFn: ({ key, ...input }: { key: string; subject: string; body: string; is_active: boolean }) =>
       api(`/settings/notification-templates/${key}`, { method: "PUT", body: input }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.templates }),
   })

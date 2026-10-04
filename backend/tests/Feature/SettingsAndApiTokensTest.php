@@ -40,7 +40,7 @@ final class SettingsAndApiTokensTest extends TestCase
         $this->getJson('/api/v1/settings/notification-templates')->assertOk()->assertJsonPath('data.0.is_default', true);
 
         $this->putJson('/api/v1/settings/notification-templates/voucher_issued', [
-            'locale' => 'de', 'subject' => 'Ihr Gutschein', 'body' => 'Hallo {{ customer_name }}',
+            'subject' => 'Ihr Gutschein', 'body' => 'Hallo {{ customer_name }}',
         ])->assertSuccessful()->assertJsonPath('data.is_default', false);
 
         $this->putJson('/api/v1/settings/notification-templates/unknown_key', ['subject' => 'x', 'body' => 'y'])->assertNotFound();

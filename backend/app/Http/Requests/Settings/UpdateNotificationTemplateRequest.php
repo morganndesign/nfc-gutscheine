@@ -15,7 +15,6 @@ final class UpdateNotificationTemplateRequest extends ApiRequest
             'subject' => ['required', 'string', 'max:200'],
             'body' => ['required', 'string', 'max:10000'],
             'is_active' => ['sometimes', 'boolean'],
-            'locale' => ['sometimes', 'string', 'in:en,de'],
         ];
     }
 }
