@@ -825,6 +825,7 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `menu.cards` | Karten | Cards | Kartice | 24 | Cards · section header |
 | `menu.cards.receive` | Lieferung bestätigen | Confirm a delivery | Potvrdite isporuku | 28 | Cards |
 | `menu.cards.find` | Karte suchen | Find a card | Pronađite karticu | 28 | Cards |
+| `menu.cards.order` | Karten bestellen | Order cards | Naručite kartice | 28 | Cards · decision 2026-10-04 |
 
 Card desk (managers and owners): confirming a delivery, looking up, suspending and replacing a card.
 
@@ -839,6 +840,13 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `cards.receive.done` | Lieferung bestätigt – die Karten sind verkaufsbereit. | Delivery confirmed – the cards are ready to sell. | Isporuka potvrđena – kartice su spremne za prodaju. | 80 | Cards |
 | `cards.receive.hold` | Die Anzahl stimmt nicht. GiftCard Pro prüft die Lieferung. | The count does not match. GiftCard Pro checks the delivery. | Broj se ne slaže. GiftCard Pro provjerava isporuku. | 80 | Cards |
 | `cards.receive.wrongCard` | Diese Karte gehört nicht zu dieser Lieferung. | This card is not from this delivery. | Ova kartica nije iz ove isporuke. | 64 | Cards |
+| `cards.order.count` | Wie viele Karten werden gebraucht? | How many cards are needed? | Koliko kartica je potrebno? | 48 | Cards · order step |
+| `cards.order.hint` | Bis zu 1.000 Karten. GiftCard Pro bestätigt die Bestellung und sendet die Karten. | Up to 1,000 cards. GiftCard Pro confirms the order and sends the cards. | Do 1.000 kartica. GiftCard Pro potvrđuje narudžbu i šalje kartice. | 90 | Cards |
+| `cards.order.submit` | {count, plural, one {# Karte bestellen} other {# Karten bestellen}} | {count, plural, one {Order # card} other {Order # cards}} | {count, plural, one {Naručite # karticu} few {Naručite # kartice} other {Naručite # kartica}} | 28 | Cards · PrimaryButton |
+| `cards.order.done` | Bestellung gesendet. Sobald die Karten unterwegs sind, erscheinen sie unter „Lieferung bestätigen“. | Order sent. Once the cards are on their way, they appear under “Confirm a delivery”. | Narudžba poslana. Čim kartice krenu, pojavit će se pod „Potvrdite isporuku“. | 100 | Cards |
+| `cards.order.open` | {count, plural, one {Eine Bestellung über # Karte wartet auf Antwort.} other {Eine Bestellung über # Karten wartet auf Antwort.}} | {count, plural, one {An order for # card is waiting for an answer.} other {An order for # cards is waiting for an answer.}} | {count, plural, one {Narudžba za # karticu čeka odgovor.} few {Narudžba za # kartice čeka odgovor.} other {Narudžba za # kartica čeka odgovor.}} | 64 | Cards · banner, latest order requested |
+| `cards.order.declined` | Letzte Bestellung abgelehnt: {reason} | Last order declined: {reason} | Zadnja narudžba odbijena: {reason} | 90 | Cards · banner, latest order declined |
+| `cards.order.tooMany` | Es warten schon 3 Bestellungen auf Antwort. | 3 orders are already waiting for an answer. | Već 3 narudžbe čekaju odgovor. | 64 | Cards · CARD_ORDER_NOT_POSSIBLE |
 | `cards.find.label` | Kartennummer | Card number | Broj kartice | 24 | Cards · TextField |
 | `cards.find.helper` | Steht beim Gutschein im Dashboard, z. B. B-2026-0001-0042 | Shown with the voucher in the dashboard, e.g. B-2026-0001-0042 | Prikazan uz vaučer na dashboardu, npr. B-2026-0001-0042 | 80 | Cards |
 | `cards.find.action` | Suchen | Look up | Traži | 16 | Cards |
@@ -952,7 +960,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **418 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **426 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

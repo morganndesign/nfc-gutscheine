@@ -387,6 +387,8 @@ Physical cards are addressed by their inventory number (`B-2026-0001-0042`); ids
 | POST | `/cards/{number}/revoke` | cards.manage | `{reason}` — a stock card (delivered, available) out of service for good; a guest's card is suspended and replaced instead |
 | GET | `/card-batches` | cards.view | The restaurant's batches with `counts` |
 | POST | `/card-batches/{id}/receipt` | cards.receive | `{count, presentment_id}` — for a `shipped` batch: the counted quantity and the `receive` presentment of one card of the batch. The cards become `delivered`; matching count → `in_service`, every card `available`; otherwise `on_hold` for the platform |
+| GET | `/card-orders` | cards.view | The restaurant's latest 20 card orders: `{id, quantity, note, status: requested\|accepted\|declined, requested_by, created_at, decided_at, decline_reason, batch_code}` |
+| POST | `/card-orders` | cards.receive | `{quantity 1–1000, note?}` — asks the platform for cards (app and dashboard); the platform admins get an e-mail. At most 3 open orders: `422 CARD_ORDER_NOT_POSSIBLE` (`context.reason` = `too_many_open`) |
 
 A refused change is `409 CARD_STATE_INVALID` (`context.state`) and a `card.transition` security event with
 outcome `refused`.
@@ -400,6 +402,9 @@ outcome `refused`.
 | POST | `/admin/card-batches/{id}/release` | One platform admin, from `in_production` → `accepted`: the QA-passed cards go to stock, cards not finished at the station become `qa_failed`. `409` while no card is QA-passed |
 | POST | `/admin/card-batches/{id}/shipment` | `{tracking_ref?}` — from `accepted` → `shipped`; the restaurant then confirms the receipt |
 | POST | `/admin/card-batches/{id}/status` | `{status, reason, production_date?}` — special transitions only: rejected (from in_production, accepted), lost (from shipped), compromised (from accepted onwards), depleted, closed. `accepted`, `shipped`, `in_service`, `on_hold` → `422` (own steps) |
+| GET | `/admin/card-orders?status=` | Card orders of all restaurants, open ones first, with `restaurant` |
+| POST | `/admin/card-orders/{id}/accept` | `{manufacturer?, quantity?}` — orders a batch for the restaurant (active key set, `in_production`); `409` once decided |
+| POST | `/admin/card-orders/{id}/decline` | `{reason}` — the restaurant sees the reason; `409` once decided |
 | POST | `/admin/card-batches/{id}/hold-resolution` | `{missing: [card_number]}` — those cards become `lost`, the other delivered cards `available` |
 
 Key sets are created at a key ceremony on the server: `php artisan cards:key-set:create ks-2027-01` (generates the

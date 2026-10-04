@@ -1676,6 +1676,10 @@
   "@menuCardsFind": {
     "description": "Spec key: menu.cards.find (12 §5.16) · Max: 28 · Notes: Cards"
   },
+  "menuCardsOrder": "Order cards",
+  "@menuCardsOrder": {
+    "description": "Spec key: menu.cards.order (12 §5.16) · Max: 28 · Notes: Cards · decision 2026-10-04"
+  },
   "cardsReceiveNone": "No delivery waiting.",
   "@cardsReceiveNone": {
     "description": "Spec key: cards.receive.none (12 §5.16) · Max: 48 · Notes: Cards"
@@ -1721,6 +1725,49 @@
   "cardsReceiveWrongCard": "This card is not from this delivery.",
   "@cardsReceiveWrongCard": {
     "description": "Spec key: cards.receive.wrongCard (12 §5.16) · Max: 64 · Notes: Cards"
+  },
+  "cardsOrderCount": "How many cards are needed?",
+  "@cardsOrderCount": {
+    "description": "Spec key: cards.order.count (12 §5.16) · Max: 48 · Notes: Cards · order step"
+  },
+  "cardsOrderHint": "Up to 1,000 cards. GiftCard Pro confirms the order and sends the cards.",
+  "@cardsOrderHint": {
+    "description": "Spec key: cards.order.hint (12 §5.16) · Max: 90 · Notes: Cards"
+  },
+  "cardsOrderSubmit": "{count, plural, one {Order {count} card} other {Order {count} cards}}",
+  "@cardsOrderSubmit": {
+    "description": "Spec key: cards.order.submit (12 §5.16) · Max: 28 · Notes: Cards · PrimaryButton",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardsOrderDone": "Order sent. Once the cards are on their way, they appear under “Confirm a delivery”.",
+  "@cardsOrderDone": {
+    "description": "Spec key: cards.order.done (12 §5.16) · Max: 100 · Notes: Cards"
+  },
+  "cardsOrderOpen": "{count, plural, one {An order for {count} card is waiting for an answer.} other {An order for {count} cards is waiting for an answer.}}",
+  "@cardsOrderOpen": {
+    "description": "Spec key: cards.order.open (12 §5.16) · Max: 64 · Notes: Cards · banner, latest order requested",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardsOrderDeclined": "Last order declined: {reason}",
+  "@cardsOrderDeclined": {
+    "description": "Spec key: cards.order.declined (12 §5.16) · Max: 90 · Notes: Cards · banner, latest order declined",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "cardsOrderTooMany": "3 orders are already waiting for an answer.",
+  "@cardsOrderTooMany": {
+    "description": "Spec key: cards.order.tooMany (12 §5.16) · Max: 64 · Notes: Cards · CARD_ORDER_NOT_POSSIBLE"
   },
   "cardsFindLabel": "Card number",
   "@cardsFindLabel": {

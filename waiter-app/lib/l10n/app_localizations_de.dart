@@ -1203,6 +1203,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get menuCardsFind => 'Karte suchen';
 
   @override
+  String get menuCardsOrder => 'Karten bestellen';
+
+  @override
   String get cardsReceiveNone => 'Keine Lieferung offen.';
 
   @override
@@ -1241,6 +1244,47 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get cardsReceiveWrongCard =>
       'Diese Karte gehört nicht zu dieser Lieferung.';
+
+  @override
+  String get cardsOrderCount => 'Wie viele Karten werden gebraucht?';
+
+  @override
+  String get cardsOrderHint =>
+      'Bis zu 1.000 Karten. GiftCard Pro bestätigt die Bestellung und sendet die Karten.';
+
+  @override
+  String cardsOrderSubmit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Karten bestellen',
+      one: '$count Karte bestellen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardsOrderDone =>
+      'Bestellung gesendet. Sobald die Karten unterwegs sind, erscheinen sie unter „Lieferung bestätigen“.';
+
+  @override
+  String cardsOrderOpen(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Eine Bestellung über $count Karten wartet auf Antwort.',
+      one: 'Eine Bestellung über $count Karte wartet auf Antwort.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardsOrderDeclined(String reason) {
+    return 'Letzte Bestellung abgelehnt: $reason';
+  }
+
+  @override
+  String get cardsOrderTooMany => 'Es warten schon 3 Bestellungen auf Antwort.';
 
   @override
   String get cardsFindLabel => 'Kartennummer';

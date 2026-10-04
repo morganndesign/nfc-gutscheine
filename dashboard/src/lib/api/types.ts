@@ -211,6 +211,23 @@ export interface CardBatch {
   qa_report?: Record<string, unknown> | null
 }
 
+export type CardOrderStatus = "requested" | "accepted" | "declined"
+
+/** A restaurant's request for new cards; the platform accepts it (a batch is ordered) or declines it. */
+export interface CardOrder {
+  id: string
+  quantity: number
+  note: string | null
+  status: CardOrderStatus
+  requested_by: string | null
+  created_at: string
+  decided_at: string | null
+  decline_reason: string | null
+  batch_code: string | null
+  /** Platform view only. */
+  restaurant?: { id: string; name: string }
+}
+
 export interface SecurityAlert {
   id: string
   rule: string

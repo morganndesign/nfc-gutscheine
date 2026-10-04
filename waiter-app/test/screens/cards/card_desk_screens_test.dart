@@ -4,6 +4,7 @@ import 'package:giftcard_waiter/components/components.dart';
 import 'package:giftcard_waiter/l10n/app_localizations.dart';
 import 'package:giftcard_waiter/screens/cards/s22_receive_delivery.dart';
 import 'package:giftcard_waiter/screens/cards/s23_card_lookup.dart';
+import 'package:giftcard_waiter/screens/cards/s25_order_cards.dart';
 import 'package:giftcard_waiter/screens/s20_sell_voucher.dart';
 
 import '../../support/app_harness.dart';
@@ -95,6 +96,72 @@ void main() {
     expect(find.byType(SellVoucherScreen), findsOneWidget);
     expect(text(en.saleFormTitle), findsNothing);
     expect(text(en.saleAmountLabel), findsOneWidget);
+    await finishApp(tester, app);
+  });
+
+  // Decision 2026-10-04: restaurants order cards in the app (and the dashboard); the platform accepts or declines.
+  for (final bool ios in <bool>[false, true]) {
+    testWidgets('${ios ? 'iPhone' : 'Android'}: menu › order cards: the last answer, the quantity, sent', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await TestApp.create(isIos: ios, user: Payloads.cardManager(), nfc: FakeNfcRelay());
+      Map<String, Object?> order(String status, int quantity, [String? reason]) => <String, Object?>{
+        'id': 'o-$quantity',
+        'quantity': quantity,
+        'status': status,
+        'decline_reason': reason,
+      };
+      app.backend
+        ..on(
+          'GET',
+          '/card-orders',
+          FakeReply(200, <String, Object?>{
+            'data': <Object?>[order('declined', 500, 'Please 100, as agreed.')],
+          }),
+        )
+        ..on('POST', '/card-orders', FakeReply(201, <String, Object?>{'data': order('requested', 100)}));
+      await pumpWaiterApp(tester, app);
+
+      await tester.tap(find.bySemanticsLabel(RegExp('^${en.topBarMenu('Mia Manager')}')).first);
+      await settle(tester);
+      await tester.tap(text(en.menuCardsOrder));
+      await settle(tester, 12);
+      expect(find.byType(OrderCardsScreen), findsOneWidget);
+      expect(text(en.cardsOrderDeclined('Please 100, as agreed.')), findsOneWidget);
+
+      await typeDigits(tester, '1001');
+      expect(text('100'), findsOneWidget, reason: 'more than 1,000 cards are not typed');
+      await tester.tap(primary(en.cardsOrderSubmit(100)));
+      await settle(tester, 12);
+
+      expect(app.backend.to('POST', '/card-orders').single.body, <String, Object?>{'quantity': 100});
+      expect(text(en.cardsOrderDone), findsOneWidget);
+      await tester.tap(primary(en.commonDone));
+      await settle(tester, 12);
+      expect(find.byType(OrderCardsScreen), findsNothing);
+      await finishApp(tester, app);
+    });
+  }
+
+  testWidgets('order cards: three open orders say so, nothing else happens', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.cardManager(), nfc: FakeNfcRelay());
+    app.backend
+      ..on('GET', '/card-orders', FakeReply(200, <String, Object?>{'data': <Object?>[]}))
+      ..on(
+        'POST',
+        '/card-orders',
+        FakeReply(422, Payloads.error('CARD_ORDER_NOT_POSSIBLE', <String, Object?>{'reason': 'too_many_open'})),
+      );
+    await pumpWaiterApp(tester, app);
+    await tester.tap(find.bySemanticsLabel(RegExp('^${en.topBarMenu('Mia Manager')}')).first);
+    await settle(tester);
+    await tester.tap(text(en.menuCardsOrder));
+    await settle(tester, 12);
+    await typeDigits(tester, '50');
+    await tester.tap(primary(en.cardsOrderSubmit(50)));
+    await settle(tester, 12);
+    expect(text(en.cardsOrderTooMany), findsOneWidget);
+    expect(text(en.cardsOrderDone), findsNothing);
     await finishApp(tester, app);
   });
 

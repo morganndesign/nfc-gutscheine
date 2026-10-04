@@ -1197,6 +1197,9 @@ class AppLocalizationsHr extends AppLocalizations {
   String get menuCardsFind => 'Pronađite karticu';
 
   @override
+  String get menuCardsOrder => 'Naručite kartice';
+
+  @override
   String get cardsReceiveNone => 'Nema isporuke na čekanju.';
 
   @override
@@ -1236,6 +1239,49 @@ class AppLocalizationsHr extends AppLocalizations {
 
   @override
   String get cardsReceiveWrongCard => 'Ova kartica nije iz ove isporuke.';
+
+  @override
+  String get cardsOrderCount => 'Koliko kartica je potrebno?';
+
+  @override
+  String get cardsOrderHint =>
+      'Do 1.000 kartica. GiftCard Pro potvrđuje narudžbu i šalje kartice.';
+
+  @override
+  String cardsOrderSubmit(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Naručite $count kartica',
+      few: 'Naručite $count kartice',
+      one: 'Naručite $count karticu',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get cardsOrderDone =>
+      'Narudžba poslana. Čim kartice krenu, pojavit će se pod „Potvrdite isporuku“.';
+
+  @override
+  String cardsOrderOpen(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Narudžba za $count kartica čeka odgovor.',
+      few: 'Narudžba za $count kartice čeka odgovor.',
+      one: 'Narudžba za $count karticu čeka odgovor.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String cardsOrderDeclined(String reason) {
+    return 'Zadnja narudžba odbijena: $reason';
+  }
+
+  @override
+  String get cardsOrderTooMany => 'Već 3 narudžbe čekaju odgovor.';
 
   @override
   String get cardsFindLabel => 'Broj kartice';

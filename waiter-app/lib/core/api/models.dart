@@ -755,6 +755,34 @@ class CardBatchSummary {
   final int inTransit;
 }
 
+/// A restaurant's request for new cards (`GET /card-orders`): `requested`, `accepted` (a batch was ordered) or
+/// `declined` (with the platform's reason).
+@immutable
+class CardOrderInfo {
+  const CardOrderInfo({required this.id, required this.quantity, required this.status, this.declineReason});
+
+  factory CardOrderInfo.fromJson(Map<String, Object?> json) => CardOrderInfo(
+    id: _string(json, 'id'),
+    quantity: _int(json, 'quantity'),
+    status: _string(json, 'status'),
+    declineReason: _stringOrNull(json, 'decline_reason'),
+  );
+
+  /// `POST /card-orders` → 201 `{data: order}`.
+  static CardOrderInfo createdFromJson(Map<String, Object?> json) => CardOrderInfo.fromJson(_map(json['data'], 'data'));
+
+  static List<CardOrderInfo> listFromJson(Map<String, Object?> json) {
+    final Object? data = json['data'];
+    if (data is! List) throw const FormatException('data');
+    return <CardOrderInfo>[for (final Object? row in data) CardOrderInfo.fromJson(_map(row, 'order'))];
+  }
+
+  final String id;
+  final int quantity;
+  final String status;
+  final String? declineReason;
+}
+
 /// A card as staff see it (`GET /cards/{number}`): no id, no UID.
 @immutable
 class CardInfo {

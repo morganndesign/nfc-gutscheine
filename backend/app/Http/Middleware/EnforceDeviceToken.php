@@ -53,6 +53,8 @@ final class EnforceDeviceToken
         // Physical cards: confirm a delivery, look up, suspend, resume and replace a guest's card.
         ['GET', 'api/v1/card-batches'],
         ['POST', 'api/v1/card-batches/*/receipt'],
+        ['GET', 'api/v1/card-orders'],
+        ['POST', 'api/v1/card-orders'],
         ['GET', 'api/v1/cards/*'],
         ['POST', 'api/v1/cards/*/suspend'],
         ['POST', 'api/v1/cards/*/resume'],

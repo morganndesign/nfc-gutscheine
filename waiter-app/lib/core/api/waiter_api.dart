@@ -146,6 +146,16 @@ class WaiterApi {
     });
   }
 
+  /// The restaurant's latest card orders, newest first.
+  Future<List<CardOrderInfo>> cardOrders() async =>
+      _parse(await _client.send('GET', '/card-orders'), CardOrderInfo.listFromJson);
+
+  /// Asks the platform for [quantity] new cards.
+  Future<CardOrderInfo> orderCards(int quantity) async => _parse(
+    await _client.send('POST', '/card-orders', body: <String, Object?>{'quantity': quantity}),
+    CardOrderInfo.createdFromJson,
+  );
+
   Future<CardInfo> card(String number) async =>
       _parse(await _client.send('GET', '/cards/${Uri.encodeComponent(number)}'), CardInfo.fromJson);
 

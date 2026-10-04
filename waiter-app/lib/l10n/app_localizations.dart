@@ -2107,6 +2107,12 @@ abstract class AppLocalizations {
   /// **'Find a card'**
   String get menuCardsFind;
 
+  /// Spec key: menu.cards.order (12 §5.16) · Max: 28 · Notes: Cards · decision 2026-10-04
+  ///
+  /// In en, this message translates to:
+  /// **'Order cards'**
+  String get menuCardsOrder;
+
   /// Spec key: cards.receive.none (12 §5.16) · Max: 48 · Notes: Cards
   ///
   /// In en, this message translates to:
@@ -2160,6 +2166,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This card is not from this delivery.'**
   String get cardsReceiveWrongCard;
+
+  /// Spec key: cards.order.count (12 §5.16) · Max: 48 · Notes: Cards · order step
+  ///
+  /// In en, this message translates to:
+  /// **'How many cards are needed?'**
+  String get cardsOrderCount;
+
+  /// Spec key: cards.order.hint (12 §5.16) · Max: 90 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Up to 1,000 cards. GiftCard Pro confirms the order and sends the cards.'**
+  String get cardsOrderHint;
+
+  /// Spec key: cards.order.submit (12 §5.16) · Max: 28 · Notes: Cards · PrimaryButton
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {Order {count} card} other {Order {count} cards}}'**
+  String cardsOrderSubmit(int count);
+
+  /// Spec key: cards.order.done (12 §5.16) · Max: 100 · Notes: Cards
+  ///
+  /// In en, this message translates to:
+  /// **'Order sent. Once the cards are on their way, they appear under “Confirm a delivery”.'**
+  String get cardsOrderDone;
+
+  /// Spec key: cards.order.open (12 §5.16) · Max: 64 · Notes: Cards · banner, latest order requested
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one {An order for {count} card is waiting for an answer.} other {An order for {count} cards is waiting for an answer.}}'**
+  String cardsOrderOpen(int count);
+
+  /// Spec key: cards.order.declined (12 §5.16) · Max: 90 · Notes: Cards · banner, latest order declined
+  ///
+  /// In en, this message translates to:
+  /// **'Last order declined: {reason}'**
+  String cardsOrderDeclined(String reason);
+
+  /// Spec key: cards.order.tooMany (12 §5.16) · Max: 64 · Notes: Cards · CARD_ORDER_NOT_POSSIBLE
+  ///
+  /// In en, this message translates to:
+  /// **'3 orders are already waiting for an answer.'**
+  String get cardsOrderTooMany;
 
   /// Spec key: cards.find.label (12 §5.16) · Max: 24 · Notes: Cards · TextField
   ///

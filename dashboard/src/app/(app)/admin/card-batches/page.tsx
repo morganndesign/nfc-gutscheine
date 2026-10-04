@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react"
 import { CheckCircle2, Loader2, MoreHorizontal, Package, Plus, Truck } from "lucide-react"
 import { toast } from "sonner"
+import { CardOrderInbox } from "@/components/admin/card-order-inbox"
 import { BatchStatusBadge, batchStatusLabel } from "@/components/cards/card-state"
 import { useConfirm } from "@/components/common/confirm"
 import { EmptyState } from "@/components/common/empty-state"
@@ -360,6 +361,7 @@ function Content() {
           </Button>
         }
       />
+      <CardOrderInbox />
       <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="flex items-center gap-3 border-b p-3">
           <Select value={status} onValueChange={(v) => (setStatus(v as CardBatchStatus | "all"), setPage(1))}>

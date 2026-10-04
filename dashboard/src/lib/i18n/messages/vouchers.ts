@@ -197,7 +197,8 @@ export const vouchers = defineMessages({
     "vouchers.sale.validFor": "{months, plural, one {Valid for # month.} other {Valid for # months.}}",
     "vouchers.sale.noExpiryHint": "Valid without an expiry date.",
     "vouchers.sale.paymentDescription": "How the guest paid. Every sale is recorded with its payment.",
-    "vouchers.sale.customerDescription": "Optional. With an e-mail address the customer receives the voucher as a PDF with its QR code, together with the receipt.",
+    "vouchers.sale.customerDescription":
+      "Optional. With an e-mail address the customer receives the voucher as a PDF with its QR code, together with the receipt.",
     "vouchers.sale.customerExisting": "Existing",
     "vouchers.sale.customerNew": "New",
     "vouchers.sale.searchCustomers": "Search customers …",

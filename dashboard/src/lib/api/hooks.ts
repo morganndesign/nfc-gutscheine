@@ -8,6 +8,7 @@ import type {
   Card,
   CardBatch,
   CardBatchStatus,
+  CardOrder,
   CardState,
   SecurityAlert,
   AuditLog,
@@ -777,6 +778,21 @@ export function useCardBatches() {
   })
 }
 
+export function useCardOrders() {
+  return useQuery({
+    queryKey: keys.cardOrders,
+    queryFn: async () => (await api<{ data: CardOrder[] }>("/card-orders")).data,
+  })
+}
+
+export function useOrderCards() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (input: { quantity: number; note?: string }) => api<{ data: CardOrder }>("/card-orders", { method: "POST", body: input }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.cardOrders }),
+  })
+}
+
 // ---------------------------------------------------------------- card batches (platform)
 
 export function useAdminCardBatches(page: number, status?: CardBatchStatus) {
@@ -816,6 +832,31 @@ export function useCardBatchAction() {
             ? api<{ data: CardBatch }>(`/admin/card-batches/${id}/status`, { method: "POST", body: { status: input.status, reason: input.reason } })
             : api<{ data: CardBatch }>(`/admin/card-batches/${id}/hold-resolution`, { method: "POST", body: { missing: input.missing } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.adminCardBatches }),
+  })
+}
+
+export function useAdminCardOrders() {
+  return useQuery({
+    queryKey: keys.adminCardOrders,
+    queryFn: async () => (await api<{ data: CardOrder[] }>("/admin/card-orders")).data,
+    refetchInterval: 60_000,
+  })
+}
+
+export function useDecideCardOrder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...input }: { id: string } & ({ kind: "accept"; manufacturer?: string; quantity?: number } | { kind: "decline"; reason: string })) =>
+      input.kind === "accept"
+        ? api<{ data: CardOrder }>(`/admin/card-orders/${id}/accept`, {
+            method: "POST",
+            body: { manufacturer: input.manufacturer, quantity: input.quantity },
+          })
+        : api<{ data: CardOrder }>(`/admin/card-orders/${id}/decline`, { method: "POST", body: { reason: input.reason } }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.adminCardOrders })
+      void qc.invalidateQueries({ queryKey: keys.adminCardBatches })
+    },
   })
 }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\Admin\ApiTokenController as AdminApiTokenController;
 use App\Http\Controllers\Api\V1\Admin\CardBatchController as AdminCardBatchController;
+use App\Http\Controllers\Api\V1\Admin\CardOrderController as AdminCardOrderController;
 use App\Http\Controllers\Api\V1\Admin\CardStationController;
 use App\Http\Controllers\Api\V1\Admin\PlatformController;
 use App\Http\Controllers\Api\V1\Admin\RestaurantController;
@@ -13,6 +14,7 @@ use App\Http\Controllers\Api\V1\AppConfigController;
 use App\Http\Controllers\Api\V1\AuditLogController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CardController;
+use App\Http\Controllers\Api\V1\CardOrderController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeviceController;
@@ -118,6 +120,9 @@ Route::prefix('v1')->group(function (): void {
             });
             Route::get('card-batches', [CardController::class, 'batches'])->middleware('can:cards.view');
             Route::post('card-batches/{batch}/receipt', [CardController::class, 'receive'])->whereUuid('batch')->middleware(['can:cards.receive', 'throttle:voucher-operation']);
+            // Ordering cards from the platform: whoever confirms deliveries (managers, owners).
+            Route::get('card-orders', [CardOrderController::class, 'index'])->middleware('can:cards.view');
+            Route::post('card-orders', [CardOrderController::class, 'store'])->middleware(['can:cards.receive', 'throttle:voucher-operation']);
 
             Route::get('transactions/export', [TransactionController::class, 'export'])->middleware(['can:transactions.export', 'throttle:10,1,exports']);
             Route::get('reports/cash-up', [ReportController::class, 'cashUp'])->middleware('can:transactions.view');
@@ -206,6 +211,13 @@ Route::prefix('v1')->group(function (): void {
             Route::post('{batch}/release', 'release')->whereUuid('batch');
             Route::post('{batch}/shipment', 'ship')->whereUuid('batch');
             Route::post('{batch}/hold-resolution', 'resolveHold')->whereUuid('batch');
+        });
+
+        // ------------------------------------------------------ card orders of the restaurants (platform)
+        Route::prefix('admin/card-orders')->middleware('can:platform.cards.manage')->controller(AdminCardOrderController::class)->group(function (): void {
+            Route::get('/', 'index');
+            Route::post('{order}/accept', 'accept')->whereUuid('order');
+            Route::post('{order}/decline', 'decline')->whereUuid('order');
         });
 
         // ------------------------------------------------------ personalisation station (internal)

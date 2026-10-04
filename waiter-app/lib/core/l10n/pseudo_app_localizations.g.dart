@@ -1187,6 +1187,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get menuCardsFind => pseudoLocalize(base.menuCardsFind);
 
   @override
+  String get menuCardsOrder => pseudoLocalize(base.menuCardsOrder);
+
+  @override
   String get cardsReceiveNone => pseudoLocalize(base.cardsReceiveNone);
 
   @override
@@ -1215,6 +1218,32 @@ class PseudoAppLocalizations extends AppLocalizations {
   @override
   String get cardsReceiveWrongCard =>
       pseudoLocalize(base.cardsReceiveWrongCard);
+
+  @override
+  String get cardsOrderCount => pseudoLocalize(base.cardsOrderCount);
+
+  @override
+  String get cardsOrderHint => pseudoLocalize(base.cardsOrderHint);
+
+  @override
+  String cardsOrderSubmit(int count) =>
+      pseudoLocalize(base.cardsOrderSubmit(count), <String>[]);
+
+  @override
+  String get cardsOrderDone => pseudoLocalize(base.cardsOrderDone);
+
+  @override
+  String cardsOrderOpen(int count) =>
+      pseudoLocalize(base.cardsOrderOpen(count), <String>[]);
+
+  @override
+  String cardsOrderDeclined(String reason) => pseudoLocalize(
+    base.cardsOrderDeclined(pseudoMarker(0)),
+    <String>[reason],
+  );
+
+  @override
+  String get cardsOrderTooMany => pseudoLocalize(base.cardsOrderTooMany);
 
   @override
   String get cardsFindLabel => pseudoLocalize(base.cardsFindLabel);

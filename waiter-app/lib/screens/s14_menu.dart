@@ -13,6 +13,7 @@ import '../core/storage/settings_store.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'cards/s22_receive_delivery.dart';
+import 'cards/s25_order_cards.dart';
 import 'cards/s23_card_lookup.dart';
 import 'scan/sheet_rows.dart';
 
@@ -152,13 +153,20 @@ class _MenuBodyState extends State<_MenuBody> {
               ),
             ),
             const SizedBox(height: Space.s2),
-            if (user?.canReceiveCards ?? false)
+            if (user?.canReceiveCards ?? false) ...<Widget>[
+              // Whoever confirms deliveries orders them too (decision 2026-10-04).
+              SheetRow(
+                label: l10n.menuCardsOrder,
+                trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
+                onPressed: () => _open(const OrderCardsScreen()),
+              ),
               SheetRow(
                 label: l10n.menuCardsReceive,
                 trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
                 onPressed: () => _open(const ReceiveDeliveryScreen()),
                 showDivider: user?.canManageCards ?? false,
               ),
+            ],
             if (user?.canManageCards ?? false)
               SheetRow(
                 label: l10n.menuCardsFind,

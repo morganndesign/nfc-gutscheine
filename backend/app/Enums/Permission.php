@@ -30,7 +30,7 @@ enum Permission: string
 
     /** Physical cards of the restaurant: stock, lifecycle. */
     case CardsView = 'cards.view';
-    /** Confirm a card delivery (count + one tapped card). */
+    /** Order cards from the platform and confirm a delivery (count + one tapped card). */
     case CardsReceive = 'cards.receive';
     /** Link an available card to a paid voucher. */
     case CardsBind = 'cards.bind';

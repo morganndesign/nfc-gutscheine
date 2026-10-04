@@ -20,6 +20,8 @@ export const keys = {
   cards: ["cards"] as const,
   cardBatches: ["card-batches"] as const,
   adminCardBatches: ["admin", "card-batches"] as const,
+  cardOrders: ["card-orders"] as const,
+  adminCardOrders: ["admin", "card-orders"] as const,
   securityAlerts: ["admin", "security-alerts"] as const,
 }
 

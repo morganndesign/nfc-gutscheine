@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation"
 import { Ban, CreditCard, Pause, Play, Search } from "lucide-react"
 import { toast } from "sonner"
 import { BatchStatusBadge, CardStateBadge, cardStateLabel } from "@/components/cards/card-state"
+import { CardOrders, OrderCardsButton } from "@/components/cards/card-orders"
 import { EmptyState } from "@/components/common/empty-state"
 import { QueryError } from "@/components/common/query-error"
 import { PageHeader } from "@/components/common/page-header"
@@ -158,6 +159,7 @@ function CardsContent() {
   const [acting, setActing] = useState<Action | null>(null)
   const { data, isLoading, error, refetch } = useCards(page, { state: FILTERS[filter], search: useDebounce(search.trim()) })
   const action = useCardAction()
+  const { can } = useAuth()
   const t = useT()
 
   const run = async (reason: string) => {
@@ -173,7 +175,8 @@ function CardsContent() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("nav.cards")} description={t("cards.description")} />
+      <PageHeader title={t("nav.cards")} description={t("cards.description")} actions={can("cards.receive") ? <OrderCardsButton /> : null} />
+      <CardOrders />
       <Batches />
       <div className="bg-card overflow-hidden rounded-2xl border">
         <div className="flex flex-col gap-3 border-b p-3 sm:flex-row sm:items-center">
