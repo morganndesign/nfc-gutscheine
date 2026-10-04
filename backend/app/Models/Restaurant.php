@@ -53,7 +53,7 @@ class Restaurant extends Model
     protected $fillable = [
         'name', 'slug', 'legal_name', 'vat_number', 'email', 'phone', 'website',
         'address_line1', 'address_line2', 'postal_code', 'city', 'country',
-        'currency', 'timezone', 'locale',
+        'currency', 'timezone', 'locale', 'is_test',
     ];
 
     protected function casts(): array
@@ -61,6 +61,7 @@ class Restaurant extends Model
         return [
             'status' => RestaurantStatus::class,
             'suspended_at' => 'datetime',
+            'is_test' => 'boolean',
         ];
     }
 

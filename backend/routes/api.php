@@ -116,6 +116,8 @@ Route::prefix('v1')->group(function (): void {
                 Route::post('suspend', [CardController::class, 'suspend']);
                 Route::post('resume', [CardController::class, 'resume']);
                 Route::post('revoke', [CardController::class, 'revoke']);
+                // The platform's test restaurant only; refused for every other restaurant.
+                Route::post('test-reset', [CardController::class, 'resetTest']);
                 Route::post('replacement', [CardController::class, 'replace'])->middleware('can:cards.bind');
             });
             Route::get('card-batches', [CardController::class, 'batches'])->middleware('can:cards.view');

@@ -3,10 +3,11 @@
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Ban, CreditCard, Pause, Play, Search } from "lucide-react"
+import { Ban, CreditCard, Pause, Play, RotateCcw, Search } from "lucide-react"
 import { toast } from "sonner"
 import { BatchStatusBadge, CardStateBadge, cardStateLabel } from "@/components/cards/card-state"
 import { CardOrders, OrderCardsButton } from "@/components/cards/card-orders"
+import { useConfirm } from "@/components/common/confirm"
 import { EmptyState } from "@/components/common/empty-state"
 import { QueryError } from "@/components/common/query-error"
 import { PageHeader } from "@/components/common/page-header"
@@ -20,7 +21,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useDebounce } from "@/hooks/use-debounce"
-import { useCard, useCardAction, useCardBatches, useCards } from "@/lib/api/hooks"
+import { useCard, useCardAction, useCardBatches, useCards, useResetTestCard } from "@/lib/api/hooks"
 import { errorMessage } from "@/lib/api/client"
 import type { Card, CardState } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
@@ -39,8 +40,13 @@ const FILTERS: Record<Filter, CardState[] | undefined> = {
 
 type Action = { card: Card; action: "suspend" | "resume" | "revoke" }
 
+/** Cards a test restaurant can put back into stock (decision 2026-10-05). */
+const TEST_RESETTABLE = ["bound", "active", "suspended", "replaced", "revoked", "lost"]
+
 function CardDetail({ number, onClose, onAction }: { number: string; onClose: () => void; onAction: (a: Action) => void }) {
-  const { can } = useAuth()
+  const { can, user } = useAuth()
+  const confirm = useConfirm()
+  const reset = useResetTestCard()
   const { data: card, isLoading, error } = useCard(number)
   const t = useT()
 
@@ -86,6 +92,28 @@ function CardDetail({ number, onClose, onAction }: { number: string; onClose: ()
                 {card.state === "available" || card.state === "delivered" ? (
                   <Button variant="outline" className="text-destructive" onClick={() => onAction({ card, action: "revoke" })}>
                     <Ban /> {t("cards.revoke")}
+                  </Button>
+                ) : null}
+                {user?.restaurant?.is_test && TEST_RESETTABLE.includes(card.state) ? (
+                  <Button
+                    variant="outline"
+                    disabled={reset.isPending}
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: t("cards.testReset.title", { number: card.card_number }),
+                        description: t("cards.testReset.description"),
+                        confirmLabel: t("cards.testReset.confirm"),
+                      })
+                      if (!ok) return
+                      try {
+                        await reset.mutateAsync(card.card_number)
+                        toast.success(t("cards.testReset.done", { number: card.card_number }))
+                      } catch (e) {
+                        toast.error(errorMessage(e))
+                      }
+                    }}
+                  >
+                    <RotateCcw /> {t("cards.testReset.action")}
                   </Button>
                 ) : null}
               </div>

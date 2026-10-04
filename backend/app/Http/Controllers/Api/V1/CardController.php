@@ -17,6 +17,7 @@ use App\Models\CardEvent;
 use App\Services\Cards\CardService;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -66,6 +67,12 @@ final class CardController extends Controller
     public function revoke(CardReasonRequest $request, string $card): CardResource
     {
         return $this->respond($this->cards->revoke(Actor::fromRequest($request), $this->find($card), (string) $request->validated('reason')));
+    }
+
+    /** The platform's test restaurant: the card goes back into stock (decision 2026-10-05). */
+    public function resetTest(Request $request, string $card): CardResource
+    {
+        return $this->respond($this->cards->resetTestCard(Actor::fromRequest($request), $this->find($card)));
     }
 
     public function replace(ReplaceCardRequest $request, string $card): CardResource

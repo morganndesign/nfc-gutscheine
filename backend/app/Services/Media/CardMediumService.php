@@ -17,9 +17,10 @@ use App\Support\Actor;
 use Illuminate\Support\Carbon;
 
 /**
- * The link between a card voucher and its physical card (architecture §6.1): one `nfc_card` medium per card,
- * for ever (a card is never reused, `media.card_id` is unique). Must run inside the transaction that holds the
- * voucher's and the card's row locks.
+ * The link between a card voucher and its physical card (architecture §6.1): one active `nfc_card` medium per
+ * card (only a stock card is bound). A card is never reused, except a card of the platform's test restaurant put
+ * back into stock (CardService::resetTestCard), which gets a new medium for its next sale. Must run inside the
+ * transaction that holds the voucher's and the card's row locks.
  */
 final class CardMediumService
 {

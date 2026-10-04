@@ -157,6 +157,12 @@ export const operations = defineMessages({
     "cards.suspend": "Suspend",
     "cards.resume": "Resume",
     "cards.revoke": "Take out of service",
+    "cards.testReset.action": "Back into stock (test)",
+    "cards.testReset.title": "Put card {number} back into stock?",
+    "cards.testReset.description":
+      "Test restaurant only. The card can then be sold again. Its current voucher is blocked and can no longer be spent; its history stays.",
+    "cards.testReset.confirm": "Back into stock",
+    "cards.testReset.done": "Card {number} is back in stock",
     "cards.replaceHint":
       "To replace a lost or damaged card, open the waiter app → Menu → Find a card, and hold a new card from stock to the phone. The balance moves to the new card.",
     "cards.history": "History",
@@ -428,6 +434,12 @@ export const operations = defineMessages({
     "cards.suspend": "Sperren",
     "cards.resume": "Entsperren",
     "cards.revoke": "Außer Betrieb nehmen",
+    "cards.testReset.action": "Zurück ins Lager (Test)",
+    "cards.testReset.title": "Karte {number} zurück ins Lager?",
+    "cards.testReset.description":
+      "Nur im Testrestaurant. Die Karte kann danach neu verkauft werden. Ihr bisheriger Gutschein wird gesperrt und kann nicht mehr eingelöst werden; seine Historie bleibt.",
+    "cards.testReset.confirm": "Zurück ins Lager",
+    "cards.testReset.done": "Karte {number} ist wieder im Lager",
     "cards.replaceHint":
       "Um eine verlorene oder beschädigte Karte zu ersetzen, öffnen Sie die Kellner-App → Menü → „Karte suchen“ und halten Sie eine neue Karte aus dem Lager ans Handy. Das Guthaben geht auf die neue Karte über.",
     "cards.history": "Verlauf",
@@ -701,6 +713,12 @@ export const operations = defineMessages({
     "cards.suspend": "Blokiraj",
     "cards.resume": "Odblokiraj",
     "cards.revoke": "Povuci iz upotrebe",
+    "cards.testReset.action": "Vrati na zalihu (test)",
+    "cards.testReset.title": "Vratiti karticu {number} na zalihu?",
+    "cards.testReset.description":
+      "Samo u testnom restoranu. Kartica se zatim može ponovo prodati. Njen dosadašnji vaučer se blokira i više se ne može koristiti; historija ostaje.",
+    "cards.testReset.confirm": "Vrati na zalihu",
+    "cards.testReset.done": "Kartica {number} je ponovo na zalihi",
     "cards.replaceHint":
       "Da zamijenite izgubljenu ili oštećenu karticu, otvorite aplikaciju za konobare → Meni → „Pronađite karticu“ i prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na novu karticu.",
     "cards.history": "Historija",

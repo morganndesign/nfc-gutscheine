@@ -91,6 +91,8 @@ export interface SessionRestaurant {
   timezone: string
   locale: string
   status: "active" | "suspended"
+  /** The platform's own test restaurant (decision 2026-10-05). */
+  is_test: boolean
   settings: RestaurantSettings
 }
 
@@ -418,6 +420,8 @@ export interface Restaurant {
   timezone: string
   locale: string
   status: "active" | "suspended"
+  /** The platform's own test restaurant: its cards can be put back into stock (decision 2026-10-05). */
+  is_test: boolean
   suspended_at: string | null
   suspension_reason: string | null
   settings?: RestaurantSettings

@@ -10,6 +10,7 @@ use App\Enums\KeySetStatus;
 use App\Enums\Permission;
 use App\Enums\PresentmentPurpose;
 use App\Enums\SecurityEventType;
+use App\Enums\VoucherStatus;
 use App\Exceptions\Domain\CardNotPresentedException;
 use App\Exceptions\Domain\CardStateException;
 use App\Exceptions\Domain\DomainException;
@@ -27,6 +28,7 @@ use App\Services\Presentments\PresentmentService;
 use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use App\Support\Tenancy\TenantContext;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -155,6 +157,38 @@ final class CardService
         }
 
         return $card;
+    }
+
+    /**
+     * The platform's test restaurant only (decision 2026-10-05): the card goes back into stock and can be sold again.
+     * The chip is not touched (selling never writes to it). Its voucher, if any, loses the card and is blocked: its
+     * balance and history stay, it can no longer be spent.
+     */
+    public function resetTestCard(Actor $actor, Card $card): Card
+    {
+        $this->assertTenant($card->restaurant_id);
+
+        return $this->guarded($actor, 'test_reset', $card->card_number, null, fn (): Card => DB::transaction(function () use ($actor, $card): Card {
+            // Lock order: cards → voucher.
+            /** @var Card $locked */
+            $locked = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
+            $medium = $this->media->activeOf($locked);
+            if ($medium !== null) {
+                /** @var Voucher $voucher */
+                $voucher = Voucher::query()->withoutGlobalScopes()->whereKey($medium->voucher_id)->lockForUpdate()->firstOrFail();
+                $this->media->revoke($actor, $medium, $voucher, 'test card back in stock');
+                if (in_array($voucher->status, [VoucherStatus::Active, VoucherStatus::Expired], true)) {
+                    $previous = $voucher->status;
+                    $voucher->forceFill(['status' => VoucherStatus::Blocked, 'blocked_at' => Carbon::now(), 'blocked_reason' => 'Testkarte zurückgesetzt'])->save();
+                    $this->audit->log('voucher.blocked', $actor, $voucher, ['status' => $previous], ['status' => VoucherStatus::Blocked], ['reason' => 'test card back in stock']);
+                }
+            }
+
+            $reset = $this->lifecycle->backToTestStock($locked, $actor);
+            $this->audit->log('card.test_reset', $actor, $reset, null, ['state' => CardState::Available], ['card_number' => $reset->card_number], $reset->restaurant_id);
+
+            return $reset;
+        }, self::DB_ATTEMPTS));
     }
 
     /** @param list<CardState> $from */

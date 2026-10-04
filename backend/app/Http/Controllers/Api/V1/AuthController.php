@@ -142,6 +142,7 @@ final class AuthController extends Controller
                 'timezone' => $tenant->timezone,
                 'locale' => $tenant->locale,
                 'status' => $tenant->status->value,
+                'is_test' => $tenant->is_test,
                 'settings' => RestaurantSettingsResource::make($tenant->settings)->resolve(),
             ] : null,
             'platform' => [

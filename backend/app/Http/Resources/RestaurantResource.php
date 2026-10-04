@@ -37,6 +37,7 @@ final class RestaurantResource extends JsonResource
             'timezone' => $restaurant->timezone,
             'locale' => $restaurant->locale,
             'status' => $restaurant->status->value,
+            'is_test' => $restaurant->is_test,
             'suspended_at' => $restaurant->suspended_at?->toIso8601String(),
             'suspension_reason' => $restaurant->suspension_reason,
             'settings' => RestaurantSettingsResource::make($this->whenLoaded('settings')),

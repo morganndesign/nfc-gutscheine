@@ -20,6 +20,8 @@ final class UpdateRestaurantRequest extends ApiRequest
         return [
             ...(new RestaurantProfileRules)->rules(),
             'currency' => ['sometimes', 'required', 'string', 'size:3', 'alpha', Rule::in(['EUR', 'CHF', 'USD', 'GBP'])],
+            // The platform's own test restaurant: its cards can be put back into stock (decision 2026-10-05).
+            'is_test' => ['sometimes', 'boolean'],
         ];
     }
 }

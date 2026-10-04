@@ -107,6 +107,34 @@ final class CardLifecycle
     }
 
     /**
+     * A card of the platform's test restaurant goes back into its stock (decision 2026-10-05). The one way back in the lifecycle, and only for a test restaurant: real cards are never reused.
+     */
+    public function backToTestStock(Card $card, Actor $actor): Card
+    {
+        return DB::transaction(function () use ($card, $actor): Card {
+            /** @var Card $locked */
+            $locked = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
+            $from = $locked->state;
+            $isTest = (bool) DB::table('restaurants')->where('id', $locked->restaurant_id)->value('is_test');
+            if (! $isTest) {
+                throw new CardStateException('Only cards of a test restaurant go back into stock.', ['reason' => 'not_test_restaurant']);
+            }
+            // Cards the restaurant has had: sold, blocked, replaced, taken out of service or lost. Not stock already,
+            // not a destroyed chip, not a card still on its way from the platform.
+            if (! in_array($from, [CardState::Bound, CardState::Active, CardState::Suspended, CardState::Replaced, CardState::Revoked, CardState::Lost], true)) {
+                throw new CardStateException("A {$from->value} card cannot go back into stock.", ['state' => $from->value]);
+            }
+
+            return $this->writing(function () use ($locked, $from, $actor): Card {
+                $locked->forceFill(['state' => CardState::Available, 'state_changed_at' => Carbon::now(), 'successor_card_id' => null])->save();
+                $this->record($locked, $from, CardState::Available, 'test card back in stock', $actor, null);
+
+                return $locked;
+            });
+        });
+    }
+
+    /**
      * Moves every card of a batch that is in one of `$from` to `$to` (a batch status change, §8.2). Runs inside
      * the caller's transaction; returns the number of cards moved.
      *

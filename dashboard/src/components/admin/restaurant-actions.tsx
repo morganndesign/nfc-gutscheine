@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { Archive, ArchiveRestore, Loader2, Mail, MoreHorizontal, PauseCircle, Pencil, PlayCircle, Trash2 } from "lucide-react"
+import { Archive, ArchiveRestore, FlaskConical, Loader2, Mail, MoreHorizontal, PauseCircle, Pencil, PlayCircle, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { canInviteAgain, invitationDetail } from "@/components/admin/invitation-badge"
 import { useConfirm } from "@/components/common/confirm"
@@ -20,7 +20,19 @@ import type { InvitationSummary, Restaurant } from "@/lib/api/types"
 import { useT } from "@/lib/i18n"
 
 /** Archived > Disabled > Active: the state that decides what the restaurant's users can do. */
-export function RestaurantStatusBadge({ restaurant }: { restaurant: Pick<Restaurant, "status" | "archived_at"> }) {
+export function RestaurantStatusBadge({ restaurant }: { restaurant: Pick<Restaurant, "status" | "archived_at"> & { is_test?: boolean } }) {
+  const t = useT()
+  const status = <RestaurantStatus restaurant={restaurant} />
+  if (!restaurant.is_test) return status
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {status}
+      <Badge variant="outline">{t("admin.test.badge")}</Badge>
+    </span>
+  )
+}
+
+function RestaurantStatus({ restaurant }: { restaurant: Pick<Restaurant, "status" | "archived_at"> }) {
   const t = useT()
   if (restaurant.archived_at)
     return (
@@ -354,6 +366,7 @@ export function RestaurantActions({ restaurant, variant, onDeleted }: { restaura
   const confirm = useConfirm()
   const router = useRouter()
   const status = useRestaurantStatus()
+  const update = useUpdateRestaurant()
   const [dialog, setDialog] = useState<Dialogs>(null)
   const archived = restaurant.archived_at !== null
   const disabled = restaurant.status === "suspended"
@@ -379,9 +392,28 @@ export function RestaurantActions({ restaurant, variant, onDeleted }: { restaura
     }
   }
 
+  /** The platform's own test restaurant: its cards can be put back into stock. Never for a real restaurant. */
+  const toggleTest = async () => {
+    const name = restaurant.name
+    const on = !restaurant.is_test
+    const ok = await confirm({
+      title: t(on ? "admin.test.onTitle" : "admin.test.offTitle", { name }),
+      description: t(on ? "admin.test.onDescription" : "admin.test.offDescription"),
+      confirmLabel: t(on ? "admin.test.on" : "admin.test.off"),
+    })
+    if (!ok) return
+    try {
+      await update.mutateAsync({ id: restaurant.id, input: { is_test: on } })
+      toast.success(t(on ? "admin.test.onDone" : "admin.test.offDone", { name }))
+    } catch (e) {
+      toast.error(errorMessage(e))
+    }
+  }
+
   const items = [
     !archived && { key: "edit", icon: Pencil, label: t("common.edit"), onSelect: () => setDialog("edit") },
     invitable && { key: "invite", icon: Mail, label: t("admin.invite.again"), onSelect: () => setDialog("invite") },
+    !archived && { key: "test", icon: FlaskConical, label: t(restaurant.is_test ? "admin.test.off" : "admin.test.on"), onSelect: () => void toggleTest() },
     !archived &&
       (disabled
         ? { key: "enable", icon: PlayCircle, label: t("admin.actions.enable"), onSelect: () => void run("reactivate") }

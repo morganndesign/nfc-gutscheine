@@ -603,6 +603,7 @@ export type UpdateRestaurantInput = Partial<
     | "currency"
     | "timezone"
     | "locale"
+    | "is_test"
   >
 >
 
@@ -760,6 +761,18 @@ export function useCard(number: string | null) {
     queryKey: [...keys.cards, "one", number],
     queryFn: async () => (await api<{ data: Card }>(`/cards/${encodeURIComponent(number ?? "")}`)).data,
     enabled: number !== null,
+  })
+}
+
+/** The platform's test restaurant: the card goes back into stock and can be sold again (decision 2026-10-05). */
+export function useResetTestCard() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (number: string) => api<{ data: Card }>(`/cards/${encodeURIComponent(number)}/test-reset`, { method: "POST" }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: keys.cards })
+      void qc.invalidateQueries({ queryKey: keys.vouchers })
+    },
   })
 }
 
