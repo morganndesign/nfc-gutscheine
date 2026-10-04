@@ -791,9 +791,6 @@ class AppLocalizationsDe extends AppLocalizations {
   String get saleEmailLabel => 'E-Mail des Gastes (optional)';
 
   @override
-  String get saleEmailHelper => 'Der Gast erhält eine Bestätigung.';
-
-  @override
   String get saleEmailHelperPdf =>
       'Der Gast erhält den Gutschein als PDF per E-Mail.';
 
@@ -894,36 +891,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get saleQrA11y => 'QR-Code des Gutscheins';
 
   @override
-  String get saleFormTitle => 'Was wird verkauft?';
-
-  @override
-  String get saleFormPrintable => 'Gedruckter Gutschein';
-
-  @override
-  String get saleFormPrintableCaption => 'Mit QR-Code zum Ausdrucken';
-
-  @override
-  String get saleFormCard => 'Geschenkkarte';
-
-  @override
-  String get saleFormCardCaption =>
-      'Eine Karte aus dem Lager, beim Verkauf aktiviert';
-
-  @override
-  String saleCardSubmit(String amount) {
-    return 'Karte antippen · $amount';
-  }
-
-  @override
-  String get saleCardTap => 'Die Karte ans Handy halten, um sie zu aktivieren.';
-
-  @override
   String get saleCardDoneTitle => 'Karte aktiviert';
-
-  @override
-  String saleCardDoneBody(String number) {
-    return 'Karte $number ist aktiv.';
-  }
 
   @override
   String get saleCardFailedTitle => 'Karte nicht aktiviert';
@@ -933,14 +901,10 @@ class AppLocalizationsDe extends AppLocalizations {
       'Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen.';
 
   @override
-  String get saleCardAlreadySold =>
-      'Diese Karte ist schon verkauft. Zum Aufladen „Karte aufladen“ wählen.';
+  String get reloadReady => 'Karte verkaufen / aufladen';
 
   @override
-  String get reloadReady => 'Karte aufladen';
-
-  @override
-  String get reloadTitle => 'Karte aufladen';
+  String get reloadTitle => 'Karte verkaufen / aufladen';
 
   @override
   String get reloadTap => 'Die Karte des Gastes ans Handy halten.';
@@ -974,7 +938,7 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
-  String get reloadAnother => 'Weitere Karte aufladen';
+  String get reloadAnother => 'Nächste Karte';
 
   @override
   String get reloadFailedTitle => 'Nicht aufgeladen';

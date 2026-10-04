@@ -694,7 +694,6 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.reason.label` | Grund | Reason | Razlog | 24 | ADR-002 · complimentary |
 | `sale.reason.required` | Grund eingeben (mindestens 3 Zeichen). | Enter a reason (at least 3 characters). | Unesite razlog (najmanje 3 znaka). | 60 | ADR-002 · field error |
 | `sale.email.label` | E-Mail des Gastes (optional) | Guest e-mail (optional) | E-mail gosta (neobavezno) | 32 | ADR-002 |
-| `sale.email.helper` | Der Gast erhält eine Bestätigung. | The guest receives a confirmation. | Gost dobija potvrdu. | 60 | ADR-002 · gift card sale, when the restaurant sends guest e-mails |
 | `sale.email.helperPdf` | Der Gast erhält den Gutschein als PDF per E-Mail. | The guest receives the voucher as a PDF by e-mail. | Gost dobija vaučer kao PDF na e-mail. | 60 | printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04) |
 | `sale.email.helperNoMail` | Wird beim Gutschein gespeichert. | Saved with the voucher. | Sprema se uz vaučer. | 60 | ADR-002 · when it does not |
 | `sale.email.invalid` | Bitte eine gültige E-Mail-Adresse eingeben. | Enter a valid e-mail address. | Unesite ispravnu e-mail adresu. | 60 | ADR-002 · field error |
@@ -724,20 +723,11 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.noQr.title` | Gutschein bereits verkauft | Voucher already sold | Vaučer je već prodan | 28 | ADR-002 · retry answered with the earlier sale, QR no longer available |
 | `sale.noQr.body` | Der QR-Code kann nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein, im Dashboard sperren und neu verkaufen. | Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one. | QR kôd se više ne može prikazati. Ako gost nema ispisan vaučer, blokirajte ga u dashboardu i prodajte novi. | 140 | ADR-002 · same advice as the dashboard |
 | `sale.qr.a11y` | QR-Code des Gutscheins | QR code of the voucher | QR kôd vaučera | — | ADR-002 · (a11y) |
-| `sale.form.title` | Was wird verkauft? | What are you selling? | Šta prodajete? | 28 | Cards · first step when the phone reads cards |
-| `sale.form.printable` | Gedruckter Gutschein | Printed voucher | Ispisani vaučer | 28 | Cards |
-| `sale.form.printable.caption` | Mit QR-Code zum Ausdrucken | With a QR code to print | Sa QR kodom za ispis | 48 | Cards |
-| `sale.form.card` | Geschenkkarte | Gift card | Poklon kartica | 28 | Cards |
-| `sale.form.card.caption` | Eine Karte aus dem Lager, beim Verkauf aktiviert | A card from stock, activated at the sale | Kartica sa zalihe, aktivira se pri prodaji | 60 | Cards |
-| `sale.card.submit` | Karte antippen · {amount} | Tap card · {amount} | Prislonite karticu · {amount} | 32 | Cards · PrimaryButton of a card sale |
-| `sale.card.tap` | Die Karte ans Handy halten, um sie zu aktivieren. | Hold the card to the phone to activate it. | Prislonite karticu uz telefon da je aktivirate. | 64 | Cards · also the iPhone sheet |
 | `sale.card.done.title` | Karte aktiviert | Card activated | Kartica aktivirana | 28 | Cards |
-| `sale.card.done.body` | Karte {number} ist aktiv. | Card {number} is active. | Kartica {number} je aktivna. | 48 | Cards · inventory number |
 | `sale.card.failed.title` | Karte nicht aktiviert | Card not activated | Kartica nije aktivirana | 32 | Cards · nothing was sold |
 | `sale.card.notUsable` | Diese Karte kann nicht verkauft werden. Eine andere Karte aus dem Lager nehmen. | This card cannot be sold. Take another card from stock. | Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe. | 90 | Cards · any other state (bound, replaced, revoked, destroyed, …) |
-| `sale.card.alreadySold` | Diese Karte ist schon verkauft. Zum Aufladen „Karte aufladen“ wählen. | This card is already sold. To add value, choose “Top up card”. | Ova kartica je već prodana. Za dopunu izaberite „Dopuni karticu“. | 90 | Cards · state `active`; other states reuse `reload.card.notInStock`, `reload.card.lost`, `problem.cardNotUsable.suspended` / `.otherRestaurant` |
-| `reload.ready` | Karte aufladen | Top up card | Dopuni karticu | 24 | Reload · S05 button; only with `vouchers.reload` and a card reader |
-| `reload.title` | Karte aufladen | Top up card | Dopuna kartice | 28 | Reload · TopBar |
+| `reload.ready` | Karte verkaufen / aufladen | Sell / top up card | Prodaj / dopuni karticu | 28 | Reload · S05 button, the one place for gift cards (2026-10-05): a stock card is sold, a guest's card topped up; with `vouchers.reload` or card sale rights and a card reader |
+| `reload.title` | Karte verkaufen / aufladen | Sell / top up card | Prodaja / dopuna kartice | 28 | Reload · TopBar |
 | `reload.tap` | Die Karte des Gastes ans Handy halten. | Hold the guest's card to the phone. | Prislonite gostovu karticu uz telefon. | 64 | Reload · step 1, also the iPhone sheet |
 | `reload.tapAgain` | Zum Bestätigen die Karte noch einmal ans Handy halten. | Hold the card to the phone again to confirm. | Ponovo prislonite karticu da potvrdite. | 64 | Reload · the first tap is older than its 60 s validity |
 | `reload.amount.label` | Aufladebetrag | Top-up amount | Iznos dopune | 24 | Reload · above the amount |
@@ -746,7 +736,7 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `reload.submitting` | Wird aufgeladen … | Topping up … | Dopunjava se … | 32 | Reload · loading label |
 | `reload.done.title` | Karte aufgeladen | Card topped up | Kartica dopunjena | 28 | Reload · also the iPhone sheet after the tap |
 | `reload.done.body` | +{amount} · neues Guthaben {balance} | +{amount} · new balance {balance} | +{amount} · novo stanje {balance} | 48 | Reload |
-| `reload.another` | Weitere Karte aufladen | Top up another card | Dopuni drugu karticu | 32 | Reload · TertiaryButton |
+| `reload.another` | Nächste Karte | Next card | Sljedeća kartica | 32 | Reload · TertiaryButton |
 | `reload.failed.title` | Nicht aufgeladen | Not topped up | Nije dopunjeno | 32 | Reload · nothing was booked; also the iPhone sheet |
 | `reload.failed.body` | Es wurde nichts gebucht. Bitte erneut versuchen. | Nothing was booked. Please try again. | Ništa nije knjiženo. Pokušajte ponovo. | 90 | Reload |
 | `reload.uncertain.title` | Aufladung unklar | Top-up unclear | Dopuna nejasna | 32 | Reload · no answer |
@@ -963,7 +953,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **429 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **419 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

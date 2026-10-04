@@ -41,7 +41,7 @@ sold. This page is the operational reference and the **validation procedure for 
   a guest-style SUN read and a K3 check → `qa_passed`. Interrupted chips are finished by holding them again.
 - **Platform dashboard:** *Card batches* (order, release, ship, hold resolution; one next-step button per batch),
   *Security alerts*.
-- **Restaurant, waiter app:** confirm a delivery (count + one tapped card), sell a gift card (tapped after payment),
+- **Restaurant, waiter app:** confirm a delivery (count + one tapped card), sell or top up a gift card (*Sell / top up card*: tap it, then amount and payment),
   *Tap card* to pay, find / suspend / resume / replace a card.
 - **Restaurant dashboard:** *Cards* (stock, guests' cards, history, suspend, resume, take stock cards out of
   service); the voucher detail shows its card.
@@ -98,8 +98,8 @@ attack tests. Staging server, test restaurant. Record every result in the sign-o
 
 | # | Step | Expected |
 |---|---|---|
-| C1 | *Sell voucher* → *Gift card* → €50 → cash → *Tap card* | "Card activated", card number shown; dashboard: voucher `card`, card `active` |
-| C2 | Tap the sold card again for another sale | "This card cannot be sold" |
+| C1 | *Sell / top up card* → tap a stock card → €50 → cash | "Card activated", card number shown; dashboard: voucher `card`, card `active` |
+| C2 | *Sell / top up card* → tap the sold card again | Balance shown: it is topped up, not sold twice |
 | C3 | *Tap card* on the Android till, redeem €12 | Charge screen with €50 balance → €38 |
 | C4 | Same on the iPhone till, redeem €8 | €30 |
 | C5 | Tap to charge with the phone in airplane mode, then online | Clear offline message; nothing booked; works online |

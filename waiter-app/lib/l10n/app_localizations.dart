@@ -1406,12 +1406,6 @@ abstract class AppLocalizations {
   /// **'Guest e-mail (optional)'**
   String get saleEmailLabel;
 
-  /// Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · gift card sale, when the restaurant sends guest e-mails
-  ///
-  /// In en, this message translates to:
-  /// **'The guest receives a confirmation.'**
-  String get saleEmailHelper;
-
   /// Spec key: sale.email.helperPdf (12 §5.13) · Max: 60 · Notes: printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04)
   ///
   /// In en, this message translates to:
@@ -1586,59 +1580,11 @@ abstract class AppLocalizations {
   /// **'QR code of the voucher'**
   String get saleQrA11y;
 
-  /// Spec key: sale.form.title (12 §5.13) · Max: 28 · Notes: Cards · first step when the phone reads cards
-  ///
-  /// In en, this message translates to:
-  /// **'What are you selling?'**
-  String get saleFormTitle;
-
-  /// Spec key: sale.form.printable (12 §5.13) · Max: 28 · Notes: Cards
-  ///
-  /// In en, this message translates to:
-  /// **'Printed voucher'**
-  String get saleFormPrintable;
-
-  /// Spec key: sale.form.printable.caption (12 §5.13) · Max: 48 · Notes: Cards
-  ///
-  /// In en, this message translates to:
-  /// **'With a QR code to print'**
-  String get saleFormPrintableCaption;
-
-  /// Spec key: sale.form.card (12 §5.13) · Max: 28 · Notes: Cards
-  ///
-  /// In en, this message translates to:
-  /// **'Gift card'**
-  String get saleFormCard;
-
-  /// Spec key: sale.form.card.caption (12 §5.13) · Max: 60 · Notes: Cards
-  ///
-  /// In en, this message translates to:
-  /// **'A card from stock, activated at the sale'**
-  String get saleFormCardCaption;
-
-  /// Spec key: sale.card.submit (12 §5.13) · Max: 32 · Notes: Cards · PrimaryButton of a card sale
-  ///
-  /// In en, this message translates to:
-  /// **'Tap card · {amount}'**
-  String saleCardSubmit(String amount);
-
-  /// Spec key: sale.card.tap (12 §5.13) · Max: 64 · Notes: Cards · also the iPhone sheet
-  ///
-  /// In en, this message translates to:
-  /// **'Hold the card to the phone to activate it.'**
-  String get saleCardTap;
-
   /// Spec key: sale.card.done.title (12 §5.13) · Max: 28 · Notes: Cards
   ///
   /// In en, this message translates to:
   /// **'Card activated'**
   String get saleCardDoneTitle;
-
-  /// Spec key: sale.card.done.body (12 §5.13) · Max: 48 · Notes: Cards · inventory number
-  ///
-  /// In en, this message translates to:
-  /// **'Card {number} is active.'**
-  String saleCardDoneBody(String number);
 
   /// Spec key: sale.card.failed.title (12 §5.13) · Max: 32 · Notes: Cards · nothing was sold
   ///
@@ -1652,22 +1598,16 @@ abstract class AppLocalizations {
   /// **'This card cannot be sold. Take another card from stock.'**
   String get saleCardNotUsable;
 
-  /// Spec key: sale.card.alreadySold (12 §5.13) · Max: 90 · Notes: Cards · state active; other states reuse reload.card.notInStock, reload.card.lost, problem.cardNotUsable.suspended / .otherRestaurant
+  /// Spec key: reload.ready (12 §5.13) · Max: 28 · Notes: Reload · S05 button, the one place for gift cards (2026-10-05): a stock card is sold, a guest's card topped up; with vouchers.reload or card sale rights and a card reader
   ///
   /// In en, this message translates to:
-  /// **'This card is already sold. To add value, choose “Top up card”.'**
-  String get saleCardAlreadySold;
-
-  /// Spec key: reload.ready (12 §5.13) · Max: 24 · Notes: Reload · S05 button; only with vouchers.reload and a card reader
-  ///
-  /// In en, this message translates to:
-  /// **'Top up card'**
+  /// **'Sell / top up card'**
   String get reloadReady;
 
   /// Spec key: reload.title (12 §5.13) · Max: 28 · Notes: Reload · TopBar
   ///
   /// In en, this message translates to:
-  /// **'Top up card'**
+  /// **'Sell / top up card'**
   String get reloadTitle;
 
   /// Spec key: reload.tap (12 §5.13) · Max: 64 · Notes: Reload · step 1, also the iPhone sheet
@@ -1721,7 +1661,7 @@ abstract class AppLocalizations {
   /// Spec key: reload.another (12 §5.13) · Max: 32 · Notes: Reload · TertiaryButton
   ///
   /// In en, this message translates to:
-  /// **'Top up another card'**
+  /// **'Next card'**
   String get reloadAnother;
 
   /// Spec key: reload.failed.title (12 §5.13) · Max: 32 · Notes: Reload · nothing was booked; also the iPhone sheet

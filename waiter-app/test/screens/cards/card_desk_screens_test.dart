@@ -11,7 +11,7 @@ import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
 import '../charge/charge_harness.dart' show typeDigits;
 
-/// Card workflows on the phone (Android and iPhone alike): selling a gift card, confirming a delivery, finding,
+/// Card workflows on the phone (Android and iPhone alike): where cards are sold, confirming a delivery, finding,
 /// suspending and replacing a card.
 void main() {
   final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
@@ -22,81 +22,34 @@ void main() {
   const String begin = '/presentments/cards';
   const String complete = '/presentments/cards/${Payloads.cardAuthentication}';
 
+  // Decision 2026-10-05: one place per thing. "Gutschein verkaufen" is the printed voucher, without a choice step;
+  // gift cards are sold and topped up under "Karte verkaufen / aufladen" (S24).
   for (final bool ios in <bool>[false, true]) {
-    testWidgets('${ios ? 'iPhone' : 'Android'}: a gift card is sold by tapping it after payment', (
+    testWidgets('${ios ? 'iPhone' : 'Android'}: selling a voucher opens the printed voucher directly, cards have their own button', (
       WidgetTester tester,
     ) async {
       final TestApp app = await TestApp.create(isIos: ios, user: Payloads.cardManager(), nfc: FakeNfcRelay());
-      app.backend
-        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-        ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
-        ..on('POST', '/vouchers', FakeReply(201, Payloads.soldCard()));
       await pumpWaiterApp(tester, app);
+      expect(text(en.reloadReady), findsOneWidget);
+      expect(en.reloadReady, 'Sell / top up card');
 
       await tester.tap(text(en.readySell));
       await settle(tester);
-      expect(text(en.saleFormTitle), findsOneWidget);
-      await tester.tap(text(en.saleFormCard));
-      await settle(tester);
-
-      await typeDigits(tester, '5000');
-      await tester.tap(primary('Continue'));
-      await settle(tester);
-      expect(text(en.saleEmailHelper), findsOneWidget, reason: 'a gift card has no QR: the e-mail is the confirmation');
-      expect(text(en.saleEmailHelperPdf), findsNothing);
-      expect(text(en.saleRecipientLabel), findsNothing, reason: 'nothing is printed on a gift card');
-      expect(text(en.saleMessageLabel), findsNothing);
-      await tester.tap(primary('Tap card'));
-      await settle(tester, 20);
-
-      expect(text(en.saleCardDoneTitle), findsOneWidget);
-      expect(text(en.saleCardDoneBody('B-2026-0001-0007')), findsOneWidget);
-      expect(app.nfc.prompts.single, en.saleCardTap);
-      expect(app.backend.to('POST', '/vouchers').single.body!['form'], 'card');
+      expect(find.byType(SellVoucherScreen), findsOneWidget);
+      expect(text(en.saleAmountLabel), findsOneWidget, reason: 'no "What are you selling?" step');
+      expect(text(en.saleCardDoneTitle), findsNothing);
+      expect(app.nfc.prompts, isEmpty, reason: 'selling a voucher never waits for a card');
       await finishApp(tester, app);
     });
   }
 
-  // Found in the first iPhone test (2026-10-04): a sold card only said "cannot be sold"; staff need the reason.
-  for (final (String state, String Function(AppLocalizations) body) c in <(String, String Function(AppLocalizations))>[
-    ('active', (AppLocalizations l) => l.saleCardAlreadySold),
-    ('shipped', (AppLocalizations l) => l.reloadCardNotInStock),
-    ('suspended', (AppLocalizations l) => l.problemCardNotUsableSuspended),
-    ('other_restaurant', (AppLocalizations l) => l.problemCardNotUsableOtherRestaurant),
-    ('replaced', (AppLocalizations l) => l.saleCardNotUsable),
-  ]) {
-    testWidgets('a card that cannot be sold says why: ${c.$1}', (WidgetTester tester) async {
-      final TestApp app = await TestApp.create(user: Payloads.cardManager(), nfc: FakeNfcRelay());
-      final Map<String, Object?> context = c.$1 == 'other_restaurant'
-          ? <String, Object?>{'reason': 'other_restaurant'}
-          : <String, Object?>{'reason': 'state', 'state': c.$1};
-      app.backend.on('POST', begin, FakeReply(422, Payloads.error('CARD_NOT_USABLE', context)));
-      await pumpWaiterApp(tester, app);
-
-      await tester.tap(text(en.readySell));
-      await settle(tester);
-      await tester.tap(text(en.saleFormCard));
-      await settle(tester);
-      await typeDigits(tester, '5000');
-      await tester.tap(primary('Continue'));
-      await settle(tester);
-      await tester.tap(primary('Tap card'));
-      await settle(tester, 20);
-
-      expect(text(en.saleCardFailedTitle), findsOneWidget);
-      expect(text(c.$2(en)), findsOneWidget);
-      expect(app.backend.to('POST', '/vouchers'), isEmpty, reason: 'nothing is sold');
-      await finishApp(tester, app);
-    });
-  }
-
-  testWidgets('without card permissions the sale goes straight to the printed voucher', (WidgetTester tester) async {
-    final TestApp app = await TestApp.create(user: Payloads.manager(), nfc: FakeNfcRelay());
+  testWidgets('without a card reader there is no card button; the voucher sale is the same', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.manager());
     await pumpWaiterApp(tester, app);
+    expect(text(en.reloadReady), findsNothing);
     await tester.tap(text(en.readySell));
     await settle(tester);
     expect(find.byType(SellVoucherScreen), findsOneWidget);
-    expect(text(en.saleFormTitle), findsNothing);
     expect(text(en.saleAmountLabel), findsOneWidget);
     await finishApp(tester, app);
   });

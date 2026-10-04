@@ -3,12 +3,12 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/core/cards/card_desk.dart';
 import 'package:giftcard_waiter/core/cards/card_presenter.dart';
-import 'package:giftcard_waiter/core/sale/sale_controller.dart';
 import 'package:giftcard_waiter/core/api/models.dart';
 
 import '../../support/app_harness.dart';
 
-/// The card workflows of a restaurant on the phone: sell a card, confirm a delivery, suspend and replace a card.
+/// The card workflows of a restaurant on the phone: confirm a delivery, suspend and replace a card. Selling a card
+/// is part of "Karte verkaufen / aufladen" (reload_controller_test).
 /// The phone relays the card's answers; the server decides.
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -41,141 +41,6 @@ void main() {
   }
 
   CardPresenter presenter() => CardPresenter(api: app.services.api, nfc: app.nfc);
-
-  SaleController cardSale() => SaleController(
-    api: app.services.api,
-    session: app.session,
-    printer: app.printer,
-    form: SaleForm.card,
-    cards: presenter(),
-    cardTexts: texts,
-  );
-
-  Future<void> toDetails(SaleController sale, WidgetTester tester) async {
-    sale.digit(5);
-    sale.digit(0);
-    sale.doubleZero();
-    sale.continueToDetails();
-    await settle(tester);
-  }
-
-  testWidgets('a card sale taps the stock card last and sells it with its bind presentment', (
-    WidgetTester tester,
-  ) async {
-    await started(tester);
-    app.backend
-      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-      ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
-      ..on('POST', '/vouchers', FakeReply(201, Payloads.soldCard()));
-    final SaleController sale = cardSale();
-    await toDetails(sale, tester);
-
-    unawaited(sale.sell());
-    await settle(tester);
-
-    final SaleDone done = sale.state as SaleDone;
-    expect(done.voucher.cardNumber, 'B-2026-0001-0007');
-    expect(done.hasQr, isFalse);
-    expect(app.backend.to('POST', begin).single.body!['purpose'], 'bind');
-    final Map<String, Object?> body = app.backend.to('POST', '/vouchers').single.body!;
-    expect(body['form'], 'card');
-    expect(body['presentment_id'], Payloads.bindPresentmentId);
-    expect(body['value'], 5000);
-    sale.dispose();
-    await finish(tester);
-  });
-
-  testWidgets('the screen closes while the stock card is checked: nothing is sold that no one sees', (
-    WidgetTester tester,
-  ) async {
-    await started(tester);
-    app.nfc.card = null;
-    app.backend
-      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-      ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
-      ..on('POST', '/vouchers', FakeReply(201, Payloads.soldCard()));
-    final SaleController sale = cardSale();
-    await toDetails(sale, tester);
-
-    unawaited(sale.sell());
-    await settle(tester);
-    expect(sale.state, isA<SaleTapCard>());
-
-    sale.dispose(); // signed out, blocked: the screen is gone
-    app.nfc.tapLate(FakeCard());
-    await settle(tester);
-    expect(app.backend.to('POST', complete), hasLength(1), reason: 'the card was checked');
-    expect(app.backend.to('POST', '/vouchers'), isEmpty);
-    await finish(tester);
-  });
-
-  testWidgets('a lost answer is retried with the same key and the same tap, never a second card', (
-    WidgetTester tester,
-  ) async {
-    await started(tester);
-    app.backend
-      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-      ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
-      ..on('POST', '/vouchers', FakeReply.transport())
-      ..on('POST', '/vouchers', FakeReply(200, Payloads.soldCard(replayed: true)));
-    final SaleController sale = cardSale();
-    await toDetails(sale, tester);
-
-    unawaited(sale.sell());
-    await settle(tester);
-    expect((sale.state as SaleProblem).kind, SaleProblemKind.uncertain);
-    unawaited(sale.sell());
-    await settle(tester);
-
-    expect(sale.state, isA<SaleDone>());
-    final List<RecordedRequest> sales = app.backend.to('POST', '/vouchers');
-    expect(sales, hasLength(2));
-    expect(sales[0].headers['Idempotency-Key'], sales[1].headers['Idempotency-Key']);
-    expect(sales[1].body!['presentment_id'], Payloads.bindPresentmentId);
-    expect(app.backend.to('POST', begin), hasLength(1), reason: 'no second tap');
-    sale.dispose();
-    await finish(tester);
-  });
-
-  testWidgets('a card not in stock is a card problem and nothing is sold; tapping again uses a new tap', (
-    WidgetTester tester,
-  ) async {
-    await started(tester);
-    app.backend
-      ..on(
-        'POST',
-        begin,
-        FakeReply(422, Payloads.error('CARD_NOT_USABLE', <String, Object?>{'reason': 'state', 'state': 'active'})),
-      )
-      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-      ..on('POST', complete, FakeReply(200, Payloads.cardOnly()))
-      ..on(
-        'POST',
-        '/vouchers',
-        FakeReply(422, Payloads.error('PRESENTMENT_INVALID', <String, Object?>{'reason': 'expired'})),
-      )
-      ..on('POST', '/vouchers', FakeReply(201, Payloads.soldCard()));
-    final SaleController sale = cardSale();
-    await toDetails(sale, tester);
-
-    unawaited(sale.sell());
-    await settle(tester);
-    final SaleProblem problem = sale.state as SaleProblem;
-    expect(problem.kind, SaleProblemKind.card);
-    expect(problem.card!.failure, CardPresentFailure.notUsable);
-    expect(app.backend.to('POST', '/vouchers'), isEmpty);
-
-    unawaited(sale.sell());
-    await settle(tester);
-    expect((sale.state as SaleProblem).kind, SaleProblemKind.failed, reason: 'the presentment expired: definitive');
-
-    unawaited(sale.sell());
-    await settle(tester);
-    expect(sale.state, isA<SaleDone>());
-    expect(app.backend.to('POST', begin), hasLength(3), reason: 'a new tap after the definitive refusal');
-    sale.dispose();
-    await finish(tester);
-  });
 
   testWidgets('a delivery is confirmed with the count and one tapped card of the parcel', (WidgetTester tester) async {
     await started(tester);

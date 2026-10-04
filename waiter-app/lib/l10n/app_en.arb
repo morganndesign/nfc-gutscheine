@@ -1129,10 +1129,6 @@
   "@saleEmailLabel": {
     "description": "Spec key: sale.email.label (12 §5.13) · Max: 32 · Notes: ADR-002"
   },
-  "saleEmailHelper": "The guest receives a confirmation.",
-  "@saleEmailHelper": {
-    "description": "Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · gift card sale, when the restaurant sends guest e-mails"
-  },
   "saleEmailHelperPdf": "The guest receives the voucher as a PDF by e-mail.",
   "@saleEmailHelperPdf": {
     "description": "Spec key: sale.email.helperPdf (12 §5.13) · Max: 60 · Notes: printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04)"
@@ -1259,51 +1255,9 @@
   "@saleQrA11y": {
     "description": "Spec key: sale.qr.a11y (12 §5.13) · Max: — · Notes: ADR-002 · (a11y)"
   },
-  "saleFormTitle": "What are you selling?",
-  "@saleFormTitle": {
-    "description": "Spec key: sale.form.title (12 §5.13) · Max: 28 · Notes: Cards · first step when the phone reads cards"
-  },
-  "saleFormPrintable": "Printed voucher",
-  "@saleFormPrintable": {
-    "description": "Spec key: sale.form.printable (12 §5.13) · Max: 28 · Notes: Cards"
-  },
-  "saleFormPrintableCaption": "With a QR code to print",
-  "@saleFormPrintableCaption": {
-    "description": "Spec key: sale.form.printable.caption (12 §5.13) · Max: 48 · Notes: Cards"
-  },
-  "saleFormCard": "Gift card",
-  "@saleFormCard": {
-    "description": "Spec key: sale.form.card (12 §5.13) · Max: 28 · Notes: Cards"
-  },
-  "saleFormCardCaption": "A card from stock, activated at the sale",
-  "@saleFormCardCaption": {
-    "description": "Spec key: sale.form.card.caption (12 §5.13) · Max: 60 · Notes: Cards"
-  },
-  "saleCardSubmit": "Tap card · {amount}",
-  "@saleCardSubmit": {
-    "description": "Spec key: sale.card.submit (12 §5.13) · Max: 32 · Notes: Cards · PrimaryButton of a card sale",
-    "placeholders": {
-      "amount": {
-        "type": "String"
-      }
-    }
-  },
-  "saleCardTap": "Hold the card to the phone to activate it.",
-  "@saleCardTap": {
-    "description": "Spec key: sale.card.tap (12 §5.13) · Max: 64 · Notes: Cards · also the iPhone sheet"
-  },
   "saleCardDoneTitle": "Card activated",
   "@saleCardDoneTitle": {
     "description": "Spec key: sale.card.done.title (12 §5.13) · Max: 28 · Notes: Cards"
-  },
-  "saleCardDoneBody": "Card {number} is active.",
-  "@saleCardDoneBody": {
-    "description": "Spec key: sale.card.done.body (12 §5.13) · Max: 48 · Notes: Cards · inventory number",
-    "placeholders": {
-      "number": {
-        "type": "String"
-      }
-    }
   },
   "saleCardFailedTitle": "Card not activated",
   "@saleCardFailedTitle": {
@@ -1313,15 +1267,11 @@
   "@saleCardNotUsable": {
     "description": "Spec key: sale.card.notUsable (12 §5.13) · Max: 90 · Notes: Cards · any other state (bound, replaced, revoked, destroyed, …)"
   },
-  "saleCardAlreadySold": "This card is already sold. To add value, choose “Top up card”.",
-  "@saleCardAlreadySold": {
-    "description": "Spec key: sale.card.alreadySold (12 §5.13) · Max: 90 · Notes: Cards · state active; other states reuse reload.card.notInStock, reload.card.lost, problem.cardNotUsable.suspended / .otherRestaurant"
-  },
-  "reloadReady": "Top up card",
+  "reloadReady": "Sell / top up card",
   "@reloadReady": {
-    "description": "Spec key: reload.ready (12 §5.13) · Max: 24 · Notes: Reload · S05 button; only with vouchers.reload and a card reader"
+    "description": "Spec key: reload.ready (12 §5.13) · Max: 28 · Notes: Reload · S05 button, the one place for gift cards (2026-10-05): a stock card is sold, a guest's card topped up; with vouchers.reload or card sale rights and a card reader"
   },
-  "reloadTitle": "Top up card",
+  "reloadTitle": "Sell / top up card",
   "@reloadTitle": {
     "description": "Spec key: reload.title (12 §5.13) · Max: 28 · Notes: Reload · TopBar"
   },
@@ -1375,7 +1325,7 @@
       }
     }
   },
-  "reloadAnother": "Top up another card",
+  "reloadAnother": "Next card",
   "@reloadAnother": {
     "description": "Spec key: reload.another (12 §5.13) · Max: 32 · Notes: Reload · TertiaryButton"
   },

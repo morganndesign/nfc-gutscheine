@@ -789,9 +789,6 @@ class AppLocalizationsHr extends AppLocalizations {
   String get saleEmailLabel => 'E-mail gosta (neobavezno)';
 
   @override
-  String get saleEmailHelper => 'Gost dobija potvrdu.';
-
-  @override
   String get saleEmailHelperPdf => 'Gost dobija vaučer kao PDF na e-mail.';
 
   @override
@@ -890,36 +887,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get saleQrA11y => 'QR kôd vaučera';
 
   @override
-  String get saleFormTitle => 'Šta prodajete?';
-
-  @override
-  String get saleFormPrintable => 'Ispisani vaučer';
-
-  @override
-  String get saleFormPrintableCaption => 'Sa QR kodom za ispis';
-
-  @override
-  String get saleFormCard => 'Poklon kartica';
-
-  @override
-  String get saleFormCardCaption =>
-      'Kartica sa zalihe, aktivira se pri prodaji';
-
-  @override
-  String saleCardSubmit(String amount) {
-    return 'Prislonite karticu · $amount';
-  }
-
-  @override
-  String get saleCardTap => 'Prislonite karticu uz telefon da je aktivirate.';
-
-  @override
   String get saleCardDoneTitle => 'Kartica aktivirana';
-
-  @override
-  String saleCardDoneBody(String number) {
-    return 'Kartica $number je aktivna.';
-  }
 
   @override
   String get saleCardFailedTitle => 'Kartica nije aktivirana';
@@ -929,14 +897,10 @@ class AppLocalizationsHr extends AppLocalizations {
       'Ova kartica se ne može prodati. Uzmite drugu karticu sa zalihe.';
 
   @override
-  String get saleCardAlreadySold =>
-      'Ova kartica je već prodana. Za dopunu izaberite „Dopuni karticu“.';
+  String get reloadReady => 'Prodaj / dopuni karticu';
 
   @override
-  String get reloadReady => 'Dopuni karticu';
-
-  @override
-  String get reloadTitle => 'Dopuna kartice';
+  String get reloadTitle => 'Prodaja / dopuna kartice';
 
   @override
   String get reloadTap => 'Prislonite gostovu karticu uz telefon.';
@@ -969,7 +933,7 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
-  String get reloadAnother => 'Dopuni drugu karticu';
+  String get reloadAnother => 'Sljedeća kartica';
 
   @override
   String get reloadFailedTitle => 'Nije dopunjeno';

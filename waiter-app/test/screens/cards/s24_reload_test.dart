@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:giftcard_waiter/components/components.dart';
@@ -8,7 +10,7 @@ import '../../support/app_harness.dart';
 import '../../support/screen_harness.dart';
 import '../charge/charge_harness.dart' show typeDigits;
 
-/// S24 · Top up card, Android and iPhone alike: the button shows for managers and owners on a phone that reads
+/// S24 · Sell / top up card, Android and iPhone alike: the button shows for managers and owners on a phone that reads
 /// cards; tap the guest's card → amount → payment → booked.
 void main() {
   final AppLocalizations en = lookupAppLocalizations(const Locale('en'));
@@ -133,5 +135,21 @@ void main() {
     expect(text(en.reloadReady), findsNothing);
     expect(text(en.readySell), findsOneWidget);
     await finishApp(tester, noReader);
+  });
+
+  // Moved from the voucher sale (2026-10-05): S24 is now the only place a card is sold.
+  testWidgets('signed out while the card is awaited: the screen closes and the reader stops', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.reloadManager(), nfc: FakeNfcRelay()..card = null);
+    app.backend.on('POST', '/auth/logout', FakeReply(200, <String, Object?>{'message': 'Logged out.'}));
+    await pumpWaiterApp(tester, app);
+    await tester.tap(text(en.reloadReady));
+    await settle(tester, 20);
+    expect(app.nfc.prompts, hasLength(1), reason: 'the reader waits for the card');
+
+    unawaited(app.session.signOut());
+    await settle(tester, 20);
+    expect(text(en.reloadTitle), findsNothing);
+    expect(app.nfc.cancels, greaterThanOrEqualTo(1), reason: 'no reader mode or iPhone sheet left behind');
+    await finishApp(tester, app);
   });
 }

@@ -236,11 +236,12 @@ class _ReadyScreenState extends State<ReadyScreen> {
           SecondaryButton(
             label: l10n.readySell,
             icon: WaiterIcon.ticket,
-            onPressed: _offline ? null : () => unawaited(openSellVoucher(context, cards: _cardReader && (user?.canSellCards ?? false))),
+            onPressed: _offline ? null : () => unawaited(openSellVoucher(context)),
             disabledReason: offlineReason,
           ),
-        // S24: top up a guest's card (managers and owners, a phone that reads cards).
-        if (_cardReader && (user?.canReload ?? false))
+        // S24: the one place for gift cards (decision 2026-10-05) — a card from stock is sold and activated, a
+        // guest's card is topped up (managers and owners, a phone that reads cards).
+        if (_cardReader && ((user?.canReload ?? false) || (user?.canSellCards ?? false)))
           SecondaryButton(
             label: l10n.reloadReady,
             icon: WaiterIcon.nfcArcs,

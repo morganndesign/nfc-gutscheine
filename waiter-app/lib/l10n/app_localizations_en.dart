@@ -788,9 +788,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleEmailLabel => 'Guest e-mail (optional)';
 
   @override
-  String get saleEmailHelper => 'The guest receives a confirmation.';
-
-  @override
   String get saleEmailHelperPdf =>
       'The guest receives the voucher as a PDF by e-mail.';
 
@@ -891,35 +888,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleQrA11y => 'QR code of the voucher';
 
   @override
-  String get saleFormTitle => 'What are you selling?';
-
-  @override
-  String get saleFormPrintable => 'Printed voucher';
-
-  @override
-  String get saleFormPrintableCaption => 'With a QR code to print';
-
-  @override
-  String get saleFormCard => 'Gift card';
-
-  @override
-  String get saleFormCardCaption => 'A card from stock, activated at the sale';
-
-  @override
-  String saleCardSubmit(String amount) {
-    return 'Tap card · $amount';
-  }
-
-  @override
-  String get saleCardTap => 'Hold the card to the phone to activate it.';
-
-  @override
   String get saleCardDoneTitle => 'Card activated';
-
-  @override
-  String saleCardDoneBody(String number) {
-    return 'Card $number is active.';
-  }
 
   @override
   String get saleCardFailedTitle => 'Card not activated';
@@ -929,14 +898,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'This card cannot be sold. Take another card from stock.';
 
   @override
-  String get saleCardAlreadySold =>
-      'This card is already sold. To add value, choose “Top up card”.';
+  String get reloadReady => 'Sell / top up card';
 
   @override
-  String get reloadReady => 'Top up card';
-
-  @override
-  String get reloadTitle => 'Top up card';
+  String get reloadTitle => 'Sell / top up card';
 
   @override
   String get reloadTap => 'Hold the guest\'s card to the phone.';
@@ -969,7 +934,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get reloadAnother => 'Top up another card';
+  String get reloadAnother => 'Next card';
 
   @override
   String get reloadFailedTitle => 'Not topped up';

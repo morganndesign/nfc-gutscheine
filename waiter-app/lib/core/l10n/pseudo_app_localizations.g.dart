@@ -789,9 +789,6 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleEmailLabel => pseudoLocalize(base.saleEmailLabel);
 
   @override
-  String get saleEmailHelper => pseudoLocalize(base.saleEmailHelper);
-
-  @override
   String get saleEmailHelperPdf => pseudoLocalize(base.saleEmailHelperPdf);
 
   @override
@@ -884,43 +881,13 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleQrA11y => pseudoLocalize(base.saleQrA11y);
 
   @override
-  String get saleFormTitle => pseudoLocalize(base.saleFormTitle);
-
-  @override
-  String get saleFormPrintable => pseudoLocalize(base.saleFormPrintable);
-
-  @override
-  String get saleFormPrintableCaption =>
-      pseudoLocalize(base.saleFormPrintableCaption);
-
-  @override
-  String get saleFormCard => pseudoLocalize(base.saleFormCard);
-
-  @override
-  String get saleFormCardCaption => pseudoLocalize(base.saleFormCardCaption);
-
-  @override
-  String saleCardSubmit(String amount) =>
-      pseudoLocalize(base.saleCardSubmit(pseudoMarker(0)), <String>[amount]);
-
-  @override
-  String get saleCardTap => pseudoLocalize(base.saleCardTap);
-
-  @override
   String get saleCardDoneTitle => pseudoLocalize(base.saleCardDoneTitle);
-
-  @override
-  String saleCardDoneBody(String number) =>
-      pseudoLocalize(base.saleCardDoneBody(pseudoMarker(0)), <String>[number]);
 
   @override
   String get saleCardFailedTitle => pseudoLocalize(base.saleCardFailedTitle);
 
   @override
   String get saleCardNotUsable => pseudoLocalize(base.saleCardNotUsable);
-
-  @override
-  String get saleCardAlreadySold => pseudoLocalize(base.saleCardAlreadySold);
 
   @override
   String get reloadReady => pseudoLocalize(base.reloadReady);
