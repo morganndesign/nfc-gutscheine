@@ -14,10 +14,18 @@ interface AuthContextValue {
   sessionError: unknown
   can: (permission: Permission) => boolean
   canAny: (...permissions: Permission[]) => boolean
-  login: (email: string, password: string, remember: boolean) => Promise<SessionUser>
+  /** Step 1. A trusted browser is signed in at once; any other gets a code by e-mail (decision 2026-10-05). */
+  login: (email: string, password: string, remember: boolean) => Promise<LoginResult>
+  /** Step 2: the 6-digit code from the e-mail. */
+  confirmCode: (login: string, code: string) => Promise<SessionUser>
+  resendCode: (login: string) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }
+
+export type LoginResult = { kind: "signedIn"; user: SessionUser } | { kind: "code"; login: string; email: string }
+
+type LoginAnswer = { data: SessionUser } | { data: { code_required: true; login: string; email: string } }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -54,16 +62,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const can = useCallback((permission: Permission) => !!user?.permissions.includes(permission), [user])
   const canAny = useCallback((...permissions: Permission[]) => permissions.some((p) => user?.permissions.includes(p)), [user])
 
-  const login = useCallback(
-    async (email: string, password: string, remember: boolean) => {
-      const result = await api<{ data: SessionUser }>("/auth/login", { method: "POST", body: { email, password, remember } })
+  const signedIn = useCallback(
+    (user: SessionUser) => {
       // Drop data cached for a previous user, but keep the (observed) session query itself.
       queryClient.removeQueries({ predicate: (q) => q.queryKey[0] !== SESSION_QUERY_KEY[0] })
-      queryClient.setQueryData(SESSION_QUERY_KEY, result.data)
-      return result.data
+      queryClient.setQueryData(SESSION_QUERY_KEY, user)
+      return user
     },
     [queryClient],
   )
+
+  const login = useCallback(
+    async (email: string, password: string, remember: boolean): Promise<LoginResult> => {
+      const result = await api<LoginAnswer>("/auth/login", { method: "POST", body: { email, password, remember } })
+      if ("code_required" in result.data) return { kind: "code", login: result.data.login, email: result.data.email }
+      return { kind: "signedIn", user: signedIn(result.data) }
+    },
+    [signedIn],
+  )
+
+  const confirmCode = useCallback(
+    async (login: string, code: string) => {
+      const result = await api<{ data: SessionUser }>("/auth/login/code", { method: "POST", body: { login, code } })
+      return signedIn(result.data)
+    },
+    [signedIn],
+  )
+
+  const resendCode = useCallback(async (login: string) => {
+    await api("/auth/login/code/resend", { method: "POST", body: { login } })
+  }, [])
 
   const logout = useCallback(async () => {
     try {
@@ -80,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const sessionError = data === undefined ? error : null
   const value = useMemo(
-    () => ({ user, isLoading, sessionError, can, canAny, login, logout, refresh }),
-    [user, isLoading, sessionError, can, canAny, login, logout, refresh],
+    () => ({ user, isLoading, sessionError, can, canAny, login, confirmCode, resendCode, logout, refresh }),
+    [user, isLoading, sessionError, can, canAny, login, confirmCode, resendCode, logout, refresh],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -7,6 +7,7 @@
 
 import assert from "node:assert/strict"
 import { randomUUID } from "node:crypto"
+import { loginCode, loginCodeCount } from "./lib/mail.mjs"
 
 const API = (process.env.API_URL ?? "http://localhost:8000").replace(/\/$/, "")
 const ORIGIN = process.env.WEB_ORIGIN ?? "http://localhost:3000"
@@ -85,7 +86,13 @@ let deviceId
 
 await check("owner signs in to the dashboard", async () => {
   await owner("GET", "/sanctum/csrf-cookie")
-  const res = await owner("POST", "/api/v1/auth/login", { email: OWNER, password: PASSWORD })
+  const before = await loginCodeCount(OWNER)
+  let res = await owner("POST", "/api/v1/auth/login", { email: OWNER, password: PASSWORD })
+  // A new browser confirms the e-mailed code (decision 2026-10-05).
+  if (res.status === 202) {
+    const { data } = await res.json()
+    res = await owner("POST", "/api/v1/auth/login/code", { login: data.login, code: await loginCode(OWNER, before) })
+  }
   assert.equal(res.status, 200, `owner login failed: ${res.status}`)
 })
 

@@ -113,6 +113,13 @@ final class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('login-ip:'.$request->ip()),
         ]);
 
+        // The e-mailed sign-in code: a code dies after 5 wrong tries anyway; this keeps one address from cycling
+        // through many sign-ins.
+        RateLimiter::for('login-code', static fn (Request $request): array => [
+            Limit::perMinute(10)->by('login-code:'.(string) $request->input('login')),
+            Limit::perMinute(30)->by('login-code-ip:'.$request->ip()),
+        ]);
+
         RateLimiter::for('password-reset', static fn (Request $request): Limit => Limit::perMinute(5)->by($request->ip()));
 
         // Guest tap page: generous for real guests, a wall for URL guessing.

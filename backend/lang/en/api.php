@@ -14,4 +14,8 @@ return [
     'logo_unreadable' => 'The image could not be read. Upload a PNG or JPEG file.',
     'logo_too_small' => 'The logo must be at least :min pixels wide and high.',
     'logo_too_large' => 'The logo may be at most :max pixels wide and high.',
+    'login_code_wrong' => 'The code is not correct. Please check the latest e-mail.',
+    'login_code_expired' => 'This code has expired or was entered wrongly too often. Please sign in again.',
+    'login_code_wait' => 'Please wait :seconds seconds before asking for a new code.',
+    'login_code_unsent' => 'The code could not be sent by e-mail. Please try again in a moment.',
 ];

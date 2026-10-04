@@ -56,7 +56,7 @@ final class SecurityEventStreamTest extends TestCase
         $this->assertSame(1, $wrong->data['attempts']);
         $this->assertSame('web', $wrong->data['channel']);
 
-        $this->postJson('/api/v1/auth/login', ['email' => 'anna@example.com', 'password' => 'Password123!'])->assertOk();
+        $this->webLogin('anna@example.com', 'Password123!')->assertOk();
         $ok = $this->event(SecurityEventType::SignIn, SecurityEventOutcome::Succeeded);
         $this->assertSame($user->id, $ok->user_id);
         $this->assertSame(SecurityActorKind::User, $ok->actor_kind);

@@ -25,6 +25,7 @@ final class AccessRevoker
     public function __construct(
         private readonly AuditLogger $audit,
         private readonly SecurityEventRecorder $events,
+        private readonly LoginCodeService $loginCodes,
     ) {}
 
     public function revokeEverywhere(User $user, Actor $actor, string $reason, ?PersonalAccessToken $except = null): int
@@ -37,6 +38,8 @@ final class AccessRevoker
             ->update(['revoked_at' => Carbon::now(), 'revoked_by' => $actor->userId() ?? $user->getKey()]);
 
         $user->forceFill(['remember_token' => Str::random(60)])->saveQuietly();
+        // No browser stays trusted: the next dashboard sign-in asks for an e-mailed code again.
+        $this->loginCodes->forget($user);
 
         $this->audit->log('auth.access_revoked', $actor, $user, null, null, [
             'reason' => $reason,

@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\SecurityEventType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Auth\ConfirmLoginCodeRequest;
 use App\Http\Requests\Auth\DeviceTokenRequest;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\ResendLoginCodeRequest;
 use App\Http\Resources\RestaurantSettingsResource;
 use App\Models\PersonalAccessToken;
 use App\Models\SystemSetting;
@@ -15,6 +17,7 @@ use App\Models\User;
 use App\Services\Audit\AuditLogger;
 use App\Services\Auth\CredentialVerifier;
 use App\Services\Auth\DeviceTokenService;
+use App\Services\Auth\LoginCodeService;
 use App\Services\Security\AuthEvents;
 use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
@@ -32,13 +35,52 @@ final class AuthController extends Controller
         private readonly DeviceTokenService $deviceTokens,
         private readonly AuthEvents $authEvents,
         private readonly SecurityEventRecorder $events,
+        private readonly LoginCodeService $loginCodes,
     ) {}
 
+    /**
+     * Dashboard sign-in, step 1: the password. A browser trusted for this user (a code confirmed within 15 days)
+     * is signed in at once; any other gets a 6-digit code by e-mail and the answer 202 with the sign-in to
+     * confirm (decision 2026-10-05).
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $user = $this->credentials->verify($request, (string) $request->validated('email'), (string) $request->validated('password'));
 
-        Auth::guard('web')->login($user, $request->boolean('remember'));
+        if ($this->loginCodes->isTrusted($request, $user)) {
+            return $this->signIn($request, $user, $request->boolean('remember'));
+        }
+
+        $login = $this->loginCodes->start($user, $request->boolean('remember'));
+
+        return response()->json(['data' => [
+            'code_required' => true,
+            'login' => $login->id,
+            'email' => LoginCodeService::maskEmail($user->email),
+            'expires_in' => (int) config('giftcard.security.login_code_minutes') * 60,
+        ]], 202);
+    }
+
+    /** Step 2: the code from the e-mail. Signs in and trusts this browser for 15 days. */
+    public function confirmCode(ConfirmLoginCodeRequest $request): JsonResponse
+    {
+        $login = $this->loginCodes->confirm($request, (string) $request->validated('login'), (string) $request->validated('code'));
+
+        return $this->signIn($request, $login->user, $login->remember)
+            ->withCookie($this->loginCodes->trust($request, $login->user));
+    }
+
+    /** "Send a new code" for the same sign-in. */
+    public function resendCode(ResendLoginCodeRequest $request): JsonResponse
+    {
+        $this->loginCodes->resend((string) $request->validated('login'));
+
+        return response()->json(['message' => 'sent']);
+    }
+
+    private function signIn(Request $request, User $user, bool $remember): JsonResponse
+    {
+        Auth::guard('web')->login($user, $remember);
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }

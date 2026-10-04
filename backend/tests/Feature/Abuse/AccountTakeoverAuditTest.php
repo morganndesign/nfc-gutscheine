@@ -162,8 +162,7 @@ final class AccountTakeoverAuditTest extends TestCase
     {
         $this->app['auth']->forgetGuards();
 
-        return $this->withServerVariables(['REMOTE_ADDR' => $ip])->withHeader('Origin', 'http://localhost:3000')
-            ->postJson('/api/v1/auth/login', ['email' => $email, 'password' => $password]);
+        return $this->withServerVariables(['REMOTE_ADDR' => $ip])->webLogin($email, $password);
     }
 
     /** A valid 1-bit greyscale PNG of the given size whose pixel data compresses to almost nothing. */

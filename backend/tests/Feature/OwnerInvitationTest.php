@@ -124,7 +124,7 @@ final class OwnerInvitationTest extends TestCase
         ])->assertUnprocessable();
 
         // 7. The owner signs in and works in the restaurant.
-        $this->postJson('/api/v1/auth/login', ['email' => 'hanna@hirsch.test', 'password' => 'Hirsch-2026-Secure'])->assertOk();
+        $this->webLogin('hanna@hirsch.test', 'Hirsch-2026-Secure')->assertOk();
         $owner = User::query()->where('email', 'hanna@hirsch.test')->firstOrFail();
         $this->assertNotNull($owner->password_changed_at);
         Sanctum::actingAs($owner, ['*']);

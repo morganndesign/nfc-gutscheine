@@ -21,9 +21,11 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\SystemSettingsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Mail\Transport\ArrayTransport;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
+use Symfony\Component\Mime\Email;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -34,6 +36,42 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         $this->seed([RolesAndPermissionsSeeder::class, NotificationTemplateSeeder::class, SystemSettingsSeeder::class]);
+    }
+
+    /**
+     * Dashboard sign-in as a browser does it: the password, then — unless this browser is trusted — the 6-digit code
+     * from the e-mail (decision 2026-10-05). Returns the last answer.
+     *
+     * @param  array<string, string>  $headers
+     */
+    protected function webLogin(string $email, string $password, array $headers = [], bool $remember = false): TestResponse
+    {
+        $headers += ['Origin' => 'http://localhost:3000'];
+        // Headers per request: they must not stay on the test for the requests that follow.
+        $first = $this->postJson('/api/v1/auth/login', ['email' => $email, 'password' => $password, 'remember' => $remember], $headers);
+        if ($first->status() !== 202) {
+            return $first;
+        }
+
+        return $this->postJson('/api/v1/auth/login/code', [
+            'login' => $first->json('data.login'),
+            'code' => $this->lastLoginCode($email),
+        ], $headers);
+    }
+
+    /** The code of the last sign-in e-mail sent to `$email` (array mailer). */
+    protected function lastLoginCode(string $email): string
+    {
+        $transport = app('mailer')->getSymfonyTransport();
+        $this->assertInstanceOf(ArrayTransport::class, $transport);
+        foreach (array_reverse(iterator_to_array($transport->messages())) as $sent) {
+            $message = $sent->getOriginalMessage();
+            if ($message instanceof Email && strcasecmp($message->getTo()[0]->getAddress(), $email) === 0
+                && preg_match('/^(\d{6}) /', (string) $message->getSubject(), $m) === 1) {
+                return $m[1];
+            }
+        }
+        $this->fail("No sign-in code was sent to {$email}.");
     }
 
     protected function restaurant(array $attributes = []): Restaurant

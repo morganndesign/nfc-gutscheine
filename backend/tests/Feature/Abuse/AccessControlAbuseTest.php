@@ -36,7 +36,7 @@ final class AccessControlAbuseTest extends TestCase
         $manager = $this->staff($restaurant, RoleSlug::Manager);
 
         // First sign-in with "remember me" on a known device.
-        $this->withHeaders(self::SPA + ['X-Device-Id' => self::DEVICE])->postJson('/api/v1/auth/login', ['email' => $manager->email, 'password' => 'Password123!', 'remember' => true])->assertOk();
+        $this->webLogin($manager->email, 'Password123!', self::SPA + ['X-Device-Id' => self::DEVICE], remember: true)->assertOk();
         $this->withHeaders(self::SPA + ['X-Device-Id' => self::DEVICE])->getJson('/api/v1/devices/current')->assertOk();
         $recaller = $manager->id.'|'.$manager->refresh()->getRememberToken().'|'.$manager->getAuthPassword();
 
@@ -54,7 +54,7 @@ final class AccessControlAbuseTest extends TestCase
         // Signed in again with "remember me" on the known device …
         $this->app['auth']->forgetGuards();
         $this->flushSession();
-        $this->withHeaders(self::SPA + ['X-Device-Id' => self::DEVICE])->postJson('/api/v1/auth/login', ['email' => $manager->email, 'password' => 'Password123!', 'remember' => true])->assertOk();
+        $this->webLogin($manager->email, 'Password123!', self::SPA + ['X-Device-Id' => self::DEVICE], remember: true)->assertOk();
         $recaller = $manager->id.'|'.$manager->refresh()->getRememberToken().'|'.$manager->getAuthPassword();
 
         // … until the device is revoked: the remember token is rotated, the old cookie is dead everywhere.

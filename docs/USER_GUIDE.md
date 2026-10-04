@@ -6,6 +6,11 @@ A guest pays with a **voucher**: a printed sheet (or a photo or PDF of it on the
 code is the voucher: whoever holds it can spend it, like cash. The sheet shows the restaurant, not the voucher
 number and not the value.
 
+**Signing in to the dashboard:** e-mail and password, then a **6-digit code** sent to your e-mail address (valid
+for 10 minutes; **Send a new code** if it does not arrive). After the code, that browser does not ask for a code
+for 15 days. A new password signs you out everywhere and every browser asks for a code again. The waiter app is
+not affected.
+
 ---
 
 ## Waiter: redeem a voucher

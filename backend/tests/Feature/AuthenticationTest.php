@@ -14,8 +14,7 @@ final class AuthenticationTest extends TestCase
 {
     private function login(string $email, string $password = 'Password123!'): TestResponse
     {
-        return $this->withHeader('Origin', 'http://localhost:3000')
-            ->postJson('/api/v1/auth/login', ['email' => $email, 'password' => $password]);
+        return $this->webLogin($email, $password);
     }
 
     public function test_staff_can_log_in_and_receives_profile_with_permissions(): void

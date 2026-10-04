@@ -18,6 +18,7 @@ use App\Models\SecurityAlert;
 use App\Models\Voucher;
 use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
@@ -189,6 +190,9 @@ final class RefundTest extends TestCase
 
     public function test_a_used_old_or_own_late_sale_is_not_cancelled_by_the_same_person(): void
     {
+        // Mid-day in the restaurant: the 20 minutes below must not cross midnight (a sale can only be cancelled on
+        // its own day; the test failed when run after 23:40 Vienna time).
+        $this->travelTo(Carbon::parse('2026-10-05 12:00', 'Europe/Vienna'));
         $seller = $this->staff($this->restaurant, RoleSlug::Manager);
         $used = $this->sell($this->restaurant, 3000, $seller);
         $late = $this->sell($this->restaurant, 2000, $seller);

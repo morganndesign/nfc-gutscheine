@@ -16,7 +16,7 @@ import { chromium, devices } from 'playwright'
 import { AxeBuilder } from '@axe-core/playwright'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
-import { invitationLink } from './lib/mail.mjs'
+import { invitationLink, signInWithCode } from './lib/mail.mjs'
 import { englishAccount, englishContext } from './lib/english.mjs'
 
 const BASE = process.env.BASE_URL ?? 'http://localhost:3000'
@@ -41,11 +41,7 @@ async function newPage(options, who) {
 
 
 async function signIn(page, email, password) {
-  await page.goto(`${BASE}/login`)
-  await page.fill('#email', email)
-  await page.fill('#password', password)
-  await page.click('button[type=submit]')
-  await page.waitForURL((u) => !u.pathname.startsWith('/login'))
+  await signInWithCode(page, BASE, email, password)
   await englishAccount(page)
 }
 

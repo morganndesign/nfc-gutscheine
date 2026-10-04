@@ -39,6 +39,13 @@ return [
         // Consecutive failed logins before the account is temporarily locked.
         'login_lockout_threshold' => (int) env('LOGIN_LOCKOUT_THRESHOLD', 10),
         'login_lockout_minutes' => (int) env('LOGIN_LOCKOUT_MINUTES', 15),
+        // Dashboard sign-in code by e-mail (decision 2026-10-05): lifetime, wrong tries, resends, and how long a
+        // browser that confirmed a code is trusted.
+        'login_code_minutes' => 10,
+        'login_code_attempts' => 5,
+        'login_code_sends' => 4,
+        'login_code_resend_seconds' => 30,
+        'trusted_browser_days' => 15,
         // Maximum lifetime of API tokens in days (null = never expires).
         'api_token_max_days' => env('API_TOKEN_MAX_DAYS') === null || env('API_TOKEN_MAX_DAYS') === '' ? 365 : (int) env('API_TOKEN_MAX_DAYS'),
         // Sign-in tokens of the native waiter app: rolling lifetime in days, renewed while the phone is in use.
