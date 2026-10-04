@@ -47,6 +47,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
   final TextEditingController _reference = TextEditingController();
   final TextEditingController _reason = TextEditingController();
   final TextEditingController _email = TextEditingController();
+  final TextEditingController _recipient = TextEditingController();
+  final TextEditingController _message = TextEditingController();
 
   @override
   void didChangeDependencies() {
@@ -78,6 +80,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
     _reference.dispose();
     _reason.dispose();
     _email.dispose();
+    _recipient.dispose();
+    _message.dispose();
     super.dispose();
   }
 
@@ -117,6 +121,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
     _reference.clear();
     _reason.clear();
     _email.clear();
+    _recipient.clear();
+    _message.clear();
     _c.startOver();
   }
 
@@ -130,6 +136,8 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
       currency: sold.currency,
       brandColor: restaurant?.settings.brandColor,
       expiresOn: restaurantDateOf(context, sold.expiresAt),
+      recipientName: sold.recipientName,
+      giftMessage: sold.giftMessage,
     );
   }
 
@@ -303,6 +311,28 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                           enabled: !s.submitting,
                           errorText: s.reasonMissing ? l10n.saleReasonRequired : null,
                           onChanged: _c.setReason,
+                        ),
+                      ],
+                      // Printed voucher: for whom, and the buyer's words (on the voucher and its PDF).
+                      if (_c.form == SaleForm.printable) ...<Widget>[
+                        const SizedBox(height: Space.s6),
+                        WaiterTextField(
+                          kind: TextFieldKind.text,
+                          label: l10n.saleRecipientLabel,
+                          controller: _recipient,
+                          maxLength: 160,
+                          enabled: !s.submitting,
+                          onChanged: _c.setRecipient,
+                        ),
+                        const SizedBox(height: Space.s4),
+                        WaiterTextField(
+                          kind: TextFieldKind.text,
+                          label: l10n.saleMessageLabel,
+                          controller: _message,
+                          maxLength: 300,
+                          enabled: !s.submitting,
+                          helperText: l10n.saleMessageHelper,
+                          onChanged: _c.setMessage,
                         ),
                       ],
                       const SizedBox(height: Space.s6),

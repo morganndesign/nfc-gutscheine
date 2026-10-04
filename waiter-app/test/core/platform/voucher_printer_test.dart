@@ -60,4 +60,27 @@ void main() {
     expect(String.fromCharCodes(pdf.take(5)), '%PDF-');
     expect(pdf.length, greaterThan(1000));
   });
+
+  test('the recipient word follows the guest language', () {
+    expect(GuestCopy.of('de_AT').forRecipient, 'für');
+    expect(GuestCopy.of('en_GB').forRecipient, 'for');
+    expect(GuestCopy.of('bs_BA').forRecipient, 'za');
+  });
+
+  test('a sheet with recipient, a long message and a light brand colour still fits one page', () async {
+    final Uint8List pdf = await voucherSheetPdf(
+      PrintableVoucher(
+        payload: 'GCPV1.AbCdEfGhIjKlMnOpQrStUvWxYz0123456789-_AbCdE',
+        restaurantName: 'Ćevabdžinica Željo',
+        restaurantLocale: 'bs_BA',
+        value: 5000,
+        currency: 'EUR',
+        brandColor: '#F5F0E6',
+        recipientName: 'Šemsa Čolić',
+        giftMessage: 'Sretan rođendan! Uživaj u večeri. ' * 9,
+      ),
+    );
+    final String text = String.fromCharCodes(pdf);
+    expect(RegExp(r'/Type\s*/Page[^s]').allMatches(text), hasLength(1));
+  });
 }

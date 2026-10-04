@@ -99,7 +99,7 @@ final class VoucherController extends Controller
 
     public function update(UpdateVoucherRequest $request, Voucher $voucher): VoucherResource
     {
-        /** @var array{customer_id?: string|null, recipient_name?: string|null, notes?: string|null} $data */
+        /** @var array{customer_id?: string|null, recipient_name?: string|null, gift_message?: string|null, notes?: string|null} $data */
         $data = $request->validated();
         $updated = $this->vouchers->update(Actor::fromRequest($request), $voucher, $data);
 

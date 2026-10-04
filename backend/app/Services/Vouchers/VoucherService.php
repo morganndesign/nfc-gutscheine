@@ -169,6 +169,7 @@ final class VoucherService
                     'expires_at' => $this->expiryFor($restaurant, $settings),
                     'issued_by' => $actor->userId(),
                     'recipient_name' => $data->recipientName,
+                    'gift_message' => $data->giftMessage !== null && trim($data->giftMessage) !== '' ? trim($data->giftMessage) : null,
                     'notes' => $data->notes,
                 ]);
 
@@ -838,7 +839,7 @@ final class VoucherService
     }
 
     /**
-     * @param  array{customer_id?: string|null, recipient_name?: string|null, notes?: string|null}  $attributes
+     * @param  array{customer_id?: string|null, recipient_name?: string|null, gift_message?: string|null, notes?: string|null}  $attributes
      */
     public function update(Actor $actor, Voucher $voucher, array $attributes): Voucher
     {

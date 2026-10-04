@@ -57,6 +57,7 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
           <PrintableVoucherSheet
             qrSvg={printable.qr_svg}
             recipientName={sale.data.recipient_name}
+            giftMessage={sale.data.gift_message}
             expiresAt={sale.data.expires_at}
             value={sale.data.initial_value}
             currency={sale.data.currency}
@@ -139,6 +140,7 @@ function SellVoucherContent() {
         email: z.union([z.literal(""), z.string().email(t("vouchers.sale.invalidEmail"))]).optional(),
         phone: z.string().max(40).optional(),
         recipient_name: z.string().max(160).optional(),
+        gift_message: z.string().max(300).optional(),
         notes: z.string().max(2000).optional(),
       }),
     [min, max, currency, t],
@@ -179,6 +181,7 @@ function SellVoucherContent() {
               ? { first_name: v.first_name || undefined, last_name: v.last_name || undefined, email: v.email || undefined, phone: v.phone || undefined }
               : null,
           recipient_name: v.recipient_name || null,
+          gift_message: v.gift_message?.trim() || null,
           notes: v.notes || null,
         },
       })
@@ -218,7 +221,17 @@ function SellVoucherContent() {
           setSale(null)
           setPayment({ method: "cash" })
           idempotencyKey.current = newIdempotencyKey()
-          form.reset({ ...form.getValues(), recipient_name: "", notes: "", first_name: "", last_name: "", email: "", phone: "", customer_id: "" })
+          form.reset({
+            ...form.getValues(),
+            recipient_name: "",
+            gift_message: "",
+            notes: "",
+            first_name: "",
+            last_name: "",
+            email: "",
+            phone: "",
+            customer_id: "",
+          })
         }}
       />
     )
@@ -348,8 +361,22 @@ function SellVoucherContent() {
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="recipient_name">{t("vouchers.sale.recipientPrinted")}</Label>
-                <Input id="recipient_name" placeholder={t("vouchers.sale.optional")} {...form.register("recipient_name")} />
+                <Input id="recipient_name" placeholder={t("vouchers.sale.optional")} maxLength={160} {...form.register("recipient_name")} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="gift_message">{t("vouchers.sale.giftMessage")}</Label>
+              <Textarea
+                id="gift_message"
+                rows={3}
+                maxLength={300}
+                placeholder={t("vouchers.sale.giftMessagePlaceholder")}
+                aria-describedby="gift_message_hint"
+                {...form.register("gift_message")}
+              />
+              <p id="gift_message_hint" className="text-muted-foreground text-xs">
+                {t("vouchers.sale.giftMessageHint")}
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="notes">{t("vouchers.field.notes")}</Label>

@@ -42,6 +42,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $expired_at
  * @property string|null $issued_by
  * @property string|null $recipient_name
+ * @property string|null $gift_message
  * @property string|null $notes
  * @property Carbon|null $last_used_at
  * @property Carbon $created_at
@@ -60,7 +61,7 @@ class Voucher extends Model
     use HasUuids;
 
     /** Money and state columns are deliberately not fillable: only the service layer changes them. */
-    protected $fillable = ['customer_id', 'recipient_name', 'notes'];
+    protected $fillable = ['customer_id', 'recipient_name', 'gift_message', 'notes'];
 
     protected function casts(): array
     {

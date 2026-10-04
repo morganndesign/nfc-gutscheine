@@ -262,6 +262,8 @@ export interface Voucher {
   blocked_reason: string | null
   expired_at: string | null
   recipient_name: string | null
+  /** The buyer's message for the recipient, printed on the voucher. */
+  gift_message: string | null
   notes: string | null
   customer?: Customer | null
   issued_by?: { id: string; name: string } | null

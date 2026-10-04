@@ -804,6 +804,16 @@ class AppLocalizationsDe extends AppLocalizations {
   String get saleEmailInvalid => 'Bitte eine gültige E-Mail-Adresse eingeben.';
 
   @override
+  String get saleRecipientLabel => 'Für wen? (optional)';
+
+  @override
+  String get saleMessageLabel => 'Persönliche Nachricht (optional)';
+
+  @override
+  String get saleMessageHelper =>
+      'Steht auf dem Gutschein und im PDF, bis zu 300 Zeichen.';
+
+  @override
   String saleSubmit(String amount) {
     return 'Gutschein verkaufen · $amount';
   }

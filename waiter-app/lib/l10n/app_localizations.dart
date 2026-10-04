@@ -1430,6 +1430,24 @@ abstract class AppLocalizations {
   /// **'Enter a valid e-mail address.'**
   String get saleEmailInvalid;
 
+  /// Spec key: sale.recipient.label (12 §5.13) · Max: 32 · Notes: printed voucher sale · on the voucher and its PDF (decision 2026-10-04)
+  ///
+  /// In en, this message translates to:
+  /// **'For whom? (optional)'**
+  String get saleRecipientLabel;
+
+  /// Spec key: sale.message.label (12 §5.13) · Max: 32 · Notes: printed voucher sale
+  ///
+  /// In en, this message translates to:
+  /// **'Personal message (optional)'**
+  String get saleMessageLabel;
+
+  /// Spec key: sale.message.helper (12 §5.13) · Max: 60 · Notes: printed voucher sale
+  ///
+  /// In en, this message translates to:
+  /// **'On the voucher and its PDF, up to 300 characters.'**
+  String get saleMessageHelper;
+
   /// Spec key: sale.submit (12 §5.13) · Max: 24+amt · Notes: ADR-002 · primary
   ///
   /// In en, this message translates to:

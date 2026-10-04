@@ -14,6 +14,7 @@ final class UpdateVoucherRequest extends ApiRequest
         return [
             'customer_id' => ['sometimes', 'nullable', 'uuid', $this->existsInTenant('customers')],
             'recipient_name' => ['sometimes', 'nullable', 'string', 'max:160'],
+            'gift_message' => ['sometimes', 'nullable', 'string', 'max:300'],
             'notes' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ];
     }

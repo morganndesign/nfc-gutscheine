@@ -650,6 +650,8 @@ class SoldVoucher {
     required this.replayed,
     this.expiresAt,
     this.cardNumber,
+    this.recipientName,
+    this.giftMessage,
   });
 
   factory SoldVoucher.fromJson(Map<String, Object?> json) {
@@ -669,6 +671,8 @@ class SoldVoucher {
       printablePayload: printable == null ? null : _string(_map(printable, 'printable'), 'payload'),
       replayed: replayed,
       cardNumber: cardNumber,
+      recipientName: _stringOrNull(data, 'recipient_name'),
+      giftMessage: _stringOrNull(data, 'gift_message'),
     );
   }
 
@@ -687,6 +691,10 @@ class SoldVoucher {
 
   /// A card sale: the inventory number of the card now active for this voucher.
   final String? cardNumber;
+
+  /// For whom, and the buyer's message: printed on the voucher.
+  final String? recipientName;
+  final String? giftMessage;
 }
 
 /// A live-authenticated card tap. Binding, receiving and surrendering name no voucher; a `reload` tap names the

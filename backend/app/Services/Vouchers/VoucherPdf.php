@@ -18,28 +18,25 @@ use SensitiveParameter;
  */
 final class VoucherPdf
 {
-    /** Paper sizes in points (1 mm = 2.8346 pt), as on the printed sheet. */
-    private const PAPER = ['a4' => 'A4', 'a5' => 'A5', 'a6' => 'A6'];
-
     /** @var array<'de'|'en'|'bs', array<string, string>> Same wording as the printed sheet (dashboard guest-copy). */
     private const COPY = [
         'de' => [
             'voucher' => 'Gutschein', 'headline' => 'Ein Geschenk für Sie', 'value' => 'Wert', 'for' => 'für',
             'howTo' => 'Bitte zeigen Sie diesen Code beim Bezahlen vor.',
             'keepSafe' => 'Wie Bargeld aufbewahren: Wer den Code besitzt, kann den Gutschein einlösen.',
-            'noExpiry' => 'Unbefristet gültig', 'validUntil' => 'Gültig bis', 'file' => 'Gutschein',
+            'noExpiry' => 'Unbefristet gültig', 'validUntil' => 'Gültig bis', 'file' => 'Gutschein', 'open' => '„', 'close' => '“',
         ],
         'en' => [
             'voucher' => 'Voucher', 'headline' => 'A gift for you', 'value' => 'Value', 'for' => 'for',
             'howTo' => 'Please show this code when you pay.',
             'keepSafe' => 'Keep it safe like cash: whoever holds the code can redeem the voucher.',
-            'noExpiry' => 'No expiry date', 'validUntil' => 'Valid until', 'file' => 'Voucher',
+            'noExpiry' => 'No expiry date', 'validUntil' => 'Valid until', 'file' => 'Voucher', 'open' => '“', 'close' => '”',
         ],
         'bs' => [
             'voucher' => 'Vaučer', 'headline' => 'Poklon za vas', 'value' => 'Vrijednost', 'for' => 'za',
             'howTo' => 'Molimo pokažite ovaj kôd prilikom plaćanja.',
             'keepSafe' => 'Čuvajte ga kao gotovinu: ko ima kôd, može iskoristiti vaučer.',
-            'noExpiry' => 'Bez roka važenja', 'validUntil' => 'Vrijedi do', 'file' => 'Vaucer',
+            'noExpiry' => 'Bez roka važenja', 'validUntil' => 'Vrijedi do', 'file' => 'Vaucer', 'open' => '„', 'close' => '“',
         ],
     ];
 
@@ -67,35 +64,6 @@ final class VoucherPdf
     /** The PDF bytes of [voucher]'s sheet with its QR [payload]. */
     public function render(Voucher $voucher, #[SensitiveParameter] string $payload): string
     {
-        $voucher->loadMissing('restaurant.settings');
-        $restaurant = $voucher->restaurant;
-        $settings = $restaurant->settings;
-        $copy = self::COPY[self::language($restaurant->locale)];
-        $brand = self::hex($settings->brand_color, '#0F172A');
-        $accent = self::hex($settings->accent_color, '#C9A86A');
-        $expiresAt = $voucher->expires_at?->timezone($restaurant->timezone)->format('d.m.Y');
-        /** @var RestaurantLogo|null $logo */
-        $logo = RestaurantLogo::query()->where('restaurant_id', $restaurant->getKey())->first();
-
-        $html = view('pdf.voucher', [
-            'language' => self::language($restaurant->locale),
-            'copy' => $copy,
-            'restaurantName' => $restaurant->name,
-            'logo' => $logo !== null ? 'data:'.$logo->mime.';base64,'.$logo->data : null,
-            'headline' => trim((string) $settings->voucher_headline) !== '' ? trim((string) $settings->voucher_headline) : $copy['headline'],
-            'message' => trim((string) $settings->voucher_message) !== '' ? trim((string) $settings->voucher_message) : null,
-            'recipient' => $voucher->recipient_name !== null && trim($voucher->recipient_name) !== '' ? $copy['for'].' '.trim($voucher->recipient_name) : null,
-            'value' => Money::format($voucher->initial_value, $voucher->currency, $restaurant->locale),
-            'validity' => $expiresAt !== null ? $copy['validUntil'].' '.$expiresAt : $copy['noExpiry'],
-            'qr' => 'data:image/png;base64,'.base64_encode($this->qr->png($payload)),
-            'brand' => $brand,
-            'ink' => self::inkOn($brand),
-            'accent' => self::contrast($brand, $accent) >= 2.2 ? $accent : self::inkOn($brand),
-            'rule' => self::contrast('#ffffff', $accent) >= 2.2 ? $accent : '#141414',
-            // The band fills the page above the QR, as on the printed sheet.
-            'bandHeight' => ['a4' => '150mm', 'a5' => '95mm', 'a6' => '52mm'][$settings->voucher_format] ?? '95mm',
-        ])->render();
-
         $options = new Options;
         // Only our own markup with inline data: no remote fetches, no PHP or JavaScript in the document.
         $options->setIsRemoteEnabled(false);
@@ -107,11 +75,50 @@ final class VoucherPdf
         $options->setTempDir(sys_get_temp_dir());
 
         $pdf = new Dompdf($options);
-        $pdf->loadHtml($html, 'UTF-8');
-        $pdf->setPaper(self::PAPER[$settings->voucher_format] ?? 'A5');
+        $pdf->loadHtml($this->html($voucher, $payload), 'UTF-8');
+        // A5 for every restaurant: a card on a letter, printable at home on A4 as well.
+        $pdf->setPaper('A5');
         $pdf->render();
 
         return (string) $pdf->output();
+    }
+
+    /** The sheet's markup (the PDF's text is compressed, so tests read this). */
+    public function html(Voucher $voucher, #[SensitiveParameter] string $payload): string
+    {
+        $voucher->loadMissing('restaurant.settings');
+        $restaurant = $voucher->restaurant;
+        $settings = $restaurant->settings;
+        $copy = self::COPY[self::language($restaurant->locale)];
+        $brand = self::hex($settings->brand_color, '#0F172A');
+        $accent = self::hex($settings->accent_color, '#C9A86A');
+        $expiresAt = $voucher->expires_at?->timezone($restaurant->timezone)->format('d.m.Y');
+        /** @var RestaurantLogo|null $logo */
+        $logo = RestaurantLogo::query()->where('restaurant_id', $restaurant->getKey())->first();
+
+        return view('pdf.voucher', [
+            'language' => self::language($restaurant->locale),
+            'copy' => $copy,
+            'restaurantName' => $restaurant->name,
+            'logo' => $logo !== null ? 'data:'.$logo->mime.';base64,'.$logo->data : null,
+            'headline' => trim((string) $settings->voucher_headline) !== '' ? trim((string) $settings->voucher_headline) : $copy['headline'],
+            'recipient' => self::text($voucher->recipient_name),
+            // The buyer's own words come first; otherwise the restaurant's message for every voucher.
+            'message' => self::text($voucher->gift_message) ?? self::text($settings->voucher_message),
+            'personal' => self::text($voucher->gift_message) !== null,
+            'value' => Money::format($voucher->initial_value, $voucher->currency, $restaurant->locale),
+            'validity' => $expiresAt !== null ? $copy['validUntil'].' '.$expiresAt : $copy['noExpiry'],
+            'qr' => 'data:image/png;base64,'.base64_encode($this->qr->png($payload)),
+            'brand' => $brand,
+            'ink' => self::inkOn($brand),
+            'accent' => self::contrast($brand, $accent) >= 2.2 ? $accent : self::inkOn($brand),
+            'rule' => self::contrast('#ffffff', $accent) >= 2.2 ? $accent : '#141414',
+        ])->render();
+    }
+
+    private static function text(?string $value): ?string
+    {
+        return $value !== null && trim($value) !== '' ? trim($value) : null;
     }
 
     private static function hex(?string $value, string $fallback): string

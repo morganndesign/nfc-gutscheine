@@ -59,6 +59,7 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
             <PrintableVoucherSheet
               qrSvg={qrSvg}
               recipientName={voucher.recipient_name}
+              giftMessage={voucher.gift_message}
               expiresAt={voucher.expires_at}
               value={voucher.initial_value}
               currency={voucher.currency}

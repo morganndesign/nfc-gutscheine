@@ -37,6 +37,11 @@ void main() {
     await settle(tester);
   }
 
+  Finder field(String label) => find.descendant(
+    of: find.byWidgetPredicate((Widget w) => w is WaiterTextField && w.label == label),
+    matching: find.byType(TextField),
+  );
+
   Future<void> submit(WidgetTester tester) async {
     await tester.tap(primary('Sell voucher'));
     await settle(tester);
@@ -86,6 +91,33 @@ void main() {
     await tester.tap(primary(en.commonDone));
     await settle(tester, 20);
     expect(find.byType(SellVoucherScreen), findsNothing);
+    await finishApp(tester, app);
+  });
+
+  // Decision 2026-10-04: a voucher bought for someone else carries their name and the buyer's message.
+  testWidgets('printed voucher for someone: name and message are sent and printed', (WidgetTester tester) async {
+    final TestApp app = await openSale(tester);
+    app.backend.on(
+      'POST',
+      '/vouchers',
+      FakeReply(201, Payloads.sold(recipientName: 'Anna', giftMessage: 'Alles Gute!')),
+    );
+
+    await continueWith(tester, '3000');
+    await tester.enterText(field(en.saleRecipientLabel), '  Anna ');
+    await tester.enterText(field(en.saleMessageLabel), 'Alles Gute!');
+    await tester.pump();
+    await submit(tester);
+
+    final Map<String, Object?> body = app.backend.to('POST', '/vouchers').single.body!;
+    expect(body['recipient_name'], 'Anna');
+    expect(body['gift_message'], 'Alles Gute!');
+
+    await tester.tap(primary(en.salePrint));
+    await settle(tester);
+    final PrintableVoucher job = app.printer.jobs.single;
+    expect(job.recipientName, 'Anna');
+    expect(job.giftMessage, 'Alles Gute!');
     await finishApp(tester, app);
   });
 

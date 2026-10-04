@@ -44,6 +44,7 @@ final class VoucherResource extends JsonResource
             'blocked_reason' => $voucher->blocked_reason,
             'expired_at' => $voucher->expired_at?->toIso8601String(),
             'recipient_name' => $voucher->recipient_name,
+            'gift_message' => $voucher->gift_message,
             'notes' => $voucher->notes,
             'customer' => CustomerResource::make($this->whenLoaded('customer')),
             'issued_by' => $this->whenLoaded('issuer', static fn () => $voucher->issuer !== null ? ['id' => $voucher->issuer->id, 'name' => $voucher->issuer->name] : null),

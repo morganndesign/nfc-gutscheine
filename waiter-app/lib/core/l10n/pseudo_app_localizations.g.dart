@@ -802,6 +802,15 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleEmailInvalid => pseudoLocalize(base.saleEmailInvalid);
 
   @override
+  String get saleRecipientLabel => pseudoLocalize(base.saleRecipientLabel);
+
+  @override
+  String get saleMessageLabel => pseudoLocalize(base.saleMessageLabel);
+
+  @override
+  String get saleMessageHelper => pseudoLocalize(base.saleMessageHelper);
+
+  @override
   String saleSubmit(String amount) =>
       pseudoLocalize(base.saleSubmit(pseudoMarker(0)), <String>[amount]);
 

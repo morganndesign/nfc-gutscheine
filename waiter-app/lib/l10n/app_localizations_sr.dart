@@ -801,6 +801,15 @@ class AppLocalizationsSr extends AppLocalizations {
   String get saleEmailInvalid => 'Unesite ispravnu e-mail adresu.';
 
   @override
+  String get saleRecipientLabel => 'Za koga? (neobavezno)';
+
+  @override
+  String get saleMessageLabel => 'Lična poruka (neobavezno)';
+
+  @override
+  String get saleMessageHelper => 'Na vaučeru i u PDF-u, do 300 znakova.';
+
+  @override
   String saleSubmit(String amount) {
     return 'Prodaj vaučer · $amount';
   }

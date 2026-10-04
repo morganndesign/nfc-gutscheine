@@ -40,13 +40,13 @@ dashboard.
 
 | Task | Where |
 |---|---|
-| Sell a voucher at the desk | **Vouchers → Sell voucher**. Value, how the guest paid (**Cash**, **Card terminal** with the receipt number, **Bank transfer** with the reference), optionally the customer, recipient and internal notes → **Sell voucher** → **Print voucher**. Print it (or save it as PDF) right away: the QR code is shown only once. |
+| Sell a voucher at the desk | **Vouchers → Sell voucher**. Value, how the guest paid (**Cash**, **Card terminal** with the receipt number, **Bank transfer** with the reference), optionally the customer, the recipient ("for Anna"), a personal message from the buyer (up to 300 characters, printed on the voucher and its PDF) and internal notes → **Sell voucher** → **Print voucher**. Print it (or save it as PDF) right away: the QR code is shown only once. |
 | Sell a voucher in the app | Managers and owners: **Sell voucher** on the ready screen → value → payment → optional guest e-mail → print with the phone's print dialog (AirPrint or the Android print service). |
 | Find a voucher | **Vouchers**, then search by voucher number, customer, recipient or note, or filter by status. |
 | Reload a voucher | Open the voucher → **Reload** → amount and payment. |
 | Lost printout, stolen or suspicious voucher | Open the voucher → **⋯ → Block voucher** with a reason. From then on it cannot be redeemed. **Unblock** is in the same menu. |
 | Wrong amount booked | **Transactions** or the voucher's history → **Reverse**. The correction is a new line; nothing is changed or deleted. |
-| Edit customer, recipient, notes | Open the voucher → **⋯ → Edit details**. |
+| Edit customer, recipient, message, notes | Open the voucher → **⋯ → Edit details**. |
 
 ---
 

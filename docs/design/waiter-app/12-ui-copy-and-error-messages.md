@@ -698,6 +698,9 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.email.helperPdf` | Der Gast erhält den Gutschein als PDF per E-Mail. | The guest receives the voucher as a PDF by e-mail. | Gost dobija vaučer kao PDF na e-mail. | 60 | printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04) |
 | `sale.email.helperNoMail` | Wird beim Gutschein gespeichert. | Saved with the voucher. | Sprema se uz vaučer. | 60 | ADR-002 · when it does not |
 | `sale.email.invalid` | Bitte eine gültige E-Mail-Adresse eingeben. | Enter a valid e-mail address. | Unesite ispravnu e-mail adresu. | 60 | ADR-002 · field error |
+| `sale.recipient.label` | Für wen? (optional) | For whom? (optional) | Za koga? (neobavezno) | 32 | printed voucher sale · on the voucher and its PDF (decision 2026-10-04) |
+| `sale.message.label` | Persönliche Nachricht (optional) | Personal message (optional) | Lična poruka (neobavezno) | 32 | printed voucher sale |
+| `sale.message.helper` | Steht auf dem Gutschein und im PDF, bis zu 300 Zeichen. | On the voucher and its PDF, up to 300 characters. | Na vaučeru i u PDF-u, do 300 znakova. | 60 | printed voucher sale |
 | `sale.submit` | Gutschein verkaufen · {amount} | Sell voucher · {amount} | Prodaj vaučer · {amount} | 24+amt | ADR-002 · primary |
 | `sale.submitting` | Gutschein wird verkauft … | Selling voucher … | Vaučer se prodaje … | 32 | ADR-002 · button progress |
 | `sale.failed.title` | Gutschein nicht verkauft | Voucher not sold | Vaučer nije prodan | 28 | ADR-002 · definitive answer |
@@ -960,7 +963,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **426 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **429 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

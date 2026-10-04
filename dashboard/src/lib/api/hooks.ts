@@ -120,6 +120,7 @@ export interface SellVoucherInput {
   customer_id?: string | null
   customer?: { first_name?: string; last_name?: string; email?: string; phone?: string; marketing_consent?: boolean } | null
   recipient_name?: string | null
+  gift_message?: string | null
   notes?: string | null
 }
 
@@ -144,7 +145,7 @@ export function useSellVoucher() {
 export function useUpdateVoucher(id: string) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { customer_id?: string | null; recipient_name?: string | null; notes?: string | null }) =>
+    mutationFn: (input: { customer_id?: string | null; recipient_name?: string | null; gift_message?: string | null; notes?: string | null }) =>
       api<{ data: Voucher }>(`/vouchers/${id}`, { method: "PATCH", body: input }),
     onSuccess: () => invalidateVoucherData(qc),
   })

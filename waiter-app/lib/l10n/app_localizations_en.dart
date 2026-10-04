@@ -801,6 +801,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleEmailInvalid => 'Enter a valid e-mail address.';
 
   @override
+  String get saleRecipientLabel => 'For whom? (optional)';
+
+  @override
+  String get saleMessageLabel => 'Personal message (optional)';
+
+  @override
+  String get saleMessageHelper =>
+      'On the voucher and its PDF, up to 300 characters.';
+
+  @override
   String saleSubmit(String amount) {
     return 'Sell voucher · $amount';
   }

@@ -291,8 +291,14 @@ abstract final class Payloads {
 
   static const String soldId = '0f1e2d3c-4b5a-4968-8776-655443322110';
 
-  static Map<String, Object?> sold({int value = 5000, bool replayed = false, String? payload, bool withQr = true}) =>
-      <String, Object?>{
+  static Map<String, Object?> sold({
+    int value = 5000,
+    bool replayed = false,
+    String? payload,
+    bool withQr = true,
+    String? recipientName,
+    String? giftMessage,
+  }) => <String, Object?>{
         'data': <String, Object?>{
           'id': soldId,
           'kind': 'digital',
@@ -301,6 +307,8 @@ abstract final class Payloads {
           'currency': 'EUR',
           'balance': value,
           'expires_at': null,
+          'recipient_name': recipientName,
+          'gift_message': giftMessage,
         },
         'printable': withQr ? <String, Object?>{'payload': payload ?? qr, 'qr_svg': '<svg/>'} : null,
         'replayed': replayed,

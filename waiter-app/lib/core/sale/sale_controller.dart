@@ -169,6 +169,10 @@ class SaleController extends ChangeNotifier {
   String reason = '';
   String email = '';
 
+  /// Printed voucher only: for whom, and the buyer's message (on the voucher and its PDF).
+  String recipient = '';
+  String message = '';
+
   SaleState _state = const SaleAmount();
   SaleState get state => _state;
 
@@ -250,6 +254,10 @@ class SaleController extends ChangeNotifier {
     final SaleState s = _state;
     if (s is SaleDetails && s.reasonMissing && value.trim().length >= 3) _set(s.copyWith(reasonMissing: false));
   }
+
+  void setRecipient(String value) => recipient = value;
+
+  void setMessage(String value) => message = value;
 
   void setEmail(String value) {
     email = value;
@@ -339,6 +347,8 @@ class SaleController extends ChangeNotifier {
         value: details.amount.cents,
         payment: PaymentInput(method: method, reference: reference.trim(), reason: reason.trim()),
         customerEmail: trimmedEmail.isEmpty ? null : trimmedEmail,
+        recipientName: form == SaleForm.printable && recipient.trim().isNotEmpty ? recipient.trim() : null,
+        giftMessage: form == SaleForm.printable && message.trim().isNotEmpty ? message.trim() : null,
         idempotencyKey: _idempotencyKey,
         cardPresentmentId: _cardPresentmentId,
       );
@@ -455,6 +465,8 @@ class SaleController extends ChangeNotifier {
     reference = '';
     reason = '';
     email = '';
+    recipient = '';
+    message = '';
     _idempotencyKey = _uuid.v4();
     _cardPresentmentId = null;
     _set(const SaleAmount());

@@ -49,6 +49,7 @@ export function useWidth<T extends HTMLElement>(fallback = 360): [React.RefObjec
 export function PrintableVoucherSheet({
   qrSvg,
   recipientName,
+  giftMessage,
   expiresAt,
   value,
   currency,
@@ -56,6 +57,8 @@ export function PrintableVoucherSheet({
 }: {
   qrSvg: string
   recipientName?: string | null
+  /** The buyer's message: printed instead of the restaurant's message for every voucher. */
+  giftMessage?: string | null
   expiresAt: string | null
   /** The value sold, in cents. */
   value: number
@@ -64,7 +67,8 @@ export function PrintableVoucherSheet({
 }) {
   const { user } = useAuth()
   const restaurant = user?.restaurant
-  const { look, logo } = useVoucherLook()
+  const { look: restaurantLook, logo } = useVoucherLook()
+  const look: VoucherLook = { ...restaurantLook, message: giftMessage?.trim() || restaurantLook.message }
   const [ref, width] = useWidth<HTMLDivElement>()
 
   const content: VoucherContent = {

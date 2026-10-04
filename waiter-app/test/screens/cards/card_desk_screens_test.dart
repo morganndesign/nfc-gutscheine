@@ -44,6 +44,8 @@ void main() {
       await settle(tester);
       expect(text(en.saleEmailHelper), findsOneWidget, reason: 'a gift card has no QR: the e-mail is the confirmation');
       expect(text(en.saleEmailHelperPdf), findsNothing);
+      expect(text(en.saleRecipientLabel), findsNothing, reason: 'nothing is printed on a gift card');
+      expect(text(en.saleMessageLabel), findsNothing);
       await tester.tap(primary('Tap card'));
       await settle(tester, 20);
 

@@ -39,6 +39,8 @@ final class StoreVoucherRequest extends ApiRequest
             'customer.phone' => ['nullable', 'string', 'max:40'],
             'customer.marketing_consent' => ['nullable', 'boolean'],
             'recipient_name' => ['nullable', 'string', 'max:160'],
+            // The buyer's words for the recipient, on the voucher and its PDF.
+            'gift_message' => ['nullable', 'string', 'max:300'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }

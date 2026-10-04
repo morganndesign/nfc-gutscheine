@@ -242,6 +242,8 @@ class WaiterApi {
     required int value,
     required PaymentInput payment,
     String? customerEmail,
+    String? recipientName,
+    String? giftMessage,
     required String idempotencyKey,
     String? cardPresentmentId,
   }) async {
@@ -254,6 +256,8 @@ class WaiterApi {
         'presentment_id': ?cardPresentmentId,
         'payment': payment.toJson(),
         if (customerEmail != null) 'customer': <String, Object?>{'email': customerEmail},
+        'recipient_name': ?recipientName,
+        'gift_message': ?giftMessage,
       },
       headers: <String, String>{'Idempotency-Key': idempotencyKey},
     );
