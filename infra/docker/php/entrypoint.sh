@@ -66,6 +66,10 @@ if [ -z "${APP_KEY:-}" ]; then
   export APP_KEY
 fi
 
+# Guests read amounts in the restaurant's format: without the full ICU data German prints "€30.00".
+php -r 'exit(str_contains((string) (new NumberFormatter("de_AT", NumberFormatter::CURRENCY))->formatCurrency(30, "EUR"), "30,00") ? 0 : 1);' \
+  || log "WARNING: PHP intl lacks the German locale data: amounts print as \"€30.00\" (install icu-data-full in the image)."
+
 # --- 3. Wait for MySQL and Redis -----------------------------------------------
 WAIT_SECONDS="${STARTUP_WAIT_SECONDS:-900}"
 waited=0

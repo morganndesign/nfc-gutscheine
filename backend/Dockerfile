@@ -10,7 +10,9 @@
 # ---------------------------------------------------------------------------
 FROM php:8.4-fpm-alpine AS base
 
-RUN apk add --no-cache icu-libs libzip libpng freetype libjpeg-turbo oniguruma tzdata fcgi \
+# icu-data-full: Alpine's icu-libs ships English locale data only, which printed € 30,00 as "€30.00" in German
+# e-mails and voucher PDFs (seen in production 2026-10-04).
+RUN apk add --no-cache icu-libs icu-data-full libzip libpng freetype libjpeg-turbo oniguruma tzdata fcgi \
  && apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev libpng-dev freetype-dev libjpeg-turbo-dev oniguruma-dev linux-headers \
  && docker-php-ext-configure gd --with-freetype --with-jpeg \
  && docker-php-ext-install -j"$(nproc)" pdo_mysql intl zip gd bcmath opcache pcntl \
