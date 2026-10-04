@@ -211,7 +211,7 @@ final class VoucherService
                     $printable = $this->printables->issue($actor, $voucher, 'sale');
                 }
 
-                VoucherIssued::dispatch($voucher, $tx);
+                VoucherIssued::dispatch($voucher, $tx, $printable?->payload);
 
                 return new SaleResult($voucher, $tx, $payment, $printable);
             }, self::DB_ATTEMPTS);

@@ -791,6 +791,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleEmailHelper => 'The guest receives a confirmation.';
 
   @override
+  String get saleEmailHelperPdf =>
+      'The guest receives the voucher as a PDF by e-mail.';
+
+  @override
   String get saleEmailHelperNoMail => 'Saved with the voucher.';
 
   @override

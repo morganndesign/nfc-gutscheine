@@ -218,6 +218,7 @@
   "saleReasonRequired": "Grund eingeben (mindestens 3 Zeichen).",
   "saleEmailLabel": "E-Mail des Gastes (optional)",
   "saleEmailHelper": "Der Gast erhält eine Bestätigung.",
+  "saleEmailHelperPdf": "Der Gast erhält den Gutschein als PDF per E-Mail.",
   "saleEmailHelperNoMail": "Wird beim Gutschein gespeichert.",
   "saleEmailInvalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
   "saleSubmit": "Gutschein verkaufen · {amount}",

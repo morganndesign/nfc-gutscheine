@@ -5,10 +5,13 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Enums\RoleSlug;
+use App\Enums\VoucherKind;
 use App\Jobs\SendVoucherNotification;
 use App\Mail\TemplatedMail;
 use App\Models\NotificationLog;
 use App\Models\Voucher;
+use App\Services\Notifications\VoucherNotificationService;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Queue;
@@ -47,9 +50,75 @@ final class NotificationTest extends TestCase
                 $this->assertStringNotContainsString($forbidden, $mail->htmlBody.$mail->textBody.$mail->subjectLine);
             }
 
+            // The voucher itself travels only as the PDF attachment (decision 2026-10-04), never in the text.
+            $this->assertStringContainsString('als PDF angehängt', (string) $mail->attachmentNote);
+            $this->assertStringContainsString('als PDF angehängt', $mail->render());
+            $this->assertCount(1, $mail->attachments());
+            $this->assertNotNull($mail->voucherPdf);
+            $this->assertSame('Gutschein-Beisl-b-Test-b.pdf', $mail->voucherPdf[0]);
+            $this->assertStringStartsWith('%PDF-', $mail->voucherPdf[1]);
+
             return $mail->hasTo('guest@example.com');
         });
         $this->assertDatabaseHas('notification_logs', ['recipient' => 'guest@example.com', 'status' => 'sent', 'template_key' => 'voucher_issued']);
+        // Nothing of the QR is stored with the e-mail log.
+        $this->assertStringNotContainsString(substr($qr, 6, 12), json_encode(NotificationLog::query()->get()->toArray(), JSON_THROW_ON_ERROR));
+    }
+
+    public function test_the_sale_job_carries_the_qr_encrypted_on_the_queue(): void
+    {
+        Queue::fake();
+        $restaurant = $this->restaurant();
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $qr = (string) $this->postJson('/api/v1/vouchers', [
+            'value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => 'guest@example.com'],
+        ], $this->idempotency())->assertCreated()->json('printable.payload');
+
+        Queue::assertPushed(SendVoucherNotification::class, function (SendVoucherNotification $job) use ($qr): bool {
+            $this->assertInstanceOf(ShouldBeEncrypted::class, $job);
+
+            return $job->printablePayload === $qr;
+        });
+    }
+
+    public function test_a_gift_card_sale_never_attaches_a_qr(): void
+    {
+        Mail::fake();
+        $restaurant = $this->restaurant();
+        $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $response = $this->postJson('/api/v1/vouchers', [
+            'value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => 'guest@example.com'],
+        ], $this->idempotency())->assertCreated();
+        $voucher = Voucher::query()->findOrFail($response->json('data.id'));
+        $voucher->forceFill(['kind' => VoucherKind::Card])->save();
+        Mail::fake();
+
+        app(VoucherNotificationService::class)->send($voucher, 'voucher_issued', null, (string) $response->json('printable.payload'));
+
+        Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail): bool => $mail->voucherPdf === null);
+    }
+
+    public function test_a_qr_issued_again_before_the_e_mail_left_is_not_attached(): void
+    {
+        Mail::fake();
+        Queue::fake();
+        $restaurant = $this->restaurant();
+        $this->actingAsStaff($restaurant, RoleSlug::Owner);
+        $response = $this->postJson('/api/v1/vouchers', [
+            'value' => 5000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => 'guest@example.com'],
+        ], $this->idempotency())->assertCreated();
+        $voucherId = (string) $response->json('data.id');
+        $this->postJson("/api/v1/vouchers/{$voucherId}/printable", ['reason' => 'guest lost the sheet'])->assertSuccessful();
+
+        $job = null;
+        Queue::assertPushed(SendVoucherNotification::class, function (SendVoucherNotification $pushed) use (&$job): bool {
+            $job = $pushed;
+
+            return true;
+        });
+        app()->call([$job, 'handle']);
+
+        Mail::assertSent(TemplatedMail::class, fn (TemplatedMail $mail): bool => $mail->voucherPdf === null && $mail->attachments() === [] && $mail->attachmentNote === null);
     }
 
     public function test_the_reload_confirmation_names_the_amount_and_payment_in_bhs(): void

@@ -218,6 +218,7 @@
   "saleReasonRequired": "Unesite razlog (najmanje 3 znaka).",
   "saleEmailLabel": "E-mail gosta (neobavezno)",
   "saleEmailHelper": "Gost dobija potvrdu.",
+  "saleEmailHelperPdf": "Gost dobija vaučer kao PDF na e-mail.",
   "saleEmailHelperNoMail": "Sprema se uz vaučer.",
   "saleEmailInvalid": "Unesite ispravnu e-mail adresu.",
   "saleSubmit": "Prodaj vaučer · {amount}",

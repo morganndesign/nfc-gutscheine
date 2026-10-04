@@ -7,13 +7,18 @@ namespace App\Jobs;
 use App\Models\Voucher;
 use App\Services\Notifications\VoucherNotificationService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use SensitiveParameter;
 
-final class SendVoucherNotification implements ShouldBeUnique, ShouldQueue
+/**
+ * Encrypted on the queue: a sale's job carries the voucher's printable QR, which is as good as cash.
+ */
+final class SendVoucherNotification implements ShouldBeEncrypted, ShouldBeUnique, ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -37,6 +42,8 @@ final class SendVoucherNotification implements ShouldBeUnique, ShouldQueue
         public readonly string $templateKey,
         /** The sale or reload the e-mail confirms; null for reminders. */
         public readonly ?string $transactionId = null,
+        /** A digital voucher's QR, attached as a PDF to the sale's e-mail. */
+        #[SensitiveParameter] public readonly ?string $printablePayload = null,
     ) {
         $this->onQueue('notifications');
     }
@@ -52,7 +59,7 @@ final class SendVoucherNotification implements ShouldBeUnique, ShouldQueue
         $voucher = Voucher::query()->withoutGlobalScopes()->find($this->voucherId);
 
         if ($voucher !== null) {
-            $notifications->send($voucher, $this->templateKey, $this->transactionId);
+            $notifications->send($voucher, $this->templateKey, $this->transactionId, $this->printablePayload);
         }
     }
 }

@@ -41,6 +41,8 @@ void main() {
       await typeDigits(tester, '5000');
       await tester.tap(primary('Continue'));
       await settle(tester);
+      expect(text(en.saleEmailHelper), findsOneWidget, reason: 'a gift card has no QR: the e-mail is the confirmation');
+      expect(text(en.saleEmailHelperPdf), findsNothing);
       await tester.tap(primary('Tap card'));
       await settle(tester, 20);
 

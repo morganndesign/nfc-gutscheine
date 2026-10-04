@@ -1406,11 +1406,17 @@ abstract class AppLocalizations {
   /// **'Guest e-mail (optional)'**
   String get saleEmailLabel;
 
-  /// Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · when the restaurant sends guest e-mails
+  /// Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · gift card sale, when the restaurant sends guest e-mails
   ///
   /// In en, this message translates to:
   /// **'The guest receives a confirmation.'**
   String get saleEmailHelper;
+
+  /// Spec key: sale.email.helperPdf (12 §5.13) · Max: 60 · Notes: printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04)
+  ///
+  /// In en, this message translates to:
+  /// **'The guest receives the voucher as a PDF by e-mail.'**
+  String get saleEmailHelperPdf;
 
   /// Spec key: sale.email.helperNoMail (12 §5.13) · Max: 60 · Notes: ADR-002 · when it does not
   ///

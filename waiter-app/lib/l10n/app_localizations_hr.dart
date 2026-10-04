@@ -792,6 +792,9 @@ class AppLocalizationsHr extends AppLocalizations {
   String get saleEmailHelper => 'Gost dobija potvrdu.';
 
   @override
+  String get saleEmailHelperPdf => 'Gost dobija vaučer kao PDF na e-mail.';
+
+  @override
   String get saleEmailHelperNoMail => 'Sprema se uz vaučer.';
 
   @override

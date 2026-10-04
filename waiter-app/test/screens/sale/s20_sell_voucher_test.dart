@@ -52,6 +52,8 @@ void main() {
       expect(text(method), findsOneWidget);
     }
     expect(text(en.salePaymentComplimentary), findsNothing, reason: 'owners only');
+    // Decision 2026-10-04: the guest's e-mail carries the printed voucher as a PDF.
+    expect(text(en.saleEmailHelperPdf), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).last, 'klara@example.at');
     await tester.pump();

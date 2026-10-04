@@ -311,7 +311,11 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                         label: l10n.saleEmailLabel,
                         controller: _email,
                         enabled: !s.submitting,
-                        helperText: _c.sendsGuestEmail ? l10n.saleEmailHelper : l10n.saleEmailHelperNoMail,
+                        helperText: !_c.sendsGuestEmail
+                            ? l10n.saleEmailHelperNoMail
+                            : _c.form == SaleForm.card
+                            ? l10n.saleEmailHelper
+                            : l10n.saleEmailHelperPdf,
                         errorText: s.emailInvalid ? l10n.saleEmailInvalid : null,
                         onChanged: _c.setEmail,
                       ),

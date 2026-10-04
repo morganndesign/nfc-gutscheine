@@ -1131,7 +1131,11 @@
   },
   "saleEmailHelper": "The guest receives a confirmation.",
   "@saleEmailHelper": {
-    "description": "Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · when the restaurant sends guest e-mails"
+    "description": "Spec key: sale.email.helper (12 §5.13) · Max: 60 · Notes: ADR-002 · gift card sale, when the restaurant sends guest e-mails"
+  },
+  "saleEmailHelperPdf": "The guest receives the voucher as a PDF by e-mail.",
+  "@saleEmailHelperPdf": {
+    "description": "Spec key: sale.email.helperPdf (12 §5.13) · Max: 60 · Notes: printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04)"
   },
   "saleEmailHelperNoMail": "Saved with the voucher.",
   "@saleEmailHelperNoMail": {

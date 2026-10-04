@@ -694,7 +694,8 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.reason.label` | Grund | Reason | Razlog | 24 | ADR-002 · complimentary |
 | `sale.reason.required` | Grund eingeben (mindestens 3 Zeichen). | Enter a reason (at least 3 characters). | Unesite razlog (najmanje 3 znaka). | 60 | ADR-002 · field error |
 | `sale.email.label` | E-Mail des Gastes (optional) | Guest e-mail (optional) | E-mail gosta (neobavezno) | 32 | ADR-002 |
-| `sale.email.helper` | Der Gast erhält eine Bestätigung. | The guest receives a confirmation. | Gost dobija potvrdu. | 60 | ADR-002 · when the restaurant sends guest e-mails |
+| `sale.email.helper` | Der Gast erhält eine Bestätigung. | The guest receives a confirmation. | Gost dobija potvrdu. | 60 | ADR-002 · gift card sale, when the restaurant sends guest e-mails |
+| `sale.email.helperPdf` | Der Gast erhält den Gutschein als PDF per E-Mail. | The guest receives the voucher as a PDF by e-mail. | Gost dobija vaučer kao PDF na e-mail. | 60 | printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04) |
 | `sale.email.helperNoMail` | Wird beim Gutschein gespeichert. | Saved with the voucher. | Sprema se uz vaučer. | 60 | ADR-002 · when it does not |
 | `sale.email.invalid` | Bitte eine gültige E-Mail-Adresse eingeben. | Enter a valid e-mail address. | Unesite ispravnu e-mail adresu. | 60 | ADR-002 · field error |
 | `sale.submit` | Gutschein verkaufen · {amount} | Sell voucher · {amount} | Prodaj vaučer · {amount} | 24+amt | ADR-002 · primary |
@@ -951,7 +952,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **417 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **418 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

@@ -75,6 +75,8 @@ dashboard.
 ## Guests
 
 Guests keep the printed sheet (or a photo of it) and show it when they pay. If they gave an e-mail address at the
-sale, they receive a receipt (value, restaurant, date, how it was paid) and, before a validity ends, a reminder.
-The e-mails never contain the QR code, the voucher number, a link or the current balance, so an e-mail can never be
-used to pay. To learn the balance, guests ask the restaurant.
+sale of a printed voucher, the receipt (value, restaurant, date, how it was paid) carries the voucher itself as a PDF
+attachment with its QR code — treat that e-mail like cash. A gift card sale only gets the receipt: the card is the
+voucher. Before a validity ends, guests get a reminder. The e-mail text never contains the QR code, the voucher
+number, a link or the current balance. If a QR code may have been copied, issue a new one: the old one stops working.
+To learn the balance, guests ask the restaurant.

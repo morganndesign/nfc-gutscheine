@@ -18,6 +18,9 @@
                 <tr>
                     <td style="padding:32px;font-size:15px;line-height:1.6;">
                         {!! $htmlBody !!}
+                        @if ($attachmentNote)
+                        <p style="margin:24px 0 0;padding:12px 16px;background:#f5f5f7;border-radius:10px;font-size:14px;">{{ $attachmentNote }}</p>
+                        @endif
                     </td>
                 </tr>
                 @if ($footer)

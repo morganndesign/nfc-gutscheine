@@ -792,6 +792,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get saleEmailHelper => pseudoLocalize(base.saleEmailHelper);
 
   @override
+  String get saleEmailHelperPdf => pseudoLocalize(base.saleEmailHelperPdf);
+
+  @override
   String get saleEmailHelperNoMail =>
       pseudoLocalize(base.saleEmailHelperNoMail);
 
