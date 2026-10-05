@@ -87,6 +87,15 @@ dashboard.
   the seller themself only within 15 minutes, after that another manager or the owner. If the answer is lost,
   confirm again with the same reason — it is never booked twice. A cancelled loyalty sale sends the guest no
   "refunded" e-mail.
+- **Gift cards** (app **Cards → Find card**, dashboard **Cards**): **Suspend** a lost or stolen card at once — it
+  no longer pays. A found card is **resumed only in the app, with the card held to the phone** (nobody can resume
+  a card that is not at the till). A card of a compromised batch cannot be resumed: **Replace** it, the balance
+  moves to the new card. A lost or stolen card is replaced by the owner. When the card's voucher is blocked or
+  expired, the card says so; topping it up is refused right after the tap, before any amount is typed.
+- **Cancelled card sale**: the card goes back to stock and can be sold again (a refund takes it out of service).
+- **Card orders**: you get an e-mail when GiftCard Pro accepts or declines an order and when the cards are shipped.
+- **Sign out everywhere** (**Account**): ends every other sign-in of yours (phones and browsers), e.g. after a
+  lost phone or a shared computer. This browser stays signed in.
 - **Cash-up**: "Korrigierte bezahlte Aufladungen" is a correction of a booking error, not a payout. Loyalty value
   is never counted as money (also not in the CSV exports, which show it in their own "Loyalty value" column).
 

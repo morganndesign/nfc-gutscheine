@@ -424,4 +424,118 @@ void main() {
     c.dispose();
     await finish(tester);
   });
+
+  // ------------------------------------------------------------------ audit 2026-10-06 (K2, K3, L4)
+
+  /// [reloadManager] with the restaurant's top-ups switched off, or with Loyalty.
+  Map<String, Object?> managerWith({bool reloads = true, bool loyalty = false}) {
+    final Map<String, Object?> user = Payloads.reloadManager();
+    final Map<String, Object?> restaurant = Map<String, Object?>.of(user['restaurant']! as Map<String, Object?>);
+    restaurant['settings'] = <String, Object?>{
+      ...restaurant['settings']! as Map<String, Object?>,
+      'allow_reload': reloads,
+    };
+    return <String, Object?>{
+      ...user,
+      'restaurant': restaurant,
+      'permissions': <String>[
+        ...(user['permissions']! as List<String>),
+        if (loyalty) Permissions.sellComplimentary,
+      ],
+    };
+  }
+
+  testWidgets('a blocked or expired voucher is said right after the tap, before any amount (K2)', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(status: 'blocked')))
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(status: 'expired')));
+    final ReloadController c = controller();
+    unawaited(c.tap());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.voucherBlocked);
+
+    c.startOver();
+    unawaited(c.tap());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.voucherExpired);
+    expect(app.backend.to('POST', reloads), isEmpty);
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('top-ups switched off: a guest card is refused at the tap, a new card is still sold (K3)', (
+    WidgetTester tester,
+  ) async {
+    await started(tester, user: managerWith(reloads: false));
+    expect(app.session.user!.restaurant!.settings.allowReload, isFalse);
+    cardAnswers();
+    newCardAnswers();
+    final ReloadController c = controller();
+    unawaited(c.tap());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.off);
+
+    c.startOver();
+    unawaited(c.tap());
+    await settle(tester);
+    expect(c.state, isA<ReloadAmount>(), reason: 'selling a new card does not depend on top-ups');
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a refused top-up for voucher reasons names them (K2)', (WidgetTester tester) async {
+    await started(tester);
+    cardAnswers(times: 2);
+    app.backend
+      ..on('POST', reloads, FakeReply(409, Payloads.error('VOUCHER_EXPIRED')))
+      ..on('POST', reloads, FakeReply(422, Payloads.error('RELOAD_NOT_ALLOWED')))
+      ..on('GET', '/auth/me', FakeReply(200, <String, Object?>{'data': managerWith(reloads: false)}));
+    ReloadController c = await toDetails(tester);
+    unawaited(c.submit());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.voucherExpired);
+    c.dispose();
+
+    c = await toDetails(tester);
+    unawaited(c.submit());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.off);
+    expect(app.session.user!.restaurant!.settings.allowReload, isFalse, reason: 'the settings are read again');
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('Loyalty taken away meanwhile: its own message, permissions reloaded, back with cash (L4)', (
+    WidgetTester tester,
+  ) async {
+    await started(tester, user: managerWith(loyalty: true));
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000, loyalty: true)))
+      ..on('POST', reloads, FakeReply(403, Payloads.error('COMPLIMENTARY_NOT_ALLOWED')))
+      ..on('GET', '/auth/me', FakeReply(200, <String, Object?>{'data': managerWith()}));
+    final ReloadController c = await toDetails(tester);
+    expect(c.methodsFor((c.state as ReloadDetails).card), contains(PaymentMethod.complimentary));
+    c.chooseMethod(PaymentMethod.complimentary);
+    c.setReason('Stammgast');
+    unawaited(c.submit());
+    await settle(tester);
+
+    final ReloadProblem p = c.state as ReloadProblem;
+    expect(p.kind, ReloadProblemKind.loyaltyNotAllowed);
+    expect(app.backend.to('GET', '/auth/me'), isNotEmpty);
+    expect(app.session.user!.canSellComplimentary, isFalse);
+    c.back();
+    final ReloadDetails back = c.state as ReloadDetails;
+    expect(back.method, PaymentMethod.cash);
+    expect(c.methodsFor(back.card), isNot(contains(PaymentMethod.complimentary)));
+    c.dispose();
+    await finish(tester);
+  });
 }
+

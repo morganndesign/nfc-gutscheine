@@ -9,6 +9,7 @@ use App\Http\Requests\Cards\CardIndexRequest;
 use App\Http\Requests\Cards\CardReasonRequest;
 use App\Http\Requests\Cards\ReceiveCardBatchRequest;
 use App\Http\Requests\Cards\ReplaceCardRequest;
+use App\Http\Requests\Cards\ResumeCardRequest;
 use App\Http\Resources\CardBatchResource;
 use App\Http\Resources\CardResource;
 use App\Models\Card;
@@ -59,9 +60,10 @@ final class CardController extends Controller
         return $this->respond($this->cards->suspend(Actor::fromRequest($request), $this->find($card), (string) $request->validated('reason')));
     }
 
-    public function resume(CardReasonRequest $request, string $card): CardResource
+    /** Only with the card tapped at the till (`resume` presentment), never by number alone. */
+    public function resume(ResumeCardRequest $request, string $card): CardResource
     {
-        return $this->respond($this->cards->resume(Actor::fromRequest($request), $this->find($card), (string) $request->validated('reason')));
+        return $this->respond($this->cards->resume(Actor::fromRequest($request), $this->find($card), (string) $request->validated('reason'), (string) $request->validated('presentment_id')));
     }
 
     public function revoke(CardReasonRequest $request, string $card): CardResource

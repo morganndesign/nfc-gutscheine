@@ -278,6 +278,27 @@ void main() {
       });
     }
 
+    testWidgets('a sheet rises above the keyboard (T10)', (WidgetTester tester) async {
+      await pumpComponent(
+        tester,
+        _Host(
+          onTap: (BuildContext c) => showWaiterSheet<void>(
+            context: c,
+            title: 'Server',
+            builder: (BuildContext _) => const SizedBox(height: 200),
+          ),
+        ),
+        center: false,
+      );
+      await tester.tap(find.text('Open', findRichText: true));
+      await tester.pumpAndSettle();
+      final double screen = tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      tester.view.viewInsets = FakeViewPadding(bottom: 300 * tester.view.devicePixelRatio);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      expect(tester.getRect(find.byType(WaiterBottomSheet)).bottom, lessThanOrEqualTo(screen - 300 + 0.5));
+    });
+
     testWidgets('drag down dismisses; a locked sheet stays', (
       WidgetTester tester,
     ) async {

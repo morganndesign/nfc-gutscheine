@@ -12,6 +12,7 @@ use App\Models\Payment;
 use App\Models\Restaurant;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
+use App\Services\Vouchers\VoucherService;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -66,8 +67,9 @@ final class DashboardService
 
         return [
             'currency' => $restaurant->currency,
-            'vouchers_sold' => Voucher::query()->count(),
-            'vouchers_sold_this_month' => Voucher::query()->where('created_at', '>=', $monthStart)->count(),
+            // Sold: paid vouchers whose sale stands (not loyalty, not cancelled; audit L6/Q8).
+            'vouchers_sold' => $this->sold()->count(),
+            'vouchers_sold_this_month' => $this->sold()->where('created_at', '>=', $monthStart)->count(),
             'vouchers_active' => $statusCounts->get(VoucherStatus::Active->value, 0),
             'vouchers_empty' => Voucher::query()->where('status', VoucherStatus::Active->value)->where('balance', 0)->count(),
             'vouchers_blocked' => $statusCounts->get(VoucherStatus::Blocked->value, 0),
@@ -235,5 +237,12 @@ final class DashboardService
             'pgsql' => "to_char({$column} + interval '{$offset} minutes', '".($unit === 'month' ? 'YYYY-MM' : 'YYYY-MM-DD')."')",
             default => "DATE_FORMAT(DATE_ADD({$column}, INTERVAL {$offset} MINUTE), '".($unit === 'month' ? '%Y-%m' : '%Y-%m-%d')."')",
         };
+    }
+
+    /** @return Builder<Voucher> */
+    private function sold(): Builder
+    {
+        return Voucher::query()->where('is_loyalty', false)->whereDoesntHave('transactions', static fn ($q) => $q
+            ->where('type', TransactionType::Refund->value)->where('note', 'like', VoucherService::SALE_CANCELLED_NOTE.'%'));
     }
 }

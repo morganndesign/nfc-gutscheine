@@ -391,6 +391,18 @@ void main() {
     await finish(tester);
   });
 
+  testWidgets('a scanned QR of a voucher that lives on a card asks for the card (T1)', (WidgetTester tester) async {
+    await started(tester);
+    app.backend.on(
+      'POST',
+      '/presentments',
+      FakeReply(422, Payloads.error('PRESENTMENT_METHOD_NOT_ALLOWED', <String, Object?>{'kind': 'card', 'method': 'qr_scan'})),
+    );
+    await scan(tester);
+    expect((app.loop.state as ProblemState).kind, ProblemKind.cardOnly);
+    await finish(tester);
+  });
+
   testWidgets('Presentment problems: not recognized, throttled countdown, network retry', (WidgetTester tester) async {
     await started(tester);
     app.backend.on('POST', '/presentments', FakeReply(422, Payloads.error('MEDIUM_NOT_RECOGNIZED')));

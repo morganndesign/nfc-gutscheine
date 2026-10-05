@@ -320,8 +320,14 @@ enum ProblemKind {
   /// The server's answer could not be used.
   server,
 
+  /// A QR of a voucher that lives on a card (PRESENTMENT_METHOD_NOT_ALLOWED): the card is to be tapped (T1).
+  cardOnly,
+
   /// A card that is not a voucher card of this restaurant, a copied tap, or a chip without the card's keys.
   cardNotRecognized,
+
+  /// The card's live check failed (CARD_AUTHENTICATION_FAILED, e.g. moved too early): tap again (T2).
+  cardUnverified,
 
   /// A genuine card that cannot pay now (not activated, blocked, no longer valid) — [ProblemState.cardState].
   cardNotUsable,

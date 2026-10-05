@@ -420,7 +420,7 @@ Single source for every UI string. **Max** = character limit (§1.8) for the lon
 | `common.done` | Fertig | Done | Gotovo | 12 | 03b |
 | `common.tryAgain` | Erneut versuchen | Try again | Pokušaj ponovo | 24 | 03b · §2.7 |
 | `common.scanAgain` | Erneut scannen | Scan again | Skeniraj ponovo | 24 | 03b · §2.7 |
-| `common.tapAgain` | Karte erneut halten | Tap card again | Ponovo prislonite karticu | 24 | Phase 4 |
+| `common.tapAgain` | Karte erneut halten | Tap card again | Ponovo prisloni karticu | 24 | Phase 4 |
 | `common.openSettings` | Einstellungen öffnen | Open Settings | Otvori postavke | 24 | 12 · = `camera.denied.action` (alias) |
 | `common.backToSignIn` | Zur Anmeldung | Back to sign in | Nazad na prijavu | 24 | 03a |
 | `common.checkAgain` | Erneut prüfen | Check again | Provjeri ponovo | 24 | 12 · alias `suspended.retry` (03a) |
@@ -643,10 +643,10 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `uncertain.title` | Verbindung unterbrochen | Connection interrupted | Veza prekinuta | 28 | **B** · R03/R04 |
 | `uncertain.body` | Wird geprüft … Es wird nie doppelt gebucht. | Checking … Nothing is ever booked twice. | Provjeravamo … Ništa se ne knjiži dvaput. | 90 | **B** · also the helper in R02 |
 | `uncertain.retrying` | Versuch {n} von 3 | Attempt {n} of 3 | Pokušaj {n} od 3 | 20 | 03b |
-| `uncertain.guestHint` | Dem Gast sagen: „Einen Moment bitte, die Einlösung wird bestätigt." | Tell the guest: "One moment please, the redemption is being confirmed." | Recite gostu: „Trenutak, molim, iskorištavanje se potvrđuje." | 90 | 03b · **harmonised** (never "Zahlung / payment / plaćanje", §1.3) |
+| `uncertain.guestHint` | Dem Gast sagen: „Einen Moment bitte, die Einlösung wird bestätigt.“ | Tell the guest: "One moment please, the redemption is being confirmed." | Recite gostu: „Trenutak, molim, iskorištavanje se potvrđuje.“ | 90 | 03b · **harmonised** (never "Zahlung / payment / plaćanje", §1.3) |
 | `uncertain.failedBody` | Noch nicht bestätigt. Erneut prüfen – es wird nie doppelt gebucht. | Not confirmed yet. Check again – nothing is ever booked twice. | Još nije potvrđeno. Provjerite ponovo – ništa se ne knjiži dvaput. | 90 | 03b · R04 · ADR-002: "Check again" resends the same key |
 | `uncertain.cancelled` | Nicht bestätigt. Wird automatisch geprüft, bevor dieser Gutschein wieder eingelöst werden kann. | Not confirmed. It is checked automatically before this voucher can be redeemed again. | Nije potvrđeno. Provjerava se automatski prije nego što se ovaj vaučer može ponovo iskoristiti. | 120 | 03b · R05 · ADR-002 · snackbar on S05 after Cancel |
-| `uncertain.cancelledGuestHint` | Dem Gast sagen: „Die Einlösung ist noch nicht bestätigt. Wir prüfen das, bevor neu eingelöst wird." | Tell the guest: "The redemption isn't confirmed yet. We'll check it before redeeming again." | Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo to prije novog iskorištavanja." | 120 | 03b · **harmonised** (vocabulary); 3 lines allowed (quoted speech) |
+| `uncertain.cancelledGuestHint` | Dem Gast sagen: „Die Einlösung ist noch nicht bestätigt. Wir prüfen das, bevor neu eingelöst wird.“ | Tell the guest: "The redemption isn't confirmed yet. We'll check it before redeeming again." | Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo to prije novog iskorištavanja.“ | 120 | 03b · **harmonised** (vocabulary); 3 lines allowed (quoted speech) |
 | `redeem.balanceChanged` | Guthaben hat sich geändert: jetzt {amount} | Balance changed: now {amount} | Stanje se promijenilo: sada {amount} | 48 | 03b · R06 |
 
 ### 5.11 S09 Success
@@ -669,9 +669,13 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 |---|---|---|---|---|---|
 | `problem.notRecognized.title` | Kein Gutschein dieses Lokals | Not a voucher of this restaurant | Nije vaučer ovog restorana | 32 | ADR-002 · unknown, revoked or foreign code |
 | `problem.notRecognized.body` | Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder Betriebsleitung holen. | This code is not valid here. Ask the guest for another voucher or get a manager. | Ovaj kôd ovdje ne važi. Zatražite od gosta drugi vaučer ili pozovite menadžera. | 90 | ADR-002 |
+| `problem.cardOnly.title` | Gutschein auf einer Karte | Voucher on a card | Vaučer je na kartici | 32 | S10 · PRESENTMENT_METHOD_NOT_ALLOWED: a QR of a card voucher was scanned (T1) |
+| `problem.cardOnly.body` | Dieser Gutschein ist auf einer Karte. Die Karte des Gastes ans Handy halten. | This voucher is on a card. Hold the guest's card to the phone. | Ovaj vaučer je na kartici. Prislonite gostovu karticu uz telefon. | 90 | S10 · primary `ready.tapCard` |
 | `problem.cardNotRecognized.title` | Karte nicht angenommen | Card not accepted | Kartica nije prihvaćena | 32 | Phase 4 · not a card of this restaurant, copied or unverifiable |
-| `problem.cardNotRecognized.body` | Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Betriebsleitung holen. | This card could not be confirmed as a voucher of this restaurant. Get a manager. | Ova kartica nije potvrđena kao vaučer ovog restorana. Pozovite menadžera. | 90 | Phase 4 |
-| `problem.cardNotUsable.title` | Mit dieser Karte nicht bezahlbar | This card cannot pay | Ovom karticom se ne može platiti | 32 | Phase 4 · CARD_NOT_USABLE |
+| `problem.cardNotRecognized.body` | Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Bitte Betriebsleitung holen. | This card could not be confirmed as a voucher of this restaurant. Get a manager. | Ova kartica nije potvrđena kao vaučer ovog restorana. Pozovite menadžera. | 90 | Phase 4 |
+| `problem.cardUnverified.title` | Karte nicht geprüft | Card not checked | Kartica nije provjerena | 32 | Phase 4 · CARD_AUTHENTICATION_FAILED (e.g. moved too early): tap again (T2) |
+| `problem.cardUnverified.body` | Die Prüfung ist nicht gelungen. Die Karte ruhig ans Handy halten und erneut versuchen. Klappt es wieder nicht, bitte Betriebsleitung holen. | The check did not succeed. Hold the card still on the phone and try again. If it fails again, get a manager. | Provjera nije uspjela. Držite karticu mirno uz telefon i pokušajte ponovo. Ako opet ne uspije, pozovite menadžera. | 140 | Phase 4 · primary `common.tapAgain` |
+| `problem.cardNotUsable.title` | Karte nicht verwendbar | Card cannot be used | Kartica se ne može koristiti | 32 | Phase 4 · CARD_NOT_USABLE |
 | `problem.cardNotUsable.notActive` | Die Karte ist noch nicht aktiviert. | The card is not activated yet. | Kartica još nije aktivirana. | 90 | Phase 4 · available, bound |
 | `problem.cardNotUsable.suspended` | Die Karte ist vorübergehend gesperrt. Die Betriebsleitung kann helfen. | The card is temporarily blocked. A manager can help. | Kartica je privremeno blokirana. Menadžer može pomoći. | 90 | Phase 4 · suspended |
 | `problem.cardNotUsable.invalid` | Die Karte ist nicht mehr gültig. Die Betriebsleitung kann helfen. | The card is no longer valid. A manager can help. | Kartica više nije važeća. Menadžer može pomoći. | 90 | Phase 4 · replaced, revoked, lost, not bound |
@@ -736,7 +740,7 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.leaveUncertain.title` | Verkauf offen – trotzdem schließen? | Sale open – close anyway? | Prodaja otvorena – ipak zatvoriti? | 36 | ADR-002 · Dialog · the last request got no answer |
 | `sale.leaveUncertain.body` | Vielleicht wurde der Gutschein bereits verkauft. Nur „Erneut versuchen“ klärt das, ohne doppelt zu verkaufen. | The voucher may already have been sold. Only “Try again” finds out without selling it twice. | Vaučer je možda već prodan. Samo „Pokušaj ponovo“ to provjerava bez dvostruke prodaje. | 120 | ADR-002 · Dialog (confirm = `sale.leave.confirm`, cancel = `common.cancel`) |
 | `sale.noQr.title` | Gutschein bereits verkauft | Voucher already sold | Vaučer je već prodan | 28 | ADR-002 · retry answered with the earlier sale, QR no longer available |
-| `sale.noQr.body` | Der QR-Code kann nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein, im Dashboard sperren und neu verkaufen. | Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one. | QR kôd se više ne može prikazati. Ako gost nema ispisan vaučer, blokirajte ga u dashboardu i prodajte novi. | 140 | ADR-002 · same advice as the dashboard |
+| `sale.noQr.body` | Der QR-Code kann hier nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein: im Dashboard beim Gutschein „Neuer QR-Code“. | Its QR code can no longer be shown here. If the guest has no printed voucher: in the dashboard, open the voucher › “New QR code”. | QR kôd se ovdje više ne može prikazati. Ako gost nema ispisan vaučer: u dashboardu otvorite vaučer › „Novi QR kod“. | 140 | ADR-002 · retry answered with the earlier sale; audit Q3: a new QR, never block and sell again (the guest would pay twice) |
 | `sale.qr.a11y` | QR-Code des Gutscheins | QR code of the voucher | QR kôd vaučera | — | ADR-002 · (a11y) |
 | `sale.card.done.title` | Karte aktiviert | Card activated | Kartica aktivirana | 28 | Cards |
 | `sale.card.failed.title` | Karte nicht aktiviert | Card not activated | Kartica nije aktivirana | 32 | Cards · nothing was sold |
@@ -757,7 +761,16 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `reload.uncertain.title` | Aufladung unklar | Top-up unclear | Dopuna nejasna | 32 | Reload · no answer |
 | `reload.uncertain.body` | Keine Antwort vom Server. „Erneut versuchen“ klärt, ob aufgeladen wurde, ohne doppelt zu buchen. | No answer from the server. “Try again” finds out whether it was topped up without booking twice. | Nema odgovora servera. „Pokušaj ponovo“ provjerava je li dopunjeno, bez dvostrukog knjiženja. | 140 | Reload · the same key |
 | `reload.notAllowed.title` | Aufladen nicht möglich | Cannot top up | Dopuna nije moguća | 32 | Reload · 403 or RELOAD_NOT_ALLOWED |
-| `reload.notAllowed.body` | Diese Anmeldung darf keine Karten aufladen, oder das Restaurant erlaubt kein Aufladen. | This sign-in may not top up cards, or the restaurant does not allow top-ups. | Ova prijava ne smije dopunjavati kartice ili restoran ne dozvoljava dopunu. | 120 | Reload |
+| `reload.notAllowed.body` | Diese Anmeldung darf keine Karten aufladen. | This sign-in may not top up cards. | Ova prijava ne smije dopunjavati kartice. | 120 | Reload · 403 (the restaurant switched top-ups off: `reload.off.*`) |
+| `reload.off.title` | Aufladen ausgeschaltet | Top-ups switched off | Dopune isključene | 32 | Reload · `allow_reload` off: said right after the tap (K3); RELOAD_NOT_ALLOWED |
+| `reload.off.body` | Dieses Lokal erlaubt kein Aufladen von Karten. Neue Karten können weiter verkauft werden. | This restaurant does not allow card top-ups. New cards can still be sold. | Ovaj restoran ne dozvoljava dopunu kartica. Nove kartice se i dalje mogu prodavati. | 120 | Reload |
+| `reload.voucherBlocked.title` | Gutschein gesperrt | Voucher blocked | Vaučer je blokiran | 32 | Reload · said right after the tap (K2); VOUCHER_BLOCKED |
+| `reload.voucherBlocked.body` | Der Gutschein dieser Karte ist gesperrt und kann nicht aufgeladen werden. Die Betriebsleitung kann helfen. | The voucher on this card is blocked and cannot be topped up. A manager can help. | Vaučer na ovoj kartici je blokiran i ne može se dopuniti. Menadžer može pomoći. | 120 | Reload |
+| `reload.voucherExpired.title` | Gutschein abgelaufen | Voucher expired | Vaučer je istekao | 32 | Reload · said right after the tap (K2); VOUCHER_EXPIRED |
+| `reload.voucherExpired.body` | Der Gutschein dieser Karte ist abgelaufen und kann nicht aufgeladen werden. | The voucher on this card has expired and cannot be topped up. | Vaučer na ovoj kartici je istekao i ne može se dopuniti. | 120 | Reload |
+| `loyalty.notAllowed.title` | Loyalty nicht erlaubt | Loyalty not allowed | Loyalty nije dozvoljen | 32 | Sale, reload · COMPLIMENTARY_NOT_ALLOWED / LOYALTY_VOUCHER_ONLY (L4); the permissions are reloaded at once |
+| `loyalty.notAllowed.body` | Diese Anmeldung darf kein Loyalty vergeben. Bitte eine andere Zahlungsart wählen. | This sign-in may not give Loyalty. Choose another payment method. | Ova prijava ne smije davati Loyalty. Odaberite drugi način plaćanja. | 120 | Sale, reload · COMPLIMENTARY_NOT_ALLOWED (the owner switched it off meanwhile) |
+| `loyalty.voucherOnly.body` | Loyalty nur auf einem Loyalty-Gutschein. Bitte eine andere Zahlungsart wählen. | Loyalty only on a Loyalty voucher. Choose another payment method. | Loyalty samo na Loyalty vaučeru. Odaberite drugi način plaćanja. | 120 | Reload · LOYALTY_VOUCHER_ONLY |
 | `reload.card.replaced` | Diese Karte wurde ersetzt. Die neue Karte des Gastes ans Handy halten. | This card was replaced. Hold the guest's new card to the phone. | Ova kartica je zamijenjena. Prislonite novu karticu gosta uz telefon. | 90 | Reload · CARD_NOT_USABLE state `replaced` (suspended, other restaurant: `problem.cardNotUsable.*`) |
 | `reload.card.revoked` | Diese Karte ist außer Betrieb und kann nicht aufgeladen werden. | This card is out of service and cannot be topped up. | Ova kartica je van upotrebe i ne može se dopuniti. | 90 | Reload · state `revoked`, `destroyed` |
 | `reload.card.lost` | Diese Karte ist als verloren gemeldet. Die Betriebsleitung kann helfen. | This card is reported lost. A manager can help. | Ova kartica je prijavljena kao izgubljena. Menadžer može pomoći. | 90 | Reload · state `lost` |
@@ -831,9 +844,9 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `menu.signOut.confirm.body` | Der Schichtverlauf wird von diesem Gerät gelöscht. | The shift history on this device will be deleted. | Historija smjene na ovom uređaju bit će izbrisana. | 90 | 03a |
 | `menu.signOut.confirm.action` | Abmelden | Sign out | Odjavi se | 24 | 12 · DangerButton (cancel = `common.cancel`) |
 | `menu.cards` | Karten | Cards | Kartice | 24 | Cards · section header |
-| `menu.cards.receive` | Lieferung bestätigen | Confirm a delivery | Potvrdite isporuku | 28 | Cards |
-| `menu.cards.find` | Karte suchen | Find a card | Pronađite karticu | 28 | Cards |
-| `menu.cards.order` | Karten bestellen | Order cards | Naručite kartice | 28 | Cards · decision 2026-10-04 |
+| `menu.cards.receive` | Lieferung bestätigen | Confirm a delivery | Potvrdi isporuku | 28 | Cards |
+| `menu.cards.find` | Karte suchen | Find a card | Pronađi karticu | 28 | Cards |
+| `menu.cards.order` | Karten bestellen | Order cards | Naruči kartice | 28 | Cards · decision 2026-10-04 |
 
 Card desk (managers and owners): confirming a delivery, looking up, suspending and replacing a card.
 
@@ -850,8 +863,8 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `cards.receive.wrongCard` | Diese Karte gehört nicht zu dieser Lieferung. | This card is not from this delivery. | Ova kartica nije iz ove isporuke. | 64 | Cards |
 | `cards.order.count` | Wie viele Karten werden gebraucht? | How many cards are needed? | Koliko kartica je potrebno? | 48 | Cards · order step |
 | `cards.order.hint` | Bis zu 1.000 Karten. GiftCard Pro bestätigt die Bestellung und sendet die Karten. | Up to 1,000 cards. GiftCard Pro confirms the order and sends the cards. | Do 1.000 kartica. GiftCard Pro potvrđuje narudžbu i šalje kartice. | 90 | Cards |
-| `cards.order.submit` | {count, plural, one {# Karte bestellen} other {# Karten bestellen}} | {count, plural, one {Order # card} other {Order # cards}} | {count, plural, one {Naručite # karticu} few {Naručite # kartice} other {Naručite # kartica}} | 28 | Cards · PrimaryButton |
-| `cards.order.done` | Bestellung gesendet. Sobald die Karten unterwegs sind, erscheinen sie unter „Lieferung bestätigen“. | Order sent. Once the cards are on their way, they appear under “Confirm a delivery”. | Narudžba poslana. Čim kartice krenu, pojavit će se pod „Potvrdite isporuku“. | 100 | Cards |
+| `cards.order.submit` | {count, plural, one {# Karte bestellen} other {# Karten bestellen}} | {count, plural, one {Order # card} other {Order # cards}} | {count, plural, one {Naruči # karticu} few {Naruči # kartice} other {Naruči # kartica}} | 28 | Cards · PrimaryButton |
+| `cards.order.done` | Bestellung gesendet. Sobald die Karten unterwegs sind, erscheinen sie unter „Lieferung bestätigen“. | Order sent. Once the cards are on their way, they appear under “Confirm a delivery”. | Narudžba poslana. Čim kartice krenu, pojavit će se pod „Potvrdi isporuku“. | 100 | Cards |
 | `cards.order.open` | {count, plural, one {Eine Bestellung über # Karte wartet auf Antwort.} other {Eine Bestellung über # Karten wartet auf Antwort.}} | {count, plural, one {An order for # card is waiting for an answer.} other {An order for # cards is waiting for an answer.}} | {count, plural, one {Narudžba za # karticu čeka odgovor.} few {Narudžba za # kartice čeka odgovor.} other {Narudžba za # kartica čeka odgovor.}} | 64 | Cards · banner, latest order requested |
 | `cards.order.declined` | Letzte Bestellung abgelehnt: {reason} | Last order declined: {reason} | Zadnja narudžba odbijena: {reason} | 90 | Cards · banner, latest order declined |
 | `cards.order.tooMany` | Es warten schon 3 Bestellungen auf Antwort. | 3 orders are already waiting for an answer. | Već 3 narudžbe čekaju odgovor. | 64 | Cards · CARD_ORDER_NOT_POSSIBLE |
@@ -865,9 +878,9 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `cards.state.available` | Im Lager | In stock | Na zalihi | 16 | Cards |
 | `cards.state.other` | Nicht in Verwendung | Not in use | Nije u upotrebi | 24 | Cards |
 | `cards.balance` | Guthaben {amount} | Balance {amount} | Stanje {amount} | 32 | Cards |
-| `cards.suspend` | Karte sperren | Suspend card | Blokirajte karticu | 24 | Cards |
-| `cards.resume` | Karte entsperren | Resume card | Deblokirajte karticu | 24 | Cards |
-| `cards.replace` | Karte ersetzen | Replace card | Zamijenite karticu | 24 | Cards |
+| `cards.suspend` | Karte sperren | Suspend card | Blokiraj karticu | 24 | Cards |
+| `cards.resume` | Karte entsperren | Resume card | Deblokiraj karticu | 24 | Cards |
+| `cards.replace` | Karte ersetzen | Replace card | Zamijeni karticu | 24 | Cards |
 | `cards.reason.title` | Grund | Reason | Razlog | 16 | Cards · section label |
 | `cards.reason.lost` | Verloren | Lost | Izgubljena | 16 | Cards |
 | `cards.reason.stolen` | Gestohlen | Stolen | Ukradena | 16 | Cards |
@@ -875,10 +888,20 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `cards.reason.found` | Wiedergefunden | Found again | Pronađena | 16 | Cards · resume |
 | `cards.replace.tap` | Neue Karte aus dem Lager ans Handy halten. Das Guthaben geht auf sie über. | Hold a new card from stock to the phone. The balance moves to it. | Prislonite novu karticu sa zalihe uz telefon. Stanje prelazi na nju. | 90 | Cards · also the iPhone sheet |
 | `cards.replace.tapOld` | Die alte Karte des Gastes ans Handy halten. | Hold the guest's old card to the phone. | Prislonite staru karticu gosta uz telefon. | 60 | Cards · also the iPhone sheet |
-| `cards.replace.ownerOnly` | Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Sperren Sie sie jetzt – dann zahlt sie nicht mehr. | Only the owner can replace a lost or stolen card. Suspend it now so it stops paying. | Izgubljenu ili ukradenu karticu zamjenjuje samo vlasnik. Blokirajte je sada da više ne plaća. | 120 | Cards · replace sheet footnote |
+| `cards.replace.ownerOnly` | Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Jetzt sperren – dann zahlt sie nicht mehr. | Only the owner can replace a lost or stolen card. Suspend it now so it stops paying. | Izgubljenu ili ukradenu karticu zamjenjuje samo vlasnik. Blokirajte je sada da više ne plaća. | 120 | Cards · replace sheet footnote |
 | `cards.replace.done` | Ersetzt durch {number}. Die alte Karte gilt nicht mehr. | Replaced by {number}. The old card no longer works. | Zamijenjena karticom {number}. Stara kartica više ne vrijedi. | 80 | Cards |
 | `cards.suspend.done` | Gesperrt – die Karte zahlt nicht mehr. | Suspended – the card no longer pays. | Blokirana – kartica više ne plaća. | 60 | Cards |
-| `cards.resume.done` | Entsperrt – die Karte zahlt wieder. | Resumed – the card pays again. | Deblokirana – kartica ponovo plaća. | 60 | Cards |
+| `cards.resume.done` | Entsperrt – die Karte zahlt wieder. | Resumed – the card pays again. | Deblokirana – kartica ponovo plaća. | 60 | Cards · after the tap of the found card (K4) |
+| `cards.resume.tap` | Die wiedergefundene Karte ans Handy halten. Entsperrt wird nur mit der Karte in der Hand. | Hold the found card to the phone. A card is resumed only when it is at hand. | Prislonite pronađenu karticu uz telefon. Deblokira se samo kartica koja je ovdje. | 90 | Cards · resume (K4, decision 2026-10-06); also the iPhone sheet |
+| `cards.resume.compromised` | Diese Karte kann aus Sicherheitsgründen nicht mehr entsperrt werden. Karte ersetzen – das Guthaben geht auf die neue Karte über. | For security reasons this card can no longer be resumed. Replace it – the balance moves to the new card. | Ova kartica se iz sigurnosnih razloga više ne može deblokirati. Zamijenite je – stanje prelazi na novu karticu. | 140 | Cards · `resumable` false: card of a compromised batch (K6) |
+| `cards.voucher.blocked` | Gutschein gesperrt – zahlt nicht | Voucher blocked – does not pay | Vaučer blokiran – ne plaća | 40 | Cards · under the card state (K11) |
+| `cards.voucher.expired` | Gutschein abgelaufen | Voucher expired | Vaučer je istekao | 40 | Cards · voucher status expired or past its end date (K11) |
+| `cards.voucher.closed` | Gutschein abgeschlossen | Voucher closed | Vaučer je zatvoren | 40 | Cards · refunded or cancelled (K11) |
+| `cards.error.state` | Die Karte hat inzwischen einen anderen Zustand. Neu suchen. | The card has changed meanwhile. Look it up again. | Kartica je u međuvremenu promijenila stanje. Potražite je ponovo. | 90 | Cards · CARD_STATE_INVALID (T7) |
+| `cards.error.otherCard` | Das war eine andere Karte. Genau diese Karte ans Handy halten. | That was a different card. Hold this very card to the phone. | To je bila druga kartica. Prislonite baš ovu karticu uz telefon. | 90 | Cards · PRESENTMENT_INVALID `other_card` (T7) |
+| `cards.error.forbidden` | Diese Anmeldung darf das nicht. Eine verlorene Karte ersetzt nur der Inhaber. | This sign-in may not do that. Only the owner replaces a lost card. | Ova prijava to ne smije. Izgubljenu karticu zamjenjuje samo vlasnik. | 90 | Cards · 403 (T7) |
+| `cards.error.notLinked` | Diese Karte gehört zu keinem Gutschein. | This card is not linked to a voucher. | Ova kartica nije vezana za vaučer. | 64 | Cards · CARD_STATE_INVALID without a state (T7) |
+| `cards.error.uncertain` | Keine Antwort vom Server. Karte neu suchen, um zu sehen, ob es geklappt hat. | No answer from the server. Look the card up again to see whether it worked. | Nema odgovora servera. Ponovo potražite karticu da vidite je li uspjelo. | 100 | Cards · replacement without an answer, the old card not yet replaced (K5) |
 | `cards.failed` | Das hat nicht geklappt. Erneut versuchen. | That did not work. Try again. | To nije uspjelo. Pokušajte ponovo. | 60 | Cards |
 
 ### 5.17 S15 Session and account states
@@ -925,7 +948,7 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `intro.2.title` | Betrag eingeben, einlösen | Type the amount, redeem | Unesite iznos, iskoristite | 32 | 03a |
 | `intro.2.body` | Guthaben sehen, Betrag tippen, fertig. Ab {threshold} zum Bestätigen gedrückt halten. | See the balance, type the amount, done. From {threshold}, press and hold to confirm. | Pogledajte stanje, unesite iznos, gotovo. Od {threshold} držite za potvrdu. | 90 | 03a |
 | `intro.3.title` | Nie doppelt gebucht | Never booked twice | Nikad dvaput knjiženo | 28 | 03a |
-| `intro.3.body` | Eingelöst wird nur mit Verbindung. Alle Einlösungen der Schicht stehen unter „Verlauf". | Redeeming only works online. Your shift's redemptions are under "Recent". | Iskorištavanje radi samo uz vezu. Iskorištavanja iz smjene su pod „Nedavno". | 90 | 03a |
+| `intro.3.body` | Eingelöst wird nur mit Verbindung. Alle Einlösungen der Schicht stehen unter „Verlauf“. | Redeeming only works online. Your shift's redemptions are under "Recent". | Iskorištavanje radi samo uz vezu. Iskorištavanja iz smjene su pod „Nedavno“. | 90 | 03a |
 
 S21 is the internal personalisation station (platform staff, station token only; never shown to restaurants).
 
@@ -938,13 +961,14 @@ S21 is the internal personalisation station (platform staff, station token only;
 | `station.progress` | {done} von {total} fertig | {done} of {total} done | {done} od {total} gotovo | 28 | Station · list row and run; `{total}` = cards ordered |
 | `station.noCard` | Keine Karte erkannt. Charge erneut antippen. | No card detected. Tap the batch again. | Kartica nije prepoznata. Ponovo dodirnite seriju. | 60 | Station · the reader closed without a card (iPhone sheet closed or timed out) |
 | `station.complete.title` | Charge fertig | Batch complete | Serija gotova | 28 | Station · every ordered card is personalised |
-| `station.complete.body` | Alle {total} Karten sind personalisiert. Jetzt im Dashboard unter „Kartenserien" freigeben. | All {total} cards are personalised. Now release the batch in the dashboard under "Card batches". | Svih {total} kartica je personalizovano. Sada seriju oslobodite u dashboardu pod „Kartenserien". | 120 | Station · `batch_complete`; no more cards are taken |
+| `station.complete.body` | Alle {total} Karten sind personalisiert. Jetzt im Dashboard unter „Kartenserien“ freigeben. | All {total} cards are personalised. Now release the batch in the dashboard under "Card batches". | Svih {total} kartica je personalizovano. Sada seriju oslobodite u dashboardu pod „Serije kartica“. | 120 | Station · `batch_complete`; no more cards are taken |
 | `station.waiting` | Leere Karte ans Handy halten. | Hold a blank card to the phone. | Prislonite praznu karticu uz telefon. | 48 | Station · also the iPhone sheet |
 | `station.working` | Wird personalisiert – Karte nicht bewegen. | Personalising – keep the card still. | Personalizacija – ne pomičite karticu. | 48 | Station · rounds running |
 | `station.done` | Karte {number} fertig | Card {number} done | Kartica {number} gotova | 40 | Station · `{number}` = inventory number |
 | `station.failed` | Karte nicht fertig. Erneut anhalten. | Card not finished. Hold it again. | Kartica nije gotova. Prislonite je ponovo. | 48 | Station · resumable failure |
 | `station.rejected` | Karte gehört nicht zu dieser Charge oder ist schon fertig. | Card is not from this batch or is already done. | Kartica nije iz ove serije ili je već gotova. | 80 | Station · `other_batch`, `already_personalized` |
-| `station.unknownChip` | Unbekannte Karte – aussortieren. | Unknown card – set it aside. | Nepoznata kartica – odvojite je. | 48 | Station · keys unknown (`auth:91AE`) |
+| `station.unknownChip` | Unbekannte Karte – aussortieren. | Unknown card – set it aside. | Nepoznata kartica – odvojite je. | 48 | Station · never keyable: keys unknown (`auth:91AE`), not an NTAG 424 DNA, not NXP, UID mismatch, not genuine, QA failed (K7) |
+| `station.batchClosed` | Diese Charge ist nicht mehr in Produktion – keine weiteren Karten. | This batch is no longer in production – no more cards. | Ova serija više nije u proizvodnji – nema više kartica. | 80 | Station · `batch_not_in_production`, `key_set_not_active`: the run stops (K7) |
 | `station.finish` | Charge beenden | Finish batch | Završi seriju | 24 | Station · back to the list |
 
 ### 5.20 Screen-reader announcements and spoken forms
@@ -972,7 +996,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **438 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **462 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

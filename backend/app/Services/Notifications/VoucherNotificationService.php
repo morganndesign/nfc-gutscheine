@@ -34,19 +34,19 @@ final class VoucherNotificationService
         'de' => [
             'no_expiry' => 'unbefristet gültig',
             'valid_until' => 'gültig bis',
-            'method' => ['cash' => 'Bar', 'card_terminal' => 'Karte', 'bank_transfer' => 'Überweisung', 'complimentary' => 'Geschenk des Hauses'],
+            'method' => ['cash' => 'Bar', 'card_terminal' => 'Kartenzahlung', 'bank_transfer' => 'Überweisung', 'complimentary' => 'Loyalty'],
             'attached' => 'Ihr Gutschein ist als PDF angehängt. Bitte bewahren Sie ihn wie Bargeld auf.',
         ],
         'en' => [
             'no_expiry' => 'valid without an expiry date',
             'valid_until' => 'valid until',
-            'method' => ['cash' => 'Cash', 'card_terminal' => 'Card', 'bank_transfer' => 'Bank transfer', 'complimentary' => 'Compliments of the house'],
+            'method' => ['cash' => 'Cash', 'card_terminal' => 'Card payment', 'bank_transfer' => 'Bank transfer', 'complimentary' => 'Loyalty'],
             'attached' => 'Your voucher is attached as a PDF. Please keep it safe like cash.',
         ],
         'bs' => [
             'no_expiry' => 'bez roka važenja',
             'valid_until' => 'vrijedi do',
-            'method' => ['cash' => 'Gotovina', 'card_terminal' => 'Kartica', 'bank_transfer' => 'Bankovni transfer', 'complimentary' => 'Poklon kuće'],
+            'method' => ['cash' => 'Gotovina', 'card_terminal' => 'Plaćanje karticom', 'bank_transfer' => 'Bankovni transfer', 'complimentary' => 'Loyalty'],
             'attached' => 'Vaš vaučer je u prilogu kao PDF. Čuvajte ga kao gotovinu.',
         ],
     ];
@@ -90,7 +90,8 @@ final class VoucherNotificationService
         $variables = [
             'restaurant_name' => $restaurant->name,
             'date' => Carbon::now()->timezone($restaurant->timezone)->format('d.m.Y'),
-            'customer_name' => $voucher->customer->full_name ?? '',
+            // The guest's name, never the e-mail address in its place (audit T9); without a name the greeting stays.
+            'customer_name' => trim(($voucher->customer->first_name ?? '').' '.($voucher->customer->last_name ?? '')),
             'expires_at' => $expiresAt ?? '—',
             'validity' => match (true) {
                 $expiresAt === null => self::TEXT[$language]['no_expiry'],
@@ -118,6 +119,10 @@ final class VoucherNotificationService
         }
 
         $rendered = $this->renderer->render($template, $variables);
+        if ($variables['customer_name'] === '') {
+            // "Hallo ," → "Hallo,": the greeting without a name.
+            $rendered = array_map(static fn (string $part): string => (string) preg_replace('/ +,/', ',', $part), $rendered);
+        }
         $voucherPdf = $this->voucherPdf($voucher, $templateKey, $printablePayload);
 
         $log = NotificationLog::query()->create([

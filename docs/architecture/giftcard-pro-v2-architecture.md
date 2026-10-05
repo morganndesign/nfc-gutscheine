@@ -451,7 +451,9 @@ When a batch is compromised, every card from `in_inventory` to `bound` becomes `
 These are **not stored on the card**, because the voucher owns balance, expiry and status (decision 3). Storing them twice would create two sources of truth. The dashboard and the app always show the combined state, so every card visibly has one.
 
 **Deliberate choices:**
-- **No reuse (R12).** `replaced`, `revoked` and `lost` never return to stock.
+- **No reuse (R12).** `replaced`, `revoked` and `lost` never return to stock. One exception (decision 2026-10-06,
+  audit K1): a card sale **cancelled** the same day (the card was never used) puts the `active` card back to
+  `available`; a refund still revokes it.
 - **Only checked-in cards can be sold.** Receipt checks the delivered count (§11.8).
 
 ### 7.2 Transitions, guards and actors
@@ -468,7 +470,8 @@ These are **not stored on the card**, because the voucher owns balance, expiry a
 | `bound` → `active` | Voucher activation (payment recorded, approval given where needed) | System, same transaction |
 | `bound` → `available` | Sale cancelled before activation; payment refunded; no debit exists | Owner |
 | `active` → `suspended` | Reason required | Contact (from the voucher page, confirmed by e-mail link), manager, or risk rule |
-| `suspended` → `active` | Suspended by the **contact** → the contact confirms by e-mail link. Suspended by a **manager** → manager A3 tap + step-up. Suspended by a **risk rule** → owner + A3 tap. | As stated |
+| `suspended` → `active` | Implemented (decision 2026-10-06, audit K4): always an A3 tap of this very card (`purpose = resume`) in the app, whoever suspended it; never for a card of a compromised batch or retired key set (it is replaced). Contact e-mail links are not built. | Manager, owner (`cards.manage`) |
+| `active` → `available` | Sale cancelled the same day (voucher unused) — the R12 exception above | Manager, owner (`vouchers.cancel_sale`) |
 | → `replaced` | Recovery or replacement rules (§11.6); successor bound in the same transaction | Manager + step-up (+ owner where §11.6 says) |
 | → `revoked` | Reason: fraud, voucher closed, refund, compromised batch, dead chip on request | Owner, or system (refund, compromise playbook) |
 | `available` → `lost` | Stock count shows the card missing | Owner |

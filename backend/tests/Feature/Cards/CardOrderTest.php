@@ -10,9 +10,11 @@ use App\Models\AuditLog;
 use App\Models\CardBatch;
 use App\Models\CardOrder;
 use App\Models\User;
+use App\Notifications\CardOrderUpdateNotification;
 use Illuminate\Mail\Events\MessageSent;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
 use Laravel\Sanctum\Sanctum;
 use Tests\Support\WithCards;
 use Tests\TestCase;
@@ -165,5 +167,59 @@ final class CardOrderTest extends TestCase
             ->assertJsonPath('data.0.status', 'declined')
             ->assertJsonPath('data.0.decline_reason', 'Bitte 100 Stück, wie besprochen.');
         $this->assertSame(0, CardBatch::query()->withoutGlobalScopes()->count());
+    }
+
+    /** Audit K5: a repeated order (lost answer, double tap) is the same order. */
+    public function test_an_order_repeated_with_the_same_key_is_one_order(): void
+    {
+        Mail::fake();
+        $this->actingAsStaff($this->restaurant(), RoleSlug::Manager);
+        $key = $this->idempotency();
+        $first = $this->postJson('/api/v1/card-orders', ['quantity' => 40], $key)->assertCreated()->json('data.id');
+        $second = $this->postJson('/api/v1/card-orders', ['quantity' => 40], $key)->assertCreated()->json('data.id');
+        $this->assertSame($first, $second);
+        $this->assertSame(1, CardOrder::query()->count());
+        $this->postJson('/api/v1/card-orders', ['quantity' => 40], $this->idempotency())->assertCreated();
+        $this->assertSame(2, CardOrder::query()->count());
+    }
+
+    /** Audit K8: the restaurant hears of an accepted, declined and shipped order; a short delivery raises an alert. */
+    public function test_the_restaurant_is_told_what_happened_to_its_order(): void
+    {
+        Notification::fake();
+        $restaurant = $this->restaurant();
+        $owner = $this->staff($restaurant, RoleSlug::Owner);
+        $manager = $this->actingAsStaff($restaurant, RoleSlug::Manager);
+        $accepted = (string) $this->postJson('/api/v1/card-orders', ['quantity' => 25])->json('data.id');
+        $declined = (string) $this->postJson('/api/v1/card-orders', ['quantity' => 900])->json('data.id');
+
+        Sanctum::actingAs(User::factory()->platformAdmin()->create(), ['*']);
+        $this->postJson("/api/v1/admin/card-orders/{$accepted}/accept")->assertOk();
+        $this->postJson("/api/v1/admin/card-orders/{$declined}/decline", ['reason' => 'Bitte höchstens 500.'])->assertOk();
+
+        $sent = static fn (string $kind): \Closure => static function (CardOrderUpdateNotification $n) use ($kind): bool {
+            return (new \ReflectionProperty($n, 'kind'))->getValue($n) === $kind;
+        };
+        Notification::assertSentTo([$owner, $manager], CardOrderUpdateNotification::class, $sent('accepted'));
+        Notification::assertSentTo([$owner, $manager], CardOrderUpdateNotification::class, $sent('declined'));
+        $mail = (new CardOrderUpdateNotification('declined', 'Beisl', 900, null, 'Bitte höchstens 500.'))->toMail($owner);
+        $this->assertStringContainsString('Bitte höchstens 500.', implode(' ', $mail->introLines));
+    }
+
+    /** Audit K8: shipped cards are announced to the restaurant; a delivery counted short raises an alert. */
+    public function test_shipped_cards_are_announced_and_a_short_delivery_raises_an_alert(): void
+    {
+        Notification::fake();
+        $restaurant = $this->restaurant();
+        $owner = $this->staff($restaurant, RoleSlug::Owner);
+        [$batch, $cards] = $this->shippedCards($restaurant, 2);
+        Notification::assertSentTo($owner, CardOrderUpdateNotification::class, static fn (CardOrderUpdateNotification $n): bool => (new \ReflectionProperty($n, 'kind'))->getValue($n) === 'shipped');
+
+        $this->actingAs($owner);
+        $presentment = (string) $this->tapCard($this->chip($cards[0]), 'receive')->assertCreated()->json('data.id');
+        $this->postJson("/api/v1/card-batches/{$batch->id}/receipt", ['count' => 1, 'presentment_id' => $presentment])->assertOk()->assertJsonPath('data.status', 'on_hold');
+
+        $this->artisan('giftcard:monitor-security-events')->assertSuccessful();
+        $this->assertDatabaseHas('security_alerts', ['rule' => 'card.delivery_short', 'subject' => 'batch:'.$batch->batch_code]);
     }
 }

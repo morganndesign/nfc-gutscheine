@@ -33,7 +33,7 @@ export const admin = defineMessages({
     "admin.test.onTitle": "Make {name} a test restaurant?",
     "admin.test.offTitle": "Make {name} a normal restaurant again?",
     "admin.test.onDescription":
-      "For your own tests only. Its owner can put cards back into stock and sell them again; the card's old voucher is blocked and keeps its history. Never for a real restaurant.",
+      "For your own tests only. Its owners and managers can put cards back into stock and sell them again; the card's old voucher is blocked and keeps its history. Never for a real restaurant.",
     "admin.test.offDescription": "Cards can no longer be put back into stock.",
     "admin.test.onDone": "{name} is a test restaurant",
     "admin.test.offDone": "{name} is a normal restaurant again",
@@ -436,7 +436,7 @@ export const admin = defineMessages({
     "admin.test.onTitle": "{name} als Testrestaurant markieren?",
     "admin.test.offTitle": "{name} wieder als normales Restaurant führen?",
     "admin.test.onDescription":
-      "Nur für eigene Tests. Der Inhaber kann Karten zurück ins Lager legen und neu verkaufen; der alte Gutschein der Karte wird gesperrt und behält seine Historie. Nie für ein echtes Restaurant.",
+      "Nur für eigene Tests. Inhaber und Manager können Karten zurück ins Lager legen und neu verkaufen; der alte Gutschein der Karte wird gesperrt und behält seine Historie. Nie für ein echtes Restaurant.",
     "admin.test.offDescription": "Karten können dann nicht mehr zurück ins Lager gelegt werden.",
     "admin.test.onDone": "{name} ist ein Testrestaurant",
     "admin.test.offDone": "{name} ist wieder ein normales Restaurant",
@@ -838,7 +838,7 @@ export const admin = defineMessages({
     "admin.test.onTitle": "Označiti {name} kao testni restoran?",
     "admin.test.offTitle": "Vratiti {name} u običan restoran?",
     "admin.test.onDescription":
-      "Samo za vlastito testiranje. Vlasnik može vraćati kartice na zalihu i ponovo ih prodavati; stari vaučer kartice se blokira i zadržava historiju. Nikad za pravi restoran.",
+      "Samo za vlastito testiranje. Vlasnik i menadžeri mogu vraćati kartice na zalihu i ponovo ih prodavati; stari vaučer kartice se blokira i zadržava historiju. Nikad za pravi restoran.",
     "admin.test.offDescription": "Kartice se onda više ne mogu vraćati na zalihu.",
     "admin.test.onDone": "{name} je testni restoran",
     "admin.test.offDone": "{name} je ponovo običan restoran",

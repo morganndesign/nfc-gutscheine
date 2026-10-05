@@ -728,6 +728,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'This code is not valid here. Ask the guest for another voucher or get a manager.';
 
   @override
+  String get problemCardOnlyTitle => 'Voucher on a card';
+
+  @override
+  String get problemCardOnlyBody =>
+      'This voucher is on a card. Hold the guest\'s card to the phone.';
+
+  @override
   String get problemCardNotRecognizedTitle => 'Card not accepted';
 
   @override
@@ -735,7 +742,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'This card could not be confirmed as a voucher of this restaurant. Get a manager.';
 
   @override
-  String get problemCardNotUsableTitle => 'This card cannot pay';
+  String get problemCardUnverifiedTitle => 'Card not checked';
+
+  @override
+  String get problemCardUnverifiedBody =>
+      'The check did not succeed. Hold the card still on the phone and try again. If it fails again, get a manager.';
+
+  @override
+  String get problemCardNotUsableTitle => 'Card cannot be used';
 
   @override
   String get problemCardNotUsableNotActive => 'The card is not activated yet.';
@@ -936,7 +950,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get saleNoQrBody =>
-      'Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one.';
+      'Its QR code can no longer be shown here. If the guest has no printed voucher: in the dashboard, open the voucher › “New QR code”.';
 
   @override
   String get saleQrA11y => 'QR code of the voucher';
@@ -1007,8 +1021,39 @@ class AppLocalizationsEn extends AppLocalizations {
   String get reloadNotAllowedTitle => 'Cannot top up';
 
   @override
-  String get reloadNotAllowedBody =>
-      'This sign-in may not top up cards, or the restaurant does not allow top-ups.';
+  String get reloadNotAllowedBody => 'This sign-in may not top up cards.';
+
+  @override
+  String get reloadOffTitle => 'Top-ups switched off';
+
+  @override
+  String get reloadOffBody =>
+      'This restaurant does not allow card top-ups. New cards can still be sold.';
+
+  @override
+  String get reloadVoucherBlockedTitle => 'Voucher blocked';
+
+  @override
+  String get reloadVoucherBlockedBody =>
+      'The voucher on this card is blocked and cannot be topped up. A manager can help.';
+
+  @override
+  String get reloadVoucherExpiredTitle => 'Voucher expired';
+
+  @override
+  String get reloadVoucherExpiredBody =>
+      'The voucher on this card has expired and cannot be topped up.';
+
+  @override
+  String get loyaltyNotAllowedTitle => 'Loyalty not allowed';
+
+  @override
+  String get loyaltyNotAllowedBody =>
+      'This sign-in may not give Loyalty. Choose another payment method.';
+
+  @override
+  String get loyaltyVoucherOnlyBody =>
+      'Loyalty only on a Loyalty voucher. Choose another payment method.';
 
   @override
   String get reloadCardReplaced =>
@@ -1386,6 +1431,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cardsResumeDone => 'Resumed – the card pays again.';
 
   @override
+  String get cardsResumeTap =>
+      'Hold the found card to the phone. A card is resumed only when it is at hand.';
+
+  @override
+  String get cardsResumeCompromised =>
+      'For security reasons this card can no longer be resumed. Replace it – the balance moves to the new card.';
+
+  @override
+  String get cardsVoucherBlocked => 'Voucher blocked – does not pay';
+
+  @override
+  String get cardsVoucherExpired => 'Voucher expired';
+
+  @override
+  String get cardsVoucherClosed => 'Voucher closed';
+
+  @override
+  String get cardsErrorState =>
+      'The card has changed meanwhile. Look it up again.';
+
+  @override
+  String get cardsErrorOtherCard =>
+      'That was a different card. Hold this very card to the phone.';
+
+  @override
+  String get cardsErrorForbidden =>
+      'This sign-in may not do that. Only the owner replaces a lost card.';
+
+  @override
+  String get cardsErrorNotLinked => 'This card is not linked to a voucher.';
+
+  @override
+  String get cardsErrorUncertain =>
+      'No answer from the server. Look the card up again to see whether it worked.';
+
+  @override
   String get cardsFailed => 'That did not work. Try again.';
 
   @override
@@ -1544,6 +1625,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get stationUnknownChip => 'Unknown card – set it aside.';
+
+  @override
+  String get stationBatchClosed =>
+      'This batch is no longer in production – no more cards.';
 
   @override
   String get stationFinish => 'Finish batch';

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -75,9 +77,12 @@ enum SaleProblemKind {
   /// the same key.
   uncertain,
 
-  /// 403: this role or this phone's sign-in may not sell (or not
-  /// complimentary).
+  /// 403: this role or this phone's sign-in may not sell.
   notAllowed,
+
+  /// COMPLIMENTARY_NOT_ALLOWED: Loyalty was taken away meanwhile; paid sales still work (L4). The permissions are
+  /// reloaded and the entry returns with another payment method.
+  loyaltyNotAllowed,
 }
 
 final class SaleProblem extends SaleState {
@@ -320,7 +325,16 @@ class SaleController extends ChangeNotifier {
         return;
       }
       _definitive(); // nothing was sold
-      if (forbidden || e.code == 'COMPLIMENTARY_NOT_ALLOWED') {
+      if (e.code == 'COMPLIMENTARY_NOT_ALLOWED') {
+        unawaited(_session.refreshUser());
+        _set(
+          SaleProblem(
+            SaleProblemKind.loyaltyNotAllowed,
+            details: back.copyWith(method: PaymentMethod.cash),
+            requestId: e.requestId,
+          ),
+        );
+      } else if (forbidden) {
         _set(SaleProblem(SaleProblemKind.notAllowed, details: back, requestId: e.requestId));
       } else if (e.code == 'INVALID_AMOUNT' || e.code == 'BALANCE_LIMIT_EXCEEDED') {
         _set(

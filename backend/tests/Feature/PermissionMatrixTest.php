@@ -39,6 +39,7 @@ final class PermissionMatrixTest extends TestCase
     private const SHARED_AUTH_ROUTES = [
         'GET api/v1/auth/me',
         'POST api/v1/auth/logout',
+        'POST api/v1/auth/logout-everywhere',
         'PUT api/v1/auth/profile',
         'PUT api/v1/auth/language',
         'PUT api/v1/auth/password',

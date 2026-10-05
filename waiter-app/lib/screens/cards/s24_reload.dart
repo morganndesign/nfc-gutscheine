@@ -393,6 +393,36 @@ class _ReloadScreenState extends State<ReloadScreen> {
         supportCode: hasCode ? code : null,
         requestId: hasCode ? s.requestId : null,
       ),
+      // The card's voucher cannot take money, or top-ups are off: nothing to retry, the next card or leave.
+      ReloadProblemKind.off || ReloadProblemKind.voucherBlocked || ReloadProblemKind.voucherExpired => ProblemScreen(
+        family: ProblemFamily.verification,
+        title: switch (s.kind) {
+          ReloadProblemKind.off => l10n.reloadOffTitle,
+          ReloadProblemKind.voucherBlocked => l10n.reloadVoucherBlockedTitle,
+          _ => l10n.reloadVoucherExpiredTitle,
+        },
+        body: switch (s.kind) {
+          ReloadProblemKind.off => l10n.reloadOffBody,
+          ReloadProblemKind.voucherBlocked => l10n.reloadVoucherBlockedBody,
+          _ => l10n.reloadVoucherExpiredBody,
+        },
+        primary: ProblemAction(l10n.reloadAnother, _startOver),
+        secondary: close,
+        onClose: () => unawaited(_close()),
+        supportCode: hasCode ? code : null,
+        requestId: hasCode ? s.requestId : null,
+      ),
+      // Loyalty was taken away or does not fit this voucher: back to the entry with another payment method.
+      ReloadProblemKind.loyaltyNotAllowed || ReloadProblemKind.loyaltyVoucherOnly => ProblemScreen(
+        family: ProblemFamily.account,
+        title: l10n.loyaltyNotAllowedTitle,
+        body: s.kind == ReloadProblemKind.loyaltyNotAllowed ? l10n.loyaltyNotAllowedBody : l10n.loyaltyVoucherOnlyBody,
+        primary: back,
+        secondary: close,
+        onClose: () => unawaited(_close()),
+        supportCode: hasCode ? code : null,
+        requestId: hasCode ? s.requestId : null,
+      ),
       ReloadProblemKind.notAllowed => ProblemScreen(
         family: ProblemFamily.account,
         title: l10n.reloadNotAllowedTitle,

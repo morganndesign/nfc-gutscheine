@@ -670,7 +670,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get uncertainGuestHint =>
-      'Dem Gast sagen: „Einen Moment bitte, die Einlösung wird bestätigt.\"';
+      'Dem Gast sagen: „Einen Moment bitte, die Einlösung wird bestätigt.“';
 
   @override
   String get uncertainFailedBody =>
@@ -682,7 +682,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get uncertainCancelledGuestHint =>
-      'Dem Gast sagen: „Die Einlösung ist noch nicht bestätigt. Wir prüfen das, bevor neu eingelöst wird.\"';
+      'Dem Gast sagen: „Die Einlösung ist noch nicht bestätigt. Wir prüfen das, bevor neu eingelöst wird.“';
 
   @override
   String redeemBalanceChanged(String amount) {
@@ -730,14 +730,28 @@ class AppLocalizationsDe extends AppLocalizations {
       'Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder Betriebsleitung holen.';
 
   @override
+  String get problemCardOnlyTitle => 'Gutschein auf einer Karte';
+
+  @override
+  String get problemCardOnlyBody =>
+      'Dieser Gutschein ist auf einer Karte. Die Karte des Gastes ans Handy halten.';
+
+  @override
   String get problemCardNotRecognizedTitle => 'Karte nicht angenommen';
 
   @override
   String get problemCardNotRecognizedBody =>
-      'Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Betriebsleitung holen.';
+      'Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Bitte Betriebsleitung holen.';
 
   @override
-  String get problemCardNotUsableTitle => 'Mit dieser Karte nicht bezahlbar';
+  String get problemCardUnverifiedTitle => 'Karte nicht geprüft';
+
+  @override
+  String get problemCardUnverifiedBody =>
+      'Die Prüfung ist nicht gelungen. Die Karte ruhig ans Handy halten und erneut versuchen. Klappt es wieder nicht, bitte Betriebsleitung holen.';
+
+  @override
+  String get problemCardNotUsableTitle => 'Karte nicht verwendbar';
 
   @override
   String get problemCardNotUsableNotActive =>
@@ -939,7 +953,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get saleNoQrBody =>
-      'Der QR-Code kann nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein, im Dashboard sperren und neu verkaufen.';
+      'Der QR-Code kann hier nicht mehr angezeigt werden. Hat der Gast keinen gedruckten Gutschein: im Dashboard beim Gutschein „Neuer QR-Code“.';
 
   @override
   String get saleQrA11y => 'QR-Code des Gutscheins';
@@ -1013,7 +1027,39 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reloadNotAllowedBody =>
-      'Diese Anmeldung darf keine Karten aufladen, oder das Restaurant erlaubt kein Aufladen.';
+      'Diese Anmeldung darf keine Karten aufladen.';
+
+  @override
+  String get reloadOffTitle => 'Aufladen ausgeschaltet';
+
+  @override
+  String get reloadOffBody =>
+      'Dieses Lokal erlaubt kein Aufladen von Karten. Neue Karten können weiter verkauft werden.';
+
+  @override
+  String get reloadVoucherBlockedTitle => 'Gutschein gesperrt';
+
+  @override
+  String get reloadVoucherBlockedBody =>
+      'Der Gutschein dieser Karte ist gesperrt und kann nicht aufgeladen werden. Die Betriebsleitung kann helfen.';
+
+  @override
+  String get reloadVoucherExpiredTitle => 'Gutschein abgelaufen';
+
+  @override
+  String get reloadVoucherExpiredBody =>
+      'Der Gutschein dieser Karte ist abgelaufen und kann nicht aufgeladen werden.';
+
+  @override
+  String get loyaltyNotAllowedTitle => 'Loyalty nicht erlaubt';
+
+  @override
+  String get loyaltyNotAllowedBody =>
+      'Diese Anmeldung darf kein Loyalty vergeben. Bitte eine andere Zahlungsart wählen.';
+
+  @override
+  String get loyaltyVoucherOnlyBody =>
+      'Loyalty nur auf einem Loyalty-Gutschein. Bitte eine andere Zahlungsart wählen.';
 
   @override
   String get reloadCardReplaced =>
@@ -1381,7 +1427,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardsReplaceOwnerOnly =>
-      'Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Sperren Sie sie jetzt – dann zahlt sie nicht mehr.';
+      'Eine verlorene oder gestohlene Karte ersetzt nur der Inhaber. Jetzt sperren – dann zahlt sie nicht mehr.';
 
   @override
   String cardsReplaceDone(String number) {
@@ -1393,6 +1439,42 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cardsResumeDone => 'Entsperrt – die Karte zahlt wieder.';
+
+  @override
+  String get cardsResumeTap =>
+      'Die wiedergefundene Karte ans Handy halten. Entsperrt wird nur mit der Karte in der Hand.';
+
+  @override
+  String get cardsResumeCompromised =>
+      'Diese Karte kann aus Sicherheitsgründen nicht mehr entsperrt werden. Karte ersetzen – das Guthaben geht auf die neue Karte über.';
+
+  @override
+  String get cardsVoucherBlocked => 'Gutschein gesperrt – zahlt nicht';
+
+  @override
+  String get cardsVoucherExpired => 'Gutschein abgelaufen';
+
+  @override
+  String get cardsVoucherClosed => 'Gutschein abgeschlossen';
+
+  @override
+  String get cardsErrorState =>
+      'Die Karte hat inzwischen einen anderen Zustand. Neu suchen.';
+
+  @override
+  String get cardsErrorOtherCard =>
+      'Das war eine andere Karte. Genau diese Karte ans Handy halten.';
+
+  @override
+  String get cardsErrorForbidden =>
+      'Diese Anmeldung darf das nicht. Eine verlorene Karte ersetzt nur der Inhaber.';
+
+  @override
+  String get cardsErrorNotLinked => 'Diese Karte gehört zu keinem Gutschein.';
+
+  @override
+  String get cardsErrorUncertain =>
+      'Keine Antwort vom Server. Karte neu suchen, um zu sehen, ob es geklappt hat.';
 
   @override
   String get cardsFailed => 'Das hat nicht geklappt. Erneut versuchen.';
@@ -1502,7 +1584,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get intro3Body =>
-      'Eingelöst wird nur mit Verbindung. Alle Einlösungen der Schicht stehen unter „Verlauf\".';
+      'Eingelöst wird nur mit Verbindung. Alle Einlösungen der Schicht stehen unter „Verlauf“.';
 
   @override
   String get stationTitle => 'Karten personalisieren';
@@ -1530,7 +1612,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String stationCompleteBody(String total) {
-    return 'Alle $total Karten sind personalisiert. Jetzt im Dashboard unter „Kartenserien\" freigeben.';
+    return 'Alle $total Karten sind personalisiert. Jetzt im Dashboard unter „Kartenserien“ freigeben.';
   }
 
   @override
@@ -1553,6 +1635,10 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get stationUnknownChip => 'Unbekannte Karte – aussortieren.';
+
+  @override
+  String get stationBatchClosed =>
+      'Diese Charge ist nicht mehr in Produktion – keine weiteren Karten.';
 
   @override
   String get stationFinish => 'Charge beenden';

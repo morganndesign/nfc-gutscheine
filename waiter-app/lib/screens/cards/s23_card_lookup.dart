@@ -47,6 +47,7 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
         done: l10n.cardDone,
         failed: l10n.cardFailed,
       ),
+      resumeTexts: (prompt: l10n.cardsResumeTap, checking: l10n.cardChecking, done: l10n.cardDone, failed: l10n.cardFailed),
     );
   }
 
@@ -113,12 +114,16 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
               children: <Widget>[
                 TopBar.task(onClose: locked ? null : () => unawaited(_close()), title: l10n.menuCardsFind),
                 if (_c.cardFailure case final CardPresentException failure) _failure(l10n, failure),
-                if (_c.requestFailed) StatusBanner(tone: BannerTone.warning, title: l10n.cardsFailed),
+                if (_c.error case final CardDeskError error) StatusBanner(tone: BannerTone.warning, title: _errorText(l10n, error)),
                 if (_c.done case final String done) _doneBanner(l10n, done),
                 Expanded(
                   child: tapping
                       ? CardTapView(
-                          instruction: _c.tappingOldCard ? l10n.cardsReplaceTapOld : l10n.cardsReplaceTap,
+                          instruction: switch (_c.tappingFor) {
+                            CardTapFor.oldCard => l10n.cardsReplaceTapOld,
+                            CardTapFor.resume => l10n.cardsResumeTap,
+                            CardTapFor.newCard => l10n.cardsReplaceTap,
+                          },
                           checking: _c.phase == DeskPhase.checking,
                         )
                       : _content(context, l10n),
@@ -140,6 +145,16 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
     );
     return StatusBanner(tone: BannerTone.warning, title: t.title, body: t.body);
   }
+
+  /// The real reason an action did not happen (audit T7).
+  static String _errorText(AppLocalizations l10n, CardDeskError error) => switch (error) {
+    CardDeskError.failed => l10n.cardsFailed,
+    CardDeskError.state => l10n.cardsErrorState,
+    CardDeskError.otherCard => l10n.cardsErrorOtherCard,
+    CardDeskError.forbidden => l10n.cardsErrorForbidden,
+    CardDeskError.notLinked => l10n.cardsErrorNotLinked,
+    CardDeskError.uncertain => l10n.cardsErrorUncertain,
+  };
 
   Widget _doneBanner(AppLocalizations l10n, String done) => StatusBanner(
     tone: BannerTone.success,
@@ -199,13 +214,25 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
       _ => l10n.cardsStateOther,
     };
     final int? balance = card.voucherBalance;
+    // An active card whose voucher cannot pay says so (audit K11).
+    final String? voucherProblem = switch (card.voucherProblem) {
+      'blocked' => l10n.cardsVoucherBlocked,
+      'expired' => l10n.cardsVoucherExpired,
+      'closed' => l10n.cardsVoucherClosed,
+      _ => null,
+    };
     return MergeSemantics(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           ScaledText(card.cardNumber, type: TypeTokens.titleM),
           const SizedBox(height: Space.s1),
-          ScaledText(state, type: TypeTokens.bodyM, color: card.state == 'active' ? c.success : c.fgSecondary),
+          ScaledText(
+            state,
+            type: TypeTokens.bodyM,
+            color: card.state == 'active' && voucherProblem == null ? c.success : c.fgSecondary,
+          ),
+          if (voucherProblem != null) ScaledText(voucherProblem, type: TypeTokens.bodyM, color: c.warning),
           if (balance != null)
             ScaledText(
               l10n.cardsBalance(context.moneyFor(card.currency ?? 'EUR').format(balance)),
@@ -225,11 +252,15 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
           label: l10n.cardsSuspend,
           onPressed: busy ? null : () => unawaited(_withReason(lossReasons, _c.suspend)),
         ),
-      if (card.state == 'suspended')
+      // Resumed only with the found card held to the phone (K4); a card of a compromised batch is replaced (K6).
+      if (card.state == 'suspended' && card.resumable != false)
         SecondaryButton(
           label: l10n.cardsResume,
+          icon: WaiterIcon.nfcArcs,
           onPressed: busy ? null : () => unawaited(_c.resume(l10n.cardsReasonFound)),
         ),
+      if (card.state == 'suspended' && card.resumable == false)
+        StatusBanner(tone: BannerTone.info, title: l10n.cardsResumeCompromised),
       if (replaceable) ...<Widget>[
         const SizedBox(height: Space.s2),
         PrimaryButton(

@@ -20,6 +20,7 @@ use App\Models\PersonalAccessToken;
 use App\Models\SystemSetting;
 use App\Models\User;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\AccessRevoker;
 use App\Services\Auth\CredentialVerifier;
 use App\Services\Auth\DeviceTokenService;
 use App\Services\Auth\LoginCodeService;
@@ -167,6 +168,23 @@ final class AuthController extends Controller
                 'user' => $this->profile($user),
             ],
         ], 201);
+    }
+
+    /**
+     * "Sign out everywhere" (dashboard, account page): every other browser session, every app phone and every
+     * integration token of this person ends; this browser stays signed in. Not reachable with an app token.
+     */
+    public function logoutEverywhere(Request $request, AccessRevoker $access): JsonResponse
+    {
+        $user = $this->user($request);
+        $access->revokeEverywhere($user, Actor::fromRequest($request), 'sign_out_everywhere');
+        $now = Carbon::now();
+        $user->forceFill(['sessions_revoked_at' => $now])->save();
+        if ($request->hasSession()) {
+            $request->session()->put(BindRememberedSignIn::SIGNED_IN_AT, $now->getTimestamp());
+        }
+
+        return response()->json(['message' => 'Signed out everywhere else.']);
     }
 
     public function logout(Request $request): JsonResponse

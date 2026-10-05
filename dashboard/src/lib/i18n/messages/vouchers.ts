@@ -202,6 +202,7 @@ export const vouchers = defineMessages({
     "vouchers.sale.paymentDescription": "How the guest paid. Every sale is recorded with its payment.",
     "vouchers.sale.customerDescription":
       "Optional. With an e-mail address the customer receives the voucher as a PDF with its QR code, together with the receipt.",
+    "vouchers.sale.customerDescriptionNoMail": "Optional. Guest e-mails are switched off in Settings → Vouchers: nothing is sent; hand over the printed voucher.",
     "vouchers.sale.customerExisting": "Existing",
     "vouchers.sale.customerNew": "New",
     "vouchers.sale.searchCustomers": "Search customers …",
@@ -423,6 +424,7 @@ export const vouchers = defineMessages({
     "vouchers.sale.noExpiryHint": "Gültig ohne Ablaufdatum.",
     "vouchers.sale.paymentDescription": "Wie der Gast bezahlt hat. Jeder Verkauf wird mit seiner Zahlung erfasst.",
     "vouchers.sale.customerDescription": "Optional. Mit E-Mail-Adresse erhält der Kunde den Gutschein als PDF mit QR-Code, zusammen mit der Bestätigung.",
+    "vouchers.sale.customerDescriptionNoMail": "Optional. Gäste-E-Mails sind unter Einstellungen → Gutscheine ausgeschaltet: Es wird nichts gesendet; den gedruckten Gutschein übergeben.",
     "vouchers.sale.customerExisting": "Bestehend",
     "vouchers.sale.customerNew": "Neu",
     "vouchers.sale.searchCustomers": "Kunden suchen …",
@@ -640,6 +642,7 @@ export const vouchers = defineMessages({
     "vouchers.sale.noExpiryHint": "Vrijedi bez roka važenja.",
     "vouchers.sale.paymentDescription": "Kako je gost platio. Svaka prodaja se evidentira sa svojim plaćanjem.",
     "vouchers.sale.customerDescription": "Opcionalno. Uz e-mail adresu kupac dobija vaučer kao PDF s QR kodom, zajedno s potvrdom.",
+    "vouchers.sale.customerDescriptionNoMail": "Opcionalno. E-mailovi gostima su isključeni u Postavke → Vaučeri: ništa se ne šalje; predajte ispisani vaučer.",
     "vouchers.sale.customerExisting": "Postojeći",
     "vouchers.sale.customerNew": "Novi",
     "vouchers.sale.searchCustomers": "Pretraži kupce …",

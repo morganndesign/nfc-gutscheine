@@ -44,6 +44,9 @@ enum StationFailure {
   /// The batch already has every card it ordered (another phone finished it).
   complete,
 
+  /// The batch is no longer in production (released, compromised) or its key set was retired: the run stops.
+  batchClosed,
+
   offline,
   server,
   nfcOff,
@@ -218,6 +221,14 @@ class StationController extends ChangeNotifier {
       if (run != _run || _disposed) return;
       _last = outcome;
       if (outcome.cardNumber != null) _finished++;
+      if (outcome.failure == StationFailure.batchClosed) {
+        // No card of this batch can be finished any more: back to the list, which no longer shows it.
+        _batch = null;
+        _phase = StationPhase.batches;
+        _notify();
+        unawaited(load());
+        return;
+      }
       if ((outcome.cardNumber != null && done >= total) || outcome.failure == StationFailure.complete) {
         // The batch has every card it ordered: no more blanks are taken (the server refuses them anyway).
         if (outcome.failure != null) _last = null;
@@ -271,11 +282,21 @@ class StationController extends ChangeNotifier {
       if (e.code == 'CARD_PERSONALIZATION_FAILED') {
         final String reason = e.contextString('reason') ?? '';
         // Never keyable: foreign keys, not an NTAG 424 DNA, not a genuine NXP chip, failed before. Set aside.
-        if (const <String>{'auth:91AE', 'not_ntag424', 'not_genuine', 'qa_failed'}.contains(reason)) {
+        // Holding such a chip again only raises another counterfeit alert (audit K7).
+        if (const <String>{
+          'auth:91AE',
+          'not_ntag424',
+          'not_nxp',
+          'uid_mismatch',
+          'version_length',
+          'not_genuine',
+          'qa_failed',
+        }.contains(reason)) {
           return StationFailure.unknownChip;
         }
         if (reason == 'other_batch' || reason == 'already_personalized') return StationFailure.rejected;
         if (reason == 'batch_complete') return StationFailure.complete;
+        if (reason == 'batch_not_in_production' || reason == 'key_set_not_active') return StationFailure.batchClosed;
         return StationFailure.refused;
       }
       if (e.status == 403) _onAuthFailure?.call(e);

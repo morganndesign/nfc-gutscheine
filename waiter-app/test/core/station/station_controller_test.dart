@@ -178,6 +178,10 @@ void main() {
       ('not_ntag424', StationFailure.unknownChip),
       ('not_genuine', StationFailure.unknownChip),
       ('qa_failed', StationFailure.unknownChip),
+      // Never keyable either: holding them again only raises another counterfeit alert (K7).
+      ('not_nxp', StationFailure.unknownChip),
+      ('uid_mismatch', StationFailure.unknownChip),
+      ('version_length', StationFailure.unknownChip),
       ('other_batch', StationFailure.rejected),
       ('already_personalized', StationFailure.rejected),
       ('expired', StationFailure.refused),
@@ -224,6 +228,29 @@ void main() {
     expect(station.last!.failure, StationFailure.tagLost);
     expect(station.last!.detail, 'tagLost');
     expect(app.backend.to('POST', '/admin/personalizations/P1'), isEmpty);
+    await finish(tester);
+  });
+
+  testWidgets('a batch released or closed meanwhile stops the run instead of failing card after card (K7)', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    app.backend.only(
+      'POST',
+      begin,
+      FakeReply(422, Payloads.error('CARD_PERSONALIZATION_FAILED', <String, Object?>{'reason': 'batch_not_in_production'})),
+    );
+    app.nfc.queue.add(chip(const <String, String>{}));
+    final int listed = app.backend.requests.where((RecordedRequest r) => r.method == 'GET').length;
+    unawaited(station.choose(station.batches!.single));
+    await settle(tester);
+
+    expect(station.last!.failure, StationFailure.batchClosed);
+    expect(station.phase, StationPhase.batches);
+    expect(station.batch, isNull);
+    expect(app.backend.requests.where((RecordedRequest r) => r.method == 'GET').length, greaterThan(listed),
+        reason: 'the list is read again');
+    expect(app.backend.to('POST', begin), hasLength(1), reason: 'no further card is taken');
     await finish(tester);
   });
 

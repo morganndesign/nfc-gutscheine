@@ -180,18 +180,28 @@ class WaiterApi {
   Future<List<CardOrderInfo>> cardOrders() async =>
       _parse(await _client.send('GET', '/card-orders'), CardOrderInfo.listFromJson);
 
-  /// Asks the platform for [quantity] new cards.
-  Future<CardOrderInfo> orderCards(int quantity) async => _parse(
-    await _client.send('POST', '/card-orders', body: <String, Object?>{'quantity': quantity}),
+  /// Asks the platform for [quantity] new cards. The same [idempotencyKey] after a lost answer returns the order
+  /// that was placed instead of a second one.
+  Future<CardOrderInfo> orderCards(int quantity, {required String idempotencyKey}) async => _parse(
+    await _client.send(
+      'POST',
+      '/card-orders',
+      body: <String, Object?>{'quantity': quantity},
+      headers: <String, String>{'Idempotency-Key': idempotencyKey},
+    ),
     CardOrderInfo.createdFromJson,
   );
 
   Future<CardInfo> card(String number) async =>
       _parse(await _client.send('GET', '/cards/${Uri.encodeComponent(number)}'), CardInfo.fromJson);
 
-  /// `suspend` or `resume`.
-  Future<CardInfo> changeCard(String number, String action, String reason) async => _parse(
-    await _client.send('POST', '/cards/${Uri.encodeComponent(number)}/$action', body: <String, Object?>{'reason': reason}),
+  /// `suspend`, or `resume` with the found card's `resume` tap ([presentmentId]).
+  Future<CardInfo> changeCard(String number, String action, String reason, {String? presentmentId}) async => _parse(
+    await _client.send(
+      'POST',
+      '/cards/${Uri.encodeComponent(number)}/$action',
+      body: <String, Object?>{'reason': reason, 'presentment_id': ?presentmentId},
+    ),
     CardInfo.fromJson,
   );
 

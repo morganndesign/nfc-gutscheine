@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
@@ -87,8 +89,23 @@ enum ReloadProblemKind {
   /// No (readable) answer: it may have been booked — "Try again" replays with the same key.
   uncertain,
 
-  /// 403 or RELOAD_NOT_ALLOWED.
+  /// 403: this sign-in may not top up cards.
   notAllowed,
+
+  /// The restaurant switched top-ups off (`allow_reload`, RELOAD_NOT_ALLOWED): said right after the tap (K3).
+  off,
+
+  /// The card's voucher is blocked: said right after the tap, before any amount or money (K2).
+  voucherBlocked,
+
+  /// The card's voucher has expired (K2).
+  voucherExpired,
+
+  /// Loyalty was taken away meanwhile (COMPLIMENTARY_NOT_ALLOWED); the permissions are reloaded (L4).
+  loyaltyNotAllowed,
+
+  /// Loyalty only on a loyalty voucher (LOYALTY_VOUCHER_ONLY).
+  loyaltyVoucherOnly,
 
   /// A new card from stock, and this sign-in may not sell cards: someone who may sell activates it.
   cannotSell,
@@ -195,6 +212,13 @@ class ReloadController extends ChangeNotifier {
       _set(const ReloadProblem(ReloadProblemKind.cannotSell));
       return;
     }
+    // A guest's card that cannot take money is said now, before an amount is typed or money taken (K2, K3).
+    final ReloadProblemKind? refusal = _refusalOf(p.voucher);
+    if (refusal != null) {
+      _definitive();
+      _set(ReloadProblem(refusal));
+      return;
+    }
     _set(ReloadAmount(card: p));
   }
 
@@ -230,6 +254,15 @@ class ReloadController extends ChangeNotifier {
   }
 
   ReloadDetails? _lastDetails;
+
+  /// Why the voucher behind a tapped guest's card cannot be topped up (null: it can, or it is a new card).
+  ReloadProblemKind? _refusalOf(PresentedVoucher? voucher) {
+    if (voucher == null) return null;
+    if (!(_settings?.allowReload ?? true)) return ReloadProblemKind.off;
+    if (voucher.status == VoucherStatus.blocked) return ReloadProblemKind.voucherBlocked;
+    if (voucher.status == VoucherStatus.expired || voucher.isExpired) return ReloadProblemKind.voucherExpired;
+    return null;
+  }
 
   // ------------------------------------------------------------------ amount
 
@@ -407,10 +440,29 @@ class ReloadController extends ChangeNotifier {
       _definitive(); // nothing was booked
       if (forbidden && voucher == null) {
         _set(ReloadProblem(ReloadProblemKind.cannotSell, details: back, requestId: e.requestId));
-      } else if (forbidden ||
-          e.code == 'RELOAD_NOT_ALLOWED' ||
-          e.code == 'COMPLIMENTARY_NOT_ALLOWED' ||
-          e.code == 'LOYALTY_VOUCHER_ONLY') {
+      } else if (e.code == 'COMPLIMENTARY_NOT_ALLOWED' || e.code == 'LOYALTY_VOUCHER_ONLY') {
+        // The owner took Loyalty away meanwhile: the methods offered follow at once (L4).
+        if (e.code == 'COMPLIMENTARY_NOT_ALLOWED') unawaited(_session.refreshUser());
+        _set(
+          ReloadProblem(
+            e.code == 'COMPLIMENTARY_NOT_ALLOWED'
+                ? ReloadProblemKind.loyaltyNotAllowed
+                : ReloadProblemKind.loyaltyVoucherOnly,
+            details: back.copyWith(method: PaymentMethod.cash),
+            requestId: e.requestId,
+          ),
+        );
+      } else if (e.code == 'RELOAD_NOT_ALLOWED') {
+        unawaited(_session.refreshUser());
+        _set(ReloadProblem(ReloadProblemKind.off, requestId: e.requestId));
+      } else if (e.code == 'VOUCHER_BLOCKED' || e.code == 'VOUCHER_EXPIRED') {
+        _set(
+          ReloadProblem(
+            e.code == 'VOUCHER_BLOCKED' ? ReloadProblemKind.voucherBlocked : ReloadProblemKind.voucherExpired,
+            requestId: e.requestId,
+          ),
+        );
+      } else if (forbidden) {
         _set(ReloadProblem(ReloadProblemKind.notAllowed, details: back, requestId: e.requestId));
       } else if (voucher == null && (e.code == 'INVALID_AMOUNT' || e.code == 'BALANCE_LIMIT_EXCEEDED')) {
         _set(

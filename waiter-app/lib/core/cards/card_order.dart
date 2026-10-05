@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../api/api_failure.dart';
 import '../api/models.dart';
@@ -11,14 +12,24 @@ import 'card_desk.dart';
 /// Ordering cards from the platform (managers and owners, Android and iPhone alike): the quantity is typed on the
 /// keypad and sent; the platform accepts (a batch is ordered) or declines with a reason. The latest order is shown.
 class CardOrderController extends ChangeNotifier {
-  CardOrderController({required WaiterApi api, required SessionController session}) : _api = api, _session = session;
+  CardOrderController({required WaiterApi api, required SessionController session, Uuid uuid = const Uuid()})
+    : _api = api,
+      _session = session,
+      _uuid = uuid,
+      _idempotencyKey = uuid.v4();
 
   /// The most a single order may ask for (as the server).
   static const int maxQuantity = 1000;
 
   final WaiterApi _api;
   final SessionController _session;
+  final Uuid _uuid;
   bool _disposed = false;
+
+  /// Kept until the server answers: sending the order again after a lost answer returns the order that was placed
+  /// instead of a second one (audit K5). A new quantity is a new order.
+  String _idempotencyKey;
+  int? _keyQuantity;
 
   DeskPhase phase = DeskPhase.idle;
 
@@ -75,19 +86,30 @@ class CardOrderController extends ChangeNotifier {
       tooMany = false;
     });
     try {
-      final CardOrderInfo order = await _api.orderCards(quantity);
+      if (_keyQuantity != quantity) {
+        _idempotencyKey = _uuid.v4();
+        _keyQuantity = quantity;
+      }
+      final CardOrderInfo order = await _api.orderCards(quantity, idempotencyKey: _idempotencyKey);
+      _newKey();
       _update(() => sent = latest = order);
     } on ApiRejected catch (e) {
       if (!_session.handleFailure(e, SessionContext.lookup)) {
+        if (e.code != 'IDEMPOTENCY_CONFLICT') _newKey();
         _update(() => e.contextString('reason') == 'too_many_open' ? tooMany = true : requestFailed = true);
       }
     } on ApiFailure catch (e) {
-      // A lost answer may still have placed the order; the list on the next visit shows it (3 open at most).
+      // A lost answer may still have placed the order: "order" again sends the same key and gets that order back.
       _session.handleFailure(e, SessionContext.lookup);
       _update(() => requestFailed = true);
     } finally {
       _update(() => phase = DeskPhase.idle);
     }
+  }
+
+  void _newKey() {
+    _idempotencyKey = _uuid.v4();
+    _keyQuantity = null;
   }
 
   void _update(void Function() change) {

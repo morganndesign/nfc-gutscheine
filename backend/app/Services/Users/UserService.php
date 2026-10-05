@@ -61,6 +61,8 @@ final class UserService
                 'role_id' => $role->getKey(),
                 'status' => UserStatus::Active,
                 'password_changed_at' => isset($data['password']) ? Carbon::now() : null,
+                // Explicit, so the answer says "not allowed" rather than nothing (audit L7).
+                'can_give_loyalty' => false,
             ])->save();
 
             $this->audit->log('user.created', $actor, $user, null, [

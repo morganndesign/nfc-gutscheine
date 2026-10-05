@@ -720,12 +720,26 @@ class PseudoAppLocalizations extends AppLocalizations {
       pseudoLocalize(base.problemNotRecognizedBody);
 
   @override
+  String get problemCardOnlyTitle => pseudoLocalize(base.problemCardOnlyTitle);
+
+  @override
+  String get problemCardOnlyBody => pseudoLocalize(base.problemCardOnlyBody);
+
+  @override
   String get problemCardNotRecognizedTitle =>
       pseudoLocalize(base.problemCardNotRecognizedTitle);
 
   @override
   String get problemCardNotRecognizedBody =>
       pseudoLocalize(base.problemCardNotRecognizedBody);
+
+  @override
+  String get problemCardUnverifiedTitle =>
+      pseudoLocalize(base.problemCardUnverifiedTitle);
+
+  @override
+  String get problemCardUnverifiedBody =>
+      pseudoLocalize(base.problemCardUnverifiedBody);
 
   @override
   String get problemCardNotUsableTitle =>
@@ -995,6 +1009,40 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get reloadNotAllowedBody => pseudoLocalize(base.reloadNotAllowedBody);
+
+  @override
+  String get reloadOffTitle => pseudoLocalize(base.reloadOffTitle);
+
+  @override
+  String get reloadOffBody => pseudoLocalize(base.reloadOffBody);
+
+  @override
+  String get reloadVoucherBlockedTitle =>
+      pseudoLocalize(base.reloadVoucherBlockedTitle);
+
+  @override
+  String get reloadVoucherBlockedBody =>
+      pseudoLocalize(base.reloadVoucherBlockedBody);
+
+  @override
+  String get reloadVoucherExpiredTitle =>
+      pseudoLocalize(base.reloadVoucherExpiredTitle);
+
+  @override
+  String get reloadVoucherExpiredBody =>
+      pseudoLocalize(base.reloadVoucherExpiredBody);
+
+  @override
+  String get loyaltyNotAllowedTitle =>
+      pseudoLocalize(base.loyaltyNotAllowedTitle);
+
+  @override
+  String get loyaltyNotAllowedBody =>
+      pseudoLocalize(base.loyaltyNotAllowedBody);
+
+  @override
+  String get loyaltyVoucherOnlyBody =>
+      pseudoLocalize(base.loyaltyVoucherOnlyBody);
 
   @override
   String get reloadCardReplaced => pseudoLocalize(base.reloadCardReplaced);
@@ -1347,6 +1395,37 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get cardsResumeDone => pseudoLocalize(base.cardsResumeDone);
 
   @override
+  String get cardsResumeTap => pseudoLocalize(base.cardsResumeTap);
+
+  @override
+  String get cardsResumeCompromised =>
+      pseudoLocalize(base.cardsResumeCompromised);
+
+  @override
+  String get cardsVoucherBlocked => pseudoLocalize(base.cardsVoucherBlocked);
+
+  @override
+  String get cardsVoucherExpired => pseudoLocalize(base.cardsVoucherExpired);
+
+  @override
+  String get cardsVoucherClosed => pseudoLocalize(base.cardsVoucherClosed);
+
+  @override
+  String get cardsErrorState => pseudoLocalize(base.cardsErrorState);
+
+  @override
+  String get cardsErrorOtherCard => pseudoLocalize(base.cardsErrorOtherCard);
+
+  @override
+  String get cardsErrorForbidden => pseudoLocalize(base.cardsErrorForbidden);
+
+  @override
+  String get cardsErrorNotLinked => pseudoLocalize(base.cardsErrorNotLinked);
+
+  @override
+  String get cardsErrorUncertain => pseudoLocalize(base.cardsErrorUncertain);
+
+  @override
   String get cardsFailed => pseudoLocalize(base.cardsFailed);
 
   @override
@@ -1493,6 +1572,9 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get stationUnknownChip => pseudoLocalize(base.stationUnknownChip);
+
+  @override
+  String get stationBatchClosed => pseudoLocalize(base.stationBatchClosed);
 
   @override
   String get stationFinish => pseudoLocalize(base.stationFinish);

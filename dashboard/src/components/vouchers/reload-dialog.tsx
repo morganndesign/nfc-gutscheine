@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PaymentFields, paymentComplete } from "@/components/vouchers/payment-fields"
 import { type PaymentInput, useReloadVoucher } from "@/lib/api/hooks"
-import { errorMessage, newIdempotencyKey } from "@/lib/api/client"
+import { ApiError, errorMessage, newIdempotencyKey } from "@/lib/api/client"
+import { useAuth } from "@/lib/auth"
 import { formatMoney, parseMoneyInput } from "@/lib/money"
 import { useT } from "@/lib/i18n"
 import { RELOAD_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
@@ -34,6 +35,7 @@ export function ReloadDialog({
   onOpenChange: (open: boolean) => void
 }) {
   const t = useT()
+  const { refresh } = useAuth()
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
   const [payment, setPayment] = useState<PaymentInput>({ method: "cash" })
@@ -98,6 +100,8 @@ export function ReloadDialog({
                 setUncertain(true)
                 setError(t("vouchers.reload.uncertain"))
               } else {
+                // The owner took the loyalty right back meanwhile: the payment choices follow at once (audit L4).
+                if (err instanceof ApiError && err.code === "COMPLIMENTARY_NOT_ALLOWED") void refresh()
                 forgetPendingKey(scope)
                 setUncertain(false)
                 setError(errorMessage(err))

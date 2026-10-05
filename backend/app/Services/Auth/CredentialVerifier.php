@@ -47,7 +47,9 @@ final class CredentialVerifier
         // timing may reveal whether the account exists, is locked, or whether a guess was right (audit S4).
         $valid = Hash::check($password, $user->password ?? self::DUMMY_HASH);
 
-        if ($user !== null && $user->isLocked()) {
+        // A lock (wrong passwords or codes, possibly someone else's) never shuts out the person on their own browser:
+        // the right password from a browser that confirmed a code for this account still signs in (audit S5).
+        if ($user !== null && $user->isLocked() && ! ($valid && ! $deviceClient && app(LoginCodeService::class)->isTrusted($request, $user))) {
             $this->audit->log('auth.locked_attempt', $this->actor($request), $user, restaurantId: $user->restaurant_id);
             $this->events->signInRefused($request, $email, $user, 'account_locked', $channel);
 

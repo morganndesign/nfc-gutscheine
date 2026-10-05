@@ -109,7 +109,7 @@ function SaleComplete({ sale, onNext }: { sale: SaleResult; onNext: () => void }
 }
 
 function SellVoucherContent() {
-  const { user } = useAuth()
+  const { user, refresh } = useAuth()
   const t = useT()
   const settings = user?.restaurant?.settings
   const currency = user?.restaurant?.currency ?? "EUR"
@@ -190,6 +190,8 @@ function SellVoucherContent() {
       setSale(result)
       toast.success(result.replayed ? t("vouchers.sale.replayedToast") : t("vouchers.sale.sold"))
     } catch (e) {
+      // The owner took the loyalty right back meanwhile: the payment choices follow at once (audit L4).
+      if (e instanceof ApiError && e.code === "COMPLIMENTARY_NOT_ALLOWED") void refresh()
       if (isUncertainOutcome(e, { unanswered, finalCodes: SALE_CODES })) {
         // The sale may have been booked. Sending the same key again returns it (and a fresh QR) instead of selling twice.
         rememberPendingKey(scope, idempotencyKey.current)
@@ -295,7 +297,8 @@ function SellVoucherContent() {
         <Card>
           <CardHeader>
             <CardTitle>{t("vouchers.col.customer")}</CardTitle>
-            <CardDescription>{t("vouchers.sale.customerDescription")}</CardDescription>
+            {/* The PDF goes out only when guest e-mails are on (audit T3). */}
+            <CardDescription>{t(settings?.send_customer_emails === false ? "vouchers.sale.customerDescriptionNoMail" : "vouchers.sale.customerDescription")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Segmented

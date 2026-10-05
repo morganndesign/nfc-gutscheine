@@ -95,7 +95,7 @@ final class InvitationEmailLocalizationTest extends TestCase
 
         $this->assertStringContainsString('Hallo Walter,', $text);
         $this->assertStringContainsString('Olga Owner hat Sie eingeladen, für das Restaurant „Café Central“ Gutscheine mit GiftCard Pro zu verwalten.', $text);
-        $this->assertStringContainsString('bitten Sie die Restaurantleitung, Ihnen die Einladung erneut zu senden', $text);
+        $this->assertStringContainsString('bitten Sie Ihren Manager oder den Inhaber, Ihnen die Einladung erneut zu senden', $text);
         $this->assertStringNotContainsString('support@', $text, 'Staff ask their restaurant, not the platform.');
     }
 

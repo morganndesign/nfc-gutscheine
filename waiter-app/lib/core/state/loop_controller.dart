@@ -245,6 +245,9 @@ class LoopController extends ChangeNotifier {
           _feedback.haptic(HapticToken.select);
           notifyListeners();
         });
+      case ApiRejected(code: 'PRESENTMENT_METHOD_NOT_ALLOWED'):
+        // A voucher on a card: only the card's tap spends it (T1).
+        _go(ProblemState(kind: ProblemKind.cardOnly, supportCode: support, requestId: requestId));
       case ApiRejected(:final int status) when status < 500:
         // Unknown, revoked or foreign code, or a medium this till cannot take.
         _go(ProblemState(kind: ProblemKind.notRecognized, supportCode: support, requestId: requestId));
@@ -394,6 +397,9 @@ class LoopController extends ChangeNotifier {
           supportCode: support,
           requestId: requestId,
         ));
+      case ApiRejected(code: 'CARD_AUTHENTICATION_FAILED'):
+        // The live check failed (the card moved, a weak field): holding it again usually works (T2).
+        _go(ProblemState(kind: ProblemKind.cardUnverified, retryCard: true, supportCode: support, requestId: requestId));
       case ApiRejected(:final int status) when status < 500:
         // Not a card of this restaurant, a copied tap, or a chip without the card's keys.
         _go(ProblemState(kind: ProblemKind.cardNotRecognized, supportCode: support, requestId: requestId));

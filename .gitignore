@@ -12,3 +12,6 @@ e2e/node_modules/
 # (see PROJECT_STRUCTURE.md). Keep them in a backup / password manager instead.
 /releases/
 /signing/
+
+# A stray local SQLite file (never part of the app).
+/backend/giftcard_pro

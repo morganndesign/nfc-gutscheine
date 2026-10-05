@@ -10,7 +10,7 @@ enum Permission: string
 
     case VouchersView = 'vouchers.view';
     case VouchersSell = 'vouchers.sell';
-    /** Sell without payment (marketing). Owner only; four-eyes for others arrives with authorizations. */
+    /** Give loyalty value (no payment, always with a reason): owners, and managers the owner allowed (User::permissionSlugs). */
     case VouchersSellComplimentary = 'vouchers.sell_complimentary';
     case VouchersUpdate = 'vouchers.update';
     case VouchersRedeem = 'vouchers.redeem';

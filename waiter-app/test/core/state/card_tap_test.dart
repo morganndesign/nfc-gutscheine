@@ -135,7 +135,9 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('the card answered but the server refuses the answer', (WidgetTester tester) async {
+  testWidgets('the card answered but the check failed: "Tap card again" holds it once more (T2)', (
+    WidgetTester tester,
+  ) async {
     await started(tester);
     app.backend
       ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
@@ -143,7 +145,12 @@ void main() {
 
     app.loop.openCardTap();
     await settle(tester);
-    expect((app.loop.state as ProblemState).kind, ProblemKind.cardNotRecognized);
+    final ProblemState problem = app.loop.state as ProblemState;
+    expect(problem.kind, ProblemKind.cardUnverified);
+    expect(problem.retryCard, isTrue);
+    app.loop.retryPresent();
+    await settle(tester);
+    expect(app.backend.to('POST', begin), hasLength(2), reason: 'the card is held again');
     await finish(tester);
   });
 

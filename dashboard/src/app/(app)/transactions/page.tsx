@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { LoyaltyBadge } from "@/components/common/status-badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useDebounce } from "@/hooks/use-debounce"
 import { useReverseTransaction, useTransactions } from "@/lib/api/hooks"
@@ -163,6 +164,8 @@ function TransactionsContent() {
                           {tx.reversed ? (
                             <span className="bg-muted text-muted-foreground ml-1.5 rounded px-1.5 text-[10px] uppercase">{t("transactions.reversed")}</span>
                           ) : null}
+                          {/* Loyalty value is never money: marked so it is not read as a paid top-up (audit L6). */}
+                          {tx.payment?.method === "complimentary" ? <LoyaltyBadge className="ml-1.5" /> : null}
                           <span className="text-muted-foreground block text-xs sm:hidden">
                             {tx.voucher ? `•••• ${tx.voucher.voucher_number.slice(-4)} · ` : ""}
                             {formatDateTime(tx.created_at)}

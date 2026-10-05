@@ -23,6 +23,9 @@ enum CardPresentFailure {
   /// Not a card of this restaurant, a copied tap, or a chip without the card's keys.
   notRecognized,
 
+  /// The card's live check failed (CARD_AUTHENTICATION_FAILED, e.g. moved too early): hold it again.
+  unverified,
+
   /// A genuine card of this restaurant in the wrong state for this purpose ([CardPresentException.cardState]).
   notUsable,
 
@@ -105,6 +108,7 @@ class CardPresenter {
       throw CardPresentException(
         switch (e) {
           ApiRejected(code: 'CARD_NOT_USABLE') => CardPresentFailure.notUsable,
+          ApiRejected(code: 'CARD_AUTHENTICATION_FAILED') => CardPresentFailure.unverified,
           ApiRejected(:final int status) when status == 429 => CardPresentFailure.throttled,
           ApiRejected(:final int status) when status == 403 && e.code == 'FORBIDDEN' => CardPresentFailure.forbidden,
           ApiRejected(:final int status) when status < 500 => CardPresentFailure.notRecognized,

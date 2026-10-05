@@ -341,16 +341,22 @@ class _SheetRoute<T> extends PopupRoute<T> {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
   ) {
+    // A sheet with a text field (the test builds' server address) rises above the keyboard; its content scrolls
+    // in what is left (audit T10, as the sale form).
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
     return PopScope(
       canPop: dismissible,
-      child: Align(
-        alignment: Alignment.bottomCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: LayoutTokens.maxSheet,
-            maxHeight: _largeDetent(context),
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboard),
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: LayoutTokens.maxSheet,
+              maxHeight: math.max(0, _largeDetent(context) - keyboard),
+            ),
+            child: Builder(builder: builder),
           ),
-          child: Builder(builder: builder),
         ),
       ),
     );

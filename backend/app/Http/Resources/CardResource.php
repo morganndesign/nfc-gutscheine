@@ -8,6 +8,7 @@ use App\Models\Card;
 use App\Models\CardBatch;
 use App\Models\Medium;
 use App\Models\Voucher;
+use App\Services\Cards\CardService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -42,11 +43,15 @@ final class CardResource extends JsonResource
                     'id' => $voucher->id,
                     'voucher_number' => $voucher->voucher_number,
                     'status' => $voucher->status->value,
+                    // Past its end date but not yet marked by the nightly job: shown as expired (audit K11).
+                    'is_expired' => $voucher->isExpiredByDate(),
                     'balance' => $voucher->balance,
                     'currency' => $voucher->currency,
                 ] : null;
             }),
             'successor' => $card->successor?->card_number,
+            // A suspended card from a compromised batch is replaced, never resumed (audit K6).
+            'resumable' => $card->state->value === 'suspended' ? CardService::resumable($card) : null,
         ];
     }
 }

@@ -259,7 +259,7 @@ final class OwnerInvitationTest extends TestCase
 
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/users/{$waiter->id}/invitation")->assertOk();
         $this->assertStringContainsString(
-            'bitten Sie die Restaurantleitung',
+            'bitten Sie Ihren Manager oder den Inhaber',
             (string) $this->sentMails()[1]->getOriginalMessage()->getTextBody(),
         );
         $this->postJson("/api/v1/admin/restaurants/{$restaurant->id}/users/{$foreign->id}/invitation")

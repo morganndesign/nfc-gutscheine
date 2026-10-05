@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\RequireIdempotencyKey;
 use App\Http\Requests\Cards\StoreCardOrderRequest;
 use App\Http\Resources\CardOrderResource;
 use App\Models\CardOrder;
@@ -28,7 +29,8 @@ final class CardOrderController extends Controller
     public function store(StoreCardOrderRequest $request): JsonResponse
     {
         $note = $request->validated('note');
-        $order = $this->orders->request(Actor::fromRequest($request), (int) $request->validated('quantity'), is_string($note) ? $note : null);
+        $key = $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE);
+        $order = $this->orders->request(Actor::fromRequest($request), (int) $request->validated('quantity'), is_string($note) ? $note : null, is_string($key) ? $key : null);
 
         return CardOrderResource::make($order->load(['requester', 'batch']))->response()->setStatusCode(201);
     }

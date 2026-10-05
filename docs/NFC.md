@@ -43,8 +43,9 @@ sold. This page is the operational reference and the **validation procedure for 
   *Security alerts*.
 - **Restaurant, waiter app:** confirm a delivery (count + one tapped card), sell or top up a gift card (*Sell / top up card*: tap it, then amount and payment),
   *Tap card* to pay, find / suspend / resume / replace a card.
-- **Restaurant dashboard:** *Cards* (stock, guests' cards, history, suspend, resume, take stock cards out of
-  service); the voucher detail shows its card.
+- **Restaurant dashboard:** *Cards* (stock, guests' cards, history, suspend, take stock cards out of service);
+  the voucher detail shows its card. A suspended card is resumed only in the app, with the card tapped (decision
+  2026-10-06).
 - **Guest:** tapping the card with any phone opens `{TAP_URL}/{key set}?e=…&m=…`: restaurant, balance (if the
   restaurant allows it), validity. No cookies, no referrer.
 

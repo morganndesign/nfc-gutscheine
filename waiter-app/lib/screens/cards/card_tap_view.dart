@@ -73,6 +73,11 @@ class CardTapView extends StatelessWidget {
     title: l10n.problemCardNotRecognizedTitle,
     body: l10n.problemCardNotRecognizedBody,
   ),
+  CardPresentFailure.unverified => (
+    family: ProblemFamily.verification,
+    title: l10n.problemCardUnverifiedTitle,
+    body: l10n.problemCardUnverifiedBody,
+  ),
   CardPresentFailure.nfcOff => (
     family: ProblemFamily.account,
     title: l10n.problemNfcOffTitle,

@@ -254,6 +254,7 @@ class _OutcomeBanner extends StatelessWidget {
       StationFailure.unknownChip => StatusBanner(tone: BannerTone.danger, title: l10n.stationUnknownChip, body: code),
       StationFailure.noCard => StatusBanner(tone: BannerTone.info, title: l10n.stationNoCard),
       StationFailure.complete => StatusBanner(tone: BannerTone.success, title: l10n.stationCompleteTitle),
+      StationFailure.batchClosed => StatusBanner(tone: BannerTone.warning, title: l10n.stationBatchClosed, body: code),
       StationFailure.nfcOff => StatusBanner(
         tone: BannerTone.warning,
         title: l10n.problemNfcOffTitle,

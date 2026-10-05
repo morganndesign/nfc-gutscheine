@@ -28,6 +28,7 @@ use App\Services\Cards\CardLifecycle;
 use App\Services\Notifications\VoucherNotificationService;
 use App\Support\Actor;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Laravel\Sanctum\Sanctum;
 use Symfony\Component\Mime\Email;
@@ -304,7 +305,7 @@ final class CardWorkflowTest extends TestCase
         $this->assertSame(1, Medium::query()->where('voucher_id', $voucherId)->where('status', MediumStatus::Active->value)->count());
 
         // Found again: a replaced card never comes back.
-        $this->postJson("/api/v1/cards/{$number}/resume", ['reason' => 'found'])->assertStatus(409);
+        $this->postJson("/api/v1/cards/{$number}/resume", ['reason' => 'found', 'presentment_id' => (string) Str::uuid()])->assertStatus(409);
     }
 
     public function test_the_guest_is_told_of_a_replacement_and_many_replacements_raise_an_alert(): void
@@ -403,7 +404,7 @@ final class CardWorkflowTest extends TestCase
         // No tap of the set is accepted any more, and nobody can switch the card back on.
         $this->asManager();
         $this->tapCard($this->chip($cards[0]), 'spend')->assertForbidden();
-        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/resume", ['reason' => 'found'])
+        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/resume", ['reason' => 'found', 'presentment_id' => (string) Str::uuid()])
             ->assertStatus(409)->assertJsonPath('context.reason', 'keys_compromised');
 
         // New keys, new cards: the owner moves the guest's balance to one.
@@ -424,7 +425,10 @@ final class CardWorkflowTest extends TestCase
 
         $this->postJson("/api/v1/cards/{$number}/suspend", ['reason' => 'check'])->assertOk();
         $this->postJson("/api/v1/cards/{$number}/suspend", ['reason' => 'check'])->assertStatus(409);
-        $this->postJson("/api/v1/cards/{$number}/resume", ['reason' => 'found in the coat'])->assertOk()->assertJsonPath('data.state', 'active');
+        // Only with the card itself tapped at the till (decision 2026-10-06, K4): not by number, not with another card.
+        $this->postJson("/api/v1/cards/{$number}/resume", ['reason' => 'found in the coat'])->assertUnprocessable()->assertJsonValidationErrors('presentment_id');
+        $this->getJson("/api/v1/cards/{$number}")->assertJsonPath('data.resumable', true);
+        $this->postJson("/api/v1/cards/{$number}/resume", ['reason' => 'found in the coat', 'presentment_id' => $this->tapped($chip, 'resume')])->assertOk()->assertJsonPath('data.state', 'active');
         $this->postJson("/api/v1/vouchers/{$voucherId}/redemptions", ['amount' => 2000, 'presentment_id' => $this->tapped($chip, 'spend')], $this->idempotency())->assertCreated();
     }
 
@@ -500,5 +504,43 @@ final class CardWorkflowTest extends TestCase
         $this->assertSame(CardBatchStatus::Shipped, $second->refresh()->status);
         $this->assertSame(CardBatchStatus::Shipped, $first->refresh()->status, 'the refused receipt consumed nothing');
         $this->assertNotNull(app(CardBatchLifecycle::class));
+    }
+
+    /** Decision 2026-10-06 (K1): a card sale cancelled by mistake puts the card back into stock; a refund does not. */
+    public function test_a_cancelled_card_sale_returns_the_card_to_stock(): void
+    {
+        [, $cards] = $this->stock();
+        $chip = $this->chip($cards[0]);
+        $voucherId = (string) $this->sellCard($chip, 3000)->assertCreated()->json('data.id');
+
+        $this->postJson("/api/v1/vouchers/{$voucherId}/cancellation", ['reason' => 'wrong amount'], $this->idempotency())->assertSuccessful();
+        $this->assertSame(CardState::Available, $cards[0]->refresh()->state);
+        $this->getJson("/api/v1/cards/{$cards[0]->card_number}")->assertJsonPath('data.voucher', null);
+
+        // Sold again, the right amount this time; the old voucher stays closed.
+        $again = (string) $this->sellCard($chip, 5000)->assertCreated()->json('data.id');
+        $this->assertNotSame($voucherId, $again);
+        $this->postJson("/api/v1/vouchers/{$again}/redemptions", ['amount' => 1000, 'presentment_id' => $this->tapped($chip, 'spend')], $this->idempotency())->assertCreated();
+
+        // A refund (the owner pays the guest back) takes the card out for good.
+        $this->asOwner();
+        $this->postJson("/api/v1/vouchers/{$again}/refund", ['payment' => ['method' => 'cash'], 'reason' => 'guest moved away'], $this->idempotency())->assertCreated();
+        $this->assertSame(CardState::Revoked, $cards[0]->refresh()->state);
+    }
+
+    /** K4: another card's tap does not resume this one. */
+    public function test_a_card_is_resumed_only_with_its_own_tap(): void
+    {
+        [, $cards] = $this->stock();
+        $this->sellCard($this->chip($cards[0]), 2000)->assertCreated();
+        $this->sellCard($this->chip($cards[1]), 2000)->assertCreated();
+        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/suspend", ['reason' => 'lost'])->assertOk();
+        $this->postJson("/api/v1/cards/{$cards[1]->card_number}/suspend", ['reason' => 'lost'])->assertOk();
+
+        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/resume", ['reason' => 'found', 'presentment_id' => $this->tapped($this->chip($cards[1]), 'resume')])
+            ->assertUnprocessable()->assertJsonPath('code', 'PRESENTMENT_INVALID');
+        $this->assertSame(CardState::Suspended, $cards[0]->refresh()->state);
+        // An active card cannot be tapped for a resume.
+        $this->tapCard($this->chip($cards[2]), 'resume')->assertStatus(422);
     }
 }

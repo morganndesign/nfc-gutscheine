@@ -186,4 +186,13 @@ final class TapPageTest extends TestCase
         $this->putJson('/api/v1/settings/vouchers', ['public_balance' => false])->assertOk()->assertJsonPath('data.public_balance', false);
         $this->assertFalse($this->restaurant->settings->refresh()->public_balance);
     }
+
+    /** Audit K10: past its end date the page says expired at once, like the till (before the nightly job). */
+    public function test_a_voucher_past_its_end_date_shows_as_expired_at_once(): void
+    {
+        $voucher = $this->activate();
+        $voucher->forceFill(['expires_at' => now()->subDay()])->save();
+
+        $this->get($this->tapUrl(6))->assertOk()->assertDontSee('class="amount"', false)->assertDontSee('42,50');
+    }
 }

@@ -73,11 +73,14 @@ final class CardService
         return $this->change($actor, $card, CardState::Suspended, $reason, [CardState::Active]);
     }
 
-    public function resume(Actor $actor, Card $card, string $reason): Card
+    /**
+     * A suspended card works again only when it is at the till: the person resuming it taps it (a `resume`
+     * presentment of this very card; decision 2026-10-06, K4). A card that is not found is replaced instead.
+     */
+    public function resume(Actor $actor, Card $card, string $reason, string $presentmentId): Card
     {
-        $batch = CardBatch::query()->withoutGlobalScopes()->findOrFail($card->batch_id);
-        $keySet = KeySet::query()->findOrFail($batch->key_set_id);
-        if ($batch->status === CardBatchStatus::Compromised || $keySet->status === KeySetStatus::Retired) {
+        $this->assertTenant($card->restaurant_id);
+        if (! self::resumable($card)) {
             // A card whose keys leaked never pays again; its balance moves to a new card (replacement).
             return $this->guarded($actor, 'resume', $card->card_number, null, fn (): never => throw new CardStateException(
                 'The keys of this card are compromised. Replace it with a new card.',
@@ -85,7 +88,36 @@ final class CardService
             ));
         }
 
-        return $this->change($actor, $card, CardState::Active, $reason, [CardState::Suspended]);
+        return $this->guarded($actor, CardState::Active->value, $card->card_number, null, fn (): Card => DB::transaction(function () use ($actor, $card, $reason, $presentmentId): Card {
+            if ($card->state !== CardState::Suspended) {
+                throw new CardStateException("A {$card->state->value} card cannot become active here.", ['state' => $card->state->value]);
+            }
+            // Lock order: presentment → card.
+            $presentment = $this->presentments->lockForUse($presentmentId);
+            $tapped = $this->presentments->consumeCard($presentment, $actor, [PresentmentPurpose::Resume], PresentmentPurpose::Resume->cardStates());
+            if ($tapped->getKey() !== $card->getKey()) {
+                throw new PresentmentInvalidException('', ['reason' => 'other_card']);
+            }
+            /** @var Card $locked */
+            $locked = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
+            if ($locked->state !== CardState::Suspended) {
+                throw new CardStateException("A {$locked->state->value} card cannot become active here.", ['state' => $locked->state->value]);
+            }
+
+            return $this->lifecycle->transition($locked, CardState::Active, $reason, $actor);
+        }, self::DB_ATTEMPTS));
+    }
+
+    /** False for a card whose keys are compromised (its batch or key set): it is replaced, never resumed. */
+    public static function resumable(Card $card): bool
+    {
+        $batch = CardBatch::query()->withoutGlobalScopes()->find($card->batch_id);
+        if ($batch === null) {
+            return false;
+        }
+        $keySet = KeySet::query()->find($batch->key_set_id);
+
+        return $batch->status !== CardBatchStatus::Compromised && $keySet?->status !== KeySetStatus::Retired;
     }
 
     /** A stock card that is damaged, missing or not to be sold: out of service for good. */

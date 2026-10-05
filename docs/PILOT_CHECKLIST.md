@@ -47,7 +47,7 @@ Use this list for the first restaurant. Tick each item. The journey in section B
    blocked. The audit log shows each action once.
 7. [ ] **Cards** (if the restaurant sells physical cards): confirm the delivery in the app (Menu → *Confirm a
    delivery*), sell a € 5 gift card (*Sell / top up card* → tap a stock card), pay € 1 with *Tap card* on every phone, suspend
-   and resume it under *Cards* in the dashboard.
+   it (app *Find card* or dashboard *Cards*) and resume it in the app with the card held to the phone.
 8. [ ] Print the waiter page of the [user guide](USER_GUIDE.md) and place it at the till.
 
 ## C. First week

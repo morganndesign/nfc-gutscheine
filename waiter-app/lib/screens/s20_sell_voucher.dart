@@ -379,6 +379,16 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
         supportCode: hasCode ? code : null,
         requestId: hasCode ? s.requestId : null,
       ),
+      SaleProblemKind.loyaltyNotAllowed => ProblemScreen(
+        family: ProblemFamily.account,
+        title: l10n.loyaltyNotAllowedTitle,
+        body: l10n.loyaltyNotAllowedBody,
+        primary: ProblemAction(l10n.commonBack, _c.backToDetails),
+        secondary: ProblemAction(l10n.commonClose, () => unawaited(_close())),
+        onClose: () => unawaited(_close()),
+        supportCode: hasCode ? code : null,
+        requestId: hasCode ? s.requestId : null,
+      ),
       SaleProblemKind.notAllowed => ProblemScreen(
         family: ProblemFamily.account,
         title: l10n.saleNotAllowedTitle,

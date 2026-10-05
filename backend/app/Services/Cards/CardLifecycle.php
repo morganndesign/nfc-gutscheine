@@ -124,10 +124,39 @@ final class CardLifecycle
             if (! in_array($from, [CardState::Bound, CardState::Active, CardState::Suspended, CardState::Replaced, CardState::Revoked, CardState::Lost], true)) {
                 throw new CardStateException("A {$from->value} card cannot go back into stock.", ['state' => $from->value]);
             }
+            // Never a card whose keys leaked, nor one lost on its way from the platform (audit K9).
+            $batchStatus = DB::table('card_batches')->where('id', $locked->batch_id)->value('status');
+            if (! CardService::resumable($locked) || ($from === CardState::Lost && in_array($batchStatus, ['shipped', 'lost'], true))) {
+                throw new CardStateException('This card cannot go back into stock.', ['reason' => 'not_reusable']);
+            }
 
             return $this->writing(function () use ($locked, $from, $actor): Card {
                 $locked->forceFill(['state' => CardState::Available, 'state_changed_at' => Carbon::now(), 'successor_card_id' => null])->save();
                 $this->record($locked, $from, CardState::Available, 'test card back in stock', $actor, null);
+
+                return $locked;
+            });
+        });
+    }
+
+    /**
+     * A card sold by mistake whose sale was cancelled (unused, the same day; decision 2026-10-06, K1): back into the
+     * restaurant's stock, to be sold again. The chip is not touched (selling never writes to it). The only other
+     * way back in the lifecycle besides the test restaurant's reset.
+     */
+    public function backToStockAfterCancel(Card $card, Actor $actor, ?Model $ref = null): Card
+    {
+        return DB::transaction(function () use ($card, $actor, $ref): Card {
+            /** @var Card $locked */
+            $locked = Card::query()->withoutGlobalScopes()->whereKey($card->getKey())->lockForUpdate()->firstOrFail();
+            $from = $locked->state;
+            if ($from !== CardState::Active) {
+                throw new CardStateException("A {$from->value} card cannot go back into stock.", ['state' => $from->value]);
+            }
+
+            return $this->writing(function () use ($locked, $from, $actor, $ref): Card {
+                $locked->forceFill(['state' => CardState::Available, 'state_changed_at' => Carbon::now()])->save();
+                $this->record($locked, $from, CardState::Available, 'sale cancelled: back in stock', $actor, $ref);
 
                 return $locked;
             });

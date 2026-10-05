@@ -30,7 +30,7 @@ class AppLocalizationsBs extends AppLocalizations {
   String get commonScanAgain => 'Skeniraj ponovo';
 
   @override
-  String get commonTapAgain => 'Ponovo prislonite karticu';
+  String get commonTapAgain => 'Ponovo prisloni karticu';
 
   @override
   String get commonOpenSettings => 'Otvori postavke';
@@ -668,7 +668,7 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get uncertainGuestHint =>
-      'Recite gostu: „Trenutak, molim, iskorištavanje se potvrđuje.\"';
+      'Recite gostu: „Trenutak, molim, iskorištavanje se potvrđuje.“';
 
   @override
   String get uncertainFailedBody =>
@@ -680,7 +680,7 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get uncertainCancelledGuestHint =>
-      'Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo to prije novog iskorištavanja.\"';
+      'Recite gostu: „Iskorištavanje još nije potvrđeno. Provjerit ćemo to prije novog iskorištavanja.“';
 
   @override
   String redeemBalanceChanged(String amount) {
@@ -728,6 +728,13 @@ class AppLocalizationsBs extends AppLocalizations {
       'Ovaj kôd ovdje ne važi. Zatražite od gosta drugi vaučer ili pozovite menadžera.';
 
   @override
+  String get problemCardOnlyTitle => 'Vaučer je na kartici';
+
+  @override
+  String get problemCardOnlyBody =>
+      'Ovaj vaučer je na kartici. Prislonite gostovu karticu uz telefon.';
+
+  @override
   String get problemCardNotRecognizedTitle => 'Kartica nije prihvaćena';
 
   @override
@@ -735,7 +742,14 @@ class AppLocalizationsBs extends AppLocalizations {
       'Ova kartica nije potvrđena kao vaučer ovog restorana. Pozovite menadžera.';
 
   @override
-  String get problemCardNotUsableTitle => 'Ovom karticom se ne može platiti';
+  String get problemCardUnverifiedTitle => 'Kartica nije provjerena';
+
+  @override
+  String get problemCardUnverifiedBody =>
+      'Provjera nije uspjela. Držite karticu mirno uz telefon i pokušajte ponovo. Ako opet ne uspije, pozovite menadžera.';
+
+  @override
+  String get problemCardNotUsableTitle => 'Kartica se ne može koristiti';
 
   @override
   String get problemCardNotUsableNotActive => 'Kartica još nije aktivirana.';
@@ -934,7 +948,7 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get saleNoQrBody =>
-      'QR kôd se više ne može prikazati. Ako gost nema ispisan vaučer, blokirajte ga u dashboardu i prodajte novi.';
+      'QR kôd se ovdje više ne može prikazati. Ako gost nema ispisan vaučer: u dashboardu otvorite vaučer › „Novi QR kod“.';
 
   @override
   String get saleQrA11y => 'QR kôd vaučera';
@@ -1006,7 +1020,39 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get reloadNotAllowedBody =>
-      'Ova prijava ne smije dopunjavati kartice ili restoran ne dozvoljava dopunu.';
+      'Ova prijava ne smije dopunjavati kartice.';
+
+  @override
+  String get reloadOffTitle => 'Dopune isključene';
+
+  @override
+  String get reloadOffBody =>
+      'Ovaj restoran ne dozvoljava dopunu kartica. Nove kartice se i dalje mogu prodavati.';
+
+  @override
+  String get reloadVoucherBlockedTitle => 'Vaučer je blokiran';
+
+  @override
+  String get reloadVoucherBlockedBody =>
+      'Vaučer na ovoj kartici je blokiran i ne može se dopuniti. Menadžer može pomoći.';
+
+  @override
+  String get reloadVoucherExpiredTitle => 'Vaučer je istekao';
+
+  @override
+  String get reloadVoucherExpiredBody =>
+      'Vaučer na ovoj kartici je istekao i ne može se dopuniti.';
+
+  @override
+  String get loyaltyNotAllowedTitle => 'Loyalty nije dozvoljen';
+
+  @override
+  String get loyaltyNotAllowedBody =>
+      'Ova prijava ne smije davati Loyalty. Odaberite drugi način plaćanja.';
+
+  @override
+  String get loyaltyVoucherOnlyBody =>
+      'Loyalty samo na Loyalty vaučeru. Odaberite drugi način plaćanja.';
 
   @override
   String get reloadCardReplaced =>
@@ -1217,13 +1263,13 @@ class AppLocalizationsBs extends AppLocalizations {
   String get menuCards => 'Kartice';
 
   @override
-  String get menuCardsReceive => 'Potvrdite isporuku';
+  String get menuCardsReceive => 'Potvrdi isporuku';
 
   @override
-  String get menuCardsFind => 'Pronađite karticu';
+  String get menuCardsFind => 'Pronađi karticu';
 
   @override
-  String get menuCardsOrder => 'Naručite kartice';
+  String get menuCardsOrder => 'Naruči kartice';
 
   @override
   String get cardsReceiveNone => 'Nema isporuke na čekanju.';
@@ -1278,16 +1324,16 @@ class AppLocalizationsBs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: 'Naručite $count kartica',
-      few: 'Naručite $count kartice',
-      one: 'Naručite $count karticu',
+      other: 'Naruči $count kartica',
+      few: 'Naruči $count kartice',
+      one: 'Naruči $count karticu',
     );
     return '$_temp0';
   }
 
   @override
   String get cardsOrderDone =>
-      'Narudžba poslana. Čim kartice krenu, pojavit će se pod „Potvrdite isporuku“.';
+      'Narudžba poslana. Čim kartice krenu, pojavit će se pod „Potvrdi isporuku“.';
 
   @override
   String cardsOrderOpen(int count) {
@@ -1343,13 +1389,13 @@ class AppLocalizationsBs extends AppLocalizations {
   }
 
   @override
-  String get cardsSuspend => 'Blokirajte karticu';
+  String get cardsSuspend => 'Blokiraj karticu';
 
   @override
-  String get cardsResume => 'Deblokirajte karticu';
+  String get cardsResume => 'Deblokiraj karticu';
 
   @override
-  String get cardsReplace => 'Zamijenite karticu';
+  String get cardsReplace => 'Zamijeni karticu';
 
   @override
   String get cardsReasonTitle => 'Razlog';
@@ -1387,6 +1433,42 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get cardsResumeDone => 'Deblokirana – kartica ponovo plaća.';
+
+  @override
+  String get cardsResumeTap =>
+      'Prislonite pronađenu karticu uz telefon. Deblokira se samo kartica koja je ovdje.';
+
+  @override
+  String get cardsResumeCompromised =>
+      'Ova kartica se iz sigurnosnih razloga više ne može deblokirati. Zamijenite je – stanje prelazi na novu karticu.';
+
+  @override
+  String get cardsVoucherBlocked => 'Vaučer blokiran – ne plaća';
+
+  @override
+  String get cardsVoucherExpired => 'Vaučer je istekao';
+
+  @override
+  String get cardsVoucherClosed => 'Vaučer je zatvoren';
+
+  @override
+  String get cardsErrorState =>
+      'Kartica je u međuvremenu promijenila stanje. Potražite je ponovo.';
+
+  @override
+  String get cardsErrorOtherCard =>
+      'To je bila druga kartica. Prislonite baš ovu karticu uz telefon.';
+
+  @override
+  String get cardsErrorForbidden =>
+      'Ova prijava to ne smije. Izgubljenu karticu zamjenjuje samo vlasnik.';
+
+  @override
+  String get cardsErrorNotLinked => 'Ova kartica nije vezana za vaučer.';
+
+  @override
+  String get cardsErrorUncertain =>
+      'Nema odgovora servera. Ponovo potražite karticu da vidite je li uspjelo.';
 
   @override
   String get cardsFailed => 'To nije uspjelo. Pokušajte ponovo.';
@@ -1496,7 +1578,7 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get intro3Body =>
-      'Iskorištavanje radi samo uz vezu. Iskorištavanja iz smjene su pod „Nedavno\".';
+      'Iskorištavanje radi samo uz vezu. Iskorištavanja iz smjene su pod „Nedavno“.';
 
   @override
   String get stationTitle => 'Personalizacija kartica';
@@ -1525,7 +1607,7 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String stationCompleteBody(String total) {
-    return 'Svih $total kartica je personalizovano. Sada seriju oslobodite u dashboardu pod „Kartenserien\".';
+    return 'Svih $total kartica je personalizovano. Sada seriju oslobodite u dashboardu pod „Serije kartica“.';
   }
 
   @override
@@ -1547,6 +1629,10 @@ class AppLocalizationsBs extends AppLocalizations {
 
   @override
   String get stationUnknownChip => 'Nepoznata kartica – odvojite je.';
+
+  @override
+  String get stationBatchClosed =>
+      'Ova serija više nije u proizvodnji – nema više kartica.';
 
   @override
   String get stationFinish => 'Završi seriju';

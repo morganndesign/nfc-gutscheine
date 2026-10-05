@@ -44,7 +44,7 @@ final class NotificationTest extends TestCase
             // ADR-003: a receipt — amount, date, payment.
             $this->assertStringContainsString('Wert: € 50,00', str_replace("\u{00A0}", ' ', $mail->textBody));
             $this->assertStringContainsString('Datum: '.Carbon::now('Europe/Vienna')->format('d.m.Y'), $mail->textBody);
-            $this->assertStringContainsString('Bezahlt: Bar', $mail->textBody);
+            $this->assertStringContainsString('Zahlungsart: Bar', $mail->textBody);
             // Nothing that proves or spends the voucher: no voucher number, link, QR payload or token.
             foreach ([$voucher->voucher_number, substr($voucher->voucher_number, -4), 'http', 'GCPV1', substr($qr, 6, 12)] as $forbidden) {
                 $this->assertStringNotContainsString($forbidden, $mail->htmlBody.$mail->textBody.$mail->subjectLine);
@@ -144,7 +144,7 @@ final class NotificationTest extends TestCase
             }
             $this->assertStringContainsString('Aščinica', $mail->subjectLine);
             $this->assertStringContainsString('15,00', $mail->textBody);
-            $this->assertStringContainsString('Plaćeno: Kartica', $mail->textBody);
+            $this->assertStringContainsString('Način plaćanja: Plaćanje karticom', $mail->textBody);
             $this->assertStringNotContainsString('T-1', $mail->textBody, 'the terminal reference stays internal');
 
             return true;

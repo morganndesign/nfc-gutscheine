@@ -165,6 +165,9 @@ final class SecurityMonitor
             // One person paying out many refunds in a day.
             ['name' => 'money.refunds', 'severity' => 'warning', 'subject' => $user, 'threshold' => 3, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherRefund && $e->outcome === SecurityEventOutcome::Succeeded && $user($e) !== null],
+            // A delivery counted short at receipt: cards may have gone missing on the way (audit K8).
+            ['name' => 'card.delivery_short', 'severity' => 'high', 'subject' => static fn (SecurityEvent $e): ?string => is_string($e->data['batch_code'] ?? null) ? 'batch:'.$e->data['batch_code'] : null,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::CardBatchStatus && ($e->data['to_status'] ?? null) === 'on_hold'],
             // One person giving away many vouchers in a day.
             ['name' => 'money.complimentary', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherIssue && $e->outcome === SecurityEventOutcome::Succeeded

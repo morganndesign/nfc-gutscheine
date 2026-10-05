@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { Ban, CreditCard, Pause, Play, RotateCcw, Search } from "lucide-react"
+import { Ban, CreditCard, Pause, RotateCcw, Search } from "lucide-react"
 import { toast } from "sonner"
 import { BatchStatusBadge, CardStateBadge, cardStateLabel } from "@/components/cards/card-state"
 import { CardOrders, OrderCardsButton } from "@/components/cards/card-orders"
@@ -38,7 +38,7 @@ const FILTERS: Record<Filter, CardState[] | undefined> = {
   stock: ["available", "delivered"],
 }
 
-type Action = { card: Card; action: "suspend" | "resume" | "revoke" }
+type Action = { card: Card; action: "suspend" | "revoke" }
 
 /** Cards a test restaurant can put back into stock (decision 2026-10-05). */
 const TEST_RESETTABLE = ["bound", "active", "suspended", "replaced", "revoked", "lost"]
@@ -85,9 +85,9 @@ function CardDetail({ number, onClose, onAction }: { number: string; onClose: ()
                   </Button>
                 ) : null}
                 {card.state === "suspended" ? (
-                  <Button variant="outline" onClick={() => onAction({ card, action: "resume" })}>
-                    <Play /> {t("cards.resume")}
-                  </Button>
+                  // Resumed only with the card itself at the till, in the app (decision 2026-10-06); a card with
+                  // compromised keys is replaced, never resumed (audit K6).
+                  <p className="text-muted-foreground text-sm">{t(card.resumable === false ? "cards.resumeCompromised" : "cards.resumeInApp")}</p>
                 ) : null}
                 {card.state === "available" || card.state === "delivered" ? (
                   <Button variant="outline" className="text-destructive" onClick={() => onAction({ card, action: "revoke" })}>
@@ -194,7 +194,7 @@ function CardsContent() {
     if (!acting) return
     try {
       await action.mutateAsync({ number: acting.card.card_number, action: acting.action, reason })
-      toast.success(t(acting.action === "suspend" ? "cards.toast.suspended" : acting.action === "resume" ? "cards.toast.resumed" : "cards.toast.revoked"))
+      toast.success(t(acting.action === "suspend" ? "cards.toast.suspended" : "cards.toast.revoked"))
       setActing(null)
     } catch (e) {
       toast.error(errorMessage(e))
@@ -273,21 +273,13 @@ function CardsContent() {
         open={acting !== null}
         onOpenChange={(o) => !o && setActing(null)}
         title={t(
-          acting?.action === "suspend" ? "cards.dialog.suspendTitle" : acting?.action === "resume" ? "cards.dialog.resumeTitle" : "cards.dialog.revokeTitle",
+          acting?.action === "suspend" ? "cards.dialog.suspendTitle" : "cards.dialog.revokeTitle",
           { number: acting?.card.card_number ?? "" },
         )}
-        description={t(
-          acting?.action === "suspend"
-            ? "cards.dialog.suspendDescription"
-            : acting?.action === "revoke"
-              ? "cards.dialog.revokeDescription"
-              : "cards.dialog.resumeDescription",
-        )}
-        confirmLabel={t(
-          acting?.action === "suspend" ? "cards.dialog.suspendConfirm" : acting?.action === "resume" ? "cards.dialog.resumeConfirm" : "cards.revoke",
-        )}
-        destructive={acting?.action !== "resume"}
-        suggestions={acting?.action === "resume" ? [t("cards.reason.found")] : [t("cards.reason.lost"), t("cards.reason.stolen"), t("cards.reason.damaged")]}
+        description={t(acting?.action === "suspend" ? "cards.dialog.suspendDescription" : "cards.dialog.revokeDescription")}
+        confirmLabel={t(acting?.action === "suspend" ? "cards.dialog.suspendConfirm" : "cards.revoke")}
+        destructive
+        suggestions={[t("cards.reason.lost"), t("cards.reason.stolen"), t("cards.reason.damaged")]}
         pending={action.isPending}
         onConfirm={(reason) => void run(reason)}
       />

@@ -170,8 +170,10 @@ export interface Card {
   state: CardState
   state_changed_at: string
   batch_code: string | null
-  voucher: { id: string; voucher_number: string; status: VoucherStatus; balance: number; currency: string } | null
+  voucher: { id: string; voucher_number: string; status: VoucherStatus; is_expired?: boolean; balance: number; currency: string } | null
   successor: string | null
+  /** Suspended cards: false when its keys are compromised (replace it, never resume). */
+  resumable?: boolean | null
   history?: { from_state: CardState | null; to_state: CardState; reason: string; at: string | null }[]
 }
 

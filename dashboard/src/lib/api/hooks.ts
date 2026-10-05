@@ -790,7 +790,7 @@ export function useResetTestCard() {
 export function useCardAction() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ number, action, reason }: { number: string; action: "suspend" | "resume" | "revoke"; reason: string }) =>
+    mutationFn: ({ number, action, reason }: { number: string; action: "suspend" | "revoke"; reason: string }) =>
       api<{ data: Card }>(`/cards/${encodeURIComponent(number)}/${action}`, { method: "POST", body: { reason } }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: keys.cards })

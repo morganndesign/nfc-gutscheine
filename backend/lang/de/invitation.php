@@ -20,7 +20,7 @@ return [
     'expiry' => 'Dieser Link ist 72 Stunden gültig und kann nur einmal verwendet werden.',
 
     'support' => 'Sollte der Link abgelaufen sein oder Sie Hilfe benötigen, kontaktieren Sie uns bitte unter:',
-    'support_staff' => 'Sollte der Link abgelaufen sein, bitten Sie die Restaurantleitung, Ihnen die Einladung erneut zu senden.',
+    'support_staff' => 'Sollte der Link abgelaufen sein, bitten Sie Ihren Manager oder den Inhaber, Ihnen die Einladung erneut zu senden.',
 
     'closing' => 'Vielen Dank,',
     'signature' => 'Ihr GiftCard Pro Team',

@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $note
  * @property CardOrderStatus $status
  * @property string|null $card_batch_id
+ * @property string|null $idempotency_key A repeated request (lost answer) returns this order (audit K5)
  * @property string|null $decided_by
  * @property Carbon|null $decided_at
  * @property string|null $decline_reason

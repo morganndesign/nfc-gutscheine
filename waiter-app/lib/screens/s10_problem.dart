@@ -175,6 +175,24 @@ class _ProblemPageState extends State<ProblemPage> {
           primary: problem.retry != null || problem.retryCard ? tryAgain : scanAgain,
           code: code,
         );
+      case ProblemKind.cardOnly:
+        return _problem(
+          family: ProblemFamily.verification,
+          title: l10n.problemCardOnlyTitle,
+          body: l10n.problemCardOnlyBody,
+          primary: ProblemAction(l10n.readyTapCard, () => _loop.openCardTap(texts: cardTexts(l10n))),
+          secondary: ProblemAction(l10n.commonDone, _close),
+          code: code,
+        );
+      case ProblemKind.cardUnverified:
+        return _problem(
+          family: ProblemFamily.verification,
+          title: l10n.problemCardUnverifiedTitle,
+          body: l10n.problemCardUnverifiedBody,
+          primary: tapAgain,
+          secondary: ProblemAction(l10n.commonDone, _close),
+          code: code,
+        );
       case ProblemKind.cardNotRecognized:
         return _problem(
           family: ProblemFamily.notFound,

@@ -100,6 +100,9 @@ final class CardBatchLifecycle
             $this->cards->moveBatch($locked, CardState::Assigned, [CardState::InInventory], 'assigned for shipping', $actor);
             $moved = $this->cards->moveBatch($locked, CardState::Shipped, [CardState::Assigned], 'shipped', $actor);
             $locked->forceFill(['shipped_at' => Carbon::now(), 'tracking_ref' => $trackingRef ?? $locked->tracking_ref]);
+            // The restaurant hears that the cards are on their way (audit K8).
+            $requestedBy = DB::table('card_orders')->where('card_batch_id', $locked->getKey())->value('requested_by');
+            app(CardOrderUpdates::class)->notify($locked->restaurant_id, 'shipped', $moved, is_string($requestedBy) ? $requestedBy : null, $locked->batch_code);
 
             return $this->setStatus($locked, CardBatchStatus::Shipped, $actor, $moved);
         });

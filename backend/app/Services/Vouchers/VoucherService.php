@@ -632,7 +632,8 @@ final class VoucherService
             $locked->status = VoucherStatus::Refunded;
             $locked->save();
 
-            // Nothing spends a closed voucher: its QR and its card stop now.
+            // Nothing spends a closed voucher: its QR and its card stop now. A cancelled sale's card was never used:
+            // it goes back into stock (decision 2026-10-06, K1); a refunded voucher's card is out for good.
             $cause = $cancel ? 'sale cancelled' : 'voucher refunded';
             $this->printables->revoke($actor, $locked, $cause);
             foreach (Medium::query()->where('voucher_id', $locked->getKey())->where('type', MediumType::NfcCard->value)->where('status', MediumStatus::Active->value)->lockForUpdate()->get() as $medium) {
@@ -640,7 +641,9 @@ final class VoucherService
                 $this->cardMedia->revoke($actor, $medium, $locked, $cause);
                 /** @var Card $card */
                 $card = Card::query()->withoutGlobalScopes()->whereKey($medium->card_id)->lockForUpdate()->firstOrFail();
-                if ($card->state->canBecome(CardState::Revoked)) {
+                if ($cancel && $card->state === CardState::Active) {
+                    $this->cards->backToStockAfterCancel($card, $actor, $locked);
+                } elseif ($card->state->canBecome(CardState::Revoked)) {
                     $this->cards->transition($card, CardState::Revoked, $cause, $actor, $locked);
                 }
             }
@@ -876,6 +879,10 @@ final class VoucherService
     public function update(Actor $actor, Voucher $voucher, array $attributes): Voucher
     {
         return $this->mutate($voucher, function (Voucher $locked) use ($actor, $attributes): void {
+            // A closed voucher (refunded or cancelled) is history: its details stay as they were (audit Q8).
+            if ($locked->status === VoucherStatus::Refunded) {
+                throw new InvalidVoucherStateException('A closed voucher cannot be changed.', ['reason' => 'closed']);
+            }
             $locked->fill($attributes);
             $dirty = $locked->getDirty();
             if ($dirty === []) {

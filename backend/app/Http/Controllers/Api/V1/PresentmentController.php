@@ -46,7 +46,7 @@ final class PresentmentController extends Controller
             PresentmentPurpose::Spend => Permission::VouchersRedeem->value,
             PresentmentPurpose::Bind => Permission::CardsBind->value,
             PresentmentPurpose::Receive => Permission::CardsReceive->value,
-            PresentmentPurpose::Surrender => Permission::CardsManage->value,
+            PresentmentPurpose::Surrender, PresentmentPurpose::Resume => Permission::CardsManage->value,
             PresentmentPurpose::Reload => Permission::VouchersReload->value,
         });
 

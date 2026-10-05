@@ -9,6 +9,7 @@ use App\Enums\MediumStatus;
 use App\Enums\RoleSlug;
 use App\Enums\VoucherStatus;
 use App\Models\Card;
+use App\Models\CardBatch;
 use App\Models\CardEvent;
 use App\Models\Medium;
 use App\Models\Restaurant;
@@ -143,5 +144,16 @@ final class TestCardResetTest extends TestCase
         $this->patchJson("/api/v1/admin/restaurants/{$this->restaurant->id}", ['is_test' => true])->assertOk()->assertJsonPath('data.is_test', true);
         $this->assertTrue($this->restaurant->refresh()->is_test);
         $this->assertDatabaseHas('audit_logs', ['action' => 'restaurant.updated', 'restaurant_id' => $this->restaurant->id]);
+    }
+
+    /** Audit K9: never a card whose keys leaked. */
+    public function test_a_card_with_compromised_keys_never_comes_back(): void
+    {
+        $this->markAsTest();
+        $cards = $this->stock(1);
+        $this->sellCard($this->chip($cards[0]))->assertCreated();
+        CardBatch::query()->withoutGlobalScopes()->whereKey($cards[0]->batch_id)->update(['status' => 'compromised']);
+
+        $this->postJson("/api/v1/cards/{$cards[0]->card_number}/test-reset")->assertStatus(409)->assertJsonPath('context.reason', 'not_reusable');
     }
 }

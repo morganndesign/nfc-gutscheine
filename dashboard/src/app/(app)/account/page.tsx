@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { useConfirm } from "@/components/common/confirm"
 import { PageHeader } from "@/components/common/page-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -23,6 +24,8 @@ export default function AccountPage() {
   const [password, setPassword] = useState("")
   const [confirmation, setConfirmation] = useState("")
   const [changing, setChanging] = useState(false)
+  const [signingOut, setSigningOut] = useState(false)
+  const confirm = useConfirm()
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -146,6 +149,39 @@ export default function AccountPage() {
               {changing ? <Loader2 className="animate-spin" /> : null} {t("account.changePassword")}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("account.everywhere")}</CardTitle>
+          <CardDescription>{t("account.everywhereDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            className="text-destructive"
+            disabled={signingOut}
+            onClick={async () => {
+              const ok = await confirm({
+                title: t("account.everywhereConfirmTitle"),
+                description: t("account.everywhereDescription"),
+                confirmLabel: t("account.everywhere"),
+                destructive: true,
+              })
+              if (!ok) return
+              setSigningOut(true)
+              try {
+                await api("/auth/logout-everywhere", { method: "POST" })
+                toast.success(t("account.everywhereDone"))
+              } catch (e) {
+                toast.error(errorMessage(e))
+              } finally {
+                setSigningOut(false)
+              }
+            }}
+          >
+            {signingOut ? <Loader2 className="animate-spin" /> : null} {t("account.everywhere")}
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -415,17 +415,34 @@ abstract final class Payloads {
     'replayed': replayed,
   };
 
-  static Map<String, Object?> cardInfo({String number = 'B-2026-0001-0007', String state = 'active', int? balance = 3200, String? successor}) =>
-      <String, Object?>{
-        'data': <String, Object?>{
-          'card_number': number,
-          'state': state,
-          'state_changed_at': '2026-09-29T10:00:00+00:00',
-          'batch_code': 'B-2026-0001',
-          'voucher': balance == null ? null : <String, Object?>{'id': 'v-1', 'voucher_number': '1268834313520042', 'status': 'active', 'balance': balance, 'currency': 'EUR'},
-          'successor': successor,
-        },
-      };
+  static Map<String, Object?> cardInfo({
+    String number = 'B-2026-0001-0007',
+    String state = 'active',
+    int? balance = 3200,
+    String voucherStatus = 'active',
+    bool expired = false,
+    String? successor,
+    bool? resumable,
+  }) => <String, Object?>{
+    'data': <String, Object?>{
+      'card_number': number,
+      'state': state,
+      'state_changed_at': '2026-09-29T10:00:00+00:00',
+      'batch_code': 'B-2026-0001',
+      'voucher': balance == null
+          ? null
+          : <String, Object?>{
+              'id': 'v-1',
+              'voucher_number': '1268834313520042',
+              'status': voucherStatus,
+              'is_expired': expired,
+              'balance': balance,
+              'currency': 'EUR',
+            },
+      'successor': successor,
+      'resumable': resumable ?? (state == 'suspended' ? true : null),
+    },
+  };
 
   static Map<String, Object?> cardBatches() => <String, Object?>{
     'data': <Object?>[

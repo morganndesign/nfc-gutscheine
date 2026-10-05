@@ -64,6 +64,8 @@ Route::prefix('v1')->group(function (): void {
         Route::prefix('auth')->group(function (): void {
             Route::get('me', [AuthController::class, 'me']);
             Route::post('logout', [AuthController::class, 'logout']);
+            // Every other sign-in of this person ends: browsers, app phones and tokens (audit S6).
+            Route::post('logout-everywhere', [AuthController::class, 'logoutEverywhere'])->middleware('throttle:5,1,logout-everywhere');
             Route::put('profile', [PasswordController::class, 'updateProfile']);
             Route::put('language', [AuthController::class, 'language']);
             // The current-password check must not become a guessing oracle for a stolen session (prefix: own bucket).
@@ -128,7 +130,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('card-batches/{batch}/receipt', [CardController::class, 'receive'])->whereUuid('batch')->middleware(['can:cards.receive', 'throttle:voucher-operation']);
             // Ordering cards from the platform: whoever confirms deliveries (managers, owners).
             Route::get('card-orders', [CardOrderController::class, 'index'])->middleware('can:cards.view');
-            Route::post('card-orders', [CardOrderController::class, 'store'])->middleware(['can:cards.receive', 'throttle:voucher-operation']);
+            Route::post('card-orders', [CardOrderController::class, 'store'])->middleware(['can:cards.receive', 'throttle:voucher-operation', 'idempotent:optional']);
 
             Route::get('transactions/export', [TransactionController::class, 'export'])->middleware(['can:transactions.export', 'throttle:10,1,exports']);
             Route::get('reports/cash-up', [ReportController::class, 'cashUp'])->middleware('can:transactions.view');

@@ -28,6 +28,9 @@ enum PresentmentPurpose: string
      */
     case Reload = 'reload';
 
+    /** Resume a suspended guest's card: only with the card tapped at the till (decision 2026-10-06, K4). */
+    case Resume = 'resume';
+
     /** Purposes whose presentment names the card's voucher when the card is active (consumed by an operation on it). */
     public function namesVoucher(): bool
     {
@@ -48,6 +51,7 @@ enum PresentmentPurpose: string
             self::Receive => [CardState::Shipped, CardState::Delivered],
             self::Surrender => [CardState::Active, CardState::Suspended],
             self::Reload => [CardState::Active, CardState::Available],
+            self::Resume => [CardState::Suspended],
         };
     }
 

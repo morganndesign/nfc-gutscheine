@@ -76,6 +76,7 @@ class RestaurantSettings {
     this.minVoucherValue,
     this.maxVoucherBalance,
     this.sendCustomerEmails = false,
+    this.allowReload = true,
   });
 
   factory RestaurantSettings.fromJson(Map<String, Object?> json) => RestaurantSettings(
@@ -86,6 +87,7 @@ class RestaurantSettings {
     minVoucherValue: _intOrNull(json, 'min_voucher_value'),
     maxVoucherBalance: _intOrNull(json, 'max_voucher_balance'),
     sendCustomerEmails: _bool(json, 'send_customer_emails'),
+    allowReload: _bool(json, 'allow_reload', fallback: true),
   );
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -96,6 +98,7 @@ class RestaurantSettings {
     'min_voucher_value': minVoucherValue,
     'max_voucher_balance': maxVoucherBalance,
     'send_customer_emails': sendCustomerEmails,
+    'allow_reload': allowReload,
   };
 
   final bool allowPartialRedemption;
@@ -117,6 +120,9 @@ class RestaurantSettings {
 
   /// Whether the guest gets a confirmation e-mail after a sale.
   final bool sendCustomerEmails;
+
+  /// Whether guests' cards may be topped up (the owner's setting). Selling new cards does not depend on it.
+  final bool allowReload;
 }
 
 @immutable
@@ -819,7 +825,16 @@ class CardOrderInfo {
 /// A card as staff see it (`GET /cards/{number}`): no id, no UID.
 @immutable
 class CardInfo {
-  const CardInfo({required this.cardNumber, required this.state, this.voucherBalance, this.currency, this.successor});
+  const CardInfo({
+    required this.cardNumber,
+    required this.state,
+    this.voucherBalance,
+    this.currency,
+    this.voucherStatus,
+    this.voucherExpired = false,
+    this.successor,
+    this.resumable,
+  });
 
   factory CardInfo.fromJson(Map<String, Object?> json) {
     final Map<String, Object?> data = _map(json['data'], 'data');
@@ -830,7 +845,10 @@ class CardInfo {
       state: _string(data, 'state'),
       voucherBalance: v == null ? null : _int(v, 'balance'),
       currency: v == null ? null : _stringOrNull(v, 'currency'),
+      voucherStatus: v == null ? null : _stringOrNull(v, 'status'),
+      voucherExpired: v != null && _bool(v, 'is_expired'),
       successor: _stringOrNull(data, 'successor'),
+      resumable: data['resumable'] is bool ? data['resumable']! as bool : null,
     );
   }
 
@@ -843,8 +861,27 @@ class CardInfo {
   final int? voucherBalance;
   final String? currency;
 
+  /// The voucher's status (`active`, `blocked`, `expired`, `refunded`, `cancelled`); null without a voucher.
+  final String? voucherStatus;
+
+  /// The voucher is past its end date (even before the nightly job marks it expired).
+  final bool voucherExpired;
+
   /// The card that replaced this one.
   final String? successor;
+
+  /// For a suspended card: false when it can never be resumed (compromised batch), it is replaced instead.
+  final bool? resumable;
+
+  /// Why the card cannot pay although it is active: `blocked`, `expired`, `closed`; null when nothing stands
+  /// in the way (audit K11).
+  String? get voucherProblem => switch (voucherStatus) {
+    null => null,
+    'blocked' => 'blocked',
+    'expired' => 'expired',
+    'refunded' || 'cancelled' => 'closed',
+    _ => voucherExpired ? 'expired' : null,
+  };
 }
 
 /// `GET /devices/current` (S14 device name).

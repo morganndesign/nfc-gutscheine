@@ -62,7 +62,8 @@ final class TapPageController
         if ($voucher->status === VoucherStatus::Blocked) {
             return $this->page($language, $restaurant, $copy['blocked']);
         }
-        if ($voucher->status === VoucherStatus::Expired) {
+        // Past its end date counts as expired at once, like at the till (the nightly job sets the status later).
+        if ($voucher->status === VoucherStatus::Expired || $voucher->isExpiredByDate()) {
             return $this->page($language, $restaurant, $copy['expired']);
         }
         if (! $restaurant->settings->public_balance) {

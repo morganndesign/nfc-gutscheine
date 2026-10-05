@@ -1298,6 +1298,18 @@ abstract class AppLocalizations {
   /// **'This code is not valid here. Ask the guest for another voucher or get a manager.'**
   String get problemNotRecognizedBody;
 
+  /// Spec key: problem.cardOnly.title (12 §5.12) · Max: 32 · Notes: S10 · PRESENTMENT_METHOD_NOT_ALLOWED: a QR of a card voucher was scanned (T1)
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher on a card'**
+  String get problemCardOnlyTitle;
+
+  /// Spec key: problem.cardOnly.body (12 §5.12) · Max: 90 · Notes: S10 · primary ready.tapCard
+  ///
+  /// In en, this message translates to:
+  /// **'This voucher is on a card. Hold the guest\'s card to the phone.'**
+  String get problemCardOnlyBody;
+
   /// Spec key: problem.cardNotRecognized.title (12 §5.12) · Max: 32 · Notes: Phase 4 · not a card of this restaurant, copied or unverifiable
   ///
   /// In en, this message translates to:
@@ -1310,10 +1322,22 @@ abstract class AppLocalizations {
   /// **'This card could not be confirmed as a voucher of this restaurant. Get a manager.'**
   String get problemCardNotRecognizedBody;
 
+  /// Spec key: problem.cardUnverified.title (12 §5.12) · Max: 32 · Notes: Phase 4 · CARD_AUTHENTICATION_FAILED (e.g. moved too early): tap again (T2)
+  ///
+  /// In en, this message translates to:
+  /// **'Card not checked'**
+  String get problemCardUnverifiedTitle;
+
+  /// Spec key: problem.cardUnverified.body (12 §5.12) · Max: 140 · Notes: Phase 4 · primary common.tapAgain
+  ///
+  /// In en, this message translates to:
+  /// **'The check did not succeed. Hold the card still on the phone and try again. If it fails again, get a manager.'**
+  String get problemCardUnverifiedBody;
+
   /// Spec key: problem.cardNotUsable.title (12 §5.12) · Max: 32 · Notes: Phase 4 · CARD_NOT_USABLE
   ///
   /// In en, this message translates to:
-  /// **'This card cannot pay'**
+  /// **'Card cannot be used'**
   String get problemCardNotUsableTitle;
 
   /// Spec key: problem.cardNotUsable.notActive (12 §5.12) · Max: 90 · Notes: Phase 4 · available, bound
@@ -1658,10 +1682,10 @@ abstract class AppLocalizations {
   /// **'Voucher already sold'**
   String get saleNoQrTitle;
 
-  /// Spec key: sale.noQr.body (12 §5.13) · Max: 140 · Notes: ADR-002 · same advice as the dashboard
+  /// Spec key: sale.noQr.body (12 §5.13) · Max: 140 · Notes: ADR-002 · retry answered with the earlier sale; audit Q3: a new QR, never block and sell again (the guest would pay twice)
   ///
   /// In en, this message translates to:
-  /// **'Its QR code can no longer be shown. If the guest has no printed voucher, block it in the dashboard and sell a new one.'**
+  /// **'Its QR code can no longer be shown here. If the guest has no printed voucher: in the dashboard, open the voucher › “New QR code”.'**
   String get saleNoQrBody;
 
   /// Spec key: sale.qr.a11y (12 §5.13) · Max: — · Notes: ADR-002 · (a11y)
@@ -1784,11 +1808,65 @@ abstract class AppLocalizations {
   /// **'Cannot top up'**
   String get reloadNotAllowedTitle;
 
-  /// Spec key: reload.notAllowed.body (12 §5.13) · Max: 120 · Notes: Reload
+  /// Spec key: reload.notAllowed.body (12 §5.13) · Max: 120 · Notes: Reload · 403 (the restaurant switched top-ups off: reload.off.*)
   ///
   /// In en, this message translates to:
-  /// **'This sign-in may not top up cards, or the restaurant does not allow top-ups.'**
+  /// **'This sign-in may not top up cards.'**
   String get reloadNotAllowedBody;
+
+  /// Spec key: reload.off.title (12 §5.13) · Max: 32 · Notes: Reload · allow_reload off: said right after the tap (K3); RELOAD_NOT_ALLOWED
+  ///
+  /// In en, this message translates to:
+  /// **'Top-ups switched off'**
+  String get reloadOffTitle;
+
+  /// Spec key: reload.off.body (12 §5.13) · Max: 120 · Notes: Reload
+  ///
+  /// In en, this message translates to:
+  /// **'This restaurant does not allow card top-ups. New cards can still be sold.'**
+  String get reloadOffBody;
+
+  /// Spec key: reload.voucherBlocked.title (12 §5.13) · Max: 32 · Notes: Reload · said right after the tap (K2); VOUCHER_BLOCKED
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher blocked'**
+  String get reloadVoucherBlockedTitle;
+
+  /// Spec key: reload.voucherBlocked.body (12 §5.13) · Max: 120 · Notes: Reload
+  ///
+  /// In en, this message translates to:
+  /// **'The voucher on this card is blocked and cannot be topped up. A manager can help.'**
+  String get reloadVoucherBlockedBody;
+
+  /// Spec key: reload.voucherExpired.title (12 §5.13) · Max: 32 · Notes: Reload · said right after the tap (K2); VOUCHER_EXPIRED
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher expired'**
+  String get reloadVoucherExpiredTitle;
+
+  /// Spec key: reload.voucherExpired.body (12 §5.13) · Max: 120 · Notes: Reload
+  ///
+  /// In en, this message translates to:
+  /// **'The voucher on this card has expired and cannot be topped up.'**
+  String get reloadVoucherExpiredBody;
+
+  /// Spec key: loyalty.notAllowed.title (12 §5.13) · Max: 32 · Notes: Sale, reload · COMPLIMENTARY_NOT_ALLOWED / LOYALTY_VOUCHER_ONLY (L4); the permissions are reloaded at once
+  ///
+  /// In en, this message translates to:
+  /// **'Loyalty not allowed'**
+  String get loyaltyNotAllowedTitle;
+
+  /// Spec key: loyalty.notAllowed.body (12 §5.13) · Max: 120 · Notes: Sale, reload · COMPLIMENTARY_NOT_ALLOWED (the owner switched it off meanwhile)
+  ///
+  /// In en, this message translates to:
+  /// **'This sign-in may not give Loyalty. Choose another payment method.'**
+  String get loyaltyNotAllowedBody;
+
+  /// Spec key: loyalty.voucherOnly.body (12 §5.13) · Max: 120 · Notes: Reload · LOYALTY_VOUCHER_ONLY
+  ///
+  /// In en, this message translates to:
+  /// **'Loyalty only on a Loyalty voucher. Choose another payment method.'**
+  String get loyaltyVoucherOnlyBody;
 
   /// Spec key: reload.card.replaced (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE state replaced (suspended, other restaurant: problem.cardNotUsable.*)
   ///
@@ -2395,11 +2473,71 @@ abstract class AppLocalizations {
   /// **'Suspended – the card no longer pays.'**
   String get cardsSuspendDone;
 
-  /// Spec key: cards.resume.done (12 §5.16) · Max: 60 · Notes: Cards
+  /// Spec key: cards.resume.done (12 §5.16) · Max: 60 · Notes: Cards · after the tap of the found card (K4)
   ///
   /// In en, this message translates to:
   /// **'Resumed – the card pays again.'**
   String get cardsResumeDone;
+
+  /// Spec key: cards.resume.tap (12 §5.16) · Max: 90 · Notes: Cards · resume (K4, decision 2026-10-06); also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold the found card to the phone. A card is resumed only when it is at hand.'**
+  String get cardsResumeTap;
+
+  /// Spec key: cards.resume.compromised (12 §5.16) · Max: 140 · Notes: Cards · resumable false: card of a compromised batch (K6)
+  ///
+  /// In en, this message translates to:
+  /// **'For security reasons this card can no longer be resumed. Replace it – the balance moves to the new card.'**
+  String get cardsResumeCompromised;
+
+  /// Spec key: cards.voucher.blocked (12 §5.16) · Max: 40 · Notes: Cards · under the card state (K11)
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher blocked – does not pay'**
+  String get cardsVoucherBlocked;
+
+  /// Spec key: cards.voucher.expired (12 §5.16) · Max: 40 · Notes: Cards · voucher status expired or past its end date (K11)
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher expired'**
+  String get cardsVoucherExpired;
+
+  /// Spec key: cards.voucher.closed (12 §5.16) · Max: 40 · Notes: Cards · refunded or cancelled (K11)
+  ///
+  /// In en, this message translates to:
+  /// **'Voucher closed'**
+  String get cardsVoucherClosed;
+
+  /// Spec key: cards.error.state (12 §5.16) · Max: 90 · Notes: Cards · CARD_STATE_INVALID (T7)
+  ///
+  /// In en, this message translates to:
+  /// **'The card has changed meanwhile. Look it up again.'**
+  String get cardsErrorState;
+
+  /// Spec key: cards.error.otherCard (12 §5.16) · Max: 90 · Notes: Cards · PRESENTMENT_INVALID other_card (T7)
+  ///
+  /// In en, this message translates to:
+  /// **'That was a different card. Hold this very card to the phone.'**
+  String get cardsErrorOtherCard;
+
+  /// Spec key: cards.error.forbidden (12 §5.16) · Max: 90 · Notes: Cards · 403 (T7)
+  ///
+  /// In en, this message translates to:
+  /// **'This sign-in may not do that. Only the owner replaces a lost card.'**
+  String get cardsErrorForbidden;
+
+  /// Spec key: cards.error.notLinked (12 §5.16) · Max: 64 · Notes: Cards · CARD_STATE_INVALID without a state (T7)
+  ///
+  /// In en, this message translates to:
+  /// **'This card is not linked to a voucher.'**
+  String get cardsErrorNotLinked;
+
+  /// Spec key: cards.error.uncertain (12 §5.16) · Max: 100 · Notes: Cards · replacement without an answer, the old card not yet replaced (K5)
+  ///
+  /// In en, this message translates to:
+  /// **'No answer from the server. Look the card up again to see whether it worked.'**
+  String get cardsErrorUncertain;
 
   /// Spec key: cards.failed (12 §5.16) · Max: 60 · Notes: Cards
   ///
@@ -2671,11 +2809,17 @@ abstract class AppLocalizations {
   /// **'Card is not from this batch or is already done.'**
   String get stationRejected;
 
-  /// Spec key: station.unknownChip (12 §5.19) · Max: 48 · Notes: Station · keys unknown (auth:91AE)
+  /// Spec key: station.unknownChip (12 §5.19) · Max: 48 · Notes: Station · never keyable: keys unknown (auth:91AE), not an NTAG 424 DNA, not NXP, UID mismatch, not genuine, QA failed (K7)
   ///
   /// In en, this message translates to:
   /// **'Unknown card – set it aside.'**
   String get stationUnknownChip;
+
+  /// Spec key: station.batchClosed (12 §5.19) · Max: 80 · Notes: Station · batch_not_in_production, key_set_not_active: the run stops (K7)
+  ///
+  /// In en, this message translates to:
+  /// **'This batch is no longer in production – no more cards.'**
+  String get stationBatchClosed;
 
   /// Spec key: station.finish (12 §5.19) · Max: 24 · Notes: Station · back to the list
   ///

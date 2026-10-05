@@ -30,17 +30,30 @@ final class CardOrderService
     public function __construct(
         private readonly CardBatchLifecycle $batches,
         private readonly AuditLogger $audit,
+        private readonly CardOrderUpdates $updates,
     ) {}
 
-    /** Places an order for the actor's restaurant (the tenant). */
-    public function request(Actor $actor, int $quantity, ?string $note): CardOrder
+    /**
+     * Places an order for the actor's restaurant (the tenant). With an idempotency key, a repeated request (a lost
+     * answer, a double tap) is answered with the order it repeats, never a second one (audit K5).
+     */
+    public function request(Actor $actor, int $quantity, ?string $note, ?string $idempotencyKey = null): CardOrder
     {
         $note = $note !== null && trim($note) !== '' ? trim($note) : null;
+        $created = false;
 
-        $order = DB::transaction(function () use ($actor, $quantity, $note): CardOrder {
+        $order = DB::transaction(function () use ($actor, $quantity, $note, $idempotencyKey, &$created): CardOrder {
             // Counted under the restaurant's row lock, so two taps cannot both pass the limit.
             $restaurantId = (string) $actor->user?->restaurant_id;
             DB::table('restaurants')->where('id', $restaurantId)->lockForUpdate()->first();
+            if ($idempotencyKey !== null) {
+                /** @var CardOrder|null $existing */
+                $existing = CardOrder::query()->where('idempotency_key', $idempotencyKey)->first();
+                if ($existing !== null) {
+                    return $existing;
+                }
+            }
+            $created = true;
             if (CardOrder::query()->where('status', CardOrderStatus::Requested)->count() >= self::MAX_OPEN) {
                 throw new CardOrderException('', ['reason' => 'too_many_open', 'max_open' => self::MAX_OPEN]);
             }
@@ -49,13 +62,16 @@ final class CardOrderService
             $order->forceFill([
                 'requested_by' => $actor->userId(),
                 'status' => CardOrderStatus::Requested,
+                'idempotency_key' => $idempotencyKey,
             ])->save();
             $this->audit->log('card.order_requested', $actor, $order, null, ['quantity' => $quantity, 'note' => $note]);
 
             return $order;
         });
 
-        NotifyCardOrder::dispatch($order->getKey())->afterCommit();
+        if ($created) {
+            NotifyCardOrder::dispatch($order->getKey())->afterCommit();
+        }
 
         return $order;
     }
@@ -86,6 +102,7 @@ final class CardOrderService
                 'batch_code' => $batch->batch_code,
                 'quantity' => $batch->quantity_ordered,
             ]);
+            $this->updates->notify($locked->restaurant_id, 'accepted', $batch->quantity_ordered, $locked->requested_by, $batch->batch_code);
 
             return $locked;
         });
@@ -106,6 +123,7 @@ final class CardOrderService
                 'status' => CardOrderStatus::Declined->value,
                 'reason' => trim($reason),
             ]);
+            $this->updates->notify($locked->restaurant_id, 'declined', $locked->quantity, $locked->requested_by, reason: trim($reason));
 
             return $locked;
         });
