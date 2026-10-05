@@ -380,6 +380,22 @@ class PseudoAppLocalizations extends AppLocalizations {
   );
 
   @override
+  String get readyDeliveryTitle => pseudoLocalize(base.readyDeliveryTitle);
+
+  @override
+  String readyDeliveryBody(String batch, String cards) => pseudoLocalize(
+    base.readyDeliveryBody(pseudoMarker(0), pseudoMarker(1)),
+    <String>[batch, cards],
+  );
+
+  @override
+  String readyDeliveryBodyMany(int count) =>
+      pseudoLocalize(base.readyDeliveryBodyMany(count), <String>[]);
+
+  @override
+  String get readyDeliveryAction => pseudoLocalize(base.readyDeliveryAction);
+
+  @override
   String readyPendingBooked(String amount) => pseudoLocalize(
     base.readyPendingBooked(pseudoMarker(0)),
     <String>[amount],

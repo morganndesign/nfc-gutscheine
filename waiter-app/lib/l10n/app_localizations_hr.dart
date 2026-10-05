@@ -376,6 +376,22 @@ class AppLocalizationsHr extends AppLocalizations {
   }
 
   @override
+  String get readyDeliveryTitle => 'Kartice su stigle';
+
+  @override
+  String readyDeliveryBody(String batch, String cards) {
+    return '$batch · $cards';
+  }
+
+  @override
+  String readyDeliveryBodyMany(int count) {
+    return '$count isporuke';
+  }
+
+  @override
+  String get readyDeliveryAction => 'Potvrdi';
+
+  @override
   String readyPendingBooked(String amount) {
     return 'Nepotvrđeno iskorištavanje od $amount je knjiženo.';
   }

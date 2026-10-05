@@ -734,6 +734,30 @@ abstract class AppLocalizations {
   /// **'{amount} on voucher •••• {last4}. Checked automatically – nothing is ever booked twice.'**
   String readyPendingBody(String amount, String last4);
 
+  /// Spec key: ready.delivery.title (12 §5.6) · Max: 28 · Notes: Cards · home-screen notice while a shipped batch waits for its receipt (2026-10-05); with cards.receive and a card reader
+  ///
+  /// In en, this message translates to:
+  /// **'Card delivery arrived'**
+  String get readyDeliveryTitle;
+
+  /// Spec key: ready.delivery.body (12 §5.6) · Max: 32 · Notes: Cards · {cards} = cards.receive.batch
+  ///
+  /// In en, this message translates to:
+  /// **'{batch} · {cards}'**
+  String readyDeliveryBody(String batch, String cards);
+
+  /// Spec key: ready.delivery.bodyMany (12 §5.6) · Max: 24 · Notes: Cards · more than one shipped batch
+  ///
+  /// In en, this message translates to:
+  /// **'{count} deliveries'**
+  String readyDeliveryBodyMany(int count);
+
+  /// Spec key: ready.delivery.action (12 §5.6) · Max: 12 · Notes: Cards · banner action → S22 (the one batch already chosen)
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get readyDeliveryAction;
+
   /// Spec key: ready.pending.booked (12 §5.6) · Max: 60 · Notes: ADR-002 · snackbar; the row appears in Recent
   ///
   /// In en, this message translates to:

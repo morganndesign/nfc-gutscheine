@@ -377,6 +377,22 @@ class AppLocalizationsDe extends AppLocalizations {
   }
 
   @override
+  String get readyDeliveryTitle => 'Kartenlieferung ist da';
+
+  @override
+  String readyDeliveryBody(String batch, String cards) {
+    return '$batch · $cards';
+  }
+
+  @override
+  String readyDeliveryBodyMany(int count) {
+    return '$count Lieferungen';
+  }
+
+  @override
+  String get readyDeliveryAction => 'Bestätigen';
+
+  @override
   String readyPendingBooked(String amount) {
     return 'Die unbestätigte Einlösung über $amount wurde gebucht.';
   }

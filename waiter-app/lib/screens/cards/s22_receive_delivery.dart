@@ -15,7 +15,10 @@ import 'card_tap_view.dart';
 /// S22 · Confirm a card delivery (managers and owners, Android and iPhone alike): the delivered batch, the number
 /// of cards counted in the parcel, one card of the parcel held to the phone.
 class ReceiveDeliveryScreen extends StatefulWidget {
-  const ReceiveDeliveryScreen({super.key});
+  const ReceiveDeliveryScreen({super.key, this.batchId});
+
+  /// Opened from the home screen's notice for one delivery: start with that batch.
+  final String? batchId;
 
   @override
   State<ReceiveDeliveryScreen> createState() => _ReceiveDeliveryScreenState();
@@ -38,7 +41,7 @@ class _ReceiveDeliveryScreenState extends State<ReceiveDeliveryScreen> {
       session: s.session,
       texts: (prompt: l10n.cardsReceiveTap, checking: l10n.cardChecking, done: l10n.cardDone, failed: l10n.cardFailed),
     );
-    unawaited(_c.load());
+    unawaited(_c.load(open: widget.batchId));
   }
 
   @override

@@ -545,6 +545,10 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `ready.sell` | Gutschein verkaufen | Sell voucher | Prodaj vaučer | 24 | ADR-002 · opens S20; only with `vouchers.sell` |
 | `ready.pending.title` | Einlösung noch nicht bestätigt | Redemption not confirmed yet | Iskorištavanje još nije potvrđeno | 32 | ADR-002 · banner while an attempt is unresolved (audit M1, M2, M6) |
 | `ready.pending.body` | {amount} auf Gutschein •••• {last4}. Wird automatisch geprüft – es wird nie doppelt gebucht. | {amount} on voucher •••• {last4}. Checked automatically – nothing is ever booked twice. | {amount} na vaučeru •••• {last4}. Provjerava se automatski – ništa se ne knjiži dvaput. | 90 | ADR-002 |
+| `ready.delivery.title` | Kartenlieferung ist da | Card delivery arrived | Kartice su stigle | 28 | Cards · home-screen notice while a shipped batch waits for its receipt (2026-10-05); with `cards.receive` and a card reader |
+| `ready.delivery.body` | {batch} · {cards} | {batch} · {cards} | {batch} · {cards} | 32 | Cards · `{cards}` = `cards.receive.batch` |
+| `ready.delivery.bodyMany` | {count} Lieferungen | {count} deliveries | {count} isporuke | 24 | Cards · more than one shipped batch |
+| `ready.delivery.action` | Bestätigen | Confirm | Potvrdi | 12 | Cards · banner action → S22 (the one batch already chosen) |
 | `ready.pending.booked` | Die unbestätigte Einlösung über {amount} wurde gebucht. | The unconfirmed redemption of {amount} was booked. | Nepotvrđeno iskorištavanje od {amount} je knjiženo. | 60 | ADR-002 · snackbar; the row appears in Recent |
 | `ready.pending.notBooked` | Die unbestätigte Einlösung über {amount} wurde nicht gebucht. | The unconfirmed redemption of {amount} was not booked. | Nepotvrđeno iskorištavanje od {amount} nije knjiženo. | 60 | ADR-002 · snackbar |
 | `ready.online` | Wieder verbunden | Connected again | Veza je ponovo uspostavljena | 32 | 03a · snackbar / announcement |
@@ -957,7 +961,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **423 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **427 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

@@ -175,4 +175,67 @@ void main() {
     expect(text(en.cardsReplaceOwnerOnly), findsOneWidget);
     await finishApp(tester, app);
   });
+
+  // Decision 2026-10-05: a delivery that arrived shows on the home screen at once, not only in the menu.
+  for (final bool ios in <bool>[false, true]) {
+    testWidgets('${ios ? 'iPhone' : 'Android'}: an arrived delivery is on the home screen and opens straight to the count', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await TestApp.create(isIos: ios, user: Payloads.cardManager(), nfc: FakeNfcRelay());
+      app.backend
+        ..on('GET', '/card-batches', FakeReply(200, Payloads.cardBatches()))
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on('POST', complete, FakeReply(200, Payloads.cardOnly(state: 'delivered')))
+        ..on('POST', '/card-batches/b-1/receipt', FakeReply(200, <String, Object?>{'data': <String, Object?>{'status': 'in_service'}}));
+      await pumpWaiterApp(tester, app);
+      await settle(tester, 12);
+
+      expect(text(en.readyDeliveryTitle), findsOneWidget);
+      expect(text(en.readyDeliveryBody('B-2026-0001', en.cardsReceiveBatch(50))), findsOneWidget);
+      await tester.tap(text(en.readyDeliveryAction));
+      await settle(tester, 12);
+      expect(find.byType(ReceiveDeliveryScreen), findsOneWidget);
+      // The one delivery is chosen already: the count comes first, no list.
+      await typeDigits(tester, '50');
+      await tester.tap(primary(en.cardsReceiveContinue(50)));
+      await settle(tester, 20);
+
+      // Received: the notice is gone when the screen closes.
+      app.backend.only('GET', '/card-batches', FakeReply(200, <String, Object?>{'data': <Object?>[]}));
+      await tester.tap(primary(en.commonDone));
+      await settle(tester, 12);
+      expect(find.byType(ReceiveDeliveryScreen), findsNothing);
+      expect(text(en.readyDeliveryTitle), findsNothing);
+      await finishApp(tester, app);
+    });
+  }
+
+  testWidgets('two deliveries: the notice counts them and opens the list', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.cardManager(), nfc: FakeNfcRelay());
+    final Map<String, Object?> two = Payloads.cardBatches();
+    (two['data']! as List<Object?>).add(<String, Object?>{
+      'id': 'b-3', 'batch_code': 'B-2026-0003', 'status': 'shipped', 'quantity_ordered': 3,
+      'counts': <String, Object?>{'in_transit': 3, 'available': 0},
+    });
+    app.backend.on('GET', '/card-batches', FakeReply(200, two));
+    await pumpWaiterApp(tester, app);
+    await settle(tester, 12);
+
+    expect(text(en.readyDeliveryBodyMany(2)), findsOneWidget);
+    await tester.tap(text(en.readyDeliveryAction));
+    await settle(tester, 12);
+    expect(text('B-2026-0001'), findsOneWidget);
+    expect(text('B-2026-0003'), findsOneWidget);
+    await finishApp(tester, app);
+  });
+
+  testWidgets('waiters never see the notice and the phone never asks', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.manager(role: 'waiter'), nfc: FakeNfcRelay());
+    app.backend.on('GET', '/card-batches', FakeReply(200, Payloads.cardBatches()));
+    await pumpWaiterApp(tester, app);
+    await settle(tester, 12);
+    expect(text(en.readyDeliveryTitle), findsNothing);
+    expect(app.backend.to('GET', '/card-batches'), isEmpty);
+    await finishApp(tester, app);
+  });
 }

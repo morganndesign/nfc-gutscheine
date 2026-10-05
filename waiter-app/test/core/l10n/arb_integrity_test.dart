@@ -41,8 +41,8 @@ void main() {
     }
   });
 
-  test('key count: 423 table keys (12 §5.22) = 420 ARB + 3 OS strings', () {
-    expect(messageKeys(template).length, 420);
+  test('key count: 427 table keys (12 §5.22) = 424 ARB + 3 OS strings', () {
+    expect(messageKeys(template).length, 424);
     final Set<String> plistKeys = <String>{};
     final String strings = File(
       'ios/Runner/en.lproj/InfoPlist.strings',
@@ -164,9 +164,12 @@ void main() {
         'envStaging',
         'envBadgeDevelopment',
         'envBadgeStaging',
+        // A pure placeholder pattern: "{batch} · {cards}".
+        'readyDeliveryBody',
       },
       'bs': <String>{
         'appName',
+        'readyDeliveryBody',
         'signInEmailLabel',
         'balanceCardMasked',
         'a11yProblem',

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:ui' show lerpDouble;
 
+import 'package:flutter/material.dart' show MaterialPageRoute;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
@@ -17,6 +18,7 @@ import '../core/storage/pending_redemptions.dart';
 import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'card_texts.dart';
+import 'cards/s22_receive_delivery.dart';
 import 'cards/s24_reload.dart';
 import 's13_recent.dart';
 import 's14_menu.dart';
@@ -69,6 +71,12 @@ class _ReadyScreenState extends State<ReadyScreen> {
 
   final FocusNode _scanFocus = FocusNode(debugLabel: 'S05 scan voucher', skipTraversal: true);
 
+  /// Card deliveries that arrived and wait for the restaurant's receipt (decision 2026-10-05: shown on the home
+  /// screen at once, not only in the menu). Checked on opening, when the app comes back to the foreground and
+  /// after any screen opened from here closes.
+  List<CardBatchSummary> _deliveries = const <CardBatchSummary>[];
+  AppLifecycleListener? _lifecycle;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -82,17 +90,46 @@ class _ReadyScreenState extends State<ReadyScreen> {
       _syncConnectivity(loop);
       unawaited(
         loop.cardReaderAvailability().then((NfcAvailability availability) {
-          if (mounted) setState(() => _cardReader = availability != NfcAvailability.unsupported);
+          if (!mounted) return;
+          setState(() => _cardReader = availability != NfcAvailability.unsupported);
+          unawaited(_checkDeliveries());
         }),
       );
+      _lifecycle = AppLifecycleListener(onResume: () => unawaited(_checkDeliveries()));
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _showOutcomes();
       });
     }
   }
 
+  /// Deliveries waiting for a receipt, for those who confirm them on a phone that reads cards. A failed check
+  /// leaves the notice as it was: the menu entry stays the way in.
+  Future<void> _checkDeliveries() async {
+    final SessionUser? user = _services.session.user;
+    if (!_cardReader || !(user?.canReceiveCards ?? false)) {
+      if (_deliveries.isNotEmpty && mounted) setState(() => _deliveries = const <CardBatchSummary>[]);
+      return;
+    }
+    try {
+      final List<CardBatchSummary> all = await _services.api.cardBatches();
+      if (!mounted) return;
+      setState(() => _deliveries = all.where((CardBatchSummary b) => b.status == 'shipped').toList());
+    } on Object {
+      // Offline or a server problem: try again next time.
+    }
+  }
+
+  Future<void> _openDeliveries() async {
+    final String? only = _deliveries.length == 1 ? _deliveries.single.id : null;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(fullscreenDialog: true, builder: (_) => ReceiveDeliveryScreen(batchId: only)),
+    );
+    if (mounted) unawaited(_checkDeliveries());
+  }
+
   @override
   void dispose() {
+    _lifecycle?.dispose();
     _loop?.removeListener(_onLoop);
     _offlineTimer?.cancel();
     _scanFocus.dispose();
@@ -186,12 +223,14 @@ class _ReadyScreenState extends State<ReadyScreen> {
                     restaurantName: user?.restaurant?.name ?? '',
                     userName: user?.name ?? '',
                     onRecent: () => unawaited(showRecentSheet(context)),
-                    onMenu: () => unawaited(showMenuSheet(context)),
+                    onMenu: () => unawaited(showMenuSheet(context).then((_) => _checkDeliveries())),
                   ),
                   _BannerSlot(
                     notice: services.session.maintenanceNotice,
                     onDismissNotice: services.session.dismissMaintenance,
                     pending: pending.isEmpty ? null : pending.first,
+                    deliveries: _deliveries,
+                    onDeliveries: _offline ? null : () => unawaited(_openDeliveries()),
                   ),
                   Expanded(child: _body(context, user)),
                 ],
@@ -281,7 +320,17 @@ class _ReadyScreenState extends State<ReadyScreen> {
 /// Maintenance notice and unconfirmed redemptions. They push the centred
 /// block down, never the bottom-anchored actions.
 class _BannerSlot extends StatelessWidget {
-  const _BannerSlot({required this.notice, required this.onDismissNotice, required this.pending});
+  const _BannerSlot({
+    required this.notice,
+    required this.onDismissNotice,
+    required this.pending,
+    required this.deliveries,
+    required this.onDeliveries,
+  });
+
+  /// Card deliveries waiting for the receipt.
+  final List<CardBatchSummary> deliveries;
+  final VoidCallback? onDeliveries;
 
   final String? notice;
   final VoidCallback onDismissNotice;
@@ -307,6 +356,18 @@ class _BannerSlot extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
+              if (deliveries.isNotEmpty)
+                WaiterBanner(
+                  key: const ValueKey<String>('deliveries'),
+                  tone: BannerTone.info,
+                  icon: WaiterIcon.creditCard,
+                  title: l10n.readyDeliveryTitle,
+                  body: deliveries.length == 1
+                      ? l10n.readyDeliveryBody(deliveries.single.batchCode, l10n.cardsReceiveBatch(deliveries.single.inTransit))
+                      : l10n.readyDeliveryBodyMany(deliveries.length),
+                  actionLabel: l10n.readyDeliveryAction,
+                  onAction: onDeliveries,
+                ),
               if (open != null)
                 WaiterBanner(
                   key: ValueKey<String>(open.key),

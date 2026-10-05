@@ -59,7 +59,9 @@ class ReceiveDeliveryController extends ChangeNotifier {
   bool requestFailed = false;
   bool wrongCard = false;
 
-  Future<void> load() async {
+  /// The deliveries to confirm. With [open] (the home screen's "delivery arrived" notice) that batch is chosen at
+  /// once when it still waits for its receipt.
+  Future<void> load({String? open}) async {
     _update(() {
       phase = DeskPhase.busy;
       requestFailed = false;
@@ -69,6 +71,9 @@ class ReceiveDeliveryController extends ChangeNotifier {
       _update(
         () => batches = all.where((CardBatchSummary b) => b.status == 'shipped' || b.status == 'on_hold').toList(),
       );
+      for (final CardBatchSummary b in batches!) {
+        if (b.id == open) choose(b);
+      }
     } on ApiFailure catch (e) {
       _session.handleFailure(e, SessionContext.lookup);
       _update(() => requestFailed = true);
