@@ -501,6 +501,17 @@ The startup problem screen (S01 → problem template) replaces the endless splas
 | `signIn.available` | Anmelden ist wieder möglich | You can sign in again | Prijava je ponovo moguća | — | 03a · (a11y) end of the wait |
 | `signIn.error.server` | Anmelden gerade nicht möglich. Gleich noch einmal versuchen. | Can't sign in right now. Try again in a moment. | Prijava trenutno nije moguća. Pokušajte ponovo za trenutak. | 90 | 03a · A09 · support code below |
 | `signIn.offline.body` | Anmelden braucht eine Internetverbindung. | Signing in needs a connection. | Za prijavu je potrebna veza. | 48 | 03a · A09 |
+| `signIn.code.title` | Code eingeben | Enter the code | Unesi kod | 32 | S02 / S15 · second step of every app sign-in (decision 2026-10-06) |
+| `signIn.code.body` | Ein 6-stelliger Code ist unterwegs an {email}. | A 6-digit code is on its way to {email}. | 6-cifreni kod je poslan na {email}. | 90 | S02 / S15 · `{email}` masked by the server (a•••@example.com) |
+| `signIn.code.label` | Code aus der E-Mail | Code from the e-mail | Kod iz e-maila | 24 | S02 / S15 · 6 digits |
+| `signIn.code.submit` | Bestätigen | Confirm | Potvrdi | 24 | S02 / S15 |
+| `signIn.code.resend` | Neuen Code senden | Send a new code | Pošalji novi kod | 24 | S02 / S15 · at most every 30 s |
+| `signIn.code.sent` | Neuer Code ist unterwegs. | A new code is on its way. | Novi kod je poslan. | 48 | S02 / S15 · info after resend |
+| `signIn.code.wait` | Neuer Code erst in einigen Sekunden möglich. | A new code is possible in a few seconds. | Novi kod je moguć za nekoliko sekundi. | 60 | S02 / S15 · resend within 30 s |
+| `signIn.code.wrong` | Code stimmt nicht. Letzte E-Mail prüfen. | The code is not correct. Check the latest e-mail. | Kod nije tačan. Provjeri posljednji e-mail. | 60 | S02 / S15 · inline under the field |
+| `signIn.code.expired` | Code abgelaufen oder zu oft falsch. Bitte neu anmelden. | The code expired or was wrong too often. Please sign in again. | Kod je istekao ili je previše puta pogrešan. Prijavi se ponovo. | 90 | S02 / S15 · back on the password step |
+| `signIn.code.locked` | Zu viele falsche Codes. Das Konto ist 60 Minuten gesperrt. | Too many wrong codes. The account is locked for 60 minutes. | Previše pogrešnih kodova. Račun je zaključan 60 minuta. | 90 | S02 / S15 · back on the password step |
+| `signIn.appUpdated` | Die App wurde aktualisiert. Bitte neu anmelden. | The app was updated. Please sign in again. | Aplikacija je ažurirana. Prijavi se ponovo. | 60 | S02 · notice after an update (every update signs in again with a code) |
 
 ### 5.4 S03 Enable biometrics
 
@@ -961,7 +972,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **427 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **438 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

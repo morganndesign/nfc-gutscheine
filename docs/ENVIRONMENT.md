@@ -94,7 +94,7 @@ A restaurant validity is at least 36 months (`min_validity_months`, fixed).
 
 | Variable | Default | Description |
 |---|---|---|
-| `MAIL_MAILER` | `failover` (dev), `log` (Coolify default) | `smtp` for real delivery. With `log`, e-mails are only written to the log and the platform admin shows a red banner. |
+| `MAIL_MAILER` | `failover` (dev); **required** in Coolify (the deploy refuses without it) | `smtp` for real delivery. Sign-in (dashboard and app) needs the e-mailed code, so with `log` nobody could sign in: production then reports `/health/operations` as degraded and the platform admin shows a red banner. |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | | SMTP server (`MAIL_SCHEME`: `smtp` = STARTTLS on 587, `smtps` = TLS on 465). |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@<domain>`, `GiftCard Pro` | Sender. |
 | `MAIL_TIMEOUT` | `10` | Seconds before a slow mail server is given up (the job is retried). |

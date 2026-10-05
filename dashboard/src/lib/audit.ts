@@ -16,6 +16,7 @@ const ACTIONS = new Set([
   "auth.locked",
   "auth.locked_attempt",
   "auth.access_revoked",
+  "auth.login_code_console",
   "auth.device_token_issued",
   "auth.password_reset",
   "card.order_accepted",
@@ -93,7 +94,7 @@ const CATEGORIES: Record<string, string> = {
 }
 
 /** Events an owner should notice: possible fraud or lock-outs. */
-const ALERTS = new Set(["auth.locked", "auth.locked_attempt", "presentment.failed", "presentment.rejected"])
+const ALERTS = new Set(["auth.locked", "auth.login_code_console", "auth.locked_attempt", "presentment.failed", "presentment.rejected"])
 
 export function auditLabel(action: string): string {
   if (ACTIONS.has(action)) return tr(`audit.action.${action}` as MessageKey)

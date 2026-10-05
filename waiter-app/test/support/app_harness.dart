@@ -314,6 +314,11 @@ abstract final class Payloads {
         'replayed': replayed,
       };
 
+  /// 202 of `POST /auth/token`: a code went to the (masked) e-mail address.
+  static Map<String, Object?> codeChallenge() => <String, Object?>{
+    'data': <String, Object?>{'code_required': true, 'login': 'login-1', 'email': 'a•••@example.at', 'expires_in': 600},
+  };
+
   static Map<String, Object?> token() => <String, Object?>{
     'data': <String, Object?>{'token': 'gcp_test', 'expires_at': '2026-10-27T00:00:00Z', 'user': user()},
   };
@@ -577,6 +582,8 @@ class TestApp {
     if (signedIn) {
       secrets.values['token'] = 'gcp_test';
       secrets.values['profile'] = jsonEncode(user ?? Payloads.user());
+      // Issued to this app version (an updated app signs in again, decision 2026-10-06).
+      secrets.values['token_version'] = '1.0.0';
       secrets.values['biometric_enrollment'] = 'valid';
     }
 

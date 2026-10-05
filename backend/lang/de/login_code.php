@@ -7,6 +7,8 @@ return [
     'headline' => 'Ihr Anmeldecode',
     'intro' => 'Geben Sie diesen Code im Dashboard ein, um die Anmeldung abzuschließen:',
     'expiry' => 'Der Code gilt :minutes Minuten und nur für diese Anmeldung.',
+    'intro_app' => 'Geben Sie diesen Code in der App GiftCard Waiter ein, um die Anmeldung abzuschließen:',
+    'trust_app' => 'Danach bleibt dieses Telefon angemeldet, bis die App aktualisiert wird.',
     'trust' => 'Danach fragt dieser Browser :days Tage lang nicht mehr nach einem Code.',
     'warning' => 'Sie haben sich nicht angemeldet? Dann kennt jemand Ihr Passwort: Ändern Sie es bitte sofort. Geben Sie den Code niemandem weiter.',
     'signature' => 'GiftCard Pro',

@@ -277,6 +277,40 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get signInOfflineBody => pseudoLocalize(base.signInOfflineBody);
 
   @override
+  String get signInCodeTitle => pseudoLocalize(base.signInCodeTitle);
+
+  @override
+  String signInCodeBody(String email) =>
+      pseudoLocalize(base.signInCodeBody(pseudoMarker(0)), <String>[email]);
+
+  @override
+  String get signInCodeLabel => pseudoLocalize(base.signInCodeLabel);
+
+  @override
+  String get signInCodeSubmit => pseudoLocalize(base.signInCodeSubmit);
+
+  @override
+  String get signInCodeResend => pseudoLocalize(base.signInCodeResend);
+
+  @override
+  String get signInCodeSent => pseudoLocalize(base.signInCodeSent);
+
+  @override
+  String get signInCodeWait => pseudoLocalize(base.signInCodeWait);
+
+  @override
+  String get signInCodeWrong => pseudoLocalize(base.signInCodeWrong);
+
+  @override
+  String get signInCodeExpired => pseudoLocalize(base.signInCodeExpired);
+
+  @override
+  String get signInCodeLocked => pseudoLocalize(base.signInCodeLocked);
+
+  @override
+  String get signInAppUpdated => pseudoLocalize(base.signInAppUpdated);
+
+  @override
   String get biometricsTitleFaceId =>
       pseudoLocalize(base.biometricsTitleFaceId);
 

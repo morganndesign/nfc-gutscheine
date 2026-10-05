@@ -21,7 +21,10 @@ sealed class SignInIssue {
     SignInThrottled(:final Duration until) => SignInThrottledIssue(until),
     SignInOffline() => const SignInOfflineIssue(),
     SignInServerError(:final String requestId) => SignInServerIssue(requestId),
-    SignInSucceeded() || SignInBlocked() => null,
+    SignInCodeExpired() => const SignInCodeExpiredIssue(),
+    SignInCodeLocked() => const SignInCodeLockedIssue(),
+    // The code step shows these itself (inline under the field).
+    SignInSucceeded() || SignInBlocked() || SignInCodeRequired() || SignInCodeWrong() => null,
   };
 }
 
@@ -53,6 +56,16 @@ final class SignInServerIssue extends SignInIssue {
 
   /// `X-Request-Id` of the failed attempt; empty when none reached the server.
   final String requestId;
+}
+
+/// The e-mailed code expired, was used or was wrong 5 times: sign in again.
+final class SignInCodeExpiredIssue extends SignInIssue {
+  const SignInCodeExpiredIssue();
+}
+
+/// 15 wrong codes within an hour: the account is locked for 60 minutes.
+final class SignInCodeLockedIssue extends SignInIssue {
+  const SignInCodeLockedIssue();
 }
 
 /// An inline notice after a forced sign-out ([SignInNotice]).
@@ -114,11 +127,14 @@ class SignInBannerSlot extends StatelessWidget {
       title: l.signInErrorServer,
       body: requestId.isEmpty ? null : l.commonSupportCode(SupportCode.fromRequestId(requestId)),
     ),
+    SignInCodeExpiredIssue() => StatusBanner(tone: BannerTone.warning, title: l.signInCodeExpired),
+    SignInCodeLockedIssue() => StatusBanner(tone: BannerTone.danger, title: l.signInCodeLocked),
     SignInNoticeIssue(:final SignInNotice notice) => switch (notice) {
       SignInNotice.biometricsChanged => StatusBanner(tone: BannerTone.info, title: l.unlockChanged),
       // 13 §11 Q2 default: a deactivated account is shown with the
       // sign-in error until the backend sends a dedicated code.
       SignInNotice.deactivated => StatusBanner(tone: BannerTone.warning, title: l.signInErrorInvalid),
+      SignInNotice.appUpdated => StatusBanner(tone: BannerTone.info, title: l.signInAppUpdated),
     },
   };
 }

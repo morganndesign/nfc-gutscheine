@@ -112,9 +112,14 @@ await check("app reads start-up config", async () => {
   assert.match(res.headers.get("cache-control") ?? "", /max-age=60/)
 })
 
-await check("waiter signs in with a device-bound token", async () => {
-  const res = await app("POST", "/auth/token", {
-    body: { email: WAITER, password: PASSWORD, device_id: DEVICE, device_name: "E2E Pixel", platform: "android" },
+await check("waiter signs in with the password, then the e-mailed code (device-bound token)", async () => {
+  const device = { device_id: DEVICE, device_name: "E2E Pixel", platform: "android" }
+  const before = await loginCodeCount(WAITER)
+  const first = await app("POST", "/auth/token", { body: { email: WAITER, password: PASSWORD, ...device } })
+  assert.equal(first.status, 202, JSON.stringify(first.json))
+  assert.equal(first.json.data.token, undefined)
+  const res = await app("POST", "/auth/token/code", {
+    body: { login: first.json.data.login, code: await loginCode(WAITER, before), ...device },
   })
   assert.equal(res.status, 201, JSON.stringify(res.json))
   token = res.json.data.token

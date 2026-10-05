@@ -28,7 +28,10 @@ class WaiterApi {
     return AppConfigData.fromJson(r.json);
   }
 
-  Future<SignInResult> signIn({
+  /// App sign-in, step 1 (`POST /auth/token`): the password. The server e-mails
+  /// a 6-digit code and answers 202 with the sign-in to confirm (decision
+  /// 2026-10-06); a server without codes answers 201 with the token.
+  Future<SignInStep> signIn({
     required String email,
     required String password,
     required String deviceId,
@@ -47,8 +50,35 @@ class WaiterApi {
       },
       authenticated: false,
     );
+    return _parse(r, r.status == 202 ? SignInChallenge.fromJson : SignInResult.fromJson);
+  }
+
+  /// Step 2 (`POST /auth/token/code`): the code from the e-mail, from this phone.
+  Future<SignInResult> confirmSignInCode({
+    required String login,
+    required String code,
+    required String deviceId,
+    required String deviceName,
+    required String platform,
+  }) async {
+    final ApiResponse r = await _client.send(
+      'POST',
+      '/auth/token/code',
+      body: <String, Object?>{
+        'login': login,
+        'code': code,
+        'device_id': deviceId,
+        'device_name': deviceName,
+        'platform': platform,
+      },
+      authenticated: false,
+    );
     return _parse(r, SignInResult.fromJson);
   }
+
+  /// "Send a new code" for the same sign-in (`POST /auth/token/code/resend`).
+  Future<void> resendSignInCode(String login) =>
+      _client.send('POST', '/auth/token/code/resend', body: <String, Object?>{'login': login}, authenticated: false);
 
   Future<SessionUser> me() async {
     final ApiResponse r = await _client.send('GET', '/auth/me');

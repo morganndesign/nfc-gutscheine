@@ -140,6 +140,11 @@ final class SecurityMonitor
                 'match' => static fn (SecurityEvent $e): bool => $refused($e, T::DeviceTokenUse, 'OTHER_DEVICE')],
             ['name' => 'auth.account_locked', 'severity' => 'warning', 'subject' => static fn (SecurityEvent $e): ?string => $e->subject_id !== null ? 'user:'.$e->subject_id : null,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::AccountLock],
+            // Many wrong sign-in codes for one person: someone with the password is guessing the second factor
+            // (15 within an hour lock the account, LoginCodeService).
+            ['name' => 'auth.code_guessing', 'severity' => 'high', 'subject' => static fn (SecurityEvent $e): ?string => $e->subject_id !== null ? 'user:'.$e->subject_id : null,
+                'threshold' => 10, 'window' => 60,
+                'match' => static fn (SecurityEvent $e): bool => ($refused($e, T::SignIn, 'wrong_code') || $refused($e, T::SignIn, 'code_')) && $e->subject_id !== null],
             // Many wrong passwords from one network, across accounts: credential stuffing.
             ['name' => 'auth.credential_stuffing', 'severity' => 'high', 'subject' => $network, 'threshold' => 20, 'window' => 10,
                 'match' => static fn (SecurityEvent $e): bool => $refused($e, T::SignIn, 'invalid_credentials') && $network($e) !== null],
@@ -163,6 +168,10 @@ final class SecurityMonitor
             // One person giving away many vouchers in a day.
             ['name' => 'money.complimentary', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherIssue && $e->outcome === SecurityEventOutcome::Succeeded
+                    && ($e->data['payment_method'] ?? null) === 'complimentary' && ($e->data['replayed'] ?? false) !== true && $user($e) !== null],
+            // One person topping up loyalty vouchers again and again in a day (loyalty value without a new voucher).
+            ['name' => 'money.loyalty_topups', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherReload && $e->outcome === SecurityEventOutcome::Succeeded
                     && ($e->data['payment_method'] ?? null) === 'complimentary' && ($e->data['replayed'] ?? false) !== true && $user($e) !== null],
         ];
     }

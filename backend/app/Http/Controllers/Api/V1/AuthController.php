@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\SecurityEventType;
+use App\Exceptions\Domain\AccountDeactivatedException;
+use App\Exceptions\Domain\LoginCodeRejectedException;
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\BindRememberedSignIn;
+use App\Http\Requests\Auth\ConfirmDeviceTokenCodeRequest;
 use App\Http\Requests\Auth\ConfirmLoginCodeRequest;
 use App\Http\Requests\Auth\DeviceTokenRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\ResendLoginCodeRequest;
 use App\Http\Resources\RestaurantSettingsResource;
+use App\Models\LoginCode;
 use App\Models\PersonalAccessToken;
 use App\Models\SystemSetting;
 use App\Models\User;
@@ -26,6 +31,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 final class AuthController extends Controller
 {
@@ -51,8 +57,12 @@ final class AuthController extends Controller
             return $this->signIn($request, $user, $request->boolean('remember'));
         }
 
-        $login = $this->loginCodes->start($user, $request->boolean('remember'));
+        return $this->codeRequired($user, $this->loginCodes->start($user, $request->boolean('remember')));
+    }
 
+    /** 202: a code went to the person's e-mail; the client confirms it with this sign-in's id. */
+    private function codeRequired(User $user, LoginCode $login): JsonResponse
+    {
         return response()->json(['data' => [
             'code_required' => true,
             'login' => $login->id,
@@ -64,10 +74,27 @@ final class AuthController extends Controller
     /** Step 2: the code from the e-mail. Signs in and trusts this browser for 15 days. */
     public function confirmCode(ConfirmLoginCodeRequest $request): JsonResponse
     {
-        $login = $this->loginCodes->confirm($request, (string) $request->validated('login'), (string) $request->validated('code'));
+        $login = $this->loginCodes->confirm($request, (string) $request->validated('login'), (string) $request->validated('code'), 'web');
 
         return $this->signIn($request, $login->user, $login->remember)
             ->withCookie($this->loginCodes->trust($request, $login->user));
+    }
+
+    /** Waiter app: "Send a new code" for the same sign-in (refusals with a reason the app words itself). */
+    public function resendTokenCode(ResendLoginCodeRequest $request): JsonResponse
+    {
+        try {
+            $this->loginCodes->resend((string) $request->validated('login'));
+        } catch (ValidationException $e) {
+            throw self::codeRejected($e);
+        }
+
+        return response()->json(['message' => 'sent']);
+    }
+
+    private static function codeRejected(ValidationException $e): LoginCodeRejectedException
+    {
+        return new LoginCodeRejectedException((string) collect($e->errors())->flatten()->first(), ['reason' => $e->errorBag]);
     }
 
     /** "Send a new code" for the same sign-in. */
@@ -83,6 +110,7 @@ final class AuthController extends Controller
         Auth::guard('web')->login($user, $remember);
         if ($request->hasSession()) {
             $request->session()->regenerate();
+            $request->session()->put(BindRememberedSignIn::SIGNED_IN_AT, time());
         }
 
         $this->audit->log('auth.login', Actor::fromRequest($request), $user, restaurantId: $user->restaurant_id);
@@ -91,10 +119,31 @@ final class AuthController extends Controller
         return response()->json(['data' => $this->profile($user)]);
     }
 
-    /** Sign-in for the native waiter app: a device-bound bearer token (present and redeem vouchers; managers and owners also sell them). */
+    /**
+     * Waiter app sign-in, step 1: the password. Every app sign-in then needs the e-mailed code, from this phone
+     * (decision 2026-10-06): the answer is 202 with the sign-in to confirm, as for the dashboard.
+     */
     public function token(DeviceTokenRequest $request): JsonResponse
     {
         $user = $this->credentials->verify($request, (string) $request->validated('email'), (string) $request->validated('password'), deviceClient: true);
+        // Who may never use the app hears so now, before a code is sent.
+        $this->deviceTokens->assertEligible($user);
+
+        return $this->codeRequired($user, $this->loginCodes->start($user, false, (string) $request->validated('device_id')));
+    }
+
+    /** Waiter app sign-in, step 2: the code from the e-mail. Issues the phone's token (until the app is updated). */
+    public function confirmTokenCode(ConfirmDeviceTokenCodeRequest $request): JsonResponse
+    {
+        try {
+            $login = $this->loginCodes->confirm($request, (string) $request->validated('login'), (string) $request->validated('code'), 'app', (string) $request->validated('device_id'));
+        } catch (ValidationException $e) {
+            throw self::codeRejected($e);
+        }
+        $user = $login->user;
+        if (! $user->isActive()) {
+            throw new AccountDeactivatedException;
+        }
 
         $token = $this->deviceTokens->issue(
             $request,

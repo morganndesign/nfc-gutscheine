@@ -22,6 +22,8 @@ final class UpdateUserRequest extends ApiRequest
             'email' => ['sometimes', 'required', 'email:rfc', 'max:191', Rule::unique('users', 'email')->ignore($user->getKey())],
             'role' => ['sometimes', 'required', Rule::in([RoleSlug::Owner->value, RoleSlug::Manager->value, RoleSlug::Waiter->value])],
             'locale' => ['sometimes', 'required', 'in:de,en,bs'],
+            // Changing one's own e-mail address (UserService::update).
+            'current_password' => ['sometimes', 'string', 'max:255'],
         ];
     }
 }

@@ -30,6 +30,10 @@ enum SignInNotice {
 
   /// Q2 default: the account was deactivated (shown with the sign-in error).
   deactivated,
+
+  /// The app was updated: every update signs in again, with the e-mailed code
+  /// (decision 2026-10-06).
+  appUpdated,
 }
 
 /// Outcome of a sign-in attempt on S02 or the S15 session sheet (A02, A07–A09).
@@ -75,6 +79,45 @@ final class SignInServerError extends SignInOutcome {
 final class SignInBlocked extends SignInOutcome {
   const SignInBlocked();
 }
+
+/// The password was right; a 6-digit code went to [maskedEmail] (decision
+/// 2026-10-06). The form shows the code step ([SessionController.pendingCode]).
+final class SignInCodeRequired extends SignInOutcome {
+  const SignInCodeRequired(this.maskedEmail);
+
+  final String maskedEmail;
+}
+
+/// The code was not right; the code step stays (inline error).
+final class SignInCodeWrong extends SignInOutcome {
+  const SignInCodeWrong();
+}
+
+/// The code expired, was used or was wrong 5 times: back to the password.
+final class SignInCodeExpired extends SignInOutcome {
+  const SignInCodeExpired();
+}
+
+/// 15 wrong codes within an hour: the account is locked for 60 minutes.
+final class SignInCodeLocked extends SignInOutcome {
+  const SignInCodeLocked();
+}
+
+/// A sign-in waiting for the code from the e-mail.
+@immutable
+class PendingSignInCode {
+  const PendingSignInCode({required this.login, required this.maskedEmail, required this.email, required this.reauth});
+
+  final String login;
+  final String maskedEmail;
+  final String email;
+
+  /// Signing in again from the S15 session sheet (the layers underneath stay).
+  final bool reauth;
+}
+
+/// "Send a new code" on the code step.
+enum CodeResendOutcome { sent, wait, expired, offline, failed }
 
 /// Result of enabling or using biometrics (S03/S04, P10–P13).
 enum BiometricResult { success, failed, lockedOut, notEnrolled }

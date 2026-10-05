@@ -22,6 +22,10 @@ enum TextFieldKind {
   /// no autocorrect, whitespace removed, Return = done, max 512.
   url,
 
+  /// The 6-digit sign-in code from the e-mail: number keyboard, digits only,
+  /// autofill "one-time code", max 6.
+  code,
+
   /// Short free text (S20 payment reference or reason): text keyboard,
   /// sentence case, spaces kept, Return = done, max 500.
   text,
@@ -184,6 +188,7 @@ class _WaiterTextFieldState extends State<WaiterTextField> {
             TextFieldKind.password => TextInputType.visiblePassword,
             TextFieldKind.email => TextInputType.emailAddress,
             TextFieldKind.url => TextInputType.url,
+            TextFieldKind.code => TextInputType.number,
             TextFieldKind.text => TextInputType.text,
           },
           textInputAction:
@@ -198,16 +203,19 @@ class _WaiterTextFieldState extends State<WaiterTextField> {
             TextFieldKind.password => const <String>[AutofillHints.password],
             TextFieldKind.email => const <String>[AutofillHints.username, AutofillHints.email],
             TextFieldKind.url => const <String>[AutofillHints.url],
+            TextFieldKind.code => const <String>[AutofillHints.oneTimeCode],
             TextFieldKind.text => null,
           },
           inputFormatters: <TextInputFormatter>[
             if (!password && widget.kind != TextFieldKind.text)
               FilteringTextInputFormatter.deny(RegExp(r'\s')),
+            if (widget.kind == TextFieldKind.code) FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(
               switch (widget.kind) {
                 TextFieldKind.password => _maxPassword,
                 TextFieldKind.email => _maxEmail,
                 TextFieldKind.url => _maxUrl,
+                TextFieldKind.code => 6,
                 TextFieldKind.text => widget.maxLength ?? _maxText,
               },
             ),

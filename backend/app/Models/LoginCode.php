@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
 /**
- * One dashboard sign-in waiting for its e-mailed code (only the code's keyed hash is stored).
+ * One sign-in waiting for its e-mailed code (only the code's keyed hash is stored): the dashboard (`web`) or the
+ * waiter app (`app`, bound to the phone that asked).
  *
  * @property string $id
  * @property string $user_id
+ * @property string $client `web` or `app`
+ * @property string|null $device_id The phone of an app sign-in (X-Device-Id)
  * @property string $code_hash
  * @property bool $remember
  * @property int $attempts

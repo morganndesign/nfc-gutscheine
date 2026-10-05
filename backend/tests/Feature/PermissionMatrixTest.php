@@ -29,6 +29,8 @@ final class PermissionMatrixTest extends TestCase
         'POST api/v1/auth/login/code',
         'POST api/v1/auth/login/code/resend',
         'POST api/v1/auth/token',
+        'POST api/v1/auth/token/code',
+        'POST api/v1/auth/token/code/resend',
         'POST api/v1/auth/forgot-password',
         'POST api/v1/auth/reset-password',
     ];

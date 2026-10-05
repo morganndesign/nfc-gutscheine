@@ -17,5 +17,6 @@ return [
     'login_code_wrong' => 'Kod nije tačan. Provjerite posljednji e-mail.',
     'login_code_expired' => 'Ovaj kod je istekao ili je previše puta pogrešno unesen. Prijavite se ponovo.',
     'login_code_wait' => 'Sačekajte :seconds sekundi prije nego što zatražite novi kod.',
+    'login_code_locked' => 'Previše pogrešnih kodova. Račun je zaključan 60 minuta.',
     'login_code_unsent' => 'Kod nije mogao biti poslan e-mailom. Pokušajte ponovo za trenutak.',
 ];

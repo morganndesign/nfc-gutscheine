@@ -59,6 +59,30 @@ abstract class TestCase extends BaseTestCase
         ], $headers);
     }
 
+    /**
+     * Waiter app sign-in as the app does it (decision 2026-10-06): the password, then the 6-digit code from the
+     * e-mail, from the same phone. The app's User-Agent stays on the test: the token works only for that app version.
+     * Returns the last answer (201 with the token, or the refusal).
+     *
+     * @param  array<string, string>  $body  email, password, device_id, device_name, platform
+     */
+    protected function appSignIn(array $body, string $userAgent = 'GiftCardWaiter/2.0.20 (Android 14; Pixel 7)'): TestResponse
+    {
+        $this->withHeaders(['User-Agent' => $userAgent]);
+        $first = $this->postJson('/api/v1/auth/token', $body);
+        if ($first->status() !== 202) {
+            return $first;
+        }
+
+        return $this->postJson('/api/v1/auth/token/code', [
+            'login' => $first->json('data.login'),
+            'code' => $this->lastLoginCode($body['email']),
+            'device_id' => $body['device_id'],
+            'device_name' => $body['device_name'],
+            'platform' => $body['platform'],
+        ]);
+    }
+
     /** The code of the last sign-in e-mail sent to `$email` (array mailer). */
     protected function lastLoginCode(string $email): string
     {

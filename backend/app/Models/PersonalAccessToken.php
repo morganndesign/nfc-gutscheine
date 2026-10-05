@@ -16,6 +16,7 @@ use Laravel\Sanctum\PersonalAccessToken as SanctumPersonalAccessToken;
  * @property string $id
  * @property string|null $restaurant_id
  * @property string|null $device_id Set for waiter app sign-ins: the token only works from this device
+ * @property string|null $app_version Waiter app version the token was issued to; another version signs in again
  * @property string|null $last_used_ip
  * @property Carbon|null $revoked_at
  * @property string|null $revoked_by

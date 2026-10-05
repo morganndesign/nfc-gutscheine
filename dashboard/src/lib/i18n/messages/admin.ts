@@ -255,12 +255,14 @@ export const admin = defineMessages({
     "admin.security.rule.device.token_theft":
       "An app sign-in was used from another phone: the token was copied. Revoke the device and reset the person’s password.",
     "admin.security.rule.auth.account_locked": "An account was locked after wrong passwords.",
+    "admin.security.rule.auth.code_guessing": "Many wrong sign-in codes for one person: someone may know the password.",
     "admin.security.rule.auth.credential_stuffing": "Many wrong passwords from one network across accounts.",
     "admin.security.rule.presentment.guessing": "One phone presented many unknown QR codes or cards.",
     "admin.security.rule.money.limit_hits": "Redemptions keep hitting the restaurant’s limits.",
     "admin.security.rule.money.reversals": "One person reversed many bookings today.",
     "admin.security.rule.money.refunds": "One person paid out many refunds today.",
     "admin.security.rule.money.complimentary": "One person gave a lot of loyalty value today.",
+    "admin.security.rule.money.loyalty_topups": "One person topped up loyalty vouchers many times today.",
 
     // ------------------------------------------------------------------ system settings
     "admin.settings.description": "Platform-wide configuration.",
@@ -331,6 +333,7 @@ export const admin = defineMessages({
     "audit.action.auth.locked": "Account locked after failed sign-ins",
     "audit.action.auth.locked_attempt": "Sign-in attempt on a locked account",
     "audit.action.auth.access_revoked": "All sign-ins and tokens revoked",
+    "audit.action.auth.login_code_console": "Sign-in code issued on the server (e-mail down)",
     "audit.action.auth.device_token_issued": "Waiter app signed in",
     "audit.action.auth.password_reset": "Password set via e-mail link",
     "audit.action.card.replaced": "Card replaced",
@@ -655,12 +658,14 @@ export const admin = defineMessages({
     "admin.security.rule.device.token_theft":
       "Eine App-Anmeldung wurde von einem anderen Handy verwendet: Das Token wurde kopiert. Widerrufen Sie das Gerät und setzen Sie das Passwort der Person zurück.",
     "admin.security.rule.auth.account_locked": "Ein Konto wurde nach falschen Passwörtern gesperrt.",
+    "admin.security.rule.auth.code_guessing": "Viele falsche Anmeldecodes für eine Person: Jemand kennt vielleicht das Passwort.",
     "admin.security.rule.auth.credential_stuffing": "Viele falsche Passwörter aus einem Netzwerk für mehrere Konten.",
     "admin.security.rule.presentment.guessing": "Ein Handy hat viele unbekannte QR-Codes oder Karten vorgezeigt.",
     "admin.security.rule.money.limit_hits": "Einlösungen stoßen wiederholt an die Limits des Restaurants.",
     "admin.security.rule.money.reversals": "Eine Person hat heute viele Buchungen storniert.",
     "admin.security.rule.money.refunds": "Eine Person hat heute viele Rückerstattungen ausgezahlt.",
     "admin.security.rule.money.complimentary": "Eine Person hat heute viel Loyalty-Guthaben vergeben.",
+    "admin.security.rule.money.loyalty_topups": "Eine Person hat heute oft Loyalty-Gutscheine aufgeladen.",
 
     "admin.settings.description": "Plattformweite Konfiguration.",
     "admin.settings.saved": "Einstellungen gespeichert",
@@ -730,6 +735,7 @@ export const admin = defineMessages({
     "audit.action.auth.locked": "Konto nach fehlgeschlagenen Anmeldungen gesperrt",
     "audit.action.auth.locked_attempt": "Anmeldeversuch bei gesperrtem Konto",
     "audit.action.auth.access_revoked": "Alle Anmeldungen und Token widerrufen",
+    "audit.action.auth.login_code_console": "Anmeldecode am Server ausgegeben (E-Mail gestört)",
     "audit.action.auth.device_token_issued": "Kellner-App angemeldet",
     "audit.action.auth.password_reset": "Passwort über E-Mail-Link festgelegt",
     "audit.action.card.replaced": "Karte ersetzt",
@@ -1046,12 +1052,14 @@ export const admin = defineMessages({
     "admin.security.rule.device.token_theft":
       "Prijava u aplikaciju korištena je s drugog telefona: token je kopiran. Opozovite uređaj i resetujte lozinku te osobe.",
     "admin.security.rule.auth.account_locked": "Račun je zaključan nakon pogrešnih lozinki.",
+    "admin.security.rule.auth.code_guessing": "Mnogo pogrešnih kodova za prijavu jedne osobe: neko možda zna lozinku.",
     "admin.security.rule.auth.credential_stuffing": "Mnogo pogrešnih lozinki iz jedne mreže za više računa.",
     "admin.security.rule.presentment.guessing": "Jedan telefon je pokazao mnogo nepoznatih QR kodova ili kartica.",
     "admin.security.rule.money.limit_hits": "Naplate stalno udaraju u limite restorana.",
     "admin.security.rule.money.reversals": "Jedna osoba je danas stornirala mnogo transakcija.",
     "admin.security.rule.money.refunds": "Jedna osoba je danas isplatila mnogo povrata novca.",
     "admin.security.rule.money.complimentary": "Jedna osoba je danas dala mnogo loyalty vrijednosti.",
+    "admin.security.rule.money.loyalty_topups": "Jedna osoba je danas mnogo puta dopunila loyalty vaučere.",
 
     "admin.settings.description": "Konfiguracija za cijelu platformu.",
     "admin.settings.saved": "Postavke sačuvane",
@@ -1121,6 +1129,7 @@ export const admin = defineMessages({
     "audit.action.auth.locked": "Račun zaključan nakon neuspješnih prijava",
     "audit.action.auth.locked_attempt": "Pokušaj prijave na zaključan račun",
     "audit.action.auth.access_revoked": "Sve prijave i tokeni opozvani",
+    "audit.action.auth.login_code_console": "Kod za prijavu izdat na serveru (e-mail ne radi)",
     "audit.action.auth.device_token_issued": "Aplikacija za konobare prijavljena",
     "audit.action.auth.password_reset": "Lozinka postavljena putem e-mail linka",
     "audit.action.card.replaced": "Kartica zamijenjena",

@@ -68,13 +68,13 @@ final class CardOrderTest extends TestCase
 
     public function test_the_waiter_app_orders_cards_with_its_phone_token(): void
     {
-        Mail::fake();
         $restaurant = $this->restaurant();
         $this->staff($restaurant, RoleSlug::Manager, ['email' => 'mia@example.com']);
         $device = 'b1a2c3d4-e5f6-4711-8899-aabbccddeeff';
-        $token = (string) $this->postJson('/api/v1/auth/token', [
+        $token = (string) $this->appSignIn([
             'email' => 'mia@example.com', 'password' => 'Password123!', 'device_id' => $device, 'device_name' => 'iPhone', 'platform' => 'ios',
         ])->assertCreated()->json('data.token');
+        Mail::fake();
         $this->app['auth']->forgetGuards();
         $this->withHeaders(['Authorization' => 'Bearer '.$token, 'X-Device-Id' => $device]);
 

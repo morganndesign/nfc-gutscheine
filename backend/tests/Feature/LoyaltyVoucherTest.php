@@ -161,9 +161,9 @@ final class LoyaltyVoucherTest extends TestCase
     {
         $restaurant = $this->restaurant();
         $manager = $this->staff($restaurant, RoleSlug::Manager, ['email' => 'mia@example.com']);
-        $token = (string) $this->withHeaders(['User-Agent' => 'GiftCardWaiter/2.0.19 (iOS 18; iPhone)'])->postJson('/api/v1/auth/token', [
+        $token = (string) $this->appSignIn([
             'email' => 'mia@example.com', 'password' => 'Password123!', 'device_id' => self::DEVICE, 'device_name' => 'iPhone', 'platform' => 'ios',
-        ])->assertCreated()->json('data.token');
+        ], 'GiftCardWaiter/2.0.20 (iOS 18; iPhone)')->assertCreated()->json('data.token');
         $app = fn (): self => $this->bearer($token);
 
         $app()->sellLoyalty()->assertForbidden();

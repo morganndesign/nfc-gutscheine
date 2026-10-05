@@ -24,14 +24,13 @@ final class WaiterAppIssuingTest extends TestCase
 
     private function signIn(string $email): TestResponse
     {
-        return $this->withHeaders(['User-Agent' => 'GiftCardWaiter/1.4.3 (Android 14; Pixel 7)'])
-            ->postJson('/api/v1/auth/token', [
-                'email' => $email,
-                'password' => 'Password123!',
-                'device_id' => self::DEVICE,
-                'device_name' => 'Pixel 7',
-                'platform' => 'android',
-            ]);
+        return $this->appSignIn([
+            'email' => $email,
+            'password' => 'Password123!',
+            'device_id' => self::DEVICE,
+            'device_name' => 'Pixel 7',
+            'platform' => 'android',
+        ], 'GiftCardWaiter/1.4.3 (Android 14; Pixel 7)');
     }
 
     private function bearer(string $token): self

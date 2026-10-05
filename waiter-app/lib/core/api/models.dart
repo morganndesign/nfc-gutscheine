@@ -271,9 +271,29 @@ class SessionUser {
   bool get canReplaceLostCards => permissions.contains(Permissions.cardsReplaceLost);
 }
 
-/// Result of `POST /auth/token`.
+/// The answer to the password step of an app sign-in.
 @immutable
-class SignInResult {
+sealed class SignInStep {
+  const SignInStep();
+}
+
+/// 202: a code went to [maskedEmail]; confirm it with [login] (decision 2026-10-06).
+class SignInChallenge extends SignInStep {
+  const SignInChallenge({required this.login, required this.maskedEmail});
+
+  factory SignInChallenge.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    return SignInChallenge(login: _string(data, 'login'), maskedEmail: _string(data, 'email'));
+  }
+
+  final String login;
+
+  /// `a•••@example.com`, as the server masked it.
+  final String maskedEmail;
+}
+
+@immutable
+class SignInResult extends SignInStep {
   const SignInResult({required this.token, required this.user});
 
   factory SignInResult.fromJson(Map<String, Object?> json) {

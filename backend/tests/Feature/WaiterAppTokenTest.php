@@ -23,14 +23,13 @@ final class WaiterAppTokenTest extends TestCase
     /** @param array<string, mixed> $overrides */
     private function signIn(string $email, array $overrides = []): TestResponse
     {
-        return $this->withHeaders(['User-Agent' => 'GiftCardWaiter/1.0.0 (Android 14; Pixel 7)'])
-            ->postJson('/api/v1/auth/token', array_merge([
-                'email' => $email,
-                'password' => 'Password123!',
-                'device_id' => self::DEVICE,
-                'device_name' => 'Pixel 7',
-                'platform' => 'android',
-            ], $overrides));
+        return $this->appSignIn(array_merge([
+            'email' => $email,
+            'password' => 'Password123!',
+            'device_id' => self::DEVICE,
+            'device_name' => 'Pixel 7',
+            'platform' => 'android',
+        ], $overrides), 'GiftCardWaiter/1.0.0 (Android 14; Pixel 7)');
     }
 
     private function bearer(string $token, string $device = self::DEVICE): self
@@ -154,7 +153,7 @@ final class WaiterAppTokenTest extends TestCase
         $this->flushHeaders();
         $this->actingAsStaff($restaurant, RoleSlug::Owner);
         $this->postJson("/api/v1/devices/{$device->id}/restore")->assertOk();
-        $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk();
+        $this->bearer($token)->withHeaders(['User-Agent' => 'GiftCardWaiter/1.0.0 (Android 14; Pixel 7)'])->getJson('/api/v1/auth/me')->assertOk();
     }
 
     public function test_signing_in_again_replaces_the_previous_token(): void

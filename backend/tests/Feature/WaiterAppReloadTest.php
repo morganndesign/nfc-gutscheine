@@ -57,14 +57,13 @@ final class WaiterAppReloadTest extends TestCase
     private function signInApp(RoleSlug $role, string $email): void
     {
         $this->staff($this->restaurant, $role, ['email' => $email]);
-        $token = (string) $this->withHeaders(['User-Agent' => 'GiftCardWaiter/2.0.1 (Android 14; Pixel 7)'])
-            ->postJson('/api/v1/auth/token', [
-                'email' => $email,
-                'password' => 'Password123!',
-                'device_id' => self::DEVICE,
-                'device_name' => 'Pixel 7',
-                'platform' => 'android',
-            ])->assertCreated()->json('data.token');
+        $token = (string) $this->appSignIn([
+            'email' => $email,
+            'password' => 'Password123!',
+            'device_id' => self::DEVICE,
+            'device_name' => 'Pixel 7',
+            'platform' => 'android',
+        ], 'GiftCardWaiter/2.0.1 (Android 14; Pixel 7)')->assertCreated()->json('data.token');
         $this->app['auth']->forgetGuards();
         $this->withHeaders(['Authorization' => 'Bearer '.$token, 'X-Device-Id' => self::DEVICE]);
     }

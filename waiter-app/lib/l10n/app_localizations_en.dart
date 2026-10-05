@@ -277,6 +277,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInOfflineBody => 'Signing in needs a connection.';
 
   @override
+  String get signInCodeTitle => 'Enter the code';
+
+  @override
+  String signInCodeBody(String email) {
+    return 'A 6-digit code is on its way to $email.';
+  }
+
+  @override
+  String get signInCodeLabel => 'Code from the e-mail';
+
+  @override
+  String get signInCodeSubmit => 'Confirm';
+
+  @override
+  String get signInCodeResend => 'Send a new code';
+
+  @override
+  String get signInCodeSent => 'A new code is on its way.';
+
+  @override
+  String get signInCodeWait => 'A new code is possible in a few seconds.';
+
+  @override
+  String get signInCodeWrong =>
+      'The code is not correct. Check the latest e-mail.';
+
+  @override
+  String get signInCodeExpired =>
+      'The code expired or was wrong too often. Please sign in again.';
+
+  @override
+  String get signInCodeLocked =>
+      'Too many wrong codes. The account is locked for 60 minutes.';
+
+  @override
+  String get signInAppUpdated => 'The app was updated. Please sign in again.';
+
+  @override
   String get biometricsTitleFaceId => 'Unlock with Face ID?';
 
   @override

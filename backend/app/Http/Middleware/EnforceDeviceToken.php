@@ -6,6 +6,7 @@ namespace App\Http\Middleware;
 
 use App\Enums\SecurityEventType;
 use App\Exceptions\Domain\AccountDeactivatedException;
+use App\Exceptions\Domain\AppUpdatedException;
 use App\Exceptions\Domain\DomainException;
 use App\Models\PersonalAccessToken;
 use App\Models\User;
@@ -16,12 +17,14 @@ use Closure;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
  * A waiter app token only works from the phone it was issued to and stops working as soon as that
  * phone is revoked in Devices (403 DEVICE_REVOKED). A copied token is useless on another device.
- * A deactivated account gets 401 ACCOUNT_DEACTIVATED. It also only reaches the requests the waiter app makes
+ * A deactivated account gets 401 ACCOUNT_DEACTIVATED. An updated app signs in again (401 APP_UPDATED, decision
+ * 2026-10-06): the token only works for the app version it was issued to. It also only reaches the requests the waiter app makes
  * (method and path): listing vouchers, profile or password changes need the web app.
  */
 final class EnforceDeviceToken
@@ -95,6 +98,13 @@ final class EnforceDeviceToken
                 throw $e;
             }
             $request->attributes->set('device', $device);
+
+            if ($token->app_version === null || $token->app_version !== DeviceTokenService::appVersion($request->userAgent())) {
+                $token->forceFill(['revoked_at' => Carbon::now(), 'revoked_by' => $user->getKey()])->save();
+                $this->refused($request, $user, 'APP_UPDATED');
+
+                throw new AppUpdatedException;
+            }
 
             if (! $this->allowed($request)) {
                 $this->refused($request, $user, 'ROUTE_NOT_ALLOWED');

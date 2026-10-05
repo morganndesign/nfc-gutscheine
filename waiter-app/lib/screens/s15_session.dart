@@ -15,6 +15,7 @@ import '../core/theme/theme.dart';
 import '../l10n/app_localizations.dart';
 import 'access/countdown.dart';
 import 'access/sign_in_banner.dart';
+import 'access/sign_in_code.dart';
 
 // ---------------------------------------------------------------- 10.1 sheet
 
@@ -85,6 +86,11 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> {
     });
     final SignInOutcome outcome = await _services.session.reauthenticate(_password.text);
     if (!mounted || outcome is SignInSucceeded || outcome is SignInBlocked) return;
+    if (outcome is SignInCodeRequired) {
+      _password.clear();
+      setState(() => _busy = false);
+      return;
+    }
     setState(() {
       _busy = false;
       _issue = SignInIssue.of(outcome);
@@ -96,6 +102,13 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> {
     }
   }
 
+  void _restart(SignInOutcome? outcome) {
+    setState(() => _issue = outcome == null ? null : SignInIssue.of(outcome));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _passwordFocus.requestFocus();
+    });
+  }
+
   void _throttleOver() {
     if (!_throttled) return;
     announce(context, AppLocalizations.of(context).signInAvailable);
@@ -104,6 +117,10 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> {
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(listenable: _services.session, builder: (BuildContext context, _) => _body(context));
+  }
+
+  Widget _body(BuildContext context) {
     final SignInIssue? issue = _issue;
     if (issue is SignInThrottledIssue) {
       return MonotonicCountdown(
@@ -125,51 +142,59 @@ class _SessionExpiredSheetState extends State<SessionExpiredSheet> {
     final String email = session.lastEmail ?? session.user?.email ?? '';
     final SignInIssue? shown = _services.connectivity.isOnline || _throttled ? _issue : const SignInOfflineIssue();
 
+    final PendingSignInCode? pending = session.pendingCode;
     // While signing in the field is read-only, not greyed (as on S02).
-    final Widget content = Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        ScaledText(l.sessionExpiredBody, type: TypeTokens.bodyM, color: c.fgSecondary, textAlign: TextAlign.center),
-        const SizedBox(height: Space.s6),
-        SignInBannerSlot(issue: shown, remaining: remaining),
-        if (email.isNotEmpty) ...<Widget>[
-          Semantics(
-            container: true,
-            label: '${l.signInEmailLabel}, $email',
-            excludeSemantics: true,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                ScaledText(l.signInEmailLabel, type: TypeTokens.caption, color: c.fgSecondary),
-                const SizedBox(height: TextFieldTokens.labelGap),
-                ScaledText(email, type: TypeTokens.bodyL, maxLines: 1, overflow: TextOverflow.ellipsis),
+    final Widget content = pending != null
+        ? SignInCodeForm(pending: pending, onRestart: _restart)
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ScaledText(
+                l.sessionExpiredBody,
+                type: TypeTokens.bodyM,
+                color: c.fgSecondary,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: Space.s6),
+              SignInBannerSlot(issue: shown, remaining: remaining),
+              if (email.isNotEmpty) ...<Widget>[
+                Semantics(
+                  container: true,
+                  label: '${l.signInEmailLabel}, $email',
+                  excludeSemantics: true,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      ScaledText(l.signInEmailLabel, type: TypeTokens.caption, color: c.fgSecondary),
+                      const SizedBox(height: TextFieldTokens.labelGap),
+                      ScaledText(email, type: TypeTokens.bodyL, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: Space.s3),
               ],
-            ),
-          ),
-          const SizedBox(height: Space.s3),
-        ],
-        AutofillGroup(
-          child: WaiterTextField(
-            kind: TextFieldKind.password,
-            label: l.signInPasswordLabel,
-            controller: _password,
-            focusNode: _passwordFocus,
-            readOnly: _busy,
-            shakeController: _shake,
-            onChanged: (_) => _edited(),
-            onSubmitted: (_) => unawaited(_submit()),
-          ),
-        ),
-        const SizedBox(height: Space.s6),
-        PrimaryButton(
-          label: _throttled ? l.signInRetryIn(DateTimeFormat.countdown(remaining)) : l.sessionExpiredAction,
-          semanticLabel: _busy ? l.signInLoading : null,
-          status: _busy ? ButtonStatus.loading : ButtonStatus.idle,
-          onPressed: _canSubmit ? () => unawaited(_submit()) : null,
-        ),
-      ],
-    );
+              AutofillGroup(
+                child: WaiterTextField(
+                  kind: TextFieldKind.password,
+                  label: l.signInPasswordLabel,
+                  controller: _password,
+                  focusNode: _passwordFocus,
+                  readOnly: _busy,
+                  shakeController: _shake,
+                  onChanged: (_) => _edited(),
+                  onSubmitted: (_) => unawaited(_submit()),
+                ),
+              ),
+              const SizedBox(height: Space.s6),
+              PrimaryButton(
+                label: _throttled ? l.signInRetryIn(DateTimeFormat.countdown(remaining)) : l.sessionExpiredAction,
+                semanticLabel: _busy ? l.signInLoading : null,
+                status: _busy ? ButtonStatus.loading : ButtonStatus.idle,
+                onPressed: _canSubmit ? () => unawaited(_submit()) : null,
+              ),
+            ],
+          );
 
     // Content height, capped at the large detent above the keyboard.
     final double maxHeight = layout.size.height - layout.viewPadding.top - SheetTokens.largeTopGap - keyboard;

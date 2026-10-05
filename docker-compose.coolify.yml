@@ -107,7 +107,7 @@ services:
       SESSION_DOMAIN: ${SESSION_DOMAIN:-}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
-      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_MAILER: ${MAIL_MAILER:?is empty - set MAIL_MAILER=smtp and the MAIL_* settings in Coolify; sign-in codes need real e-mail}
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
@@ -185,7 +185,7 @@ services:
       SESSION_DOMAIN: ${SESSION_DOMAIN:-}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
-      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_MAILER: ${MAIL_MAILER:?is empty - set MAIL_MAILER=smtp and the MAIL_* settings in Coolify; sign-in codes need real e-mail}
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
@@ -264,7 +264,7 @@ services:
       SESSION_DOMAIN: ${SESSION_DOMAIN:-}
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
-      MAIL_MAILER: ${MAIL_MAILER:-log}
+      MAIL_MAILER: ${MAIL_MAILER:?is empty - set MAIL_MAILER=smtp and the MAIL_* settings in Coolify; sign-in codes need real e-mail}
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}

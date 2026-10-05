@@ -17,9 +17,14 @@ use Symfony\Component\HttpFoundation\Response;
  * and that is still active (audit S1): a copied cookie is useless on a new device id and after the device was
  * revoked. Platform administrators always sign in explicitly. Runs for every authenticated request, so the check
  * happens on the very request that restores the session, whatever endpoint it calls.
+ *
+ * It also ends browser sessions signed in before the person's `sessions_revoked_at` (an e-mail change or a
+ * deactivation, audit S4): the session remembers when it signed in.
  */
 final class BindRememberedSignIn
 {
+    public const SIGNED_IN_AT = 'signed_in_at';
+
     public function __construct(private readonly DeviceService $devices) {}
 
     public function handle(Request $request, Closure $next): Response
@@ -35,6 +40,20 @@ final class BindRememberedSignIn
             }
 
             throw new AuthenticationException('Please sign in again on this device.');
+        }
+
+        if ($user instanceof User && $guard->check() && $request->hasSession()) {
+            $session = $request->session();
+            if ($guard->viaRemember()) {
+                // Restored from a valid "remember me" cookie (rotated whenever sessions are revoked): a new sign-in.
+                $session->put(self::SIGNED_IN_AT, time());
+            } elseif ($user->sessions_revoked_at !== null && (int) $session->get(self::SIGNED_IN_AT, 0) < $user->sessions_revoked_at->getTimestamp()) {
+                $guard->logout();
+                $session->invalidate();
+                $session->regenerateToken();
+
+                throw new AuthenticationException('Please sign in again.');
+            }
         }
 
         return $next($request);

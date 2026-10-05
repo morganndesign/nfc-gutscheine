@@ -9,12 +9,14 @@ use App\Enums\SecurityEventType;
 use App\Enums\UserStatus;
 use App\Exceptions\Domain\LastOwnerException;
 use App\Exceptions\Domain\RoleAssignmentException;
+use App\Http\Middleware\BindRememberedSignIn;
 use App\Jobs\SendPasswordResetLink;
 use App\Models\Restaurant;
 use App\Models\Role;
 use App\Models\User;
 use App\Notifications\SignInEmailChanged;
 use App\Services\Audit\AuditLogger;
+use App\Services\Auth\LoginCodeService;
 use App\Services\Security\SecurityEventRecorder;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
@@ -23,6 +25,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Staff management within a restaurant. Users are never deleted: they are deactivated,
@@ -34,6 +37,7 @@ final class UserService
         private readonly AuditLogger $audit,
         private readonly InvitationService $invitations,
         private readonly SecurityEventRecorder $events,
+        private readonly LoginCodeService $loginCodes,
     ) {}
 
     /**
@@ -76,7 +80,7 @@ final class UserService
     }
 
     /**
-     * @param  array{name?: string, email?: string, role?: string, locale?: string}  $data
+     * @param  array{name?: string, email?: string, role?: string, locale?: string, current_password?: string}  $data
      */
     public function update(Actor $actor, User $user, array $data): User
     {
@@ -100,6 +104,13 @@ final class UserService
                     $user->can_give_loyalty = false;
                 }
                 $user->role_id = $role->getKey();
+            }
+
+            // Moving one's own account to another address needs the current password: a taken-over session must
+            // not be able to redirect the account (and then its password reset) to the attacker's mailbox.
+            if (isset($data['email']) && Str::lower($data['email']) !== $user->email && $user->is($actor->user)
+                && ! Hash::check((string) ($data['current_password'] ?? ''), $user->password)) {
+                throw ValidationException::withMessages(['current_password' => __('validation.current_password')]);
             }
 
             $user->fill(array_filter([
@@ -234,11 +245,22 @@ final class UserService
         $this->invitations->send($user, $restaurant, $invitedBy);
     }
 
+    /**
+     * Tokens, remembered and trusted browsers and open browser sessions of this person end (the session of the
+     * person making the change stays). Used for a deactivation and for an e-mail change.
+     */
     private function terminateAccess(User $user, Actor $actor): void
     {
-        // Sessions of an inactive user are rejected on the next request by ResolveTenant.
         $user->tokens()->whereNull('revoked_at')->update(['revoked_at' => Carbon::now(), 'revoked_by' => $actor->userId()]);
         $user->forceFill(['remember_token' => Str::random(60)])->save();
+        $this->loginCodes->forget($user);
+        // Every browser session signed in before now ends on its next request (BindRememberedSignIn); the session
+        // of the person making the change is renewed so it stays.
+        $now = Carbon::now();
+        $user->forceFill(['sessions_revoked_at' => $now])->save();
+        if ($user->is($actor->user) && request()->hasSession()) {
+            request()->session()->put(BindRememberedSignIn::SIGNED_IN_AT, $now->getTimestamp());
+        }
     }
 
     /**

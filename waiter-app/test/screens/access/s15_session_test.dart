@@ -73,6 +73,33 @@ void main() {
       await finishApp(tester, app);
     });
 
+    // Decision 2026-10-06: signing in again on the sheet needs the e-mailed code too.
+    testWidgets('signing in again on the sheet asks for the code; the layer underneath stays', (
+      WidgetTester tester,
+    ) async {
+      final TestApp app = await _startWith(tester, FakeReply(401, Payloads.error('UNAUTHENTICATED')));
+      app.backend
+        ..on('POST', '/auth/token', FakeReply(202, Payloads.codeChallenge()))
+        ..on('POST', '/auth/token/code', FakeReply(201, Payloads.token()));
+      await settle(tester);
+
+      await tester.enterText(_sheetPassword, 'secret');
+      await tester.pump();
+      await tester.tap(_sheetButton);
+      await settle(tester);
+      expect(find.byType(SessionExpiredSheet), findsOneWidget);
+      expect(text(en.signInCodeBody('a•••@example.at')), findsOneWidget);
+
+      await tester.enterText(find.descendant(of: find.byType(SessionExpiredSheet), matching: find.byType(TextField)), '654321');
+      await settle(tester);
+      expect(app.backend.to('POST', '/auth/token/code').single.body!['code'], '654321');
+      expect(app.session.expired, isNull);
+      expect(app.session.phase, AccessPhase.active);
+      await settle(tester);
+      expect(find.byType(SessionExpiredSheet), findsNothing);
+      await finishApp(tester, app);
+    });
+
     testWidgets('wrong password: banner, password cleared, sheet stays', (WidgetTester tester) async {
       final TestApp app = await _startWith(tester, FakeReply(401, Payloads.error('UNAUTHENTICATED')));
       app.backend.on('POST', '/auth/token', FakeReply(401, Payloads.error('UNAUTHENTICATED')));

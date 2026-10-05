@@ -39,6 +39,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property Carbon|null $password_changed_at
  * @property int $failed_login_attempts
  * @property Carbon|null $locked_until
+ * @property Carbon|null $sessions_revoked_at Browser sessions signed in before this end (e-mail change, deactivation)
  * @property Carbon $created_at
  * @property-read Role $role
  * @property-read Restaurant|null $restaurant
@@ -74,6 +75,7 @@ class User extends Authenticatable implements CanResetPasswordContract
             'last_login_at' => 'datetime',
             'password_changed_at' => 'datetime',
             'locked_until' => 'datetime',
+            'sessions_revoked_at' => 'datetime',
             'password' => 'hashed',
             'status' => UserStatus::class,
             'failed_login_attempts' => 'integer',

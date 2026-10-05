@@ -31,12 +31,14 @@ const RULES = new Set([
   "card.replacements",
   "device.token_theft",
   "auth.account_locked",
+  "auth.code_guessing",
   "auth.credential_stuffing",
   "presentment.guessing",
   "money.limit_hits",
   "money.reversals",
   "money.refunds",
   "money.complimentary",
+  "money.loyalty_topups",
 ])
 
 function SeverityBadge({ severity }: { severity: SecurityAlert["severity"] }) {

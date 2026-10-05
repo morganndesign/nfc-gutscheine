@@ -13,6 +13,7 @@ import '../l10n/app_localizations.dart';
 import 'access/countdown.dart';
 import 'access/forgot_password.dart';
 import 'access/sign_in_banner.dart';
+import 'access/sign_in_code.dart';
 
 /// S02 · Sign in (03a §2; errors A02, A07–A09 of 12 §3.3; layout widths
 /// 08 §3.5). Two fields, one button; the restaurant comes from the account.
@@ -132,6 +133,12 @@ class _SignInScreenState extends State<SignInScreen> {
     });
     final SignInOutcome outcome = await _services.session.signIn(_email.text, _password.text);
     if (!mounted || outcome is SignInSucceeded || outcome is SignInBlocked) return;
+    if (outcome is SignInCodeRequired) {
+      // The code step takes over (decision 2026-10-06); the password is not kept.
+      _password.clear();
+      setState(() => _busy = false);
+      return;
+    }
     setState(() {
       _busy = false;
       _issue = SignInIssue.of(outcome);
@@ -142,6 +149,17 @@ class _SignInScreenState extends State<SignInScreen> {
       _passwordFocus.requestFocus();
       _passwordShake.shake();
     }
+  }
+
+  /// Back from the code step: the password again, with why when it expired.
+  void _restart(SignInOutcome? outcome) {
+    setState(() {
+      _issue = outcome == null ? null : SignInIssue.of(outcome);
+      _noticeDismissed = true;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _passwordFocus.requestFocus();
+    });
   }
 
   void _throttleOver() {
@@ -195,67 +213,93 @@ class _SignInScreenState extends State<SignInScreen> {
       onPressed: _canSubmit ? _submit : null,
     );
 
+    final PendingSignInCode? pending = _services.session.pendingCode;
     // While signing in the fields are read-only, not greyed (03a §2 Loading).
-    final Widget form = AutofillGroup(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          if (!compact) const _BrandRow(),
-          SizedBox(height: compact ? Space.s6 : Space.s8),
-          Semantics(
-            header: true,
-            child: ScaledText(l.signInTitle, type: TypeTokens.titleL, maxLines: 2, overflow: TextOverflow.ellipsis),
-          ),
-          const SizedBox(height: Space.s2),
-          ScaledText(l.signInSubtitle, type: TypeTokens.bodyM, color: c.fgSecondary),
-          const SizedBox(height: Space.s8),
-          SignInBannerSlot(issue: _visibleIssue(_services.session.signInNotice), remaining: remaining),
-          WaiterTextField(
-            kind: TextFieldKind.email,
-            label: l.signInEmailLabel,
-            controller: _email,
-            focusNode: _emailFocus,
-            readOnly: _busy,
-            errorText: _emailError,
-            shakeController: _emailShake,
-            onChanged: (_) => _edited(email: true),
-            onSubmitted: (_) => _passwordFocus.requestFocus(),
-          ),
-          const SizedBox(height: Space.s3),
-          WaiterTextField(
-            kind: TextFieldKind.password,
-            label: l.signInPasswordLabel,
-            controller: _password,
-            focusNode: _passwordFocus,
-            readOnly: _busy,
-            shakeController: _passwordShake,
-            onChanged: (_) => _edited(),
-            onSubmitted: (_) => unawaited(_submit()),
-          ),
-          const SizedBox(height: Space.s2),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            // The 56-pt target overlaps the margin; its label aligns with
-            // the fields.
-            child: Transform.translate(
-              offset: Offset(
-                Directionality.of(context) == TextDirection.ltr
-                    ? -ButtonTokens.tertiaryPaddingHorizontal
-                    : ButtonTokens.tertiaryPaddingHorizontal,
-                0,
+    final Widget form = pending != null
+        ? Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              if (!compact) const _BrandRow(),
+              SizedBox(height: compact ? Space.s6 : Space.s8),
+              Semantics(
+                header: true,
+                child: ScaledText(
+                  l.signInCodeTitle,
+                  type: TypeTokens.titleL,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              child: TertiaryButton(
-                label: l.signInForgot,
-                isLink: true,
-                onPressed: () => unawaited(openForgotPassword(context)),
-              ),
+              const SizedBox(height: Space.s2),
+              SignInCodeForm(pending: pending, onRestart: _restart),
+            ],
+          )
+        : AutofillGroup(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (!compact) const _BrandRow(),
+                SizedBox(height: compact ? Space.s6 : Space.s8),
+                Semantics(
+                  header: true,
+                  child: ScaledText(
+                    l.signInTitle,
+                    type: TypeTokens.titleL,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: Space.s2),
+                ScaledText(l.signInSubtitle, type: TypeTokens.bodyM, color: c.fgSecondary),
+                const SizedBox(height: Space.s8),
+                SignInBannerSlot(issue: _visibleIssue(_services.session.signInNotice), remaining: remaining),
+                WaiterTextField(
+                  kind: TextFieldKind.email,
+                  label: l.signInEmailLabel,
+                  controller: _email,
+                  focusNode: _emailFocus,
+                  readOnly: _busy,
+                  errorText: _emailError,
+                  shakeController: _emailShake,
+                  onChanged: (_) => _edited(email: true),
+                  onSubmitted: (_) => _passwordFocus.requestFocus(),
+                ),
+                const SizedBox(height: Space.s3),
+                WaiterTextField(
+                  kind: TextFieldKind.password,
+                  label: l.signInPasswordLabel,
+                  controller: _password,
+                  focusNode: _passwordFocus,
+                  readOnly: _busy,
+                  shakeController: _passwordShake,
+                  onChanged: (_) => _edited(),
+                  onSubmitted: (_) => unawaited(_submit()),
+                ),
+                const SizedBox(height: Space.s2),
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  // The 56-pt target overlaps the margin; its label aligns with
+                  // the fields.
+                  child: Transform.translate(
+                    offset: Offset(
+                      Directionality.of(context) == TextDirection.ltr
+                          ? -ButtonTokens.tertiaryPaddingHorizontal
+                          : ButtonTokens.tertiaryPaddingHorizontal,
+                      0,
+                    ),
+                    child: TertiaryButton(
+                      label: l.signInForgot,
+                      isLink: true,
+                      onPressed: () => unawaited(openForgotPassword(context)),
+                    ),
+                  ),
+                ),
+                if (tablet) ...<Widget>[const SizedBox(height: Space.s8), button],
+              ],
             ),
-          ),
-          if (tablet) ...<Widget>[const SizedBox(height: Space.s8), button],
-        ],
-      ),
-    );
+          );
 
     final double bottom = keyboard > 0 ? keyboard + Space.s4 : layout.viewPadding.bottom + layout.ctaBottomPadding;
 
@@ -290,8 +334,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-                if (!tablet)
+                if (!tablet && pending == null)
                   Padding(padding: EdgeInsets.fromLTRB(layout.margin, Space.s4, layout.margin, bottom), child: button),
+                if (pending != null && !tablet) SizedBox(height: bottom),
               ],
             ),
           ),

@@ -39,16 +39,31 @@ cookie is accepted only on an active device this person has used before; otherwi
 ### Integrations (POS, accounting) — API tokens
 
 An owner creates a token under **Settings → API** and sends it as `Authorization: Bearer gcp_…`. A token acts as the
-user who created it, restricted to the abilities chosen (a subset of that user's permissions), expires after at
+user who created it, restricted to the abilities chosen (only `vouchers.redeem`, `vouchers.view`, `vouchers.export`, `transactions.view`, `transactions.export`, and only those the user has), expires after at
 most `API_TOKEN_MAX_DAYS` and can be revoked at any time. Platform administrators cannot create or use tokens.
 
 ### Native waiter app (GiftCard Waiter) — device-bound tokens
 
+Every app sign-in needs the 6-digit code from the e-mail (decision 2026-10-06):
+
 ```http
 POST /api/v1/auth/token
      {"email":"…","password":"…","device_id":"<16–64 chars [A-Za-z0-9-]>","device_name":"Pixel 7","platform":"android"|"ios"}
+→ 202 {"data": {"code_required": true, "login": "<uuid>", "email": "a•••@example.com", "expires_in": 600}}
+
+POST /api/v1/auth/token/code
+     {"login":"<uuid>","code":"123456","device_id":"<the same>","device_name":"Pixel 7","platform":"android"|"ios"}
 → 201 {"data": {"token": "gcp_…", "expires_at": "…", "user": SessionUser}}
+→ 422 LOGIN_CODE_REJECTED, context.reason: wrong | expired | locked
+
+POST /api/v1/auth/token/code/resend   {"login":"<uuid>"}
+→ 200 | 422 LOGIN_CODE_REJECTED, context.reason: wait | expired
 ```
+
+The code works only for the phone (`device_id`) that asked for it, never in the dashboard, once, for 10 minutes
+and 5 tries; 15 wrong codes of one person within an hour lock the account for 60 minutes (alert
+`auth.code_guessing`). The token is bound to the app version in the `User-Agent` (`GiftCardWaiter/<x.y.z> …`):
+another version gets `401 APP_UPDATED` and the token is revoked, so every app update signs in again.
 
 Send the token as `Authorization: Bearer …` together with the same `X-Device-Id`. The token:
 
@@ -149,7 +164,7 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 
 | Limiter | Limit | Applies to |
 |---|---|---|
-| `login` | 5/min per e-mail + IP, 30/min per IP | `/auth/login`, `/auth/token` |
+| `login` | 5/min per e-mail + IP, 30/min per IP | `/auth/login`, `/auth/token` (codes: `login-code`, `/auth/login/code*`, `/auth/token/code*`) |
 | `password-reset` | 5/min per IP | `/auth/forgot-password`, `/auth/reset-password` |
 | `app-config` | 60/min per IP | `/app/config` |
 | `presentment` | 90/min per user and `X-Device-Id` | `POST /presentments` |
@@ -185,7 +200,8 @@ endpoints also require a restaurant (platform administrators get `403 TENANT_NOT
 | Method | Path | |
 |---|---|---|
 | POST | `/auth/login` | `{email, password, remember?}` → `{data: SessionUser}` |
-| POST | `/auth/token` | Native waiter app sign-in (above) → `201 {data: {token, expires_at, user}}` |
+| POST | `/auth/token` | Native waiter app sign-in, step 1 (above) → `202` with the sign-in to confirm |
+| POST | `/auth/token/code`, `/auth/token/code/resend` | Step 2: the e-mailed code → `201 {data: {token, expires_at, user}}` |
 | POST | `/auth/logout` | Ends the session, or revokes the current token |
 | GET | `/auth/me` | `SessionUser`: `id, name, email, locale, role {slug, name}, is_platform_admin, permissions[]` (with a token: only what the token may do), `restaurant {id, name, slug, currency, timezone, locale, status, settings}`, `platform {support_email, notice}` |
 | PUT | `/auth/profile` | `{name?, locale? (de \| en \| bs)}` |

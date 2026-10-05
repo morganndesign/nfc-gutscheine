@@ -278,6 +278,44 @@ class AppLocalizationsDe extends AppLocalizations {
   String get signInOfflineBody => 'Anmelden braucht eine Internetverbindung.';
 
   @override
+  String get signInCodeTitle => 'Code eingeben';
+
+  @override
+  String signInCodeBody(String email) {
+    return 'Ein 6-stelliger Code ist unterwegs an $email.';
+  }
+
+  @override
+  String get signInCodeLabel => 'Code aus der E-Mail';
+
+  @override
+  String get signInCodeSubmit => 'Bestätigen';
+
+  @override
+  String get signInCodeResend => 'Neuen Code senden';
+
+  @override
+  String get signInCodeSent => 'Neuer Code ist unterwegs.';
+
+  @override
+  String get signInCodeWait => 'Neuer Code erst in einigen Sekunden möglich.';
+
+  @override
+  String get signInCodeWrong => 'Code stimmt nicht. Letzte E-Mail prüfen.';
+
+  @override
+  String get signInCodeExpired =>
+      'Code abgelaufen oder zu oft falsch. Bitte neu anmelden.';
+
+  @override
+  String get signInCodeLocked =>
+      'Zu viele falsche Codes. Das Konto ist 60 Minuten gesperrt.';
+
+  @override
+  String get signInAppUpdated =>
+      'Die App wurde aktualisiert. Bitte neu anmelden.';
+
+  @override
   String get biometricsTitleFaceId => 'Mit Face ID entsperren?';
 
   @override

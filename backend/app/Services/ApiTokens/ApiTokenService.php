@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\ApiTokens;
 
+use App\Enums\Permission;
 use App\Enums\SecurityEventType;
 use App\Exceptions\Domain\RoleAssignmentException;
 use App\Models\PersonalAccessToken;
@@ -26,6 +27,18 @@ final class ApiTokenService
     ) {}
 
     /**
+     * What an integration (a POS system) may do, at most: read and export, and redeem a scanned voucher. Never sell,
+     * give loyalty, refund, manage people or mint tokens: a leaked integration token must not move money or access.
+     */
+    public const INTEGRATION_ABILITIES = [
+        Permission::VouchersRedeem->value,
+        Permission::VouchersView->value,
+        Permission::VouchersExport->value,
+        Permission::TransactionsView->value,
+        Permission::TransactionsExport->value,
+    ];
+
+    /**
      * @param  list<string>  $abilities
      */
     public function create(Actor $actor, User $user, string $name, array $abilities, ?Carbon $expiresAt): NewAccessToken
@@ -37,6 +50,10 @@ final class ApiTokenService
 
         // Never more than the caller holds right now: the role in the dashboard, the role and the abilities of the
         // token when a token creates a token (a token with only api_tokens.manage must not mint a wider one).
+        $beyond = array_diff($abilities, self::INTEGRATION_ABILITIES);
+        if ($beyond !== []) {
+            throw new RoleAssignmentException('An integration token cannot have these abilities: '.implode(', ', $beyond));
+        }
         $allowed = $user->effectivePermissions();
         $invalid = array_diff($abilities, $allowed);
         if ($invalid !== []) {

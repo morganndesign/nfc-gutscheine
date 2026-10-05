@@ -8,8 +8,15 @@ number and not the value.
 
 **Signing in to the dashboard:** e-mail and password, then a **6-digit code** sent to your e-mail address (valid
 for 10 minutes; **Send a new code** if it does not arrive). After the code, that browser does not ask for a code
-for 15 days. A new password signs you out everywhere and every browser asks for a code again. The waiter app is
-not affected.
+for 15 days. A new password signs you out everywhere and every browser asks for a code again.
+
+**Signing in to the waiter app:** e-mail and password, then the **6-digit code** from the e-mail — on every sign-in,
+for every role. The phone then stays signed in until the app is **updated**: after each update the app asks for
+the password and a new code again. 15 wrong codes within an hour lock the account for 60 minutes. If e-mail is down,
+the platform team can hand out a code from the server (`php artisan auth:login-code`, see DEPLOYMENT).
+
+**Changing an e-mail address** in Team signs that person out everywhere (browsers and app); changing your own
+address needs your current password.
 
 ---
 

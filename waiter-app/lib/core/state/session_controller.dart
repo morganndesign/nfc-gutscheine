@@ -57,23 +57,27 @@ class SessionController extends ChangeNotifier {
     required String platform,
     required String deviceName,
     DiagnosticLog? log,
-  })  : _api = api,
-        _secrets = secrets,
-        _settings = settings,
-        _recent = recent,
-        _pending = pending,
-        _biometrics = biometrics,
-        _feedback = feedback,
-        _identity = identity,
-        _clock = clock,
-        _calendar = calendar,
-        _appVersion = appVersion,
-        _platform = platform,
-        _deviceName = deviceName,
-        _log = log;
+  }) : _api = api,
+       _secrets = secrets,
+       _settings = settings,
+       _recent = recent,
+       _pending = pending,
+       _biometrics = biometrics,
+       _feedback = feedback,
+       _identity = identity,
+       _clock = clock,
+       _calendar = calendar,
+       _appVersion = appVersion,
+       _platform = platform,
+       _deviceName = deviceName,
+       _log = log;
 
   static const String _tokenKey = 'token';
   static const String _profileKey = 'profile';
+
+  /// The app version the stored token was issued to: an updated app signs in
+  /// again (decision 2026-10-06).
+  static const String _tokenVersionKey = 'token_version';
   static const String _enrollmentKey = 'biometric_enrollment';
 
   /// Background longer than this discards the layer stack (N9).
@@ -207,6 +211,17 @@ class SessionController extends ChangeNotifier {
       return;
     }
 
+    // Every app update signs in again, with the e-mailed code (decision 2026-10-06).
+    if (token != null && await _secrets.read(_tokenVersionKey) != _appVersion) {
+      _log?.record('auth.appUpdated');
+      await _clearAccount();
+      if (launch != _launch) return;
+      _signInNotice = SignInNotice.appUpdated;
+      _startupProblem = result.problem;
+      _go(result.problem != null ? AccessPhase.startupProblem : AccessPhase.signedOut);
+      return;
+    }
+
     if (token == null || _user == null) {
       await _clearAccount();
       if (launch != _launch) return;
@@ -276,95 +291,192 @@ class SessionController extends ChangeNotifier {
 
   // --------------------------------------------------------------- sign-in
 
-  /// S02 sign-in (`POST /auth/token`).
-  Future<SignInOutcome> signIn(String email, String password) async {
-    final SignInOutcome outcome = await _authenticate(email.trim(), password);
-    if (outcome is! SignInSucceeded) return outcome;
+  /// The sign-in waiting for its e-mailed code (S02 and the S15 sheet show the
+  /// code step while this is set).
+  PendingSignInCode? _pendingCode;
+  PendingSignInCode? get pendingCode => _pendingCode;
 
-    _signInNotice = null;
-    if (!_settings.biometricsOffered && _biometricKind != BiometricKind.none) {
-      _go(AccessPhase.onboardingBiometrics);
-    } else {
-      _afterBiometricsStep();
-    }
-    return outcome;
-  }
+  /// S02 sign-in, step 1 (`POST /auth/token`): the password. Every app sign-in
+  /// then needs the code from the e-mail (decision 2026-10-06).
+  Future<SignInOutcome> signIn(String email, String password) => _authenticate(email.trim(), password, reauth: false);
 
   /// S15 session sheet: signs in again with the stored e-mail (A01). The layer
   /// stack underneath is kept (lookup → S05, redeem → S07 with amount).
-  Future<SignInOutcome> reauthenticate(String password) async {
+  Future<SignInOutcome> reauthenticate(String password) {
     final String email = _settings.lastEmail ?? _user?.email ?? '';
-    final String? previousUser = _user?.id;
-    final SignInOutcome outcome = await _authenticate(email, password);
-    if (outcome is SignInSucceeded) {
-      _expired = null;
-      if (previousUser != _user?.id) {
-        _signals.add(SessionSignal.signedOut);
-      } else {
-        _signals.add(SessionSignal.reauthenticated);
-      }
-      notifyListeners();
-    }
-    return outcome;
+    return _authenticate(email, password, reauth: true);
   }
 
-  Future<SignInOutcome> _authenticate(String email, String password) async {
+  /// Step 2: the code from the e-mail.
+  Future<SignInOutcome> confirmSignInCode(String code) async {
+    final PendingSignInCode? pending = _pendingCode;
+    if (pending == null) return const SignInCodeExpired();
     try {
-      final SignInResult result = await _api.signIn(
+      final SignInResult result = await _api.confirmSignInCode(
+        login: pending.login,
+        code: code,
+        deviceId: _identity.deviceId,
+        deviceName: _deviceName,
+        platform: _platform,
+      );
+      return await _signedIn(result, pending);
+    } on ApiRejected catch (e) {
+      if (e.code == 'LOGIN_CODE_REJECTED') {
+        switch (e.contextString('reason')) {
+          case 'wrong':
+            _feedback.haptic(HapticToken.error);
+            return const SignInCodeWrong();
+          case 'locked':
+            _endCodeStep();
+            _feedback.haptic(HapticToken.error);
+            return const SignInCodeLocked();
+          default:
+            _endCodeStep();
+            _feedback.haptic(HapticToken.warning);
+            return const SignInCodeExpired();
+        }
+      }
+      return _refused(e);
+    } on ApiFailure catch (e) {
+      return _refused(e);
+    }
+  }
+
+  /// "Send a new code" (at most every 30 s, 4 times per sign-in).
+  Future<CodeResendOutcome> resendSignInCode() async {
+    final PendingSignInCode? pending = _pendingCode;
+    if (pending == null) return CodeResendOutcome.expired;
+    try {
+      await _api.resendSignInCode(pending.login);
+      return CodeResendOutcome.sent;
+    } on ApiRejected catch (e) {
+      if (e.code == 'LOGIN_CODE_REJECTED' && e.contextString('reason') == 'wait') return CodeResendOutcome.wait;
+      if (e.code == 'LOGIN_CODE_REJECTED') {
+        _endCodeStep();
+        return CodeResendOutcome.expired;
+      }
+      return CodeResendOutcome.failed;
+    } on ApiTransportFailure {
+      return CodeResendOutcome.offline;
+    } on ApiFailure {
+      return CodeResendOutcome.failed;
+    }
+  }
+
+  /// "Back" on the code step: the password again.
+  void cancelSignInCode() => _endCodeStep();
+
+  void _endCodeStep() {
+    if (_pendingCode == null) return;
+    _pendingCode = null;
+    notifyListeners();
+  }
+
+  Future<SignInOutcome> _authenticate(String email, String password, {required bool reauth}) async {
+    try {
+      final SignInStep step = await _api.signIn(
         email: email,
         password: password,
         deviceId: _identity.deviceId,
         deviceName: _deviceName,
         platform: _platform,
       );
-      if (!result.user.canUseApp) {
-        _feedback.haptic(HapticToken.error);
-        return const SignInNoPermission();
+      final PendingSignInCode pending = PendingSignInCode(
+        login: step is SignInChallenge ? step.login : '',
+        maskedEmail: step is SignInChallenge ? step.maskedEmail : '',
+        email: email,
+        reauth: reauth,
+      );
+      switch (step) {
+        case SignInChallenge(:final String maskedEmail):
+          _pendingCode = pending;
+          _log?.record('auth.codeSent');
+          notifyListeners();
+          return SignInCodeRequired(maskedEmail);
+        case SignInResult():
+          return await _signedIn(step, pending);
       }
-      final bool userChanged = _user != null && _user!.id != result.user.id;
-      _identity.token = result.token;
-      _user = result.user;
-      _settings.lastEmail = email;
-      await _secrets.write(_tokenKey, result.token);
-      await _secrets.write(_profileKey, jsonEncode(result.user.toJson()));
-      if (userChanged) {
-        await _recent.clear();
-        _settings.biometricsEnabled = false;
-      }
-      await _loadRecent();
-      _log?.record('auth.signedIn');
-      return const SignInSucceeded();
-    } on ApiUnauthorized catch (e) {
-      if (e.isDeactivated) {
-        _block(BlockedKind.deactivated, e.requestId, clear: true);
-        return const SignInBlocked();
-      }
-      _feedback.haptic(HapticToken.error);
-      return const SignInInvalid();
-    } on ApiRejected catch (e) {
-      switch (e.code) {
-        case 'DEVICE_REVOKED':
-          _block(BlockedKind.deviceRevoked, e.requestId, clear: true);
-          return const SignInBlocked();
-        case 'RESTAURANT_SUSPENDED':
-          _block(BlockedKind.suspended, e.requestId);
-          return const SignInBlocked();
-        case 'FORBIDDEN':
-          _feedback.haptic(HapticToken.error);
-          return const SignInNoPermission();
-      }
-      if (e.status == 429) {
-        _feedback.haptic(HapticToken.warning);
-        return SignInThrottled(_clock.now() + (e.retryAfter ?? const Duration(seconds: 60)));
-      }
-      _feedback.haptic(HapticToken.error);
-      return const SignInInvalid();
-    } on ApiTransportFailure {
-      _feedback.haptic(HapticToken.warning);
-      return const SignInOffline();
     } on ApiFailure catch (e) {
-      _feedback.haptic(HapticToken.warning);
-      return SignInServerError(requestId: e.requestId);
+      return _refused(e);
+    }
+  }
+
+  /// The token arrived: store it and go on (S02: onboarding or Ready; S15: the
+  /// layers underneath).
+  Future<SignInOutcome> _signedIn(SignInResult result, PendingSignInCode pending) async {
+    _pendingCode = null;
+    if (!result.user.canUseApp) {
+      _feedback.haptic(HapticToken.error);
+      notifyListeners();
+      return const SignInNoPermission();
+    }
+    final String? previousUser = _user?.id;
+    final bool userChanged = _user != null && _user!.id != result.user.id;
+    _identity.token = result.token;
+    _user = result.user;
+    _settings.lastEmail = pending.email;
+    await _secrets.write(_tokenKey, result.token);
+    await _secrets.write(_tokenVersionKey, _appVersion);
+    await _secrets.write(_profileKey, jsonEncode(result.user.toJson()));
+    if (userChanged) {
+      await _recent.clear();
+      _settings.biometricsEnabled = false;
+    }
+    await _loadRecent();
+    _log?.record('auth.signedIn');
+
+    if (pending.reauth) {
+      _expired = null;
+      _signals.add(previousUser != _user?.id ? SessionSignal.signedOut : SessionSignal.reauthenticated);
+      notifyListeners();
+      return const SignInSucceeded();
+    }
+    _signInNotice = null;
+    if (!_settings.biometricsOffered && _biometricKind != BiometricKind.none) {
+      _go(AccessPhase.onboardingBiometrics);
+    } else {
+      _afterBiometricsStep();
+    }
+    return const SignInSucceeded();
+  }
+
+  SignInOutcome _refused(ApiFailure failure) {
+    switch (failure) {
+      case ApiUnauthorized(:final bool isDeactivated, :final String requestId):
+        if (isDeactivated) {
+          _pendingCode = null;
+          _block(BlockedKind.deactivated, requestId, clear: true);
+          return const SignInBlocked();
+        }
+        _feedback.haptic(HapticToken.error);
+        return const SignInInvalid();
+      case ApiRejected(:final String code, :final String requestId, :final int status, :final Duration? retryAfter):
+        switch (code) {
+          case 'DEVICE_REVOKED':
+            _pendingCode = null;
+            _block(BlockedKind.deviceRevoked, requestId, clear: true);
+            return const SignInBlocked();
+          case 'RESTAURANT_SUSPENDED':
+            _pendingCode = null;
+            _block(BlockedKind.suspended, requestId);
+            return const SignInBlocked();
+          case 'FORBIDDEN':
+            _feedback.haptic(HapticToken.error);
+            _endCodeStep();
+            return const SignInNoPermission();
+        }
+        if (status == 429) {
+          _feedback.haptic(HapticToken.warning);
+          return SignInThrottled(_clock.now() + (retryAfter ?? const Duration(seconds: 60)));
+        }
+        _feedback.haptic(HapticToken.error);
+        return const SignInInvalid();
+      case ApiTransportFailure():
+        _feedback.haptic(HapticToken.warning);
+        return const SignInOffline();
+      case ApiServerFault() || ApiCancelled():
+        _feedback.haptic(HapticToken.warning);
+        return SignInServerError(requestId: failure.requestId);
     }
   }
 
@@ -489,7 +601,9 @@ class SessionController extends ChangeNotifier {
     _user = null;
     _expired = null;
     _rolloverTimer?.cancel();
+    _pendingCode = null;
     await _secrets.delete(_tokenKey);
+    await _secrets.delete(_tokenVersionKey);
     await _secrets.delete(_profileKey);
     await _recent.clear();
     _pending.detach();
@@ -553,9 +667,15 @@ class SessionController extends ChangeNotifier {
   /// an access problem and has been handled here.
   bool handleFailure(ApiFailure failure, SessionContext context) {
     switch (failure) {
-      case ApiUnauthorized(:final bool isDeactivated, :final String requestId):
+      case ApiUnauthorized(:final bool isDeactivated, :final String requestId, :final String code):
         if (isDeactivated) {
           _block(BlockedKind.deactivated, requestId, clear: true);
+          return true;
+        }
+        // The server refuses tokens of an older app version: sign in again.
+        if (code == 'APP_UPDATED') {
+          _signInNotice = SignInNotice.appUpdated;
+          unawaited(_signOutLocally());
           return true;
         }
         if (_phase == AccessPhase.active || _phase == AccessPhase.locked) {
@@ -660,8 +780,7 @@ class SessionController extends ChangeNotifier {
   // ------------------------------------------------------------ business day
 
   /// Current business-day key in the restaurant zone.
-  String businessDayKey([DateTime? at]) =>
-      _calendar.dayOf(_zone, (at ?? DateTime.now()).toUtc()).key;
+  String businessDayKey([DateTime? at]) => _calendar.dayOf(_zone, (at ?? DateTime.now()).toUtc()).key;
 
   String get _zone => _user?.restaurant?.timezone ?? 'Europe/Vienna';
 

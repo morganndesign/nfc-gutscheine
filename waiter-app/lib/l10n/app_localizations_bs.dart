@@ -277,6 +277,43 @@ class AppLocalizationsBs extends AppLocalizations {
   String get signInOfflineBody => 'Za prijavu je potrebna veza.';
 
   @override
+  String get signInCodeTitle => 'Unesi kod';
+
+  @override
+  String signInCodeBody(String email) {
+    return '6-cifreni kod je poslan na $email.';
+  }
+
+  @override
+  String get signInCodeLabel => 'Kod iz e-maila';
+
+  @override
+  String get signInCodeSubmit => 'Potvrdi';
+
+  @override
+  String get signInCodeResend => 'Pošalji novi kod';
+
+  @override
+  String get signInCodeSent => 'Novi kod je poslan.';
+
+  @override
+  String get signInCodeWait => 'Novi kod je moguć za nekoliko sekundi.';
+
+  @override
+  String get signInCodeWrong => 'Kod nije tačan. Provjeri posljednji e-mail.';
+
+  @override
+  String get signInCodeExpired =>
+      'Kod je istekao ili je previše puta pogrešan. Prijavi se ponovo.';
+
+  @override
+  String get signInCodeLocked =>
+      'Previše pogrešnih kodova. Račun je zaključan 60 minuta.';
+
+  @override
+  String get signInAppUpdated => 'Aplikacija je ažurirana. Prijavi se ponovo.';
+
+  @override
   String get biometricsTitleFaceId => 'Otključavati pomoću Face ID-a?';
 
   @override

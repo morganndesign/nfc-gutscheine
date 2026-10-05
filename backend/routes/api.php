@@ -53,6 +53,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('login/code', [AuthController::class, 'confirmCode'])->middleware('throttle:login-code');
         Route::post('login/code/resend', [AuthController::class, 'resendCode'])->middleware('throttle:login-code');
         Route::post('token', [AuthController::class, 'token'])->middleware('throttle:login');
+        Route::post('token/code', [AuthController::class, 'confirmTokenCode'])->middleware('throttle:login-code');
+        Route::post('token/code/resend', [AuthController::class, 'resendTokenCode'])->middleware('throttle:login-code');
         Route::post('forgot-password', [PasswordController::class, 'forgot'])->middleware('throttle:password-reset');
         Route::post('reset-password', [PasswordController::class, 'reset'])->middleware('throttle:password-reset');
     });

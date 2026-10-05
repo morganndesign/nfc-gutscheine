@@ -156,7 +156,7 @@ final class SecurityEventStreamTest extends TestCase
     {
         $restaurant = $this->restaurant();
         $this->staff($restaurant, RoleSlug::Waiter, ['email' => 'anna@example.com']);
-        $token = (string) $this->postJson('/api/v1/auth/token', [
+        $token = (string) $this->appSignIn([
             'email' => 'anna@example.com',
             'password' => 'Password123!',
             'device_id' => 'b1a2c3d4-e5f6-4711-8899-aabbccddeeff',

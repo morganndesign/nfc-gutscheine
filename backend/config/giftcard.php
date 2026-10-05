@@ -43,6 +43,10 @@ return [
         // browser that confirmed a code is trusted.
         'login_code_minutes' => 10,
         'login_code_attempts' => 5,
+        // Wrong codes of one person within an hour (across sign-ins) that lock the account: guessing with a stolen
+        // password from many addresses ends there.
+        'login_code_hourly_attempts' => 15,
+        'login_code_lock_minutes' => 60,
         'login_code_sends' => 4,
         'login_code_resend_seconds' => 30,
         'trusted_browser_days' => 15,

@@ -83,7 +83,8 @@ final class SettingsAndApiTokensTest extends TestCase
         $restaurant = $this->restaurant();
         $this->actingAsStaff($restaurant, RoleSlug::Owner);
 
+        // Not even offered to integrations (audit 2026-10-06 L1).
         $this->postJson('/api/v1/api-tokens', ['name' => 'Bad', 'abilities' => ['platform.restaurants.manage']])
-            ->assertForbidden()->assertJsonPath('code', 'ROLE_ASSIGNMENT_FORBIDDEN');
+            ->assertUnprocessable()->assertJsonValidationErrors('abilities.0');
     }
 }

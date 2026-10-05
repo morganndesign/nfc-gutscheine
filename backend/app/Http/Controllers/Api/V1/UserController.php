@@ -54,7 +54,7 @@ final class UserController extends Controller
 
     public function update(UpdateUserRequest $request, User $user): UserResource
     {
-        /** @var array{name?: string, email?: string, role?: string, locale?: string} $data */
+        /** @var array{name?: string, email?: string, role?: string, locale?: string, current_password?: string} $data */
         $data = $request->validated();
 
         return UserResource::make($this->users->update(Actor::fromRequest($request), $user, $data));

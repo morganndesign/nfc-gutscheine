@@ -27,23 +27,28 @@ final class AccountTakeoverAuditTest extends TestCase
         $this->restaurant = $this->restaurant();
     }
 
-    /** An integration token allowed to manage tokens must not mint a token with rights it does not have itself. */
+    /**
+     * An integration token (even an old one allowed to manage tokens) never mints a token with more than an
+     * integration may do (audit 2026-10-06 L1), nor one with rights it does not have itself.
+     */
     public function test_a_token_cannot_mint_a_token_with_more_rights_than_itself(): void
     {
         $owner = $this->staff($this->restaurant, RoleSlug::Owner);
         $narrow = $this->integrationToken($owner, ['api_tokens.manage']);
 
         $this->withToken($narrow)->postJson('/api/v1/api-tokens', ['name' => 'Wide', 'abilities' => ['users.manage', 'vouchers.sell_complimentary']])
+            ->assertUnprocessable()->assertJsonValidationErrors(['abilities.0', 'abilities.1']);
+        $this->app['auth']->forgetGuards();
+        $this->withToken($narrow)->postJson('/api/v1/api-tokens', ['name' => 'Same', 'abilities' => ['api_tokens.manage']])->assertUnprocessable();
+        $this->app['auth']->forgetGuards();
+        $this->withToken($narrow)->postJson('/api/v1/api-tokens', ['name' => 'Redeem', 'abilities' => ['vouchers.redeem']])
             ->assertForbidden()->assertJsonPath('code', 'ROLE_ASSIGNMENT_FORBIDDEN');
         $this->assertSame(1, PersonalAccessToken::query()->count());
 
-        // Within its own rights it still works.
+        // In the dashboard (a session) only the integration abilities, whatever the role.
         $this->app['auth']->forgetGuards();
-        $this->withToken($narrow)->postJson('/api/v1/api-tokens', ['name' => 'Same', 'abilities' => ['api_tokens.manage']])->assertCreated();
-
-        // In the dashboard (a session) the role is the limit, as before.
-        $this->app['auth']->forgetGuards();
-        $this->actingAs($owner, 'web')->postJson('/api/v1/api-tokens', ['name' => 'Wide', 'abilities' => ['users.manage']])->assertCreated();
+        $this->actingAs($owner, 'web')->postJson('/api/v1/api-tokens', ['name' => 'Wide', 'abilities' => ['users.manage']])->assertUnprocessable();
+        $this->actingAs($owner, 'web')->postJson('/api/v1/api-tokens', ['name' => 'POS', 'abilities' => ['vouchers.redeem']])->assertCreated();
     }
 
     /**

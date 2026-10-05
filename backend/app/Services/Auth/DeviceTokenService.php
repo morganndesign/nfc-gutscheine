@@ -72,15 +72,26 @@ final class DeviceTokenService
         private readonly SecurityEventRecorder $events,
     ) {}
 
+    /** Whether this person may use the app at all (a restaurant's till, or platform staff at the station). */
+    public function assertEligible(User $user): void
+    {
+        $station = $user->isPlatformAdmin();
+        if ($station ? self::abilitiesFor($user) === [] : ($user->restaurant === null || array_diff(self::ABILITIES, $user->permissionSlugs()) !== [])) {
+            throw new AuthorizationException;
+        }
+    }
+
+    /** `GiftCardWaiter/2.0.20 (iOS 18; iPhone)` → `2.0.20`; null for anything else. */
+    public static function appVersion(?string $userAgent): ?string
+    {
+        return $userAgent !== null && preg_match('/^GiftCardWaiter\/(\d{1,4}\.\d{1,4}\.\d{1,4})\b/', $userAgent, $m) === 1 ? $m[1] : null;
+    }
+
     public function issue(Request $request, User $user, string $deviceId, string $deviceName, string $platform): NewAccessToken
     {
         $restaurant = $user->restaurant;
-        $granted = $user->permissionSlugs();
         $station = $user->isPlatformAdmin();
-
-        if ($station ? self::abilitiesFor($user) === [] : ($restaurant === null || array_diff(self::ABILITIES, $granted) !== [])) {
-            throw new AuthorizationException;
-        }
+        $this->assertEligible($user);
 
         $device = $this->devices->resolve($station ? null : $restaurant, $user, $deviceId, $request->userAgent(), $request->ip(), $deviceName, atTill: true);
 
@@ -92,7 +103,9 @@ final class DeviceTokenService
             throw new DeviceRevokedException;
         }
 
-        return DB::transaction(function () use ($user, $device, $platform, $actor): NewAccessToken {
+        $version = self::appVersion($request->userAgent());
+
+        return DB::transaction(function () use ($user, $device, $platform, $actor, $version): NewAccessToken {
             PersonalAccessToken::query()
                 ->where('tokenable_id', $user->getKey())
                 ->where('device_id', $device->getKey())
@@ -107,7 +120,7 @@ final class DeviceTokenService
 
             /** @var PersonalAccessToken $model */
             $model = $token->accessToken;
-            $model->forceFill(['restaurant_id' => $user->restaurant_id, 'device_id' => $device->getKey()])->save();
+            $model->forceFill(['restaurant_id' => $user->restaurant_id, 'device_id' => $device->getKey(), 'app_version' => $version])->save();
 
             $this->audit->log('auth.device_token_issued', $actor, $device, null, [
                 'platform' => $platform,

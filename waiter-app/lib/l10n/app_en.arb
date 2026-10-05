@@ -385,6 +385,55 @@
   "@signInOfflineBody": {
     "description": "Spec key: signIn.offline.body (12 §5.3) · Max: 48 · Notes: 03a · A09"
   },
+  "signInCodeTitle": "Enter the code",
+  "@signInCodeTitle": {
+    "description": "Spec key: signIn.code.title (12 §5.3) · Max: 32 · Notes: S02 / S15 · second step of every app sign-in (decision 2026-10-06)"
+  },
+  "signInCodeBody": "A 6-digit code is on its way to {email}.",
+  "@signInCodeBody": {
+    "description": "Spec key: signIn.code.body (12 §5.3) · Max: 90 · Notes: S02 / S15 · {email} masked by the server (a•••@example.com)",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "signInCodeLabel": "Code from the e-mail",
+  "@signInCodeLabel": {
+    "description": "Spec key: signIn.code.label (12 §5.3) · Max: 24 · Notes: S02 / S15 · 6 digits"
+  },
+  "signInCodeSubmit": "Confirm",
+  "@signInCodeSubmit": {
+    "description": "Spec key: signIn.code.submit (12 §5.3) · Max: 24 · Notes: S02 / S15"
+  },
+  "signInCodeResend": "Send a new code",
+  "@signInCodeResend": {
+    "description": "Spec key: signIn.code.resend (12 §5.3) · Max: 24 · Notes: S02 / S15 · at most every 30 s"
+  },
+  "signInCodeSent": "A new code is on its way.",
+  "@signInCodeSent": {
+    "description": "Spec key: signIn.code.sent (12 §5.3) · Max: 48 · Notes: S02 / S15 · info after resend"
+  },
+  "signInCodeWait": "A new code is possible in a few seconds.",
+  "@signInCodeWait": {
+    "description": "Spec key: signIn.code.wait (12 §5.3) · Max: 60 · Notes: S02 / S15 · resend within 30 s"
+  },
+  "signInCodeWrong": "The code is not correct. Check the latest e-mail.",
+  "@signInCodeWrong": {
+    "description": "Spec key: signIn.code.wrong (12 §5.3) · Max: 60 · Notes: S02 / S15 · inline under the field"
+  },
+  "signInCodeExpired": "The code expired or was wrong too often. Please sign in again.",
+  "@signInCodeExpired": {
+    "description": "Spec key: signIn.code.expired (12 §5.3) · Max: 90 · Notes: S02 / S15 · back on the password step"
+  },
+  "signInCodeLocked": "Too many wrong codes. The account is locked for 60 minutes.",
+  "@signInCodeLocked": {
+    "description": "Spec key: signIn.code.locked (12 §5.3) · Max: 90 · Notes: S02 / S15 · back on the password step"
+  },
+  "signInAppUpdated": "The app was updated. Please sign in again.",
+  "@signInAppUpdated": {
+    "description": "Spec key: signIn.appUpdated (12 §5.3) · Max: 60 · Notes: S02 · notice after an update (every update signs in again with a code)"
+  },
   "biometricsTitleFaceId": "Unlock with Face ID?",
   "@biometricsTitleFaceId": {
     "description": "Spec key: biometrics.title.faceId (12 §5.4) · Max: 32 · Notes: 03a · question allowed (offer screen)"

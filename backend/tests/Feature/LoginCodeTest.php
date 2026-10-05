@@ -164,17 +164,6 @@ final class LoginCodeTest extends TestCase
         $this->password($cookie)->assertStatus(202);
     }
 
-    public function test_the_waiter_app_signs_in_without_a_code(): void
-    {
-        $this->staff($this->user->restaurant, RoleSlug::Waiter, ['email' => 'kellner@example.com']);
-        $sent = $this->sentCount();
-        $this->postJson('/api/v1/auth/token', [
-            'email' => 'kellner@example.com', 'password' => 'Password123!',
-            'device_id' => '6f0f3c1e-2b5d-4c7a-9e1f-0a1b2c3d4e5f', 'device_name' => 'Kasse', 'platform' => 'android',
-        ])->assertCreated();
-        $this->assertSame($sent, $this->sentCount());
-    }
-
     public function test_the_code_e_mail_follows_the_users_language(): void
     {
         $this->user->forceFill(['locale' => 'bs'])->save();

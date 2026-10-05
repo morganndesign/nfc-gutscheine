@@ -560,6 +560,72 @@ abstract class AppLocalizations {
   /// **'Signing in needs a connection.'**
   String get signInOfflineBody;
 
+  /// Spec key: signIn.code.title (12 §5.3) · Max: 32 · Notes: S02 / S15 · second step of every app sign-in (decision 2026-10-06)
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the code'**
+  String get signInCodeTitle;
+
+  /// Spec key: signIn.code.body (12 §5.3) · Max: 90 · Notes: S02 / S15 · {email} masked by the server (a•••@example.com)
+  ///
+  /// In en, this message translates to:
+  /// **'A 6-digit code is on its way to {email}.'**
+  String signInCodeBody(String email);
+
+  /// Spec key: signIn.code.label (12 §5.3) · Max: 24 · Notes: S02 / S15 · 6 digits
+  ///
+  /// In en, this message translates to:
+  /// **'Code from the e-mail'**
+  String get signInCodeLabel;
+
+  /// Spec key: signIn.code.submit (12 §5.3) · Max: 24 · Notes: S02 / S15
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get signInCodeSubmit;
+
+  /// Spec key: signIn.code.resend (12 §5.3) · Max: 24 · Notes: S02 / S15 · at most every 30 s
+  ///
+  /// In en, this message translates to:
+  /// **'Send a new code'**
+  String get signInCodeResend;
+
+  /// Spec key: signIn.code.sent (12 §5.3) · Max: 48 · Notes: S02 / S15 · info after resend
+  ///
+  /// In en, this message translates to:
+  /// **'A new code is on its way.'**
+  String get signInCodeSent;
+
+  /// Spec key: signIn.code.wait (12 §5.3) · Max: 60 · Notes: S02 / S15 · resend within 30 s
+  ///
+  /// In en, this message translates to:
+  /// **'A new code is possible in a few seconds.'**
+  String get signInCodeWait;
+
+  /// Spec key: signIn.code.wrong (12 §5.3) · Max: 60 · Notes: S02 / S15 · inline under the field
+  ///
+  /// In en, this message translates to:
+  /// **'The code is not correct. Check the latest e-mail.'**
+  String get signInCodeWrong;
+
+  /// Spec key: signIn.code.expired (12 §5.3) · Max: 90 · Notes: S02 / S15 · back on the password step
+  ///
+  /// In en, this message translates to:
+  /// **'The code expired or was wrong too often. Please sign in again.'**
+  String get signInCodeExpired;
+
+  /// Spec key: signIn.code.locked (12 §5.3) · Max: 90 · Notes: S02 / S15 · back on the password step
+  ///
+  /// In en, this message translates to:
+  /// **'Too many wrong codes. The account is locked for 60 minutes.'**
+  String get signInCodeLocked;
+
+  /// Spec key: signIn.appUpdated (12 §5.3) · Max: 60 · Notes: S02 · notice after an update (every update signs in again with a code)
+  ///
+  /// In en, this message translates to:
+  /// **'The app was updated. Please sign in again.'**
+  String get signInAppUpdated;
+
   /// Spec key: biometrics.title.faceId (12 §5.4) · Max: 32 · Notes: 03a · question allowed (offer screen)
   ///
   /// In en, this message translates to:
