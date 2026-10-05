@@ -81,6 +81,14 @@ dashboard.
 - **Settings → Vouchers**: minimum value, maximum balance, maximum per redemption, maximum per voucher and day,
   redemptions per voucher and hour, validity, reloads, partial redemption, customer e-mails, brand color, e-mail
   footer.
+  With partial redemption off, the maximum per redemption must be at least the maximum balance (otherwise a
+  voucher could never be redeemed); the form refuses anything else.
+- **Cancel a sale** (voucher page ⋯, booked by mistake): offered only while the voucher is unused and sold today;
+  the seller themself only within 15 minutes, after that another manager or the owner. If the answer is lost,
+  confirm again with the same reason — it is never booked twice. A cancelled loyalty sale sends the guest no
+  "refunded" e-mail.
+- **Cash-up**: "Korrigierte bezahlte Aufladungen" is a correction of a booking error, not a payout. Loyalty value
+  is never counted as money (also not in the CSV exports, which show it in their own "Loyalty value" column).
 
 ---
 

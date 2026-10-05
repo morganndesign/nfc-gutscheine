@@ -23,12 +23,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCancelSale, useReinstateVoucher, useVoucher, useVoucherAction } from "@/lib/api/hooks"
-import { errorMessage } from "@/lib/api/client"
+import { errorMessage, newIdempotencyKey } from "@/lib/api/client"
+import { CANCEL_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 import type { Voucher } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
 import { formatDate, formatDateTime, formatRelative, todayInput } from "@/lib/format"
 import { formatMoney } from "@/lib/money"
-import { soldToday } from "@/lib/voucher-state"
 import { useDocumentTitle } from "@/hooks/use-document-title"
 import { useT } from "@/lib/i18n"
 
@@ -112,18 +112,16 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
     }
   }
 
-  // A sale booked by mistake: unused and sold today (the server checks again, and who may cancel).
+  // A sale booked by mistake: unused, sold today, the seller only within 15 minutes (the server decides, audit Q5).
   const salePayment = voucher.payments?.length === 1 ? voucher.payments[0] : undefined
-  const cancellable =
-    can("vouchers.cancel_sale") &&
-    voucher.status === "active" &&
-    voucher.total_redeemed === 0 &&
-    voucher.total_loaded === voucher.initial_value &&
-    !!salePayment &&
-    soldToday(voucher.created_at, user?.restaurant?.timezone)
+  const cancellable = voucher.can_cancel_sale === true && !!salePayment
   const needsStornoReference = salePayment?.method === "card_terminal" || salePayment?.method === "bank_transfer"
   const [stornoReference, setStornoReference] = useState("")
   const cancelSale = useCancelSale()
+  // One key per cancellation: a retry after a lost answer is the same request, never a second one (audit Q4).
+  const cancelScope = `cancel:${voucher.id}`
+  const [cancelKey] = useState(() => pendingKey(cancelScope) ?? newIdempotencyKey())
+  const [cancelUncertain, setCancelUncertain] = useState(false)
 
   useDocumentTitle(voucher.voucher_number_formatted)
 
@@ -372,11 +370,19 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
             return
           }
           try {
-            await cancelSale.mutateAsync({ voucherId: voucher.id, reason, reference: needsStornoReference ? stornoReference.trim() : null })
+            await cancelSale.mutateAsync({ voucherId: voucher.id, reason, reference: needsStornoReference ? stornoReference.trim() : null, idempotencyKey: cancelKey })
+            forgetPendingKey(cancelScope)
+            setCancelUncertain(false)
             toast.success(t("vouchers.cancelSale.done"))
             setDialog(null)
           } catch (e) {
-            toast.error(errorMessage(e))
+            if (isUncertainOutcome(e, { unanswered: cancelUncertain, finalCodes: CANCEL_CODES })) {
+              rememberPendingKey(cancelScope, cancelKey)
+              setCancelUncertain(true)
+              toast.error(t("vouchers.cancelSale.uncertain"))
+            } else {
+              toast.error(errorMessage(e))
+            }
           }
         }}
       >

@@ -10,6 +10,7 @@ return [
     'confirm_slug' => "Type the restaurant's short name \":slug\" to confirm.",
     'invalid_link' => 'This link is invalid or has expired. Please request a new one.',
     'min_above_max' => 'The minimum voucher value must not exceed the maximum voucher balance.',
+    'full_only_limits' => 'Full redemption only needs the limit per redemption and the daily limit to be at least the maximum balance. Otherwise a voucher could never be redeemed.',
     'debit_above_daily' => 'The limit per redemption must not exceed the daily limit per voucher.',
     'logo_unreadable' => 'The image could not be read. Upload a PNG or JPEG file.',
     'logo_too_small' => 'The logo must be at least :min pixels wide and high.',

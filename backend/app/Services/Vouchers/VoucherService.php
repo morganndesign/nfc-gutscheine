@@ -79,6 +79,9 @@ use Illuminate\Support\Facades\DB;
  */
 final class VoucherService
 {
+    /** How the ledger note of a cancelled sale starts (the cash-up recognises it). */
+    public const SALE_CANCELLED_NOTE = 'sale cancelled: ';
+
     private const DB_ATTEMPTS = 3;
 
     public function __construct(
@@ -624,7 +627,7 @@ final class VoucherService
                     'device_id' => $actor->deviceId(),
                 ])->save();
             }
-            $note = mb_substr(($cancel ? 'sale cancelled: ' : '').$reason, 0, 500);
+            $note = mb_substr(($cancel ? self::SALE_CANCELLED_NOTE : '').$reason, 0, 500);
             $tx = $this->record($locked, TransactionType::Refund, -$closed, $actor, $idempotencyKey, note: $note, payment: $payment);
             $locked->status = VoucherStatus::Refunded;
             $locked->save();
@@ -667,22 +670,45 @@ final class VoucherService
      * seller within the sale window, otherwise by someone else or an owner. Returns how the money goes back (the
      * sale's own method), or null for a complimentary sale.
      */
-    private function assertCancellable(Actor $actor, Voucher $voucher, ?string $reference): ?PaymentData
+    /**
+     * Why this person cannot cancel the sale now (`not_cancellable`: used, closed or not sold today; `own_sale`: the
+     * seller after 15 minutes), or null when they can. The voucher page offers the action only then (audit Q5).
+     */
+    public function cancelRefusal(Actor $actor, Voucher $voucher): ?string
     {
-        /** @var VoucherTransaction $sale */
-        $sale = VoucherTransaction::query()->where('voucher_id', $voucher->getKey())->ofType(TransactionType::Issue)->firstOrFail();
+        /** @var VoucherTransaction|null $sale */
+        $sale = VoucherTransaction::query()->where('voucher_id', $voucher->getKey())->ofType(TransactionType::Issue)->first();
+        if ($sale === null) {
+            return 'not_cancellable';
+        }
         $untouched = ! VoucherTransaction::query()->where('voucher_id', $voucher->getKey())->whereKeyNot($sale->getKey())->exists();
         $timezone = $this->tenant->require()->timezone;
         if (! $untouched || $voucher->status !== VoucherStatus::Active || ! $sale->created_at->copy()->timezone($timezone)->isSameDay(Carbon::now($timezone))) {
-            throw new InvalidVoucherStateException('Only an unused voucher sold today can be cancelled; later, the owner refunds it.', ['reason' => 'not_cancellable']);
+            return 'not_cancellable';
         }
         $window = (int) config('giftcard.security.sale_replay_window_minutes', 15);
         $bySeller = $sale->user_id === $actor->userId();
         $owner = $actor->user !== null && $actor->user->hasPermission(Permission::VouchersRefund);
         if ($bySeller && ! $owner && $sale->created_at->lessThan(Carbon::now()->subMinutes($window))) {
             // Taking the money and later cancelling one's own sale takes it from the guest: a second person does it.
+            return 'own_sale';
+        }
+
+        return null;
+    }
+
+    private function assertCancellable(Actor $actor, Voucher $voucher, ?string $reference): ?PaymentData
+    {
+        $refusal = $this->cancelRefusal($actor, $voucher);
+        if ($refusal === 'own_sale') {
+            $window = (int) config('giftcard.security.sale_replay_window_minutes', 15);
             throw new InvalidVoucherStateException('Your own sale is cancelled by another manager or the owner after '.$window.' minutes.', ['reason' => 'own_sale']);
         }
+        if ($refusal !== null) {
+            throw new InvalidVoucherStateException('Only an unused voucher sold today can be cancelled; later, the owner refunds it.', ['reason' => 'not_cancellable']);
+        }
+        /** @var VoucherTransaction $sale */
+        $sale = VoucherTransaction::query()->where('voucher_id', $voucher->getKey())->ofType(TransactionType::Issue)->firstOrFail();
 
         /** @var Payment $payment */
         $payment = Payment::query()->findOrFail($sale->payment_id);
@@ -923,6 +949,8 @@ final class VoucherService
             $printable = null;
             if ($sameSeller && $untouched && $recent && $voucher->kind === VoucherKind::Digital && $voucher->status === VoucherStatus::Active) {
                 $printable = $this->printables->issue($actor, $voucher, 'sale_retry');
+                // The guest's e-mail carries the QR that is valid now (the first one was just revoked, audit Q1).
+                VoucherIssued::dispatch($voucher, $existing, $printable->payload);
             }
 
             return new SaleResult($voucher, $existing, $payment, $printable, replayed: true);

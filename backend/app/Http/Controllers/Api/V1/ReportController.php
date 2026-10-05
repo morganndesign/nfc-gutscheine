@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\PaymentDirection;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Services\Exports\CsvExporter;
@@ -46,9 +47,15 @@ final class ReportController extends Controller
             [
                 'Date' => static fn (Payment $p): string => $p->created_at->timezone($tz)->format('Y-m-d H:i:s'),
                 'Payment ID' => static fn (Payment $p): string => $p->id,
-                'Direction' => static fn (Payment $p): string => $p->direction === PaymentDirection::Out ? 'Paid out' : 'Received',
+                // Loyalty is value given, not money: never in Amount, so a sum of Amount is the money (audit L3).
+                'Direction' => static fn (Payment $p): string => match (true) {
+                    $p->method === PaymentMethod::Complimentary => 'Loyalty (no payment)',
+                    $p->direction === PaymentDirection::Out => 'Paid out',
+                    default => 'Received',
+                },
                 'Method' => static fn (Payment $p): string => $p->method->label(),
-                'Amount' => static fn (Payment $p): string => $money($p->direction === PaymentDirection::Out ? -$p->amount : $p->amount),
+                'Amount' => static fn (Payment $p): ?string => $p->method === PaymentMethod::Complimentary ? null : $money($p->direction === PaymentDirection::Out ? -$p->amount : $p->amount),
+                'Loyalty value' => static fn (Payment $p): ?string => $p->method === PaymentMethod::Complimentary ? $money($p->amount) : null,
                 'Currency' => static fn (Payment $p): string => $p->currency,
                 'Reference' => static fn (Payment $p): ?string => $p->reference,
                 'Voucher number' => static fn (Payment $p): string => VoucherNumber::format($p->voucher->voucher_number),

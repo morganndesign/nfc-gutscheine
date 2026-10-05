@@ -48,9 +48,12 @@ final class SendVoucherNotification implements ShouldBeEncrypted, ShouldBeUnique
         $this->onQueue('notifications');
     }
 
+    /** A retried sale's new QR is a new e-mail (audit Q1): it must not be swallowed by the first one's lock. */
     public function uniqueId(): string
     {
-        return $this->voucherId.':'.$this->templateKey.':'.($this->transactionId ?? '');
+        $qr = $this->printablePayload !== null ? ':'.substr(hash('sha256', $this->printablePayload), 0, 16) : '';
+
+        return $this->voucherId.':'.$this->templateKey.':'.($this->transactionId ?? '').$qr;
     }
 
     public function handle(VoucherNotificationService $notifications): void

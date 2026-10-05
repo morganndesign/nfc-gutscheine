@@ -1,7 +1,7 @@
 "use client"
 
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { api, apiRaw, newIdempotencyKey } from "@/lib/api/client"
+import { api, apiRaw } from "@/lib/api/client"
 import { VOUCHER_DATA_KEYS, keys } from "@/lib/api/query-keys"
 import type {
   ApiToken,
@@ -211,17 +211,17 @@ export function useRefundVoucher() {
 }
 
 /**
- * Cancels an unused sale of today (booked by mistake). A second attempt after a lost answer is safe: the voucher is
- * closed by the first one, so no second payout can happen.
+ * Cancels an unused sale of today (booked by mistake). The caller keeps one idempotency key per cancellation: after a
+ * lost answer the same request is answered with the booked cancellation (audit Q4).
  */
 export function useCancelSale() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ voucherId, reason, reference }: { voucherId: string; reason: string; reference?: string | null }) =>
+    mutationFn: ({ voucherId, reason, reference, idempotencyKey }: { voucherId: string; reason: string; reference?: string | null; idempotencyKey: string }) =>
       api<MoneyResult>(`/vouchers/${voucherId}/cancellation`, {
         method: "POST",
         body: { reason, reference: reference || null },
-        idempotencyKey: newIdempotencyKey(),
+        idempotencyKey,
       }),
     onSuccess: () => invalidateVoucherData(qc),
   })

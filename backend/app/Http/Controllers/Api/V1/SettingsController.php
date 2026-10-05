@@ -41,6 +41,11 @@ final class SettingsController extends Controller
         if ($settings->max_debit_per_transaction > $settings->max_debit_per_voucher_per_day) {
             throw ValidationException::withMessages(['max_debit_per_transaction' => __('api.debit_above_daily')]);
         }
+        // Full redemption only: a voucher is paid in one go, so the limits must allow the largest balance; otherwise a
+        // voucher above them could never be used (audit Q2).
+        if (! $settings->allow_partial_redemption && $settings->max_debit_per_transaction < $settings->max_voucher_balance) {
+            throw ValidationException::withMessages(['allow_partial_redemption' => __('api.full_only_limits')]);
+        }
 
         if ($settings->isDirty()) {
             $old = array_intersect_key($settings->getOriginal(), $settings->getDirty());

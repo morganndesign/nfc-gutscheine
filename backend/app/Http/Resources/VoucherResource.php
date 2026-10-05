@@ -10,6 +10,7 @@ use App\Models\Medium;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Vouchers\VoucherService;
+use App\Support\Actor;
 use App\Support\VoucherNumber;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -66,6 +67,13 @@ final class VoucherResource extends JsonResource
                 static fn (): int => in_array($voucher->status, [VoucherStatus::Active, VoucherStatus::Blocked, VoucherStatus::Expired], true)
                     ? app(VoucherService::class)->refundable($voucher)
                     : 0,
+            ),
+            // Whether this person may cancel the sale now (detail view): unused, sold today, and the seller only
+            // within 15 minutes (audit Q5). The server checks again on the request.
+            'can_cancel_sale' => $this->when(
+                $voucher->relationLoaded('payments') && $request->user() instanceof User,
+                static fn (): bool => $request->user()?->hasPermission(Permission::VouchersCancelSale) === true
+                    && app(VoucherService::class)->cancelRefusal(Actor::fromRequest($request), $voucher) === null,
             ),
             'last_used_at' => $voucher->last_used_at?->toIso8601String(),
             'created_at' => $voucher->created_at->toIso8601String(),

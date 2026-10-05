@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\PaymentDirection;
+use App\Enums\PaymentMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ReasonRequest;
 use App\Http\Requests\Vouchers\TransactionIndexRequest;
@@ -66,7 +67,9 @@ final class TransactionController extends Controller
                 'Payment method' => static fn (VoucherTransaction $t): ?string => $t->payment?->method->label(),
                 // The money that moved with the entry: received (sale, reload) or paid out (refund); may differ from
                 // Amount on a refund, where complimentary value is closed without a payout.
-                'Payment' => static fn (VoucherTransaction $t): ?string => $t->payment !== null ? $money($t->payment->direction === PaymentDirection::Out ? -$t->payment->amount : $t->payment->amount) : null,
+                'Payment' => static fn (VoucherTransaction $t): ?string => $t->payment !== null && $t->payment->method !== PaymentMethod::Complimentary ? $money($t->payment->direction === PaymentDirection::Out ? -$t->payment->amount : $t->payment->amount) : null,
+                // Value given without payment (audit L3): never in Payment.
+                'Loyalty value' => static fn (VoucherTransaction $t): ?string => $t->payment?->method === PaymentMethod::Complimentary ? $money($t->payment->amount) : null,
                 'Payment reference' => static fn (VoucherTransaction $t): ?string => $t->payment?->reference,
                 'Note' => static fn (VoucherTransaction $t): ?string => $t->note,
                 'Reversed' => static fn (VoucherTransaction $t): bool => $t->isReversed(),

@@ -275,6 +275,8 @@ export interface Voucher {
   payments?: Payment[]
   /** Detail view, for those who may refund: what a refund would pay back now. */
   refundable?: number
+  /** Detail view: whether this person may cancel the sale now (unused, sold today; the seller only within 15 minutes). */
+  can_cancel_sale?: boolean
   last_used_at: string | null
   created_at: string
   updated_at: string

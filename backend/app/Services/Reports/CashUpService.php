@@ -10,14 +10,16 @@ use App\Enums\TransactionType;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\VoucherTransaction;
+use App\Services\Vouchers\VoucherService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
  * End-of-day cash-up for one local calendar day of the restaurant: the voucher money received and paid out per
- * payment method and per staff member, what was booked and corrected again (reversed reloads), complimentary value
- * given, and the balance owed to guests at the end of the day (from the ledger, so any past day is exact).
+ * payment method and per staff member, what was booked and corrected again (reversed paid reloads: a correction of
+ * a booking error, not a payout — decision 2026-10-06), loyalty value given (less loyalty sales cancelled that day),
+ * and the balance owed to guests at the end of the day (from the ledger, so any past day is exact).
  */
 final class CashUpService
 {
@@ -67,13 +69,24 @@ final class CashUpService
         }
         $names = User::query()->whereIn('id', array_filter(array_column($staff, 'user_id')))->pluck('name', 'id');
 
+        // Paid reloads only: a reversed loyalty top-up was never money (audit L5).
         $reversedReloads = (int) VoucherTransaction::query()->ofType(TransactionType::Reversal)
             ->where('created_at', '>=', $from)->where('created_at', '<', $to)
-            ->whereHas('relatedTransaction', static fn ($q) => $q->where('type', TransactionType::Reload->value))
+            ->whereHas('relatedTransaction', static fn ($q) => $q->where('type', TransactionType::Reload->value)
+                ->whereHas('payment', static fn ($p) => $p->where('method', '!=', PaymentMethod::Complimentary->value)))
             ->sum('amount');
+        // A loyalty sale cancelled the same day gave nothing (audit L5).
+        $cancelledThatDay = static fn ($q) => $q->select(DB::raw(1))->from('voucher_transactions as s')
+            ->join('voucher_transactions as c', 'c.voucher_id', '=', 's.voucher_id')
+            ->whereColumn('s.payment_id', 'payments.id')
+            ->where('s.type', TransactionType::Issue->value)
+            ->where('c.type', TransactionType::Refund->value)
+            ->where('c.note', 'like', VoucherService::SALE_CANCELLED_NOTE.'%')
+            ->where('c.created_at', '<', $to);
         $complimentary = (int) Payment::query()->where('method', PaymentMethod::Complimentary->value)
             ->where('created_at', '>=', $from)->where('created_at', '<', $to)
             ->whereNotExists($reversedThatDay)
+            ->whereNotExists($cancelledThatDay)
             ->sum('amount');
 
         // Each voucher's balance after its last ledger entry before the end of the day.

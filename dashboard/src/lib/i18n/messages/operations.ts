@@ -113,7 +113,7 @@ export const operations = defineMessages({
     "cashUp.perPerson": "Per person",
     "cashUp.person": "Person",
     "cashUp.alsoToday": "Also on this day",
-    "cashUp.reversedReloads": "Reloads corrected (not kept)",
+    "cashUp.reversedReloads": "Paid reloads corrected (booking error, not a payout)",
     "cashUp.complimentary": "Loyalty value given",
     "cashUp.outstanding": "Owed to guests at close",
 
@@ -391,7 +391,7 @@ export const operations = defineMessages({
     "cashUp.perPerson": "Nach Person",
     "cashUp.person": "Person",
     "cashUp.alsoToday": "Außerdem an diesem Tag",
-    "cashUp.reversedReloads": "Stornierte Aufladungen (nicht behalten)",
+    "cashUp.reversedReloads": "Korrigierte bezahlte Aufladungen (Buchungsfehler, keine Auszahlung)",
     "cashUp.complimentary": "Vergebenes Loyalty-Guthaben",
     "cashUp.outstanding": "Guthaben der Gäste bei Tagesende",
 
@@ -671,7 +671,7 @@ export const operations = defineMessages({
     "cashUp.perPerson": "Po osobi",
     "cashUp.person": "Osoba",
     "cashUp.alsoToday": "Također tog dana",
-    "cashUp.reversedReloads": "Stornirane dopune (nisu zadržane)",
+    "cashUp.reversedReloads": "Ispravljene plaćene dopune (greška u knjiženju, nije isplata)",
     "cashUp.complimentary": "Data loyalty vrijednost",
     "cashUp.outstanding": "Dugovanje gostima na kraju dana",
 

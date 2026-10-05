@@ -13,7 +13,10 @@ enum PaymentMethod: string
     case Cash = 'cash';
     case CardTerminal = 'card_terminal';
     case BankTransfer = 'bank_transfer';
-    /** No money received (e.g. marketing). Owner only, always with a reason. */
+    /**
+     * Loyalty: value given without payment (regulars, marketing), always with a reason; owners and the managers the
+     * owner allowed (decision 2026-10-05/06). Never revenue, never paid out.
+     */
     case Complimentary = 'complimentary';
 
     public function label(): string
@@ -22,7 +25,7 @@ enum PaymentMethod: string
             self::Cash => 'Cash',
             self::CardTerminal => 'Card terminal',
             self::BankTransfer => 'Bank transfer',
-            self::Complimentary => 'Complimentary',
+            self::Complimentary => 'Loyalty (no payment)',
         };
     }
 

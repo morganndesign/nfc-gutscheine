@@ -28,7 +28,8 @@ final class QueueVoucherNotifications
 
     public function handleRefunded(VoucherRefunded $event): void
     {
-        if ($event->voucher->customer_id !== null) {
+        // Nothing was paid back (a cancelled loyalty sale): no "refunded" e-mail with an amount (audit Q7).
+        if ($event->voucher->customer_id !== null && $event->transaction->payment_id !== null) {
             SendVoucherNotification::dispatch($event->voucher->getKey(), NotificationTemplate::KEY_VOUCHER_REFUNDED, $event->transaction->getKey());
         }
     }

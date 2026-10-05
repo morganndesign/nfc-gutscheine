@@ -30,6 +30,9 @@ export const REDEMPTION_CODES: ReadonlySet<string> = new Set([
   "INVALID_AMOUNT",
 ])
 
+/** Codes a cancellation answers with after it looked the key up: nothing was booked. */
+export const CANCEL_CODES: ReadonlySet<string> = new Set(["VALIDATION_FAILED", "INVALID_VOUCHER_STATE", "INVALID_AMOUNT", "IDEMPOTENCY_CONFLICT"])
+
 /** Codes only a sale answers with. */
 export const SALE_CODES: ReadonlySet<string> = new Set(["INVALID_AMOUNT", "BALANCE_LIMIT_EXCEEDED", "VALIDATION_FAILED", "COMPLIMENTARY_NOT_ALLOWED"])
 

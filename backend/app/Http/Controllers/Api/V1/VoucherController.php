@@ -118,6 +118,7 @@ final class VoucherController extends Controller
                 'Voucher number' => static fn (Voucher $v): string => VoucherNumber::format($v->voucher_number),
                 'Kind' => static fn (Voucher $v): string => ucfirst($v->kind->value),
                 'Status' => static fn (Voucher $v): string => $v->status->label(),
+                'Loyalty' => static fn (Voucher $v): bool => $v->is_loyalty,
                 'Currency' => static fn (Voucher $v): string => $v->currency,
                 'Initial value' => static fn (Voucher $v): string => $money($v->initial_value),
                 'Balance' => static fn (Voucher $v): string => $money($v->balance),
