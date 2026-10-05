@@ -58,7 +58,10 @@ final class CardOrderTest extends TestCase
         $this->assertCount(1, $sent);
         $mail = $sent[0];
         $this->assertSame('ops@giftcardpro.test', $mail->getTo()[0]->getAddress());
-        $this->assertSame('[GiftCard Pro] Kartenbestellung: Trattoria Test · 50 Karten', $mail->getSubject());
+        $this->assertSame('Neue Kartenbestellung: Trattoria Test · 50 Karten', $mail->getSubject());
+        $html = (string) $mail->getHtmlBody();
+        $this->assertStringContainsString('Bestellung ansehen', $html);
+        $this->assertStringContainsString('/admin/card-batches#orders', $html);
         $this->assertStringContainsString('Bitte bis Freitag', (string) $mail->getTextBody());
         $this->assertSame($admin->email, $mail->getTo()[0]->getAddress());
     }

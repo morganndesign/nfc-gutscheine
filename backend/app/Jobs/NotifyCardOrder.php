@@ -7,13 +7,13 @@ namespace App\Jobs;
 use App\Enums\RoleSlug;
 use App\Models\CardOrder;
 use App\Models\User;
+use App\Notifications\CardOrderNotification;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Mail;
 
-/** Tells the platform staff that a restaurant ordered cards, in each admin's language. */
+/** Tells the platform staff that a restaurant ordered cards, in each admin's language ({@see CardOrderNotification}). */
 final class NotifyCardOrder implements ShouldQueue
 {
     use Dispatchable;
@@ -24,28 +24,6 @@ final class NotifyCardOrder implements ShouldQueue
 
     /** @var list<int> */
     public array $backoff = [30, 120, 600, 1800];
-
-    /** @var array<'de'|'en'|'bs', array{subject: string, body: string, note: string, by: string}> */
-    private const TEXT = [
-        'de' => [
-            'subject' => 'Kartenbestellung: :restaurant · :quantity Karten',
-            'body' => ':restaurant bestellt :quantity Karten.',
-            'note' => 'Notiz',
-            'by' => 'Bestellt von',
-        ],
-        'en' => [
-            'subject' => 'Card order: :restaurant · :quantity cards',
-            'body' => ':restaurant orders :quantity cards.',
-            'note' => 'Note',
-            'by' => 'Ordered by',
-        ],
-        'bs' => [
-            'subject' => 'Narudžba kartica: :restaurant · :quantity kartica',
-            'body' => ':restaurant naručuje :quantity kartica.',
-            'note' => 'Napomena',
-            'by' => 'Naručio/la',
-        ],
-    ];
 
     public function __construct(public readonly string $orderId)
     {
@@ -65,23 +43,12 @@ final class NotifyCardOrder implements ShouldQueue
             ->filter(static fn (User $u): bool => $u->isActive());
 
         foreach ($admins as $admin) {
-            $t = self::TEXT[match (strtolower(substr((string) $admin->locale, 0, 2))) {
+            $language = match (strtolower(substr((string) $admin->locale, 0, 2))) {
                 'en' => 'en',
                 'bs', 'hr', 'sr' => 'bs',
                 default => 'de',
-            }];
-            $replace = [':restaurant' => $order->restaurant->name, ':quantity' => (string) $order->quantity];
-            $lines = [strtr($t['body'], $replace)];
-            if ($order->note !== null) {
-                $lines[] = $t['note'].': '.$order->note;
-            }
-            if ($order->requester !== null) {
-                $lines[] = $t['by'].': '.$order->requester->name;
-            }
-            $lines[] = '';
-            $lines[] = config('giftcard.frontend_url').'/admin/card-batches';
-
-            Mail::raw(implode("\n", $lines), static fn ($message) => $message->to($admin->email)->subject('[GiftCard Pro] '.strtr($t['subject'], $replace)));
+            };
+            $admin->notify((new CardOrderNotification($order))->locale($language));
         }
     }
 }
