@@ -99,7 +99,7 @@ enum SecurityEventType: string
             self::PasswordChange, self::PasswordResetRequest => [],
             self::PasswordReset => ['purpose', 'email_hash'],
             self::StaffCreate => ['role'],
-            self::StaffChange => ['role', 'previous_role', 'fields'],
+            self::StaffChange => ['role', 'previous_role', 'fields', 'can_give_loyalty'],
             self::StaffDeactivate, self::StaffActivate => [],
             self::DeviceRegister => ['platform'],
             self::DeviceRevoke, self::DeviceRestore => [],

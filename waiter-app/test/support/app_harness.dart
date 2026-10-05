@@ -431,7 +431,12 @@ abstract final class Payloads {
     ],
   };
 
-  static Map<String, Object?> cardPresentment({int balance = 5000, String status = 'active', String id = presentmentId}) {
+  static Map<String, Object?> cardPresentment({
+    int balance = 5000,
+    String status = 'active',
+    String id = presentmentId,
+    bool loyalty = false,
+  }) {
     final Map<String, Object?> p = presentment(balance: balance, status: status, id: id);
     final Map<String, Object?> spend = p['data']! as Map<String, Object?>;
     final Map<String, Object?> data = Map<String, Object?>.of(spend)
@@ -439,7 +444,7 @@ abstract final class Payloads {
       ..['level'] = 'A3'
       ..['card'] = <String, Object?>{'card_number': 'B-2026-0001-0001', 'state': 'active'}
       // A card voucher: only a tap can spend it.
-      ..['voucher'] = <String, Object?>{...spend['voucher']! as Map<String, Object?>, 'kind': 'card'};
+      ..['voucher'] = <String, Object?>{...spend['voucher']! as Map<String, Object?>, 'kind': 'card', 'loyalty': loyalty};
     return <String, Object?>{'data': data};
   }
 

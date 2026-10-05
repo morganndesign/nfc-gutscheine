@@ -173,7 +173,8 @@ final class WaiterAppIssuingTest extends TestCase
         $model->forceFill(['expires_at' => Carbon::now()->addDays(3)])->save();
         $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk();
 
-        $this->assertSame(['vouchers.redeem', 'vouchers.sell', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'], $model->refresh()->abilities);
+        // Loyalty rides along in a manager's token for the owner's switch; the person's own permission decides.
+        $this->assertSame(['vouchers.redeem', 'vouchers.sell', 'vouchers.sell_complimentary', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'], $model->refresh()->abilities);
         $this->assertEqualsCanonicalizing(
             ['vouchers.redeem', 'vouchers.sell', 'vouchers.reload', 'cards.receive', 'cards.bind', 'cards.view', 'cards.manage'],
             $this->bearer($token)->getJson('/api/v1/auth/me')->assertOk()->json('data.permissions'),

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>{{ $restaurant ?? $copy['title'] }}</title>
-    <style>
+    <style nonce="{{ $nonce }}">
         :root { color-scheme: light dark; --ink: #18181b; --muted: #71717a; --bg: #f4f4f5; --card: #fff; }
         @media (prefers-color-scheme: dark) { :root { --ink: #fafafa; --muted: #a1a1aa; --bg: #09090b; --card: #18181b; } }
         * { box-sizing: border-box; }
@@ -21,6 +21,7 @@
         .amount { margin: 4px 0 8px; font-size: 44px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
         .muted { margin: 0; color: var(--muted); font-size: 14px; }
         .message { margin: 0; font-size: 17px; }
+        .pay { margin-top: 16px; }
     </style>
 </head>
 <body>
@@ -34,7 +35,7 @@
             <p class="label">{{ $copy['balance'] }}</p>
             <p class="amount">{{ $balance['balance'] }}</p>
             <p class="muted">{{ $balance['validity'] }}</p>
-            <p class="muted" style="margin-top:16px">{{ $copy['pay'] }}</p>
+            <p class="muted pay">{{ $copy['pay'] }}</p>
         @else
             <p class="message">{{ $message }}</p>
         @endif

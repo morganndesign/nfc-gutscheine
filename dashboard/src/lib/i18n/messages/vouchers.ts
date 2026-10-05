@@ -25,7 +25,7 @@ export const vouchers = defineMessages({
     "payment.bankReference": "Bank reference",
     "payment.complimentaryReason": "For whom, and why?",
     "payment.complimentaryPlaceholder": "e.g. regular guest, friend of the house, October",
-    "payment.complimentaryHint": "Owner only. Loyalty value is not revenue, is never paid out and is listed separately in reports.",
+    "payment.complimentaryHint": "Only on a new voucher or a loyalty voucher. Loyalty value is not revenue, is never paid out and is listed separately in reports.",
 
     "voucherVisual.digital": "Digital voucher",
     "voucherVisual.card": "Card voucher",
@@ -241,7 +241,7 @@ export const vouchers = defineMessages({
     "payment.bankReference": "Zahlungsreferenz",
     "payment.complimentaryReason": "Für wen und warum?",
     "payment.complimentaryPlaceholder": "z. B. Stammgast, Freund des Hauses, Oktober",
-    "payment.complimentaryHint": "Nur Inhaber. Loyalty-Guthaben ist kein Umsatz, wird nie ausbezahlt und in Berichten gesondert ausgewiesen.",
+    "payment.complimentaryHint": "Nur bei einem neuen Gutschein oder einem Loyalty-Gutschein. Loyalty-Guthaben ist kein Umsatz, wird nie ausbezahlt und in Berichten gesondert ausgewiesen.",
 
     "voucherVisual.digital": "Digitaler Gutschein",
     "voucherVisual.card": "Kartengutschein",
@@ -461,7 +461,7 @@ export const vouchers = defineMessages({
     "payment.bankReference": "Referenca uplate",
     "payment.complimentaryReason": "Za koga i zašto?",
     "payment.complimentaryPlaceholder": "npr. stalni gost, prijatelj kuće, oktobar",
-    "payment.complimentaryHint": "Samo vlasnik. Loyalty vrijednost nije prihod, nikad se ne isplaćuje i u izvještajima se vodi odvojeno.",
+    "payment.complimentaryHint": "Samo na novom vaučeru ili loyalty vaučeru. Loyalty vrijednost nije prihod, nikad se ne isplaćuje i u izvještajima se vodi odvojeno.",
 
     "voucherVisual.digital": "Digitalni vaučer",
     "voucherVisual.card": "Vaučer na kartici",

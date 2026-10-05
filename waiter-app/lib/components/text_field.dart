@@ -55,6 +55,7 @@ class WaiterTextField extends StatefulWidget {
     this.onSubmitted,
     this.shakeController,
     this.maxLength,
+    this.textInputAction,
   });
 
   /// Content kind.
@@ -99,6 +100,10 @@ class WaiterTextField extends StatefulWidget {
 
   /// Character limit of a [TextFieldKind.text] field (default 500).
   final int? maxLength;
+
+  /// The keyboard's action key; default "next" for e-mail, "done" otherwise. In a form, "next" moves on to the
+  /// following field.
+  final TextInputAction? textInputAction;
 
   @override
   State<WaiterTextField> createState() => _WaiterTextFieldState();
@@ -181,9 +186,9 @@ class _WaiterTextFieldState extends State<WaiterTextField> {
             TextFieldKind.url => TextInputType.url,
             TextFieldKind.text => TextInputType.text,
           },
-          textInputAction: widget.kind == TextFieldKind.email
-              ? TextInputAction.next
-              : TextInputAction.done,
+          textInputAction:
+              widget.textInputAction ??
+              (widget.kind == TextFieldKind.email ? TextInputAction.next : TextInputAction.done),
           autocorrect: false,
           enableSuggestions: false,
           textCapitalization: widget.kind == TextFieldKind.text

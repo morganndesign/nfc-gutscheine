@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
@@ -154,7 +155,13 @@ class _CardLookupScreenState extends State<CardLookupScreen> {
     final CardInfo? card = _c.card;
     final bool busy = _c.phase != DeskPhase.idle;
     return ListView(
-      padding: EdgeInsets.fromLTRB(layout.margin, Space.s4, layout.margin, layout.viewPadding.bottom + Space.s6),
+      // Ends above the keyboard, so the card's actions stay reachable while the number is typed.
+      padding: EdgeInsets.fromLTRB(
+        layout.margin,
+        Space.s4,
+        layout.margin,
+        math.max(layout.viewPadding.bottom, MediaQuery.viewInsetsOf(context).bottom) + Space.s6,
+      ),
       children: <Widget>[
         WaiterTextField(
           kind: TextFieldKind.text,

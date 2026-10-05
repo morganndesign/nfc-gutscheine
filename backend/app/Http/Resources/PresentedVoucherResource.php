@@ -38,6 +38,8 @@ final class PresentedVoucherResource extends JsonResource
             'status' => $voucher->status->value,
             'currency' => $voucher->currency,
             'balance' => $voucher->balance,
+            // Loyalty value may only be added to a loyalty voucher.
+            'loyalty' => $voucher->is_loyalty,
             'expires_at' => $voucher->expires_at?->toIso8601String(),
             'is_expired' => $voucher->isExpiredByDate(),
             'blocked_reason' => $voucher->status === VoucherStatus::Blocked ? $voucher->blocked_reason : null,

@@ -19,11 +19,22 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, MessageKey> = {
   complimentary: "payment.method.complimentary",
 }
 
-/** Every sale and reload records how the money was received (decision 25). */
-export function PaymentFields({ value, onChange }: { value: PaymentInput; onChange: (value: PaymentInput) => void }) {
+/**
+ * Every sale and reload records how the money was received (decision 25). Loyalty is offered to those allowed to
+ * give it, and on a top-up only for a loyalty voucher (`loyalty: false`): a paid voucher never becomes one.
+ */
+export function PaymentFields({
+  value,
+  onChange,
+  loyalty = true,
+}: {
+  value: PaymentInput
+  onChange: (value: PaymentInput) => void
+  loyalty?: boolean
+}) {
   const { can } = useAuth()
   const t = useT()
-  const methods: PaymentMethod[] = ["cash", "card_terminal", "bank_transfer", ...(can("vouchers.sell_complimentary") ? (["complimentary"] as const) : [])]
+  const methods: PaymentMethod[] = ["cash", "card_terminal", "bank_transfer", ...(loyalty && can("vouchers.sell_complimentary") ? (["complimentary"] as const) : [])]
 
   return (
     <div className="space-y-3">

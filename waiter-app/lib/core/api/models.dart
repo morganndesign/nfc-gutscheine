@@ -253,7 +253,7 @@ class SessionUser {
   /// "Sell voucher" (S20).
   bool get canSell => permissions.contains(Permissions.sell);
 
-  /// The complimentary payment method (owners).
+  /// The loyalty payment method: owners, and managers the owner allowed.
   bool get canSellComplimentary => permissions.contains(Permissions.sellComplimentary);
 
   /// Selling a physical card (a card voucher) needs selling and binding a card.
@@ -320,6 +320,7 @@ class PresentedVoucher {
     required this.allowPartialRedemption,
     required this.maxDebitPerTransaction,
     required this.canRedeem,
+    this.loyalty = false,
   });
 
   factory PresentedVoucher.fromJson(Map<String, Object?> json) {
@@ -338,6 +339,7 @@ class PresentedVoucher {
       allowPartialRedemption: _bool(json, 'allow_partial_redemption', fallback: true),
       maxDebitPerTransaction: _intOrNull(json, 'max_debit_per_transaction'),
       canRedeem: actions is Map && actions['redeem'] == true,
+      loyalty: _bool(json, 'loyalty'),
     );
   }
 
@@ -361,6 +363,9 @@ class PresentedVoucher {
   /// Cents per redemption, or null when the restaurant sets none.
   final int? maxDebitPerTransaction;
   final bool canRedeem;
+
+  /// Sold as loyalty: only such a voucher takes further loyalty value (a paid one never becomes loyalty).
+  final bool loyalty;
 
   String get last4 => voucherNumber.length <= 4 ? voucherNumber : voucherNumber.substring(voucherNumber.length - 4);
 

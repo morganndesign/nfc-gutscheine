@@ -60,6 +60,14 @@ final class UserController extends Controller
         return UserResource::make($this->users->update(Actor::fromRequest($request), $user, $data));
     }
 
+    /** The owner allows a manager to give loyalty, or takes it back. */
+    public function loyalty(Request $request, User $user): UserResource
+    {
+        $request->validate(['allowed' => ['required', 'boolean']]);
+
+        return UserResource::make($this->users->setLoyaltyGrant(Actor::fromRequest($request), $user, $request->boolean('allowed')));
+    }
+
     public function deactivate(Request $request, User $user): UserResource
     {
         return UserResource::make($this->users->deactivate(Actor::fromRequest($request), $user)->load('role'));

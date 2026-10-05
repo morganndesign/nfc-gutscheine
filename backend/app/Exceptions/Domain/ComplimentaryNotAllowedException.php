@@ -18,6 +18,6 @@ final class ComplimentaryNotAllowedException extends DomainException
 
     protected function defaultMessage(): string
     {
-        return 'Only the owner can issue a complimentary voucher.';
+        return 'You may not issue loyalty value.';
     }
 }

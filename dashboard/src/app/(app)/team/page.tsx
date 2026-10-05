@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { KeyRound, Loader2, MoreHorizontal, Pencil, Plus, UserCheck, UserX, Users } from "lucide-react"
+import { Gift, KeyRound, Loader2, MoreHorizontal, Pencil, Plus, UserCheck, UserX, Users } from "lucide-react"
 import { toast } from "sonner"
 import { UserStatusBadge } from "@/components/common/user-status-badge"
 import { PageHeader } from "@/components/common/page-header"
@@ -15,8 +15,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useRoles, useSaveUser, useUserAction, useUsers } from "@/lib/api/hooks"
+import { useLoyaltyGrant, useRoles, useSaveUser, useUserAction, useUsers } from "@/lib/api/hooks"
 import { ApiError, errorMessage } from "@/lib/api/client"
 import type { StaffUser } from "@/lib/api/types"
 import { useAuth } from "@/lib/auth"
@@ -134,6 +135,67 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
         </form>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/**
+ * Loyalty (decision 2026-10-05): owners give it by role; the owner chooses which managers may too. Waiters never.
+ */
+function LoyaltyGrants({ users }: { users: StaffUser[] }) {
+  const t = useT()
+  const grant = useLoyaltyGrant()
+  const managers = users.filter((u) => u.role?.slug === "manager")
+  const [pending, setPending] = useState<string | null>(null)
+
+  const change = async (u: StaffUser, allowed: boolean) => {
+    setPending(u.id)
+    try {
+      await grant.mutateAsync({ id: u.id, allowed })
+      toast.success(allowed ? t("team.loyalty.allowed", { name: u.name }) : t("team.loyalty.revoked", { name: u.name }))
+    } catch (e) {
+      toast.error(errorMessage(e))
+    } finally {
+      setPending(null)
+    }
+  }
+
+  return (
+    <section aria-labelledby="loyalty-grants" className="bg-card rounded-2xl border p-4 sm:p-5">
+      <div className="flex items-start gap-3">
+        <Gift className="text-muted-foreground mt-0.5 size-5 shrink-0" aria-hidden />
+        <div className="space-y-1">
+          <h2 id="loyalty-grants" className="font-medium">
+            {t("team.loyalty.title")}
+          </h2>
+          <p className="text-muted-foreground text-sm">{t("team.loyalty.description")}</p>
+        </div>
+      </div>
+      {managers.length ? (
+        <ul className="mt-4 divide-y">
+          {managers.map((u) => (
+            <li key={u.id} className="flex items-center justify-between gap-4 py-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">{u.name}</div>
+                <div className="text-muted-foreground truncate text-xs">
+                  {u.status === "active" ? u.email : t("team.loyalty.inactive")}
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {pending === u.id ? <Loader2 className="text-muted-foreground size-4 animate-spin" aria-hidden /> : null}
+                <Switch
+                  checked={!!u.can_give_loyalty}
+                  disabled={pending !== null}
+                  aria-label={t("team.loyalty.switch", { name: u.name })}
+                  onCheckedChange={(v) => void change(u, v)}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-muted-foreground mt-4 text-sm">{t("team.loyalty.noManagers")}</p>
+      )}
+    </section>
   )
 }
 
@@ -274,6 +336,7 @@ function TeamContent() {
           <EmptyState icon={Users} title={t("team.empty")} />
         )}
       </div>
+      {manage && me?.role.slug === "owner" && data ? <LoyaltyGrants users={data.data} /> : null}
       {editing ? (
         <UserDialog
           key={editing === "new" ? "new" : editing.id}

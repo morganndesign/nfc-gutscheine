@@ -93,6 +93,9 @@ final class TapPageController
     /** @param array{balance: string, validity: string}|null $balance */
     private function page(string $language, ?Restaurant $restaurant, ?string $message, ?array $balance = null, int $status = 200): Response
     {
+        // The page's own stylesheet is inline; the strict API policy (default-src 'none') would block it.
+        $nonce = base64_encode(random_bytes(16));
+
         return response()
             ->view('tap.balance', [
                 'lang' => $language,
@@ -101,7 +104,9 @@ final class TapPageController
                 'brand' => $restaurant?->settings->brand_color ?? '#18181B',
                 'message' => $message,
                 'balance' => $balance,
+                'nonce' => $nonce,
             ], $status)
+            ->header('Content-Security-Policy', "default-src 'none'; style-src 'nonce-{$nonce}'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'")
             ->header('Cache-Control', 'no-store, private')
             ->header('X-Robots-Tag', 'noindex, nofollow')
             ->header('Referrer-Policy', 'no-referrer');

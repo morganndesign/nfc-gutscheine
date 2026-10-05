@@ -153,17 +153,18 @@ void main() {
     await finishApp(tester, app);
   });
 
-  // Decision 2026-10-05: the owner tops up a regular's card as loyalty — no payment, always with a reason.
+  // Decision 2026-10-05: loyalty (no payment, always with a reason) from owners and managers the owner allowed; only
+  // a loyalty card takes more loyalty, a paid card never becomes one.
+  final Map<String, Object?> owner = <String, Object?>{
+    ...Payloads.reloadManager(),
+    'permissions': <String>[...(Payloads.reloadManager()['permissions']! as List<String>), 'vouchers.sell_complimentary'],
+  };
   for (final bool ios in <bool>[false, true]) {
-    testWidgets('${ios ? 'iPhone' : 'Android'}: an owner tops up a regular\'s card as loyalty', (WidgetTester tester) async {
-      final Map<String, Object?> owner = <String, Object?>{
-        ...Payloads.reloadManager(),
-        'permissions': <String>[...(Payloads.reloadManager()['permissions']! as List<String>), 'vouchers.sell_complimentary'],
-      };
+    testWidgets('${ios ? 'iPhone' : 'Android'}: an owner tops up a regular\'s loyalty card as loyalty', (WidgetTester tester) async {
       final TestApp app = await TestApp.create(isIos: ios, user: owner, nfc: FakeNfcRelay());
       app.backend
         ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
-        ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000)))
+        ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000, loyalty: true)))
         ..on('POST', reloads, FakeReply(201, Payloads.reloaded(amount: 2000, balance: 4000)));
       await pumpWaiterApp(tester, app);
 
@@ -183,6 +184,37 @@ void main() {
       expect(text(en.reloadDoneTitle), findsOneWidget);
       expect(app.backend.to('POST', reloads).single.body!['payment'], <String, Object?>{'method': 'complimentary', 'reason': 'Stammgast Oktober'});
       await finishApp(tester, app);
+    });
+  }
+
+  for (final bool ios in <bool>[false, true]) {
+    testWidgets('${ios ? 'iPhone' : 'Android'}: a paid card is never offered loyalty, a new card is', (WidgetTester tester) async {
+      final TestApp app = await TestApp.create(isIos: ios, user: owner, nfc: FakeNfcRelay());
+      app.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000)));
+      await pumpWaiterApp(tester, app);
+      await tester.tap(text(en.reloadReady));
+      await settle(tester, 20);
+      await typeDigits(tester, '2000');
+      await tester.tap(primary('Continue'));
+      await settle(tester);
+      expect(text(en.salePaymentCash), findsOneWidget);
+      expect(text(en.salePaymentComplimentary), findsNothing);
+      await finishApp(tester, app);
+
+      final TestApp fresh = await TestApp.create(isIos: ios, user: owner, nfc: FakeNfcRelay());
+      fresh.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on('POST', complete, FakeReply(200, Payloads.cardOnly()));
+      await pumpWaiterApp(tester, fresh);
+      await tester.tap(text(en.reloadReady));
+      await settle(tester, 20);
+      await typeDigits(tester, '3000');
+      await tester.tap(primary('Continue'));
+      await settle(tester);
+      expect(text(en.salePaymentComplimentary), findsOneWidget);
+      await finishApp(tester, fresh);
     });
   }
 

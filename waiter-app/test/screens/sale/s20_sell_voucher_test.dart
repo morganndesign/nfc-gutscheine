@@ -322,6 +322,45 @@ void main() {
     await finishApp(tester, app);
   });
 
+  // Field report 2026-10-05: with the keyboard up the form could not be scrolled to the guest's e-mail.
+  testWidgets('with the keyboard up every field can still be reached, and "next" moves on', (WidgetTester tester) async {
+    final TestApp app = await openSale(tester);
+    await continueWith(tester, '2000');
+
+    await tester.tap(field(en.saleRecipientLabel));
+    await tester.pump();
+    // An iPhone keyboard: 336 points of the 852-point screen.
+    tester.view.viewInsets = FakeViewPadding(bottom: 336 * tester.view.devicePixelRatio);
+    await settle(tester);
+
+    const double keyboardTop = 852 - 336;
+    expect(tester.getRect(primary('Sell voucher')).bottom, lessThanOrEqualTo(keyboardTop), reason: 'the button sits above the keyboard');
+    expect(text(en.commonBack), findsNothing, reason: 'back makes room while typing');
+
+    // "Next" walks through the fields; the focused one is scrolled into view above the keyboard.
+    await tester.enterText(field(en.saleRecipientLabel), 'Klara');
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await settle(tester);
+    expect(tester.widget<TextField>(field(en.saleMessageLabel)).focusNode?.hasFocus, isTrue);
+    await tester.testTextInput.receiveAction(TextInputAction.next);
+    await settle(tester);
+    final TextField email = tester.widget<TextField>(field(en.saleEmailLabel));
+    expect(email.focusNode?.hasFocus, isTrue);
+    expect(email.textInputAction, TextInputAction.done);
+    expect(tester.getRect(field(en.saleEmailLabel)).bottom, lessThanOrEqualTo(keyboardTop));
+
+    // The form scrolls by hand as well.
+    final ScrollableState scroll = tester.state<ScrollableState>(
+      find.descendant(of: find.byType(SellVoucherScreen), matching: find.byType(Scrollable)).first,
+    );
+    expect(scroll.position.maxScrollExtent, greaterThan(0));
+
+    tester.view.resetViewInsets();
+    await settle(tester);
+    expect(text(en.commonBack), findsOneWidget);
+    await finishApp(tester, app);
+  });
+
   testWidgets('German copy', (WidgetTester tester) async {
     final AppLocalizations de = lookupAppLocalizations(const Locale('de'));
     final TestApp app = await TestApp.create(user: Payloads.manager());

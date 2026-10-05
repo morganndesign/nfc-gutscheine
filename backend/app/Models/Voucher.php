@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\MediumStatus;
-use App\Enums\PaymentDirection;
-use App\Enums\PaymentMethod;
 use App\Enums\VoucherKind;
 use App\Enums\VoucherStatus;
 use App\Models\Concerns\BelongsToRestaurant;
@@ -31,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property string $restaurant_id
  * @property string|null $customer_id
  * @property VoucherKind $kind
+ * @property bool $is_loyalty Sold as loyalty (decision 2026-10-05); set at the sale only.
  * @property string $voucher_number Internal: staff and support only, never printed, never a credential.
  * @property VoucherStatus $status
  * @property string $currency
@@ -69,6 +68,7 @@ class Voucher extends Model
     {
         return [
             'kind' => VoucherKind::class,
+            'is_loyalty' => 'boolean',
             'status' => VoucherStatus::class,
             'initial_value' => 'integer',
             'balance' => 'integer',
@@ -122,38 +122,21 @@ class Voucher extends Model
     }
 
     /**
-     * A loyalty voucher (decision 2026-10-05): the owner gave value without payment at least once — at the sale or a
-     * top-up (`complimentary` payments). Never revenue, never paid out.
+     * A loyalty voucher (decision 2026-10-05): sold as loyalty (`complimentary`), set once at the sale and never
+     * later. Only such a voucher takes further loyalty value; paid top-ups are allowed on it too.
      */
     public function isLoyalty(): bool
     {
-        $known = $this->getAttribute('loyalty_exists');
-        if ($known !== null) {
-            return (bool) $known;
-        }
-        if ($this->relationLoaded('payments')) {
-            return $this->payments->contains(static fn (Payment $p): bool => $p->method === PaymentMethod::Complimentary && $p->direction === PaymentDirection::In);
-        }
-
-        return $this->payments()->where('method', PaymentMethod::Complimentary->value)->where('direction', PaymentDirection::In->value)->exists();
+        return $this->is_loyalty;
     }
 
     /**
      * @param  Builder<Voucher>  $query
      * @return Builder<Voucher>
      */
-    public function scopeWithLoyalty(Builder $query): Builder
+    public function scopeLoyalty(Builder $query, bool $loyalty = true): Builder
     {
-        return $query->withExists(['payments as loyalty_exists' => static fn ($q) => $q->where('method', PaymentMethod::Complimentary->value)->where('direction', PaymentDirection::In->value)]);
-    }
-
-    /**
-     * @param  Builder<Voucher>  $query
-     * @return Builder<Voucher>
-     */
-    public function scopeLoyalty(Builder $query): Builder
-    {
-        return $query->whereHas('payments', static fn ($q) => $q->where('method', PaymentMethod::Complimentary->value)->where('direction', PaymentDirection::In->value));
+        return $query->where('is_loyalty', $loyalty);
     }
 
     /** @return HasMany<Payment, $this> */

@@ -32,6 +32,7 @@ use App\Exceptions\Domain\IdempotencyConflictException;
 use App\Exceptions\Domain\InsufficientBalanceException;
 use App\Exceptions\Domain\InvalidAmountException;
 use App\Exceptions\Domain\InvalidVoucherStateException;
+use App\Exceptions\Domain\LoyaltyVoucherOnlyException;
 use App\Exceptions\Domain\PresentmentInvalidException;
 use App\Exceptions\Domain\ReloadNotAllowedException;
 use App\Exceptions\Domain\TenantMismatchException;
@@ -159,6 +160,7 @@ final class VoucherService
                     'restaurant_id' => $restaurant->getKey(),
                     'customer_id' => $data->customerId,
                     'kind' => $card !== null ? VoucherKind::Card : VoucherKind::Digital,
+                    'is_loyalty' => $data->payment->method === PaymentMethod::Complimentary,
                     'voucher_number' => $this->numbers->generate($restaurant),
                     'status' => VoucherStatus::Active,
                     'currency' => $restaurant->currency,
@@ -422,6 +424,10 @@ final class VoucherService
             $presentment = $this->presentments->consume($presentment, $actor, $locked, PresentmentPurpose::Reload);
         }
         $this->assertPaymentAllowed($actor, $payment);
+        // Loyalty value only onto a loyalty voucher: a paid voucher never becomes one.
+        if ($payment->method === PaymentMethod::Complimentary && ! $locked->is_loyalty) {
+            throw new LoyaltyVoucherOnlyException;
+        }
         $settings = $this->settings();
         if (! $settings->allow_reload) {
             throw new ReloadNotAllowedException;

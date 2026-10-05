@@ -253,7 +253,7 @@ export interface Voucher {
   voucher_number: string
   voucher_number_formatted: string
   status: VoucherStatus
-  /** The owner gave value without payment at least once (decision 2026-10-05): a regular's loyalty voucher. */
+  /** Sold as loyalty, without payment (decision 2026-10-05): only such a voucher takes further loyalty value. */
   loyalty: boolean
   currency: string
   initial_value: number
@@ -357,6 +357,8 @@ export interface StaffUser {
   last_login_at: string | null
   locked: boolean
   created_at: string
+  /** Managers only (null otherwise): the owner allowed this manager to give loyalty. */
+  can_give_loyalty: boolean | null
   /** Only in platform administration responses. */
   invitation?: InvitationSummary | null
 }

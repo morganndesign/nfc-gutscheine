@@ -137,6 +137,18 @@ class _ReloadScreenState extends State<ReloadScreen> {
     );
   }
 
+  static bool _typing(BuildContext context) => MediaQuery.viewInsetsOf(context).bottom > 0;
+
+  /// The form with its fields ends above the keyboard, so every field can be scrolled to while typing (the screen
+  /// has no Scaffold that would make room for the keyboard).
+  EdgeInsets _formPadding(BuildContext context) {
+    final WaiterLayout layout = context.layout;
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return keyboard > 0
+        ? EdgeInsets.fromLTRB(layout.margin, 0, layout.margin, keyboard + Space.s4)
+        : _pagePadding(layout);
+  }
+
   EdgeInsets _pagePadding(WaiterLayout layout) =>
       EdgeInsets.fromLTRB(layout.margin, 0, layout.margin, layout.viewPadding.bottom + layout.ctaBottomPadding);
 
@@ -247,7 +259,7 @@ class _ReloadScreenState extends State<ReloadScreen> {
     final WaiterColors c = context.colors;
     final String amount = context.moneyFor(_c.currencyOf(s.card)).format(s.amount.cents);
     return Padding(
-      padding: _pagePadding(context.layout),
+      padding: _formPadding(context),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: LayoutTokens.maxForm),
@@ -255,49 +267,53 @@ class _ReloadScreenState extends State<ReloadScreen> {
             children: <Widget>[
               Expanded(
                 child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      const SizedBox(height: Space.s4),
-                      if (s.newCard) ...<Widget>[_newCard(l10n, s.card), const SizedBox(height: Space.s4)],
-                      Semantics(
-                        header: true,
-                        child: ScaledText(l10n.salePaymentLabel, type: TypeTokens.caption, color: c.fgSecondary),
-                      ),
-                      const SizedBox(height: Space.s2),
-                      for (final PaymentMethod m in _c.methods)
-                        PaymentMethodRow(
-                          label: paymentMethodLabel(l10n, m),
-                          selected: m == s.method,
-                          enabled: !s.submitting,
-                          onSelected: () => _c.chooseMethod(m),
-                        ),
-                      if (s.method.needsReference) ...<Widget>[
+                  // Field after field in the order shown, also below the visible part ("next" on the keyboard).
+                  child: FocusTraversalGroup(
+                    policy: WidgetOrderTraversalPolicy(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
                         const SizedBox(height: Space.s4),
-                        WaiterTextField(
-                          kind: TextFieldKind.text,
-                          label: l10n.saleReferenceLabel,
-                          controller: _reference,
-                          maxLength: 120,
-                          enabled: !s.submitting,
-                          errorText: s.referenceMissing ? l10n.saleReferenceRequired : null,
-                          onChanged: _c.setReference,
+                        if (s.newCard) ...<Widget>[_newCard(l10n, s.card), const SizedBox(height: Space.s4)],
+                        Semantics(
+                          header: true,
+                          child: ScaledText(l10n.salePaymentLabel, type: TypeTokens.caption, color: c.fgSecondary),
                         ),
-                      ],
-                      if (s.method.needsReason) ...<Widget>[
+                        const SizedBox(height: Space.s2),
+                        for (final PaymentMethod m in _c.methodsFor(s.card))
+                          PaymentMethodRow(
+                            label: paymentMethodLabel(l10n, m),
+                            selected: m == s.method,
+                            enabled: !s.submitting,
+                            onSelected: () => _c.chooseMethod(m),
+                          ),
+                        if (s.method.needsReference) ...<Widget>[
+                          const SizedBox(height: Space.s4),
+                          WaiterTextField(
+                            kind: TextFieldKind.text,
+                            label: l10n.saleReferenceLabel,
+                            controller: _reference,
+                            maxLength: 120,
+                            enabled: !s.submitting,
+                            errorText: s.referenceMissing ? l10n.saleReferenceRequired : null,
+                            onChanged: _c.setReference,
+                          ),
+                        ],
+                        if (s.method.needsReason) ...<Widget>[
+                          const SizedBox(height: Space.s4),
+                          WaiterTextField(
+                            kind: TextFieldKind.text,
+                            label: l10n.saleReasonLabel,
+                            controller: _reason,
+                            maxLength: 500,
+                            enabled: !s.submitting,
+                            errorText: s.reasonMissing ? l10n.saleReasonRequired : null,
+                            onChanged: _c.setReason,
+                          ),
+                        ],
                         const SizedBox(height: Space.s4),
-                        WaiterTextField(
-                          kind: TextFieldKind.text,
-                          label: l10n.saleReasonLabel,
-                          controller: _reason,
-                          maxLength: 500,
-                          enabled: !s.submitting,
-                          errorText: s.reasonMissing ? l10n.saleReasonRequired : null,
-                          onChanged: _c.setReason,
-                        ),
                       ],
-                      const SizedBox(height: Space.s4),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -308,8 +324,11 @@ class _ReloadScreenState extends State<ReloadScreen> {
                 status: s.submitting ? ButtonStatus.loading : ButtonStatus.idle,
                 onPressed: s.submitting ? null : () => unawaited(_c.submit()),
               ),
-              const SizedBox(height: Space.s2),
-              TertiaryButton(label: l10n.commonBack, large: true, onPressed: s.submitting ? null : _c.backToAmount),
+              // While typing the keyboard needs the room; back is the close button or the system back then.
+              if (!_typing(context)) ...<Widget>[
+                const SizedBox(height: Space.s2),
+                TertiaryButton(label: l10n.commonBack, large: true, onPressed: s.submitting ? null : _c.backToAmount),
+              ],
             ],
           ),
         ),

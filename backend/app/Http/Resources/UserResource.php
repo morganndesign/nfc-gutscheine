@@ -30,6 +30,8 @@ final class UserResource extends JsonResource
                 'name' => $user->role->name,
             ]),
             'restaurant_id' => $user->restaurant_id,
+            // Managers only: whether the owner allowed this manager to give loyalty.
+            'can_give_loyalty' => $user->mayBeGrantedLoyalty() ? $user->can_give_loyalty : null,
             'last_login_at' => $user->last_login_at?->toIso8601String(),
             'locked' => $user->isLocked(),
             'created_at' => $user->created_at->toIso8601String(),

@@ -20,6 +20,7 @@ export function ReloadDialog({
   balance,
   maxBalance,
   currency,
+  loyalty,
   open,
   onOpenChange,
 }: {
@@ -27,6 +28,8 @@ export function ReloadDialog({
   balance: number
   maxBalance: number
   currency: string
+  /** A loyalty voucher: only then may loyalty value be added. */
+  loyalty: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
@@ -108,7 +111,7 @@ export function ReloadDialog({
             <MoneyInput id="amount" autoFocus disabled={uncertain} value={amount} onChange={(e) => setAmount(e.target.value)} className="h-12 text-xl" />
             {tooMuch ? <p className="text-destructive text-xs">{t("vouchers.reload.tooMuch", { max: formatMoney(maxBalance, currency) })}</p> : null}
           </div>
-          {!uncertain ? <PaymentFields value={payment} onChange={setPayment} /> : null}
+          {!uncertain ? <PaymentFields value={payment} onChange={setPayment} loyalty={loyalty} /> : null}
           <div className="space-y-2">
             <Label htmlFor="note">{t("vouchers.field.note")}</Label>
             <Input id="note" disabled={uncertain} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />

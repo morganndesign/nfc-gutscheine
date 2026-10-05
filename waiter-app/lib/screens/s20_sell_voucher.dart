@@ -151,6 +151,18 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
     );
   }
 
+  static bool _typing(BuildContext context) => MediaQuery.viewInsetsOf(context).bottom > 0;
+
+  /// The form with its fields ends above the keyboard, so every field can be scrolled to while typing (the screen
+  /// has no Scaffold that would make room for the keyboard).
+  EdgeInsets _formPadding(BuildContext context) {
+    final WaiterLayout layout = context.layout;
+    final double keyboard = MediaQuery.viewInsetsOf(context).bottom;
+    return keyboard > 0
+        ? EdgeInsets.fromLTRB(layout.margin, 0, layout.margin, keyboard + Space.s4)
+        : _pagePadding(layout);
+  }
+
   EdgeInsets _pagePadding(WaiterLayout layout) =>
       EdgeInsets.fromLTRB(layout.margin, 0, layout.margin, layout.viewPadding.bottom + layout.ctaBottomPadding);
 
@@ -230,7 +242,7 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
     final WaiterColors c = context.colors;
     final String amount = context.money.format(s.amount.cents);
     return Padding(
-      padding: _pagePadding(context.layout),
+      padding: _formPadding(context),
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: LayoutTokens.maxForm),
@@ -238,82 +250,87 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
             children: <Widget>[
               Expanded(
                 child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      const SizedBox(height: Space.s4),
-                      Semantics(
-                        header: true,
-                        child: ScaledText(
-                          l10n.salePaymentLabel,
-                          type: TypeTokens.caption,
-                          color: c.fgSecondary,
+                  // Field after field in the order shown, also below the visible part ("next" on the keyboard).
+                  child: FocusTraversalGroup(
+                    policy: WidgetOrderTraversalPolicy(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        const SizedBox(height: Space.s4),
+                        Semantics(
+                          header: true,
+                          child: ScaledText(l10n.salePaymentLabel, type: TypeTokens.caption, color: c.fgSecondary),
                         ),
-                      ),
-                      const SizedBox(height: Space.s2),
-                      for (final PaymentMethod m in _c.methods)
-                        PaymentMethodRow(
-                          label: paymentMethodLabel(l10n, m),
-                          selected: m == s.method,
+                        const SizedBox(height: Space.s2),
+                        for (final PaymentMethod m in _c.methods)
+                          PaymentMethodRow(
+                            label: paymentMethodLabel(l10n, m),
+                            selected: m == s.method,
+                            enabled: !s.submitting,
+                            onSelected: () => _c.chooseMethod(m),
+                          ),
+                        if (s.method.needsReference) ...<Widget>[
+                          const SizedBox(height: Space.s4),
+                          WaiterTextField(
+                            kind: TextFieldKind.text,
+                            label: l10n.saleReferenceLabel,
+                            textInputAction: TextInputAction.next,
+                            controller: _reference,
+                            maxLength: 120,
+                            enabled: !s.submitting,
+                            errorText: s.referenceMissing ? l10n.saleReferenceRequired : null,
+                            onChanged: _c.setReference,
+                          ),
+                        ],
+                        if (s.method.needsReason) ...<Widget>[
+                          const SizedBox(height: Space.s4),
+                          WaiterTextField(
+                            kind: TextFieldKind.text,
+                            label: l10n.saleReasonLabel,
+                            textInputAction: TextInputAction.next,
+                            controller: _reason,
+                            maxLength: 500,
+                            enabled: !s.submitting,
+                            errorText: s.reasonMissing ? l10n.saleReasonRequired : null,
+                            onChanged: _c.setReason,
+                          ),
+                        ],
+                        // For whom, and the buyer's words (on the voucher and its PDF).
+                        const SizedBox(height: Space.s6),
+                        WaiterTextField(
+                          kind: TextFieldKind.text,
+                          label: l10n.saleRecipientLabel,
+                          textInputAction: TextInputAction.next,
+                          controller: _recipient,
+                          maxLength: 160,
                           enabled: !s.submitting,
-                          onSelected: () => _c.chooseMethod(m),
+                          onChanged: _c.setRecipient,
                         ),
-                      if (s.method.needsReference) ...<Widget>[
                         const SizedBox(height: Space.s4),
                         WaiterTextField(
                           kind: TextFieldKind.text,
-                          label: l10n.saleReferenceLabel,
-                          controller: _reference,
-                          maxLength: 120,
+                          label: l10n.saleMessageLabel,
+                          textInputAction: TextInputAction.next,
+                          controller: _message,
+                          maxLength: 300,
                           enabled: !s.submitting,
-                          errorText: s.referenceMissing ? l10n.saleReferenceRequired : null,
-                          onChanged: _c.setReference,
+                          helperText: l10n.saleMessageHelper,
+                          onChanged: _c.setMessage,
                         ),
-                      ],
-                      if (s.method.needsReason) ...<Widget>[
-                        const SizedBox(height: Space.s4),
+                        const SizedBox(height: Space.s6),
                         WaiterTextField(
-                          kind: TextFieldKind.text,
-                          label: l10n.saleReasonLabel,
-                          controller: _reason,
-                          maxLength: 500,
+                          kind: TextFieldKind.email,
+                          label: l10n.saleEmailLabel,
+                          textInputAction: TextInputAction.done,
+                          controller: _email,
                           enabled: !s.submitting,
-                          errorText: s.reasonMissing ? l10n.saleReasonRequired : null,
-                          onChanged: _c.setReason,
+                          helperText: _c.sendsGuestEmail ? l10n.saleEmailHelperPdf : l10n.saleEmailHelperNoMail,
+                          errorText: s.emailInvalid ? l10n.saleEmailInvalid : null,
+                          onChanged: _c.setEmail,
                         ),
+                        const SizedBox(height: Space.s4),
                       ],
-                      // For whom, and the buyer's words (on the voucher and its PDF).
-                      const SizedBox(height: Space.s6),
-                      WaiterTextField(
-                        kind: TextFieldKind.text,
-                        label: l10n.saleRecipientLabel,
-                        controller: _recipient,
-                        maxLength: 160,
-                        enabled: !s.submitting,
-                        onChanged: _c.setRecipient,
-                      ),
-                      const SizedBox(height: Space.s4),
-                      WaiterTextField(
-                        kind: TextFieldKind.text,
-                        label: l10n.saleMessageLabel,
-                        controller: _message,
-                        maxLength: 300,
-                        enabled: !s.submitting,
-                        helperText: l10n.saleMessageHelper,
-                        onChanged: _c.setMessage,
-                      ),
-                      const SizedBox(height: Space.s6),
-                      WaiterTextField(
-                        kind: TextFieldKind.email,
-                        label: l10n.saleEmailLabel,
-                        controller: _email,
-                        enabled: !s.submitting,
-                        helperText: _c.sendsGuestEmail ? l10n.saleEmailHelperPdf : l10n.saleEmailHelperNoMail,
-                        errorText: s.emailInvalid ? l10n.saleEmailInvalid : null,
-                        onChanged: _c.setEmail,
-                      ),
-                      const SizedBox(height: Space.s4),
-                    ],
+                    ),
                   ),
                 ),
               ),
@@ -324,8 +341,11 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                 status: s.submitting ? ButtonStatus.loading : ButtonStatus.idle,
                 onPressed: s.submitting ? null : () => unawaited(_c.sell()),
               ),
-              const SizedBox(height: Space.s2),
-              TertiaryButton(label: l10n.commonBack, large: true, onPressed: s.submitting ? null : _c.backToAmount),
+              // While typing the keyboard needs the room; back is the close button or the system back then.
+              if (!_typing(context)) ...<Widget>[
+                const SizedBox(height: Space.s2),
+                TertiaryButton(label: l10n.commonBack, large: true, onPressed: s.submitting ? null : _c.backToAmount),
+              ],
             ],
           ),
         ),
@@ -484,7 +504,12 @@ class _SellVoucherScreenState extends State<SellVoucherScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: Space.s6),
-                        ScaledText(l10n.saleNoQrBody, type: TypeTokens.bodyM, color: c.warning, textAlign: TextAlign.center),
+                        ScaledText(
+                          l10n.saleNoQrBody,
+                          type: TypeTokens.bodyM,
+                          color: c.warning,
+                          textAlign: TextAlign.center,
+                        ),
                       ],
                     ),
                   ),
@@ -520,10 +545,7 @@ class _VoucherQr extends StatelessWidget {
       label: label,
       child: Container(
         padding: const EdgeInsets.all(Space.s3),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFFFFFF),
-          borderRadius: BorderRadius.circular(Radii.m),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFFFFFFFF), borderRadius: BorderRadius.circular(Radii.m)),
         child: SvgPicture.string(svg, width: _qrSide, height: _qrSide),
       ),
     );

@@ -98,12 +98,20 @@ final class TapPageTest extends TestCase
             $this->assertStringNotContainsString($secret, $html);
         }
         $this->assertCount(0, $page->headers->getCookies(), 'the page sets no cookies');
+        // Its inline stylesheet is allowed by a fresh nonce, nothing else (no scripts, no forms, no framing).
+        $csp = (string) $page->headers->get('Content-Security-Policy');
+        $this->assertMatchesRegularExpression("/^default-src 'none'; style-src 'nonce-([A-Za-z0-9+\/=]{24})'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'$/", $csp);
+        preg_match("/'nonce-([^']+)'/", $csp, $nonce);
+        $this->assertStringContainsString('<style nonce="'.$nonce[1].'">', $html);
+        $this->assertStringNotContainsString('style="', $html);
         $this->assertSame(5, $this->card->refresh()->sdm_counter);
 
         // The station's QA read was the card's first tap.
         $event = SecurityEvent::query()->where('type', SecurityEventType::CardTap->value)->get()->filter(static fn (SecurityEvent $e): bool => $e->data['purpose'] === 'balance')->sole();
         $this->assertSame(SecurityEventOutcome::Succeeded, $event->outcome);
         $this->assertSame(5, $event->data['counter']);
+
+        $this->assertNotSame($csp, $this->get($this->tapUrl(6))->headers->get('Content-Security-Policy'), 'a new nonce per page');
     }
 
     public function test_a_copied_or_older_tap_url_is_refused(): void

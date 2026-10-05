@@ -171,11 +171,14 @@ class ReloadController extends ChangeNotifier {
   /// The currency of the amount: the voucher's, or the restaurant's for a new card.
   String currencyOf(CardPresented card) => card.voucher?.currency ?? _session.user?.restaurant?.currency ?? 'EUR';
 
-  List<PaymentMethod> get methods => <PaymentMethod>[
+  /// How the guest pays for [card]. Loyalty only for those allowed to give it, and only on a new card or a loyalty
+  /// voucher: a paid voucher never becomes a loyalty one (the server refuses it as well).
+  List<PaymentMethod> methodsFor(CardPresented card) => <PaymentMethod>[
     PaymentMethod.cash,
     PaymentMethod.cardTerminal,
     PaymentMethod.bankTransfer,
-    if (_session.user?.canSellComplimentary ?? false) PaymentMethod.complimentary,
+    if ((_session.user?.canSellComplimentary ?? false) && (card.isNew || (card.voucher?.loyalty ?? false)))
+      PaymentMethod.complimentary,
   ];
 
   // ------------------------------------------------------------------ tap
@@ -313,6 +316,7 @@ class ReloadController extends ChangeNotifier {
     'RELOAD_NOT_ALLOWED',
     'VALIDATION_FAILED',
     'COMPLIMENTARY_NOT_ALLOWED',
+    'LOYALTY_VOUCHER_ONLY',
     'PRESENTMENT_INVALID',
     ..._voucherCodes,
   };
@@ -403,7 +407,10 @@ class ReloadController extends ChangeNotifier {
       _definitive(); // nothing was booked
       if (forbidden && voucher == null) {
         _set(ReloadProblem(ReloadProblemKind.cannotSell, details: back, requestId: e.requestId));
-      } else if (forbidden || e.code == 'RELOAD_NOT_ALLOWED' || e.code == 'COMPLIMENTARY_NOT_ALLOWED') {
+      } else if (forbidden ||
+          e.code == 'RELOAD_NOT_ALLOWED' ||
+          e.code == 'COMPLIMENTARY_NOT_ALLOWED' ||
+          e.code == 'LOYALTY_VOUCHER_ONLY') {
         _set(ReloadProblem(ReloadProblemKind.notAllowed, details: back, requestId: e.requestId));
       } else if (voucher == null && (e.code == 'INVALID_AMOUNT' || e.code == 'BALANCE_LIMIT_EXCEEDED')) {
         _set(

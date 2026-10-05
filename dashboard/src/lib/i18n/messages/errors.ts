@@ -52,7 +52,8 @@ export const errors = defineMessages({
     "errors.VOUCHER_NOT_REDEEMABLE": "This voucher cannot be redeemed in its current status.",
     "errors.VOUCHER_NOT_REFUNDABLE": "Nothing of this balance can be refunded: loyalty value is not paid out.",
     "errors.RELOAD_NOT_ALLOWED": "Reloading vouchers is turned off for this restaurant.",
-    "errors.COMPLIMENTARY_NOT_ALLOWED": "Only the owner can give loyalty value.",
+    "errors.COMPLIMENTARY_NOT_ALLOWED": "You may not give loyalty value. The owner can allow it in Team.",
+    "errors.LOYALTY_VOUCHER_ONLY": "Loyalty value only goes onto a loyalty voucher. A paid voucher never becomes one.",
     "errors.TRANSACTION_NOT_REVERSIBLE": "This booking cannot be cancelled (anymore).",
 
     // Scanning and cards
@@ -110,7 +111,8 @@ export const errors = defineMessages({
     "errors.VOUCHER_NOT_REDEEMABLE": "Dieser Gutschein kann im aktuellen Status nicht eingelöst werden.",
     "errors.VOUCHER_NOT_REFUNDABLE": "Von diesem Guthaben kann nichts rückerstattet werden: Loyalty-Guthaben wird nicht ausbezahlt.",
     "errors.RELOAD_NOT_ALLOWED": "Das Aufladen von Gutscheinen ist für dieses Restaurant deaktiviert.",
-    "errors.COMPLIMENTARY_NOT_ALLOWED": "Nur der Inhaber kann Loyalty-Guthaben vergeben.",
+    "errors.COMPLIMENTARY_NOT_ALLOWED": "Sie dürfen kein Loyalty-Guthaben vergeben. Der Inhaber kann es unter Team erlauben.",
+    "errors.LOYALTY_VOUCHER_ONLY": "Loyalty-Guthaben nur auf Loyalty-Gutscheine. Ein bezahlter Gutschein wird nie zu einem.",
     "errors.TRANSACTION_NOT_REVERSIBLE": "Diese Buchung kann nicht (mehr) storniert werden.",
 
     "errors.MEDIUM_NOT_RECOGNIZED": "Dieser Code ist kein gültiger Gutschein dieses Restaurants.",
@@ -167,7 +169,8 @@ export const errors = defineMessages({
     "errors.VOUCHER_NOT_REDEEMABLE": "Ovaj vaučer se ne može naplatiti u trenutnom statusu.",
     "errors.VOUCHER_NOT_REFUNDABLE": "Od ovog stanja ništa se ne može vratiti: loyalty vrijednost se ne isplaćuje.",
     "errors.RELOAD_NOT_ALLOWED": "Dopuna vaučera je isključena za ovaj restoran.",
-    "errors.COMPLIMENTARY_NOT_ALLOWED": "Samo vlasnik može dati loyalty vrijednost.",
+    "errors.COMPLIMENTARY_NOT_ALLOWED": "Ne smijete davati loyalty vrijednost. Vlasnik to može dozvoliti u Timu.",
+    "errors.LOYALTY_VOUCHER_ONLY": "Loyalty vrijednost ide samo na loyalty vaučer. Plaćeni vaučer nikad ne postaje loyalty.",
     "errors.TRANSACTION_NOT_REVERSIBLE": "Ova transakcija se ne može (više) stornirati.",
 
     "errors.MEDIUM_NOT_RECOGNIZED": "Ovaj kod nije važeći vaučer ovog restorana.",

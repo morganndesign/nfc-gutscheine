@@ -25,7 +25,7 @@ use Laravel\Sanctum\NewAccessToken;
  * Sign-in tokens for the native waiter app (GiftCard Waiter).
  *
  * A token can present and redeem vouchers; for managers and owners (roles with `vouchers.sell`) it can also
- * sell a voucher in the app, owners also complimentary ones. Platform staff get a station token (platform device,
+ * sell a voucher in the app, owners (and managers the owner allowed) also loyalty ones. Platform staff get a station token (platform device,
  * personalisation only). It is bound to the phone that signed in (X-Device-Id), expires after
  * `device_token_days` without use and is renewed while the phone is in use. Revoking the device in
  * Devices stops the token immediately. One active token per person and phone: signing in again
@@ -37,8 +37,8 @@ final class DeviceTokenService
     public const ABILITIES = [Permission::VouchersRedeem->value];
 
     /**
-     * Selling vouchers in the app, each granted only when the role has that permission (a complimentary voucher
-     * additionally needs `vouchers.sell_complimentary`, owners by default). The role is still checked on every
+     * Selling vouchers in the app, each granted only when the role has that permission (loyalty additionally
+     * needs `vouchers.sell_complimentary`: owners, and managers the owner allowed). The role is still checked on every
      * request: a token never grants more than the role (see User::hasPermission).
      *
      * @var list<string>
@@ -54,11 +54,14 @@ final class DeviceTokenService
     /** @return list<string> */
     public static function abilitiesFor(User $user): array
     {
-        $granted = $user->role->permissionSlugs();
+        $granted = $user->permissionSlugs();
         if ($user->isPlatformAdmin()) {
             return array_values(array_intersect(self::STATION_ABILITIES, $granted));
         }
-        $issuing = in_array(Permission::VouchersSell->value, $granted, true) ? array_intersect(self::ISSUING_ABILITIES, $granted) : [];
+        // A manager's token carries loyalty in case the owner allows it later (it takes effect at once, no new
+        // sign-in): the person's own permission is still checked on every request, so it grants nothing by itself.
+        $grantable = $user->mayBeGrantedLoyalty() ? [Permission::VouchersSellComplimentary->value] : [];
+        $issuing = in_array(Permission::VouchersSell->value, $granted, true) ? array_intersect(self::ISSUING_ABILITIES, [...$granted, ...$grantable]) : [];
 
         return [...self::ABILITIES, ...array_values($issuing), ...array_values(array_intersect(self::CARD_ABILITIES, $granted))];
     }
@@ -72,7 +75,7 @@ final class DeviceTokenService
     public function issue(Request $request, User $user, string $deviceId, string $deviceName, string $platform): NewAccessToken
     {
         $restaurant = $user->restaurant;
-        $granted = $user->role->permissionSlugs();
+        $granted = $user->permissionSlugs();
         $station = $user->isPlatformAdmin();
 
         if ($station ? self::abilitiesFor($user) === [] : ($restaurant === null || array_diff(self::ABILITIES, $granted) !== [])) {

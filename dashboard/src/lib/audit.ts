@@ -58,6 +58,8 @@ const ACTIONS = new Set([
   "user.password_reset_sent",
   "user.profile_updated",
   "user.updated",
+  "user.loyalty_allowed",
+  "user.loyalty_revoked",
   "voucher.blocked",
   "voucher.expired",
   "voucher.qr_reissued",

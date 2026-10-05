@@ -146,6 +146,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('users', [UserController::class, 'store'])->middleware('can:users.manage');
             Route::get('users/{user}', [UserController::class, 'show'])->middleware('can:users.view');
             Route::patch('users/{user}', [UserController::class, 'update'])->middleware('can:users.manage');
+            Route::put('users/{user}/loyalty', [UserController::class, 'loyalty'])->middleware('can:users.manage');
             Route::post('users/{user}/deactivate', [UserController::class, 'deactivate'])->middleware('can:users.manage');
             Route::post('users/{user}/activate', [UserController::class, 'activate'])->middleware('can:users.manage');
             Route::post('users/{user}/password-reset', [UserController::class, 'sendPasswordReset'])->middleware('can:users.manage');

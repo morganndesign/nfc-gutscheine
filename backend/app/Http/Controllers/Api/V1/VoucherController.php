@@ -141,7 +141,7 @@ final class VoucherController extends Controller
     private function filteredQuery(VoucherIndexRequest $request): Builder
     {
         $v = $request->validated();
-        $query = Voucher::query()->search($v['search'] ?? null)->withLoyalty();
+        $query = Voucher::query()->search($v['search'] ?? null);
         if (! empty($v['loyalty'])) {
             $query->loyalty();
         }

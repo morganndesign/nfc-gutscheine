@@ -386,6 +386,15 @@ export function useUserAction() {
   })
 }
 
+/** The owner allows a manager to give loyalty, or takes it back (effective with the manager's next request). */
+export function useLoyaltyGrant() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, allowed }: { id: string; allowed: boolean }) => api(`/users/${id}/loyalty`, { method: "PUT", body: { allowed } }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: keys.users }),
+  })
+}
+
 // ---------------------------------------------------------------- devices
 
 export function useDevices() {

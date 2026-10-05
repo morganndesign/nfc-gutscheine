@@ -342,6 +342,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
         balance={voucher.balance}
         maxBalance={settings?.max_voucher_balance ?? voucher.balance}
         currency={voucher.currency}
+        loyalty={voucher.loyalty}
         open={dialog === "reload"}
         onOpenChange={(o) => setDialog(o ? "reload" : null)}
       />

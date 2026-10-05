@@ -40,6 +40,7 @@ export const RELOAD_CODES: ReadonlySet<string> = new Set([
   "VOUCHER_EXPIRED",
   "VOUCHER_NOT_REDEEMABLE",
   "INVALID_VOUCHER_STATE",
+  "LOYALTY_VOUCHER_ONLY",
 ])
 
 /**

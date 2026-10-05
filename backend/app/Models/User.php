@@ -32,6 +32,7 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $email
  * @property string $password
  * @property UserStatus $status
+ * @property bool $can_give_loyalty A manager the owner allowed to give loyalty (decision 2026-10-05).
  * @property string $locale
  * @property Carbon|null $last_login_at
  * @property string|null $last_login_ip
@@ -76,6 +77,7 @@ class User extends Authenticatable implements CanResetPasswordContract
             'password' => 'hashed',
             'status' => UserStatus::class,
             'failed_login_attempts' => 'integer',
+            'can_give_loyalty' => 'boolean',
         ];
     }
 
@@ -111,11 +113,33 @@ class User extends Authenticatable implements CanResetPasswordContract
         return $this->locked_until !== null && $this->locked_until->isFuture();
     }
 
+    /**
+     * The role's permissions plus what the owner granted this person: a manager may give loyalty when the owner
+     * allowed it (`can_give_loyalty`, decision 2026-10-05). Never more than the owner has.
+     *
+     * @return list<string>
+     */
+    public function permissionSlugs(): array
+    {
+        $slugs = $this->role->permissionSlugs();
+        if ($this->mayBeGrantedLoyalty() && $this->can_give_loyalty && ! in_array(PermissionEnum::VouchersSellComplimentary->value, $slugs, true)) {
+            $slugs[] = PermissionEnum::VouchersSellComplimentary->value;
+        }
+
+        return $slugs;
+    }
+
+    /** Only managers can be granted loyalty; owners have it by role, waiters never. */
+    public function mayBeGrantedLoyalty(): bool
+    {
+        return $this->roleSlug() === RoleSlug::Manager;
+    }
+
     public function hasPermission(PermissionEnum|string $permission): bool
     {
         $slug = $permission instanceof PermissionEnum ? $permission->value : $permission;
 
-        if (! in_array($slug, $this->role->permissionSlugs(), true)) {
+        if (! in_array($slug, $this->permissionSlugs(), true)) {
             return false;
         }
 
@@ -129,7 +153,7 @@ class User extends Authenticatable implements CanResetPasswordContract
     public function effectivePermissions(): array
     {
         return array_values(array_filter(
-            $this->role->permissionSlugs(),
+            $this->permissionSlugs(),
             fn (string $slug): bool => $this->hasPermission($slug),
         ));
     }

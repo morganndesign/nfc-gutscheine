@@ -107,14 +107,22 @@ final class RefundTest extends TestCase
         $this->assertLedgerConsistent($gift->voucher);
     }
 
-    public function test_complimentary_value_given_after_the_paid_money_was_spent_is_never_paid_out(): void
+    public function test_loyalty_value_given_after_the_paid_money_was_spent_is_never_paid_out(): void
     {
-        $sale = $this->sell($this->restaurant, 5000);
+        // A loyalty voucher (only those take loyalty value): 1000 given, 5000 paid in by the guest, all eaten.
+        $owner = $this->staff($this->restaurant, RoleSlug::Owner);
+        $sale = $this->asTenant($this->restaurant, fn () => app(VoucherService::class)->sell(new Actor($owner), new IssueVoucherData(
+            value: 1000,
+            payment: new PaymentData(PaymentMethod::Complimentary, reason: 'Regular'),
+            idempotencyKey: (string) Str::uuid(),
+        )));
+        $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
+        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 5000, 'payment' => ['method' => 'cash']], $this->idempotency())->assertCreated();
         $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
-        $redemption = $this->redeemWithQr($sale->voucher, $sale->printable->payload, 5000)->assertCreated()->json('data.transaction.id');
+        $redemption = $this->redeemWithQr($sale->voucher, $sale->printable->payload, 6000)->assertCreated()->json('data.transaction.id');
         $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
 
-        // The 5000 paid were eaten; a goodwill top-up afterwards is food, not cash.
+        // The paid money was eaten; a goodwill top-up afterwards is food, not cash.
         $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 5000, 'payment' => ['method' => 'complimentary', 'reason' => 'Sorry for the wait']], $this->idempotency())->assertCreated();
         $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 0);
         $this->refund($sale->voucher)->assertStatus(422)->assertJsonPath('code', 'VOUCHER_NOT_REFUNDABLE');
@@ -125,7 +133,7 @@ final class RefundTest extends TestCase
         $this->postJson("/api/v1/transactions/{$redemption}/reverse", ['reason' => 'Booked on the wrong voucher'])->assertCreated();
         $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 6000);
         $this->refund($sale->voucher)->assertCreated()
-            ->assertJsonPath('data.transaction.amount', -11000)
+            ->assertJsonPath('data.transaction.amount', -12000)
             ->assertJsonPath('data.transaction.payment.amount', 6000);
         $this->assertLedgerConsistent($sale->voucher);
     }

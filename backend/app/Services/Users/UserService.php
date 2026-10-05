@@ -95,6 +95,10 @@ final class UserService
                 if ($previousRole === RoleSlug::Owner && $role->slug !== RoleSlug::Owner && $user->isActive()) {
                     $this->assertAnotherOwnerRemains($user);
                 }
+                if ($role->getKey() !== $user->role_id) {
+                    // A loyalty grant belongs to the manager role: a new role starts without it.
+                    $user->can_give_loyalty = false;
+                }
                 $user->role_id = $role->getKey();
             }
 
@@ -123,6 +127,33 @@ final class UserService
             }
 
             return $user->refresh()->load('role');
+        });
+    }
+
+    /**
+     * The owner allows a manager to give loyalty, or takes it back (decision 2026-10-05). Only an owner of the
+     * same restaurant, only for managers; effective with the manager's next request.
+     */
+    public function setLoyaltyGrant(Actor $actor, User $user, bool $allowed): User
+    {
+        $owner = $actor->user;
+        if ($owner === null || $owner->roleSlug() !== RoleSlug::Owner || ! $owner->belongsToRestaurant($user->restaurant_id)) {
+            throw new RoleAssignmentException('Only the owner can allow loyalty.');
+        }
+        if (! $user->mayBeGrantedLoyalty()) {
+            throw new RoleAssignmentException('Only managers can be allowed to give loyalty.');
+        }
+
+        return DB::transaction(function () use ($actor, $user, $allowed): User {
+            $locked = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
+            if ($locked->can_give_loyalty !== $allowed) {
+                $locked->forceFill(['can_give_loyalty' => $allowed])->save();
+                $this->audit->log($allowed ? 'user.loyalty_allowed' : 'user.loyalty_revoked', $actor, $locked,
+                    ['can_give_loyalty' => ! $allowed], ['can_give_loyalty' => $allowed]);
+                $this->events->record(SecurityEventType::StaffChange, $actor, subject: $locked, data: ['fields' => ['can_give_loyalty'], 'can_give_loyalty' => $allowed]);
+            }
+
+            return $locked->load('role');
         });
     }
 
