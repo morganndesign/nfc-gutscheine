@@ -4,7 +4,7 @@ import { use, useState } from "react"
 import Link from "next/link"
 import { ArrowDownLeft, ArrowLeft, Ban, CheckCircle2, Clock, Loader2, MoreHorizontal, Pencil, QrCode, RotateCcw, Undo2 } from "lucide-react"
 import { toast } from "sonner"
-import { StatusBadge, displayStatus } from "@/components/common/status-badge"
+import { LoyaltyBadge, StatusBadge, displayStatus } from "@/components/common/status-badge"
 import { useConfirm } from "@/components/common/confirm"
 import { PAYMENT_METHOD_LABELS } from "@/components/vouchers/payment-fields"
 import { ReasonDialog } from "@/components/common/reason-dialog"
@@ -143,6 +143,7 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="card-number text-xl font-semibold sm:text-2xl">{voucher.voucher_number_formatted}</h1>
             <StatusBadge status={displayStatus(voucher)} size="lg" />
+            {voucher.loyalty ? <LoyaltyBadge /> : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {canReload ? (

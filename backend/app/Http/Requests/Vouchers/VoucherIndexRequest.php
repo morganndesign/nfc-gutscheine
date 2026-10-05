@@ -27,6 +27,8 @@ final class VoucherIndexRequest extends ApiRequest
             'min_balance' => ['nullable', 'integer', 'min:0'],
             'max_balance' => ['nullable', 'integer', 'min:0'],
             'kind' => ['nullable', 'string', 'in:'.implode(',', VoucherKind::values())],
+            // Loyalty vouchers only: value given by the owner without payment (decision 2026-10-05).
+            'loyalty' => ['nullable', 'boolean'],
             'sort' => ['nullable', 'in:'.implode(',', self::SORTS)],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];

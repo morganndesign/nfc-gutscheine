@@ -1,6 +1,6 @@
 "use client"
 
-import { Ban, CheckCircle2, Circle, Clock, Undo2 } from "lucide-react"
+import { Ban, CheckCircle2, Circle, Clock, Heart, Undo2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import type { VoucherStatus } from "@/lib/api/types"
 import { tr, useT } from "@/lib/i18n"
@@ -58,6 +58,23 @@ export function StatusBadge({
     >
       <Icon className={size === "sm" ? "size-3" : "size-4"} aria-hidden />
       {label ?? t(cfg.label)}
+    </span>
+  )
+}
+
+/** A regular's loyalty voucher: the owner gave value without payment (decision 2026-10-05). */
+export function LoyaltyBadge({ className }: { className?: string }) {
+  const t = useT()
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        "bg-violet-50 text-violet-700 ring-violet-600/15 dark:bg-violet-500/10 dark:text-violet-300",
+        className,
+      )}
+    >
+      <Heart className="size-3" aria-hidden />
+      {t("vouchers.loyalty.badge")}
     </span>
   )
 }

@@ -7,7 +7,7 @@ import { Download, Filter, Loader2, Plus, Search, Ticket } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { QueryError } from "@/components/common/query-error"
-import { StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabelKey } from "@/components/common/status-badge"
+import { LoyaltyBadge, StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabelKey } from "@/components/common/status-badge"
 import { EmptyState } from "@/components/common/empty-state"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { RequirePermission } from "@/components/layout/auth-guard"
@@ -49,12 +49,13 @@ function VouchersContent() {
   const router = useRouter()
   const [search, setSearch] = useState("")
   const [status, setStatus] = useState<VoucherStatus[]>([])
+  const [loyalty, setLoyalty] = useState(false)
   const [sort, setSort] = useState("-created_at")
   const [page, setPage] = useState(1)
   const [exporting, setExporting] = useState(false)
   const debounced = useDebounce(search)
 
-  const filters = { search: debounced, status, sort, page, per_page: 25 }
+  const filters = { search: debounced, status, sort, page, per_page: 25, ...(loyalty ? { loyalty: 1 as const } : {}) }
   const { data, isLoading, isFetching, error, refetch } = useVouchers(filters)
 
   const toggleStatus = (s: VoucherStatus) => {
@@ -76,7 +77,7 @@ function VouchersContent() {
                 onClick={async () => {
                   setExporting(true)
                   try {
-                    await downloadFile("/vouchers/export", { search: debounced, status, sort }, "vouchers.csv")
+                    await downloadFile("/vouchers/export", { search: debounced, status, sort, ...(loyalty ? { loyalty: 1 } : {}) }, "vouchers.csv")
                   } catch (e) {
                     toast.error(errorMessage(e))
                   } finally {
@@ -118,7 +119,9 @@ function VouchersContent() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="h-9">
                   <Filter /> {t("vouchers.col.status")}
-                  {status.length ? <span className="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px]">{status.length}</span> : null}
+                  {status.length + (loyalty ? 1 : 0) ? (
+                    <span className="bg-primary text-primary-foreground rounded-full px-1.5 text-[10px]">{status.length + (loyalty ? 1 : 0)}</span>
+                  ) : null}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
@@ -129,6 +132,17 @@ function VouchersContent() {
                     {t(statusLabelKey(s))}
                   </DropdownMenuCheckboxItem>
                 ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={loyalty}
+                  onCheckedChange={(v) => {
+                    setLoyalty(v === true)
+                    setPage(1)
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  {t("vouchers.loyalty.only")}
+                </DropdownMenuCheckboxItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Select value={sort} onValueChange={(v) => setSort(v)}>
@@ -182,7 +196,10 @@ function VouchersContent() {
                       {voucher.customer?.full_name ?? voucher.recipient_name ?? t("common.none")}
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <StatusBadge status={displayStatus(voucher)} />
+                      <span className="inline-flex items-center gap-1.5">
+                        <StatusBadge status={displayStatus(voucher)} />
+                        {voucher.loyalty ? <LoyaltyBadge /> : null}
+                      </span>
                     </TableCell>
                     <TableCell className="tabular pr-4 text-right sm:pr-2">
                       <span className="font-medium">{formatMoney(voucher.balance, voucher.currency)}</span>

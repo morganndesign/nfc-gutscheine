@@ -73,6 +73,8 @@ export interface VoucherFilters {
   search?: string
   status?: VoucherStatus[]
   kind?: VoucherKind
+  /** 1 = loyalty vouchers only. */
+  loyalty?: 1
   sort?: string
   page?: number
   per_page?: number

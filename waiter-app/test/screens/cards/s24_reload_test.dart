@@ -152,4 +152,52 @@ void main() {
     expect(app.nfc.cancels, greaterThanOrEqualTo(1), reason: 'no reader mode or iPhone sheet left behind');
     await finishApp(tester, app);
   });
+
+  // Decision 2026-10-05: the owner tops up a regular's card as loyalty — no payment, always with a reason.
+  for (final bool ios in <bool>[false, true]) {
+    testWidgets('${ios ? 'iPhone' : 'Android'}: an owner tops up a regular\'s card as loyalty', (WidgetTester tester) async {
+      final Map<String, Object?> owner = <String, Object?>{
+        ...Payloads.reloadManager(),
+        'permissions': <String>[...(Payloads.reloadManager()['permissions']! as List<String>), 'vouchers.sell_complimentary'],
+      };
+      final TestApp app = await TestApp.create(isIos: ios, user: owner, nfc: FakeNfcRelay());
+      app.backend
+        ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+        ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000)))
+        ..on('POST', reloads, FakeReply(201, Payloads.reloaded(amount: 2000, balance: 4000)));
+      await pumpWaiterApp(tester, app);
+
+      await tester.tap(text(en.reloadReady));
+      await settle(tester, 20);
+      await typeDigits(tester, '2000');
+      await tester.tap(primary('Continue'));
+      await settle(tester);
+      expect(en.salePaymentComplimentary, 'Loyalty');
+      await tester.tap(text(en.salePaymentComplimentary));
+      await settle(tester);
+      await tester.enterText(find.byType(TextField).last, 'Stammgast Oktober');
+      await tester.pump();
+      await tester.tap(primary('Top up'));
+      await settle(tester, 20);
+
+      expect(text(en.reloadDoneTitle), findsOneWidget);
+      expect(app.backend.to('POST', reloads).single.body!['payment'], <String, Object?>{'method': 'complimentary', 'reason': 'Stammgast Oktober'});
+      await finishApp(tester, app);
+    });
+  }
+
+  testWidgets('a manager is never offered loyalty', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.reloadManager(), nfc: FakeNfcRelay());
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000)));
+    await pumpWaiterApp(tester, app);
+    await tester.tap(text(en.reloadReady));
+    await settle(tester, 20);
+    await typeDigits(tester, '2000');
+    await tester.tap(primary('Continue'));
+    await settle(tester);
+    expect(text(en.salePaymentComplimentary), findsNothing);
+    await finishApp(tester, app);
+  });
 }

@@ -1394,10 +1394,10 @@ abstract class AppLocalizations {
   /// **'Bank transfer'**
   String get salePaymentBankTransfer;
 
-  /// Spec key: sale.payment.complimentary (12 §5.13) · Max: 16 · Notes: ADR-002 · choice · only with vouchers.sell_complimentary
+  /// Spec key: sale.payment.complimentary (12 §5.13) · Max: 16 · Notes: ADR-002 · choice · value without payment for regulars (renamed from "Gratis", 2026-10-05) · only with vouchers.sell_complimentary (owners); sale and top-up
   ///
   /// In en, this message translates to:
-  /// **'Complimentary'**
+  /// **'Loyalty'**
   String get salePaymentComplimentary;
 
   /// Spec key: sale.reference.label (12 §5.13) · Max: 32 · Notes: ADR-002 · card terminal / bank transfer
@@ -1412,10 +1412,10 @@ abstract class AppLocalizations {
   /// **'Enter the receipt or reference number.'**
   String get saleReferenceRequired;
 
-  /// Spec key: sale.reason.label (12 §5.13) · Max: 24 · Notes: ADR-002 · complimentary
+  /// Spec key: sale.reason.label (12 §5.13) · Max: 24 · Notes: ADR-002 · loyalty (e.g. "Stammgast")
   ///
   /// In en, this message translates to:
-  /// **'Reason'**
+  /// **'For whom, and why?'**
   String get saleReasonLabel;
 
   /// Spec key: sale.reason.required (12 §5.13) · Max: 60 · Notes: ADR-002 · field error

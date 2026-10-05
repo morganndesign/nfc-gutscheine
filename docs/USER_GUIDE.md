@@ -64,7 +64,7 @@ dashboard.
 - **Recent activity**: the latest bookings. **Transactions** is the full ledger.
 - **Exports**: **Vouchers → Export CSV** and **Transactions → Export CSV** open directly in Excel (Austrian number
   format); the transaction export includes the payment method.
-- **Complimentary vouchers** (owners only, in the dashboard): payment **Complimentary** with a reason.
+- **Loyalty** (owners only, dashboard and app): value for regulars without payment — sell a voucher or a card, or top one up, with payment **Loyalty (no payment)** and a reason (e.g. "regular guest, October"). Such vouchers carry a **Loyalty** badge and can be filtered in **Vouchers**; loyalty value is not revenue, is listed separately in the cash-up and is never paid out.
 - **Expiry**: vouchers have no expiry unless you set a validity (at least 36 months) under **Settings → Vouchers**.
   An expired voucher keeps its balance. **⋯ → Expire now** (with a reason) and **⋯ → Reinstate** (with a new last
   valid day or none) are for owners.

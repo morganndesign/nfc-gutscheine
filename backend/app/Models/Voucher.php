@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\MediumStatus;
+use App\Enums\PaymentDirection;
+use App\Enums\PaymentMethod;
 use App\Enums\VoucherKind;
 use App\Enums\VoucherStatus;
 use App\Models\Concerns\BelongsToRestaurant;
@@ -117,6 +119,41 @@ class Voucher extends Model
     public function activeMedia(): HasMany
     {
         return $this->hasMany(Medium::class)->where('status', MediumStatus::Active->value);
+    }
+
+    /**
+     * A loyalty voucher (decision 2026-10-05): the owner gave value without payment at least once — at the sale or a
+     * top-up (`complimentary` payments). Never revenue, never paid out.
+     */
+    public function isLoyalty(): bool
+    {
+        $known = $this->getAttribute('loyalty_exists');
+        if ($known !== null) {
+            return (bool) $known;
+        }
+        if ($this->relationLoaded('payments')) {
+            return $this->payments->contains(static fn (Payment $p): bool => $p->method === PaymentMethod::Complimentary && $p->direction === PaymentDirection::In);
+        }
+
+        return $this->payments()->where('method', PaymentMethod::Complimentary->value)->where('direction', PaymentDirection::In->value)->exists();
+    }
+
+    /**
+     * @param  Builder<Voucher>  $query
+     * @return Builder<Voucher>
+     */
+    public function scopeWithLoyalty(Builder $query): Builder
+    {
+        return $query->withExists(['payments as loyalty_exists' => static fn ($q) => $q->where('method', PaymentMethod::Complimentary->value)->where('direction', PaymentDirection::In->value)]);
+    }
+
+    /**
+     * @param  Builder<Voucher>  $query
+     * @return Builder<Voucher>
+     */
+    public function scopeLoyalty(Builder $query): Builder
+    {
+        return $query->whereHas('payments', static fn ($q) => $q->where('method', PaymentMethod::Complimentary->value)->where('direction', PaymentDirection::In->value));
     }
 
     /** @return HasMany<Payment, $this> */

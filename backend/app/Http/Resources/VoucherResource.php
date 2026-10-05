@@ -33,6 +33,7 @@ final class VoucherResource extends JsonResource
             'voucher_number' => $voucher->voucher_number,
             'voucher_number_formatted' => VoucherNumber::format($voucher->voucher_number),
             'status' => $voucher->status->value,
+            'loyalty' => $voucher->isLoyalty(),
             'currency' => $voucher->currency,
             'initial_value' => $voucher->initial_value,
             'balance' => $voucher->balance,

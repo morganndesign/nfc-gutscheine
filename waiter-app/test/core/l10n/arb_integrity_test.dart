@@ -166,10 +166,13 @@ void main() {
         'envBadgeStaging',
         // A pure placeholder pattern: "{batch} · {cards}".
         'readyDeliveryBody',
+        // "Loyalty" is the product word in every language (2026-10-05).
+        'salePaymentComplimentary',
       },
       'bs': <String>{
         'appName',
         'readyDeliveryBody',
+        'salePaymentComplimentary',
         'signInEmailLabel',
         'balanceCardMasked',
         'a11yProblem',

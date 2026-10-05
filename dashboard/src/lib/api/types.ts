@@ -253,6 +253,8 @@ export interface Voucher {
   voucher_number: string
   voucher_number_formatted: string
   status: VoucherStatus
+  /** The owner gave value without payment at least once (decision 2026-10-05): a regular's loyalty voucher. */
+  loyalty: boolean
   currency: string
   initial_value: number
   balance: number

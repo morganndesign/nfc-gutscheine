@@ -50,9 +50,9 @@ export const errors = defineMessages({
     "errors.VOUCHER_BLOCKED": "This voucher is blocked.",
     "errors.VOUCHER_EXPIRED": "This voucher has expired. The owner can reinstate it; the balance is kept.",
     "errors.VOUCHER_NOT_REDEEMABLE": "This voucher cannot be redeemed in its current status.",
-    "errors.VOUCHER_NOT_REFUNDABLE": "Nothing of this balance can be refunded: complimentary value is not paid out.",
+    "errors.VOUCHER_NOT_REFUNDABLE": "Nothing of this balance can be refunded: loyalty value is not paid out.",
     "errors.RELOAD_NOT_ALLOWED": "Reloading vouchers is turned off for this restaurant.",
-    "errors.COMPLIMENTARY_NOT_ALLOWED": "Only the owner can issue a complimentary voucher.",
+    "errors.COMPLIMENTARY_NOT_ALLOWED": "Only the owner can give loyalty value.",
     "errors.TRANSACTION_NOT_REVERSIBLE": "This booking cannot be cancelled (anymore).",
 
     // Scanning and cards
@@ -108,9 +108,9 @@ export const errors = defineMessages({
     "errors.VOUCHER_BLOCKED": "Dieser Gutschein ist gesperrt.",
     "errors.VOUCHER_EXPIRED": "Dieser Gutschein ist abgelaufen. Der Inhaber kann ihn wieder aktivieren; das Guthaben bleibt erhalten.",
     "errors.VOUCHER_NOT_REDEEMABLE": "Dieser Gutschein kann im aktuellen Status nicht eingelöst werden.",
-    "errors.VOUCHER_NOT_REFUNDABLE": "Von diesem Guthaben kann nichts rückerstattet werden: Geschenkter Wert wird nicht ausbezahlt.",
+    "errors.VOUCHER_NOT_REFUNDABLE": "Von diesem Guthaben kann nichts rückerstattet werden: Loyalty-Guthaben wird nicht ausbezahlt.",
     "errors.RELOAD_NOT_ALLOWED": "Das Aufladen von Gutscheinen ist für dieses Restaurant deaktiviert.",
-    "errors.COMPLIMENTARY_NOT_ALLOWED": "Nur der Inhaber kann einen Gratisgutschein ausstellen.",
+    "errors.COMPLIMENTARY_NOT_ALLOWED": "Nur der Inhaber kann Loyalty-Guthaben vergeben.",
     "errors.TRANSACTION_NOT_REVERSIBLE": "Diese Buchung kann nicht (mehr) storniert werden.",
 
     "errors.MEDIUM_NOT_RECOGNIZED": "Dieser Code ist kein gültiger Gutschein dieses Restaurants.",
@@ -165,9 +165,9 @@ export const errors = defineMessages({
     "errors.VOUCHER_BLOCKED": "Ovaj vaučer je blokiran.",
     "errors.VOUCHER_EXPIRED": "Ovaj vaučer je istekao. Vlasnik ga može ponovo aktivirati; stanje ostaje sačuvano.",
     "errors.VOUCHER_NOT_REDEEMABLE": "Ovaj vaučer se ne može naplatiti u trenutnom statusu.",
-    "errors.VOUCHER_NOT_REFUNDABLE": "Od ovog stanja ništa se ne može vratiti: poklonjena vrijednost se ne isplaćuje.",
+    "errors.VOUCHER_NOT_REFUNDABLE": "Od ovog stanja ništa se ne može vratiti: loyalty vrijednost se ne isplaćuje.",
     "errors.RELOAD_NOT_ALLOWED": "Dopuna vaučera je isključena za ovaj restoran.",
-    "errors.COMPLIMENTARY_NOT_ALLOWED": "Samo vlasnik može izdati besplatni vaučer.",
+    "errors.COMPLIMENTARY_NOT_ALLOWED": "Samo vlasnik može dati loyalty vrijednost.",
     "errors.TRANSACTION_NOT_REVERSIBLE": "Ova transakcija se ne može (više) stornirati.",
 
     "errors.MEDIUM_NOT_RECOGNIZED": "Ovaj kod nije važeći vaučer ovog restorana.",

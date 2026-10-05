@@ -786,7 +786,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get salePaymentBankTransfer => 'Bank transfer';
 
   @override
-  String get salePaymentComplimentary => 'Complimentary';
+  String get salePaymentComplimentary => 'Loyalty';
 
   @override
   String get saleReferenceLabel => 'Receipt or reference number';
@@ -795,7 +795,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saleReferenceRequired => 'Enter the receipt or reference number.';
 
   @override
-  String get saleReasonLabel => 'Reason';
+  String get saleReasonLabel => 'For whom, and why?';
 
   @override
   String get saleReasonRequired => 'Enter a reason (at least 3 characters).';

@@ -1134,9 +1134,9 @@
   "@salePaymentBankTransfer": {
     "description": "Spec key: sale.payment.bankTransfer (12 §5.13) · Max: 16 · Notes: ADR-002 · choice"
   },
-  "salePaymentComplimentary": "Complimentary",
+  "salePaymentComplimentary": "Loyalty",
   "@salePaymentComplimentary": {
-    "description": "Spec key: sale.payment.complimentary (12 §5.13) · Max: 16 · Notes: ADR-002 · choice · only with vouchers.sell_complimentary"
+    "description": "Spec key: sale.payment.complimentary (12 §5.13) · Max: 16 · Notes: ADR-002 · choice · value without payment for regulars (renamed from \"Gratis\", 2026-10-05) · only with vouchers.sell_complimentary (owners); sale and top-up"
   },
   "saleReferenceLabel": "Receipt or reference number",
   "@saleReferenceLabel": {
@@ -1146,9 +1146,9 @@
   "@saleReferenceRequired": {
     "description": "Spec key: sale.reference.required (12 §5.13) · Max: 60 · Notes: ADR-002 · field error"
   },
-  "saleReasonLabel": "Reason",
+  "saleReasonLabel": "For whom, and why?",
   "@saleReasonLabel": {
-    "description": "Spec key: sale.reason.label (12 §5.13) · Max: 24 · Notes: ADR-002 · complimentary"
+    "description": "Spec key: sale.reason.label (12 §5.13) · Max: 24 · Notes: ADR-002 · loyalty (e.g. \"Stammgast\")"
   },
   "saleReasonRequired": "Enter a reason (at least 3 characters).",
   "@saleReasonRequired": {

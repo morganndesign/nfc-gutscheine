@@ -787,7 +787,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get salePaymentBankTransfer => 'Bankovni transfer';
 
   @override
-  String get salePaymentComplimentary => 'Besplatno';
+  String get salePaymentComplimentary => 'Loyalty';
 
   @override
   String get saleReferenceLabel => 'Broj potvrde ili reference';
@@ -796,7 +796,7 @@ class AppLocalizationsHr extends AppLocalizations {
   String get saleReferenceRequired => 'Unesite broj potvrde ili reference.';
 
   @override
-  String get saleReasonLabel => 'Razlog';
+  String get saleReasonLabel => 'Za koga i zašto?';
 
   @override
   String get saleReasonRequired => 'Unesite razlog (najmanje 3 znaka).';

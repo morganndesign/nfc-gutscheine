@@ -13,7 +13,7 @@ export const operations = defineMessages({
     "ops.method.cash": "Cash",
     "ops.method.card_terminal": "Card terminal",
     "ops.method.bank_transfer": "Bank transfer",
-    "ops.method.complimentary": "Complimentary",
+    "ops.method.complimentary": "Loyalty",
     "ops.col.type": "Type",
     "ops.col.voucher": "Voucher",
     "ops.col.amount": "Amount",
@@ -114,7 +114,7 @@ export const operations = defineMessages({
     "cashUp.person": "Person",
     "cashUp.alsoToday": "Also on this day",
     "cashUp.reversedReloads": "Reloads corrected (not kept)",
-    "cashUp.complimentary": "Complimentary value given",
+    "cashUp.complimentary": "Loyalty value given",
     "cashUp.outstanding": "Owed to guests at close",
 
     // Customers
@@ -296,7 +296,7 @@ export const operations = defineMessages({
     "ops.method.cash": "Bar",
     "ops.method.card_terminal": "Kartenterminal",
     "ops.method.bank_transfer": "Überweisung",
-    "ops.method.complimentary": "Gratis",
+    "ops.method.complimentary": "Loyalty",
     "ops.col.type": "Art",
     "ops.col.voucher": "Gutschein",
     "ops.col.amount": "Betrag",
@@ -392,7 +392,7 @@ export const operations = defineMessages({
     "cashUp.person": "Person",
     "cashUp.alsoToday": "Außerdem an diesem Tag",
     "cashUp.reversedReloads": "Stornierte Aufladungen (nicht behalten)",
-    "cashUp.complimentary": "Gratis vergebener Wert",
+    "cashUp.complimentary": "Vergebenes Loyalty-Guthaben",
     "cashUp.outstanding": "Guthaben der Gäste bei Tagesende",
 
     "customers.description": "Käufer und Besitzer Ihrer Gutscheine.",
@@ -576,7 +576,7 @@ export const operations = defineMessages({
     "ops.method.cash": "Gotovina",
     "ops.method.card_terminal": "Kartični terminal",
     "ops.method.bank_transfer": "Bankovni transfer",
-    "ops.method.complimentary": "Gratis",
+    "ops.method.complimentary": "Loyalty",
     "ops.col.type": "Vrsta",
     "ops.col.voucher": "Vaučer",
     "ops.col.amount": "Iznos",
@@ -672,7 +672,7 @@ export const operations = defineMessages({
     "cashUp.person": "Osoba",
     "cashUp.alsoToday": "Također tog dana",
     "cashUp.reversedReloads": "Stornirane dopune (nisu zadržane)",
-    "cashUp.complimentary": "Poklonjena vrijednost",
+    "cashUp.complimentary": "Data loyalty vrijednost",
     "cashUp.outstanding": "Dugovanje gostima na kraju dana",
 
     "customers.description": "Kupci i korisnici vaših vaučera.",

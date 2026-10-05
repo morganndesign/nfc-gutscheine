@@ -692,10 +692,10 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `sale.payment.cash` | Bar | Cash | Gotovina | 16 | ADR-002 · choice |
 | `sale.payment.cardTerminal` | Kartenterminal | Card terminal | POS terminal | 16 | ADR-002 · choice |
 | `sale.payment.bankTransfer` | Überweisung | Bank transfer | Bankovni transfer | 16 | ADR-002 · choice |
-| `sale.payment.complimentary` | Gratis | Complimentary | Besplatno | 16 | ADR-002 · choice · only with `vouchers.sell_complimentary` |
+| `sale.payment.complimentary` | Loyalty | Loyalty | Loyalty | 16 | ADR-002 · choice · value without payment for regulars (renamed from "Gratis", 2026-10-05) · only with `vouchers.sell_complimentary` (owners); sale and top-up |
 | `sale.reference.label` | Beleg- oder Referenznummer | Receipt or reference number | Broj potvrde ili reference | 32 | ADR-002 · card terminal / bank transfer |
 | `sale.reference.required` | Beleg- oder Referenznummer eingeben. | Enter the receipt or reference number. | Unesite broj potvrde ili reference. | 60 | ADR-002 · field error |
-| `sale.reason.label` | Grund | Reason | Razlog | 24 | ADR-002 · complimentary |
+| `sale.reason.label` | Für wen und warum? | For whom, and why? | Za koga i zašto? | 24 | ADR-002 · loyalty (e.g. "Stammgast") |
 | `sale.reason.required` | Grund eingeben (mindestens 3 Zeichen). | Enter a reason (at least 3 characters). | Unesite razlog (najmanje 3 znaka). | 60 | ADR-002 · field error |
 | `sale.email.label` | E-Mail des Gastes (optional) | Guest e-mail (optional) | E-mail gosta (neobavezno) | 32 | ADR-002 |
 | `sale.email.helperPdf` | Der Gast erhält den Gutschein als PDF per E-Mail. | The guest receives the voucher as a PDF by e-mail. | Gost dobija vaučer kao PDF na e-mail. | 60 | printed voucher sale, when the restaurant sends guest e-mails (decision 2026-10-04) |

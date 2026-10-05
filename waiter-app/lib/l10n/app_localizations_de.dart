@@ -789,7 +789,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get salePaymentBankTransfer => 'Überweisung';
 
   @override
-  String get salePaymentComplimentary => 'Gratis';
+  String get salePaymentComplimentary => 'Loyalty';
 
   @override
   String get saleReferenceLabel => 'Beleg- oder Referenznummer';
@@ -798,7 +798,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get saleReferenceRequired => 'Beleg- oder Referenznummer eingeben.';
 
   @override
-  String get saleReasonLabel => 'Grund';
+  String get saleReasonLabel => 'Für wen und warum?';
 
   @override
   String get saleReasonRequired => 'Grund eingeben (mindestens 3 Zeichen).';

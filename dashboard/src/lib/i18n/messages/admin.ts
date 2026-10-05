@@ -260,7 +260,7 @@ export const admin = defineMessages({
     "admin.security.rule.money.limit_hits": "Redemptions keep hitting the restaurant’s limits.",
     "admin.security.rule.money.reversals": "One person reversed many bookings today.",
     "admin.security.rule.money.refunds": "One person paid out many refunds today.",
-    "admin.security.rule.money.complimentary": "One person gave away many complimentary vouchers today.",
+    "admin.security.rule.money.complimentary": "One person gave a lot of loyalty value today.",
 
     // ------------------------------------------------------------------ system settings
     "admin.settings.description": "Platform-wide configuration.",
@@ -658,7 +658,7 @@ export const admin = defineMessages({
     "admin.security.rule.money.limit_hits": "Einlösungen stoßen wiederholt an die Limits des Restaurants.",
     "admin.security.rule.money.reversals": "Eine Person hat heute viele Buchungen storniert.",
     "admin.security.rule.money.refunds": "Eine Person hat heute viele Rückerstattungen ausgezahlt.",
-    "admin.security.rule.money.complimentary": "Eine Person hat heute viele Gratis-Gutscheine vergeben.",
+    "admin.security.rule.money.complimentary": "Eine Person hat heute viel Loyalty-Guthaben vergeben.",
 
     "admin.settings.description": "Plattformweite Konfiguration.",
     "admin.settings.saved": "Einstellungen gespeichert",
@@ -1047,7 +1047,7 @@ export const admin = defineMessages({
     "admin.security.rule.money.limit_hits": "Naplate stalno udaraju u limite restorana.",
     "admin.security.rule.money.reversals": "Jedna osoba je danas stornirala mnogo transakcija.",
     "admin.security.rule.money.refunds": "Jedna osoba je danas isplatila mnogo povrata novca.",
-    "admin.security.rule.money.complimentary": "Jedna osoba je danas poklonila mnogo besplatnih vaučera.",
+    "admin.security.rule.money.complimentary": "Jedna osoba je danas dala mnogo loyalty vrijednosti.",
 
     "admin.settings.description": "Konfiguracija za cijelu platformu.",
     "admin.settings.saved": "Postavke sačuvane",
