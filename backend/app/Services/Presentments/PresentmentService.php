@@ -96,6 +96,8 @@ final class PresentmentService
         // Each purpose has its own state rule (architecture §10.1); for spending, the voucher's kind decides.
         $refused = match ($purpose) {
             PresentmentPurpose::Spend => ! $voucher->kind->allowsSpendingWith($method),
+            // Only a voucher bought online with a card to pick up; the pickup itself checks the order.
+            PresentmentPurpose::Pickup => ! $voucher->sold_online || ! $voucher->kind->allowsSpendingWith($method),
             PresentmentPurpose::Bind, PresentmentPurpose::Receive, PresentmentPurpose::Surrender, PresentmentPurpose::Reload, PresentmentPurpose::Resume => true,
         };
         if ($refused) {

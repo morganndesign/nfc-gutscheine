@@ -15,6 +15,7 @@ import '../l10n/app_localizations.dart';
 import 'cards/s22_receive_delivery.dart';
 import 'cards/s25_order_cards.dart';
 import 'cards/s23_card_lookup.dart';
+import 'cards/s26_card_pickup.dart';
 import 'scan/sheet_rows.dart';
 
 /// Gap between the account header and the text column (Avatar → name).
@@ -143,7 +144,7 @@ class _MenuBodyState extends State<_MenuBody> {
               );
             },
           ),
-          if ((user?.canReceiveCards ?? false) || (user?.canManageCards ?? false)) ...<Widget>[
+          if ((user?.canReceiveCards ?? false) || (user?.canManageCards ?? false) || (user?.canSellCards ?? false)) ...<Widget>[
             const SizedBox(height: Space.s6),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: margin),
@@ -172,6 +173,14 @@ class _MenuBodyState extends State<_MenuBody> {
                 label: l10n.menuCardsFind,
                 trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
                 onPressed: () => _open(const CardLookupScreen()),
+                showDivider: user?.canSellCards ?? false,
+              ),
+            // Online sales (decision 2026-10-06): the gift card of a voucher bought online, picked up here.
+            if (user?.canSellCards ?? false)
+              SheetRow(
+                label: l10n.menuCardsPickup,
+                trailing: WaiterIconView(WaiterIcon.chevronRight, size: IconSize.s16, color: c.fgTertiary),
+                onPressed: () => _open(const CardPickupScreen()),
                 showDivider: false,
               ),
           ],

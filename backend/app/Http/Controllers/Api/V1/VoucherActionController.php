@@ -6,9 +6,11 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Data\PaymentData;
 use App\Data\TransactionResult;
+use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\RequireIdempotencyKey;
+use App\Http\Requests\Online\CardPickupRequest;
 use App\Http\Requests\ReasonRequest;
 use App\Http\Requests\Vouchers\CancelSaleRequest;
 use App\Http\Requests\Vouchers\RedeemVoucherRequest;
@@ -18,14 +20,18 @@ use App\Http\Requests\Vouchers\ReloadVoucherRequest;
 use App\Http\Resources\PresentedVoucherResource;
 use App\Http\Resources\TransactionResource;
 use App\Http\Resources\VoucherResource;
+use App\Jobs\SendVoucherNotification;
+use App\Models\NotificationTemplate;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
+use App\Services\Online\OnlineOrderService;
 use App\Services\Vouchers\QrCodeService;
 use App\Services\Vouchers\VoucherHistoryService;
 use App\Services\Vouchers\VoucherService;
 use App\Support\Actor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 final class VoucherActionController extends Controller
 {
@@ -98,6 +104,16 @@ final class VoucherActionController extends Controller
         /** @var array{method: string, reference?: string|null} $payment */
         $payment = $request->validated('payment');
 
+        // Back to the buyer's card through the payment provider (an online voucher).
+        if ($payment['method'] === PaymentMethod::Online->value) {
+            return $this->moneyResponse($request, app(OnlineOrderService::class)->refund(
+                Actor::fromRequest($request),
+                $voucher,
+                (string) $request->validated('reason'),
+                (string) $request->attributes->get(RequireIdempotencyKey::ATTRIBUTE),
+            ));
+        }
+
         $result = $this->vouchers->refund(
             Actor::fromRequest($request),
             $voucher,
@@ -127,12 +143,38 @@ final class VoucherActionController extends Controller
     /** POST /vouchers/{voucher}/printable: a new QR for a lost or unprinted sheet; shown once, never stored. */
     public function reissue(ReasonRequest $request, Voucher $voucher, QrCodeService $qr): JsonResponse
     {
+        // `send`: the new voucher goes to the guest's e-mail as a PDF as well (audit Q8).
+        $send = $request->boolean('send');
+        if ($send && $voucher->customer?->email === null) {
+            throw ValidationException::withMessages(['send' => __('validation.required', ['attribute' => 'customer e-mail'])]);
+        }
         $printable = $this->vouchers->reissuePrintable(Actor::fromRequest($request), $voucher, (string) $request->validated('reason'));
+        if ($send) {
+            /** @var VoucherTransaction $sale */
+            $sale = VoucherTransaction::query()->where('voucher_id', $voucher->getKey())->ofType(TransactionType::Issue)->firstOrFail();
+            SendVoucherNotification::dispatch($voucher->getKey(), NotificationTemplate::KEY_VOUCHER_ISSUED, $sale->getKey(), $printable->payload);
+        }
 
         return response()->json([
             'data' => VoucherResource::make($voucher->refresh())->resolve($request),
             'printable' => ['payload' => $printable->payload, 'qr_svg' => $qr->svg($printable->payload)],
         ], 201)->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * POST /vouchers/{voucher}/card-pickup: the buyer of an online voucher picks up its gift card; the card takes
+     * over the voucher and the e-mailed QR stops.
+     */
+    public function pickUpCard(CardPickupRequest $request, Voucher $voucher): VoucherResource
+    {
+        $updated = app(OnlineOrderService::class)->pickUpCard(
+            Actor::fromRequest($request),
+            $voucher,
+            (string) $request->validated('qr_presentment_id'),
+            (string) $request->validated('presentment_id'),
+        );
+
+        return VoucherResource::make($updated->refresh()->load(['customer', 'issuer', 'media.card', 'payments']));
     }
 
     public function block(ReasonRequest $request, Voucher $voucher): VoucherResource

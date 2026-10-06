@@ -847,6 +847,7 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `menu.cards.receive` | Lieferung bestätigen | Confirm a delivery | Potvrdi isporuku | 28 | Cards |
 | `menu.cards.find` | Karte suchen | Find a card | Pronađi karticu | 28 | Cards |
 | `menu.cards.order` | Karten bestellen | Order cards | Naruči kartice | 28 | Cards · decision 2026-10-04 |
+| `menu.cards.pickup` | Online-Karte ausgeben | Hand out an online card | Izdaj online karticu | 28 | Cards · online sales (decision 2026-10-06): the gift card of a voucher bought online; `cards.bind` |
 
 Card desk (managers and owners): confirming a delivery, looking up, suspending and replacing a card.
 
@@ -902,6 +903,22 @@ Card desk (managers and owners): confirming a delivery, looking up, suspending a
 | `cards.error.forbidden` | Diese Anmeldung darf das nicht. Eine verlorene Karte ersetzt nur der Inhaber. | This sign-in may not do that. Only the owner replaces a lost card. | Ova prijava to ne smije. Izgubljenu karticu zamjenjuje samo vlasnik. | 90 | Cards · 403 (T7) |
 | `cards.error.notLinked` | Diese Karte gehört zu keinem Gutschein. | This card is not linked to a voucher. | Ova kartica nije vezana za vaučer. | 64 | Cards · CARD_STATE_INVALID without a state (T7) |
 | `cards.error.uncertain` | Keine Antwort vom Server. Karte neu suchen, um zu sehen, ob es geklappt hat. | No answer from the server. Look the card up again to see whether it worked. | Nema odgovora servera. Ponovo potražite karticu da vidite je li uspjelo. | 100 | Cards · replacement without an answer, the old card not yet replaced (K5) |
+| `pickup.scan` | Den QR-Code aus der E-Mail des Gastes scannen. Danach eine neue Karte aus dem Lager ans Handy halten. | Scan the QR code from the guest's e-mail. Then hold a new card from stock to the phone. | Skenirajte QR kod iz gostovog maila. Zatim prislonite novu karticu sa zalihe uz telefon. | 120 | Pickup · step 1 |
+| `pickup.scanAction` | QR-Code scannen | Scan QR code | Skeniraj QR kod | 24 | Pickup · PrimaryButton, opens the camera |
+| `pickup.scanTitle` | QR-Code aus der E-Mail | QR code from the e-mail | QR kod iz maila | 28 | Pickup · camera TopBar |
+| `pickup.voucher` | Online-Gutschein · Guthaben {balance} | Online voucher · balance {balance} | Online vaučer · stanje {balance} | 48 | Pickup · after the scan |
+| `pickup.tap` | Eine neue Karte aus dem Lager ans Handy halten. Sie übernimmt das Guthaben; der QR-Code aus der E-Mail gilt dann nicht mehr. | Hold a new card from stock to the phone. It takes over the balance; the QR code from the e-mail then stops working. | Prislonite novu karticu sa zalihe uz telefon. Ona preuzima stanje; QR kod iz maila tada prestaje važiti. | 140 | Pickup · step 2, also the iPhone sheet |
+| `pickup.tapAction` | Karte ausgeben | Hand out card | Izdaj karticu | 24 | Pickup · PrimaryButton |
+| `pickup.done.title` | Karte ausgegeben | Card handed out | Kartica izdana | 28 | Pickup · success |
+| `pickup.done.body` | Karte {number} ist aktiv · Guthaben {balance}. Der QR-Code aus der E-Mail gilt nicht mehr. | Card {number} is active · balance {balance}. The QR code from the e-mail no longer works. | Kartica {number} je aktivna · stanje {balance}. QR kod iz maila više ne važi. | 120 | Pickup · success |
+| `pickup.next` | Nächster Gutschein | Next voucher | Sljedeći vaučer | 24 | Pickup · TertiaryButton |
+| `pickup.error.notRecognized` | Dieser Code gilt hier nicht. | This code is not valid here. | Ovaj kôd ovdje ne važi. | 60 | Pickup · unknown, revoked or foreign code (also a QR whose card was handed out) |
+| `pickup.error.notOnline` | Das ist kein online gekaufter Gutschein. Eine Karte gibt es nur für Online-Gutscheine mit Kartenwunsch. | This is not a voucher bought online. A card is only handed out for online vouchers that ordered one. | Ovo nije online kupljen vaučer. Kartica se izdaje samo za online vaučere uz koje je naručena. | 140 | Pickup · PRESENTMENT_METHOD_NOT_ALLOWED |
+| `pickup.error.noCard` | Zu diesem Gutschein wurde keine Karte bestellt. | No card was ordered with this voucher. | Uz ovaj vaučer nije naručena kartica. | 64 | Pickup · `no_card_ordered` |
+| `pickup.error.pickedUp` | Die Karte zu diesem Gutschein wurde schon ausgegeben. | The card for this voucher was already handed out. | Kartica za ovaj vaučer je već izdana. | 64 | Pickup · `picked_up` |
+| `pickup.error.tooEarly` | Die Karte kann ab {date} ausgegeben werden (24 Stunden nach der Zahlung). | The card can be handed out from {date} (24 hours after the payment). | Kartica se može izdati od {date} (24 sata poslije plaćanja). | 100 | Pickup · `too_early`; `{date}` = weekday, date, time |
+| `pickup.error.scanAgain` | Zu lange gewartet. Bitte den QR-Code noch einmal scannen. | Too much time passed. Please scan the QR code again. | Prošlo je previše vremena. Ponovo skenirajte QR kod. | 80 | Pickup · the scan expired before the card |
+| `pickup.error.notUsable` | Dieser Gutschein ist gesperrt oder abgelaufen. Bitte einen Manager holen. | This voucher is blocked or expired. Please get a manager. | Ovaj vaučer je blokiran ili istekao. Molimo pozovite menadžera. | 90 | Pickup · VOUCHER_BLOCKED, VOUCHER_EXPIRED |
 | `cards.failed` | Das hat nicht geklappt. Erneut versuchen. | That did not work. Try again. | To nije uspjelo. Pokušajte ponovo. | 60 | Cards |
 
 ### 5.17 S15 Session and account states
@@ -996,7 +1013,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **462 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **479 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

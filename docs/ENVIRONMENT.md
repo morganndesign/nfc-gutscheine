@@ -95,6 +95,12 @@ A restaurant validity is at least 36 months (`min_validity_months`, fixed).
 | Variable | Default | Description |
 |---|---|---|
 | `MAIL_MAILER` | `failover` (dev); **required** in Coolify (the deploy refuses without it) | `smtp` for real delivery. Sign-in (dashboard and app) needs the e-mailed code, so with `log` nobody could sign in: production then reports `/health/operations` as degraded and the platform admin shows a red banner. |
+| `STRIPE_SECRET` | empty (online sales off) | The platform's Stripe secret key (restricted key with Connect, Checkout, Refunds). Restaurants never enter keys: each connects its own account in Settings › Online-Shop. |
+| `STRIPE_WEBHOOK_SECRET` | empty | Signing secret of the **Connect** webhook endpoint `https://<api>/api/v1/webhooks/stripe` (events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.dispute.created`, `charge.refunded`, `account.updated`, `account.application.deauthorized`). Without it no online voucher is ever created. |
+| `ONLINE_APPLICATION_FEE_BPS` | `0` | GiftCard Pro's fee per online sale in basis points (100 = 1 %), taken by Stripe from the restaurant's payment. |
+| `ONLINE_MAX_AMOUNT` | `25000` | Largest online voucher in cents (decision 2026-10-06: 250 €); each shop may set less. |
+| `ONLINE_CARD_PICKUP_AFTER_HOURS` | `24` | A gift card ordered online is handed out at the restaurant no sooner than this after the payment (a stolen card is usually disputed by then). |
+| `ONLINE_ORDERS_PER_HOUR` | `5` | Orders per hour per buyer e-mail and per IP address. |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | | SMTP server (`MAIL_SCHEME`: `smtp` = STARTTLS on 587, `smtps` = TLS on 465). |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@<domain>`, `GiftCard Pro` | Sender. |
 | `MAIL_TIMEOUT` | `10` | Seconds before a slow mail server is given up (the job is retried). |

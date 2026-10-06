@@ -15,7 +15,7 @@ import { useT } from "@/lib/i18n"
 import type { MessageKey } from "@/lib/i18n/catalog"
 import { REFUND_CODES, forgetPendingKey, isUncertainOutcome, pendingKey, rememberPendingKey } from "@/lib/outcome"
 
-type Method = "cash" | "card_terminal" | "bank_transfer"
+type Method = "cash" | "card_terminal" | "bank_transfer" | "online"
 
 const METHODS: { value: Method; label: MessageKey }[] = [
   { value: "cash", label: "payment.method.cash" },
@@ -26,7 +26,9 @@ const METHODS: { value: Method; label: MessageKey }[] = [
 /** Owner: pay the remaining balance back and close the voucher. Complimentary value is not paid out. */
 export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher; open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useT()
-  const [method, setMethod] = useState<Method>("cash")
+  // An online voucher goes back to the guest's card through Stripe by default.
+  const [method, setMethod] = useState<Method>(voucher.online ? "online" : "cash")
+  const methods: { value: Method; label: MessageKey }[] = voucher.online ? [{ value: "online", label: "online.refund.toCard" }, ...METHODS] : METHODS
   const [reference, setReference] = useState("")
   const [reason, setReason] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -35,12 +37,12 @@ export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher
   const mutation = useRefundVoucher()
   const refundable = voucher.refundable ?? 0
   const forfeited = voucher.balance - refundable
-  const needsReference = method !== "cash"
+  const needsReference = method === "card_terminal" || method === "bank_transfer"
   const invalid = reason.trim().length < 3 || (needsReference && reference.trim() === "") || refundable <= 0
   const scope = `refund:${voucher.id}`
 
   const reset = () => {
-    setMethod("cash")
+    setMethod(voucher.online ? "online" : "cash")
     setReference("")
     setReason("")
     setError(null)
@@ -103,8 +105,8 @@ export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher
         >
           <div className="space-y-2">
             <Label>{t("vouchers.refund.paidBackBy")}</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {METHODS.map((m) => (
+            <div className={voucher.online ? "grid grid-cols-2 gap-2" : "grid grid-cols-3 gap-2"}>
+              {methods.map((m) => (
                 <Button
                   key={m.value}
                   type="button"

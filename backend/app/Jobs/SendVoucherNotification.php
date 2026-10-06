@@ -46,6 +46,9 @@ final class SendVoucherNotification implements ShouldBeEncrypted, ShouldBeUnique
         #[SensitiveParameter] public readonly ?string $printablePayload = null,
     ) {
         $this->onQueue('notifications');
+        // Queued once the sale (or the online order with it) is committed: a worker never reads a voucher, or an
+        // order, that is not there yet.
+        $this->afterCommit();
     }
 
     /** A retried sale's new QR is a new e-mail (audit Q1): it must not be swallowed by the first one's lock. */

@@ -25,9 +25,14 @@ final class PresentmentController extends Controller
 {
     public function store(CreatePresentmentRequest $request, PresentmentService $presentments): JsonResponse
     {
+        $purpose = PresentmentPurpose::from((string) $request->validated('purpose'));
+        // The QR of an online voucher whose card is picked up: only someone who binds cards.
+        if ($purpose === PresentmentPurpose::Pickup) {
+            $this->authorize(Permission::CardsBind->value);
+        }
         $presentment = $presentments->present(
             Actor::fromRequest($request),
-            PresentmentPurpose::from((string) $request->validated('purpose')),
+            $purpose,
             PresentmentMethod::from((string) $request->validated('method')),
             (string) $request->validated('credential'),
         );
@@ -44,7 +49,7 @@ final class PresentmentController extends Controller
         $purpose = PresentmentPurpose::from((string) $request->validated('purpose'));
         $this->authorize(match ($purpose) {
             PresentmentPurpose::Spend => Permission::VouchersRedeem->value,
-            PresentmentPurpose::Bind => Permission::CardsBind->value,
+            PresentmentPurpose::Bind, PresentmentPurpose::Pickup => Permission::CardsBind->value,
             PresentmentPurpose::Receive => Permission::CardsReceive->value,
             PresentmentPurpose::Surrender, PresentmentPurpose::Resume => Permission::CardsManage->value,
             PresentmentPurpose::Reload => Permission::VouchersReload->value,

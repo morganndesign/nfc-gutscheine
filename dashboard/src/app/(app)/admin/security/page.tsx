@@ -39,6 +39,10 @@ const RULES = new Set([
   "money.refunds",
   "money.complimentary",
   "money.loyalty_topups",
+  "card.delivery_short",
+  "online.dispute",
+  "online.account_change",
+  "online.order_burst",
 ])
 
 function SeverityBadge({ severity }: { severity: SecurityAlert["severity"] }) {

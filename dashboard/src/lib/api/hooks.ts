@@ -10,6 +10,8 @@ import type {
   CardBatchStatus,
   CardOrder,
   CardState,
+  OnlineOrder,
+  OnlineShopState,
   SecurityAlert,
   AuditLog,
   Customer,
@@ -203,7 +205,7 @@ export function useRefundVoucher() {
       idempotencyKey,
     }: {
       voucherId: string
-      input: { payment: { method: "cash" | "card_terminal" | "bank_transfer"; reference?: string | null }; reason: string }
+      input: { payment: { method: "cash" | "card_terminal" | "bank_transfer" | "online"; reference?: string | null }; reason: string }
       idempotencyKey: string
     }) => api<MoneyResult>(`/vouchers/${voucherId}/refund`, { method: "POST", body: input, idempotencyKey }),
     onSuccess: () => invalidateVoucherData(qc),
@@ -231,8 +233,8 @@ export function useCancelSale() {
 export function useReissueQr() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ voucherId, reason }: { voucherId: string; reason: string }) =>
-      api<{ data: Voucher; printable: { payload: string; qr_svg: string } }>(`/vouchers/${voucherId}/printable`, { method: "POST", body: { reason } }),
+    mutationFn: ({ voucherId, reason, send = false }: { voucherId: string; reason: string; send?: boolean }) =>
+      api<{ data: Voucher; printable: { payload: string; qr_svg: string } }>(`/vouchers/${voucherId}/printable`, { method: "POST", body: { reason, send } }),
     onSuccess: () => invalidateVoucherData(qc),
   })
 }
@@ -906,5 +908,45 @@ export function useAcknowledgeAlert() {
     mutationFn: ({ id, note }: { id: string; note: string }) =>
       api<{ data: SecurityAlert }>(`/admin/security-alerts/${id}/acknowledge`, { method: "POST", body: { note } }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: keys.securityAlerts }),
+  })
+}
+
+// ---------------------------------------------------------------- online shop (decision 2026-10-06)
+
+export function useOnlineShop() {
+  return useQuery({
+    queryKey: keys.onlineShop,
+    queryFn: async () => (await api<{ data: OnlineShopState }>("/online-shop")).data,
+  })
+}
+
+export function useUpdateOnlineShop() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: Partial<OnlineShopState["shop"]>) => (await api<{ data: OnlineShopState }>("/online-shop", { method: "PUT", body: input })).data,
+    onSuccess: (data) => qc.setQueryData(keys.onlineShop, data),
+  })
+}
+
+/** The provider's onboarding page for the restaurant's own account (company and bank details are entered there). */
+export function useConnectOnlinePayments() {
+  return useMutation({
+    mutationFn: async () => (await api<{ data: { url: string } }>("/online-shop/connect", { method: "POST" })).data.url,
+  })
+}
+
+export function useOnlineAccountAction() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (action: "refresh" | "disconnect") =>
+      (await api<{ data: OnlineShopState }>(action === "refresh" ? "/online-shop/refresh" : "/online-shop/connection", { method: action === "refresh" ? "POST" : "DELETE" })).data,
+    onSuccess: (data) => qc.setQueryData(keys.onlineShop, data),
+  })
+}
+
+export function useOnlineOrders(pickup = false) {
+  return useQuery({
+    queryKey: [...keys.onlineOrders, pickup],
+    queryFn: async () => (await api<{ data: OnlineOrder[] }>("/online-orders", { query: pickup ? { pickup: "open" } : {} })).data,
   })
 }

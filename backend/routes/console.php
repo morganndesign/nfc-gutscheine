@@ -50,6 +50,9 @@ $alerting(Schedule::command('giftcard:seal-security-events')->everyMinute()->wit
 $alerting(Schedule::command('giftcard:monitor-security-events')->everyMinute()->withoutOverlapping(10)->onOneServer(), 'giftcard:monitor-security-events');
 
 // Tamper evidence: recompute every hash chain, every voucher balance from its ledger and every event seal.
+// Online orders whose payment page closed without a payment (the provider's event is the normal way).
+$alerting(Schedule::command('online:expire-orders')->everyFifteenMinutes()->withoutOverlapping(10)->onOneServer(), 'online:expire-orders');
+
 Schedule::command('giftcard:verify-chains')->dailyAt('04:00')->timezone($tz)->withoutOverlapping(720)->onOneServer();
 
 // Tamper check of the card root keys against the key check values of their ceremony.

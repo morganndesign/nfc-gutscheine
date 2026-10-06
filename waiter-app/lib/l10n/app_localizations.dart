@@ -2239,6 +2239,12 @@ abstract class AppLocalizations {
   /// **'Order cards'**
   String get menuCardsOrder;
 
+  /// Spec key: menu.cards.pickup (12 §5.16) · Max: 28 · Notes: Cards · online sales (decision 2026-10-06): the gift card of a voucher bought online; cards.bind
+  ///
+  /// In en, this message translates to:
+  /// **'Hand out an online card'**
+  String get menuCardsPickup;
+
   /// Spec key: cards.receive.none (12 §5.16) · Max: 48 · Notes: Cards
   ///
   /// In en, this message translates to:
@@ -2538,6 +2544,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No answer from the server. Look the card up again to see whether it worked.'**
   String get cardsErrorUncertain;
+
+  /// Spec key: pickup.scan (12 §5.16) · Max: 120 · Notes: Pickup · step 1
+  ///
+  /// In en, this message translates to:
+  /// **'Scan the QR code from the guest\'s e-mail. Then hold a new card from stock to the phone.'**
+  String get pickupScan;
+
+  /// Spec key: pickup.scanAction (12 §5.16) · Max: 24 · Notes: Pickup · PrimaryButton, opens the camera
+  ///
+  /// In en, this message translates to:
+  /// **'Scan QR code'**
+  String get pickupScanAction;
+
+  /// Spec key: pickup.scanTitle (12 §5.16) · Max: 28 · Notes: Pickup · camera TopBar
+  ///
+  /// In en, this message translates to:
+  /// **'QR code from the e-mail'**
+  String get pickupScanTitle;
+
+  /// Spec key: pickup.voucher (12 §5.16) · Max: 48 · Notes: Pickup · after the scan
+  ///
+  /// In en, this message translates to:
+  /// **'Online voucher · balance {balance}'**
+  String pickupVoucher(String balance);
+
+  /// Spec key: pickup.tap (12 §5.16) · Max: 140 · Notes: Pickup · step 2, also the iPhone sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Hold a new card from stock to the phone. It takes over the balance; the QR code from the e-mail then stops working.'**
+  String get pickupTap;
+
+  /// Spec key: pickup.tapAction (12 §5.16) · Max: 24 · Notes: Pickup · PrimaryButton
+  ///
+  /// In en, this message translates to:
+  /// **'Hand out card'**
+  String get pickupTapAction;
+
+  /// Spec key: pickup.done.title (12 §5.16) · Max: 28 · Notes: Pickup · success
+  ///
+  /// In en, this message translates to:
+  /// **'Card handed out'**
+  String get pickupDoneTitle;
+
+  /// Spec key: pickup.done.body (12 §5.16) · Max: 120 · Notes: Pickup · success
+  ///
+  /// In en, this message translates to:
+  /// **'Card {number} is active · balance {balance}. The QR code from the e-mail no longer works.'**
+  String pickupDoneBody(String number, String balance);
+
+  /// Spec key: pickup.next (12 §5.16) · Max: 24 · Notes: Pickup · TertiaryButton
+  ///
+  /// In en, this message translates to:
+  /// **'Next voucher'**
+  String get pickupNext;
+
+  /// Spec key: pickup.error.notRecognized (12 §5.16) · Max: 60 · Notes: Pickup · unknown, revoked or foreign code (also a QR whose card was handed out)
+  ///
+  /// In en, this message translates to:
+  /// **'This code is not valid here.'**
+  String get pickupErrorNotRecognized;
+
+  /// Spec key: pickup.error.notOnline (12 §5.16) · Max: 140 · Notes: Pickup · PRESENTMENT_METHOD_NOT_ALLOWED
+  ///
+  /// In en, this message translates to:
+  /// **'This is not a voucher bought online. A card is only handed out for online vouchers that ordered one.'**
+  String get pickupErrorNotOnline;
+
+  /// Spec key: pickup.error.noCard (12 §5.16) · Max: 64 · Notes: Pickup · no_card_ordered
+  ///
+  /// In en, this message translates to:
+  /// **'No card was ordered with this voucher.'**
+  String get pickupErrorNoCard;
+
+  /// Spec key: pickup.error.pickedUp (12 §5.16) · Max: 64 · Notes: Pickup · picked_up
+  ///
+  /// In en, this message translates to:
+  /// **'The card for this voucher was already handed out.'**
+  String get pickupErrorPickedUp;
+
+  /// Spec key: pickup.error.tooEarly (12 §5.16) · Max: 100 · Notes: Pickup · too_early; {date} = weekday, date, time
+  ///
+  /// In en, this message translates to:
+  /// **'The card can be handed out from {date} (24 hours after the payment).'**
+  String pickupErrorTooEarly(String date);
+
+  /// Spec key: pickup.error.scanAgain (12 §5.16) · Max: 80 · Notes: Pickup · the scan expired before the card
+  ///
+  /// In en, this message translates to:
+  /// **'Too much time passed. Please scan the QR code again.'**
+  String get pickupErrorScanAgain;
+
+  /// Spec key: pickup.error.notUsable (12 §5.16) · Max: 90 · Notes: Pickup · VOUCHER_BLOCKED, VOUCHER_EXPIRED
+  ///
+  /// In en, this message translates to:
+  /// **'This voucher is blocked or expired. Please get a manager.'**
+  String get pickupErrorNotUsable;
 
   /// Spec key: cards.failed (12 §5.16) · Max: 60 · Notes: Cards
   ///

@@ -4,7 +4,9 @@ export type VoucherStatus = "active" | "blocked" | "expired" | "refunded"
 /** card: spent only with its NTAG 424 DNA card; digital: spent only with its QR (decision 26). */
 export type VoucherKind = "card" | "digital"
 export type TransactionType = "issue" | "redemption" | "reload" | "reversal" | "refund"
-export type PaymentMethod = "cash" | "card_terminal" | "bank_transfer" | "complimentary"
+export type PaymentMethod = "cash" | "card_terminal" | "bank_transfer" | "complimentary" | "online"
+/** What a person records at the till or in the dashboard; `online` is booked by the payment provider only. */
+export type TillPaymentMethod = Exclude<PaymentMethod, "online">
 export type RoleSlug = "platform_admin" | "owner" | "manager" | "waiter"
 
 export type Permission =
@@ -257,6 +259,10 @@ export interface Voucher {
   status: VoucherStatus
   /** Sold as loyalty, without payment (decision 2026-10-05): only such a voucher takes further loyalty value. */
   loyalty: boolean
+  /** Bought in the restaurant's online shop. */
+  online: boolean
+  /** An online voucher whose gift card is picked up at the restaurant: still open, and from when. */
+  card_pickup?: { open: boolean; from: string | null } | null
   currency: string
   initial_value: number
   balance: number
@@ -541,4 +547,61 @@ export interface Paginated<T> {
   data: T[]
   links: { first: string | null; last: string | null; prev: string | null; next: string | null }
   meta: { current_page: number; from: number | null; last_page: number; per_page: number; to: number | null; total: number }
+}
+
+/** Settings › Online-Shop (owners). */
+export interface OnlineShopState {
+  configured: boolean
+  provider: string
+  account: { charges_enabled: boolean; payouts_enabled: boolean; details_submitted: boolean; enabled_at: string | null } | null
+  shop: {
+    enabled: boolean
+    amounts: number[]
+    custom_amount: boolean
+    max_amount: number
+    card_pickup: boolean
+    headline: string | null
+    intro: string | null
+    terms_url: string | null
+    imprint_url: string | null
+  }
+  limits: { min_amount: number; max_amount: number }
+  url: string
+  qr_svg: string
+}
+
+export type OnlineOrderStatus = "pending" | "paid" | "expired" | "refunded" | "disputed"
+
+export interface OnlineOrder {
+  id: string
+  status: OnlineOrderStatus
+  amount: number
+  currency: string
+  buyer_email: string
+  buyer_name: string | null
+  recipient_name: string | null
+  card_pickup: boolean
+  card_pickup_from: string | null
+  card_picked_up_at: string | null
+  paid_at: string | null
+  created_at: string
+  voucher: { id: string; voucher_number: string; status: VoucherStatus; balance: number } | null
+}
+
+/** The public shop of a restaurant (/g/{slug}). */
+export interface PublicShop {
+  restaurant: { name: string; slug: string; locale: string; website: string | null }
+  currency: string
+  brand_color: string | null
+  logo_url: string | null
+  headline: string | null
+  intro: string | null
+  amounts: number[]
+  custom_amount: boolean
+  min_amount: number
+  max_amount: number
+  card_pickup: boolean
+  terms_url: string | null
+  imprint_url: string | null
+  validity_months: number | null
 }

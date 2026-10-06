@@ -262,6 +262,10 @@ export const admin = defineMessages({
     "admin.security.rule.money.reversals": "One person reversed many bookings today.",
     "admin.security.rule.money.refunds": "One person paid out many refunds today.",
     "admin.security.rule.money.complimentary": "One person gave a lot of loyalty value today.",
+    "admin.security.rule.online.dispute": "A guest disputed an online payment: the voucher is blocked.",
+    "admin.security.rule.online.account_change": "The account online payments are paid out to was changed or disconnected.",
+    "admin.security.rule.online.order_burst": "Many online orders paid in an hour in one shop (stolen cards?).",
+    "admin.security.rule.card.delivery_short": "A delivery was counted short at receipt: cards may be missing.",
     "admin.security.rule.money.loyalty_topups": "One person topped up loyalty vouchers many times today.",
 
     // ------------------------------------------------------------------ system settings
@@ -665,6 +669,10 @@ export const admin = defineMessages({
     "admin.security.rule.money.reversals": "Eine Person hat heute viele Buchungen storniert.",
     "admin.security.rule.money.refunds": "Eine Person hat heute viele Rückerstattungen ausgezahlt.",
     "admin.security.rule.money.complimentary": "Eine Person hat heute viel Loyalty-Guthaben vergeben.",
+    "admin.security.rule.online.dispute": "Ein Gast hat eine Online-Zahlung beanstandet: Der Gutschein ist gesperrt.",
+    "admin.security.rule.online.account_change": "Das Auszahlungskonto für Online-Zahlungen wurde geändert oder getrennt.",
+    "admin.security.rule.online.order_burst": "Viele bezahlte Online-Bestellungen in einer Stunde in einem Shop (gestohlene Karten?).",
+    "admin.security.rule.card.delivery_short": "Eine Lieferung hatte beim Eingang zu wenige Karten: Karten fehlen eventuell.",
     "admin.security.rule.money.loyalty_topups": "Eine Person hat heute oft Loyalty-Gutscheine aufgeladen.",
 
     "admin.settings.description": "Plattformweite Konfiguration.",
@@ -1059,6 +1067,10 @@ export const admin = defineMessages({
     "admin.security.rule.money.reversals": "Jedna osoba je danas stornirala mnogo transakcija.",
     "admin.security.rule.money.refunds": "Jedna osoba je danas isplatila mnogo povrata novca.",
     "admin.security.rule.money.complimentary": "Jedna osoba je danas dala mnogo loyalty vrijednosti.",
+    "admin.security.rule.online.dispute": "Gost je reklamirao online plaćanje: vaučer je blokiran.",
+    "admin.security.rule.online.account_change": "Račun na koji se isplaćuju online plaćanja je promijenjen ili odvezan.",
+    "admin.security.rule.online.order_burst": "Mnogo plaćenih online narudžbi u jednom satu u jednoj prodavnici (ukradene kartice?).",
+    "admin.security.rule.card.delivery_short": "Isporuka je pri prijemu imala manje kartica: kartice možda nedostaju.",
     "admin.security.rule.money.loyalty_topups": "Jedna osoba je danas mnogo puta dopunila loyalty vaučere.",
 
     "admin.settings.description": "Konfiguracija za cijelu platformu.",

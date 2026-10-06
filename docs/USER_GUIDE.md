@@ -59,6 +59,8 @@ dashboard.
 | Lost printout, stolen or suspicious voucher | Open the voucher → **⋯ → Block voucher** with a reason. From then on it cannot be redeemed. **Unblock** is in the same menu. |
 | Wrong amount booked | **Transactions** or the voucher's history → **Reverse**. The correction is a new line; nothing is changed or deleted. |
 | Edit customer, recipient, message, notes | Open the voucher → **⋯ → Edit details**. |
+| Guest lost the e-mailed voucher | Open the voucher → **⋯ → New QR code**, tick **Also e-mail the new voucher to the guest**: the new voucher goes out as a PDF, the old QR stops at once. |
+| Hand out a gift card bought online | App: **Menu → Hand out an online card** → scan the QR from the guest's e-mail → hold a new card from stock to the phone. The card takes over the balance; the e-mailed QR stops working. Not within 24 hours of the payment (the app says from when), and only once. **Settings → Online-Shop** lists the cards still to hand out. |
 
 ---
 
@@ -96,6 +98,14 @@ dashboard.
 - **Card orders**: you get an e-mail when GiftCard Pro accepts or declines an order and when the cards are shipped.
 - **Sign out everywhere** (**Account**): ends every other sign-in of yours (phones and browsers), e.g. after a
   lost phone or a shared computer. This browser stays signed in.
+- **Online shop** (**Settings → Online-Shop**, owners): **Connect with Stripe** opens Stripe's own setup for your
+  restaurant's Stripe account (you never enter keys here; the money goes straight to your account, Stripe pays it
+  out). Once Stripe allows payments, choose the amounts (at most 250 €), whether guests may type their own amount and
+  order a gift card to pick up, add the links to your terms and imprint, and switch the shop on. The share card has
+  your shop link (`…/g/your-restaurant`), a button snippet for your website and a QR code for flyers or the table.
+  Online vouchers carry an **Online** badge. They are never cancelled at the till: **Refund** sends the money back
+  to the guest's card through Stripe (money loaded later at the till goes back in cash or by transfer). If a guest
+  disputes the payment with their bank, the voucher is blocked at once and you get an e-mail.
 - **Cash-up**: "Korrigierte bezahlte Aufladungen" is a correction of a booking error, not a payout. Loyalty value
   is never counted as money (also not in the CSV exports, which show it in their own "Loyalty value" column).
 
@@ -109,3 +119,8 @@ attachment with its QR code — treat that e-mail like cash. A gift card sale on
 voucher. Before a validity ends, guests get a reminder. The e-mail text never contains the QR code, the voucher
 number, a link or the current balance. If a QR code may have been copied, issue a new one: the old one stops working.
 To learn the balance, guests ask the restaurant.
+
+**Buying online**: on the restaurant's shop page the guest picks an amount, optionally a recipient and a message,
+enters their e-mail, accepts the restaurant's terms and pays on Stripe's page (card, Apple Pay, Google Pay, EPS).
+The voucher arrives as a PDF by e-mail within seconds. A guest who ordered a gift card shows that e-mail's QR code at
+the restaurant (from the next day) and gets the card; from then on only the card pays.

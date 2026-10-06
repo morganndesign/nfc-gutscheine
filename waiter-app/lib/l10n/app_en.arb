@@ -1772,6 +1772,10 @@
   "@menuCardsOrder": {
     "description": "Spec key: menu.cards.order (12 §5.16) · Max: 28 · Notes: Cards · decision 2026-10-04"
   },
+  "menuCardsPickup": "Hand out an online card",
+  "@menuCardsPickup": {
+    "description": "Spec key: menu.cards.pickup (12 §5.16) · Max: 28 · Notes: Cards · online sales (decision 2026-10-06): the gift card of a voucher bought online; cards.bind"
+  },
   "cardsReceiveNone": "No delivery waiting.",
   "@cardsReceiveNone": {
     "description": "Spec key: cards.receive.none (12 §5.16) · Max: 48 · Notes: Cards"
@@ -2006,6 +2010,88 @@
   "cardsErrorUncertain": "No answer from the server. Look the card up again to see whether it worked.",
   "@cardsErrorUncertain": {
     "description": "Spec key: cards.error.uncertain (12 §5.16) · Max: 100 · Notes: Cards · replacement without an answer, the old card not yet replaced (K5)"
+  },
+  "pickupScan": "Scan the QR code from the guest's e-mail. Then hold a new card from stock to the phone.",
+  "@pickupScan": {
+    "description": "Spec key: pickup.scan (12 §5.16) · Max: 120 · Notes: Pickup · step 1"
+  },
+  "pickupScanAction": "Scan QR code",
+  "@pickupScanAction": {
+    "description": "Spec key: pickup.scanAction (12 §5.16) · Max: 24 · Notes: Pickup · PrimaryButton, opens the camera"
+  },
+  "pickupScanTitle": "QR code from the e-mail",
+  "@pickupScanTitle": {
+    "description": "Spec key: pickup.scanTitle (12 §5.16) · Max: 28 · Notes: Pickup · camera TopBar"
+  },
+  "pickupVoucher": "Online voucher · balance {balance}",
+  "@pickupVoucher": {
+    "description": "Spec key: pickup.voucher (12 §5.16) · Max: 48 · Notes: Pickup · after the scan",
+    "placeholders": {
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupTap": "Hold a new card from stock to the phone. It takes over the balance; the QR code from the e-mail then stops working.",
+  "@pickupTap": {
+    "description": "Spec key: pickup.tap (12 §5.16) · Max: 140 · Notes: Pickup · step 2, also the iPhone sheet"
+  },
+  "pickupTapAction": "Hand out card",
+  "@pickupTapAction": {
+    "description": "Spec key: pickup.tapAction (12 §5.16) · Max: 24 · Notes: Pickup · PrimaryButton"
+  },
+  "pickupDoneTitle": "Card handed out",
+  "@pickupDoneTitle": {
+    "description": "Spec key: pickup.done.title (12 §5.16) · Max: 28 · Notes: Pickup · success"
+  },
+  "pickupDoneBody": "Card {number} is active · balance {balance}. The QR code from the e-mail no longer works.",
+  "@pickupDoneBody": {
+    "description": "Spec key: pickup.done.body (12 §5.16) · Max: 120 · Notes: Pickup · success",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      },
+      "balance": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupNext": "Next voucher",
+  "@pickupNext": {
+    "description": "Spec key: pickup.next (12 §5.16) · Max: 24 · Notes: Pickup · TertiaryButton"
+  },
+  "pickupErrorNotRecognized": "This code is not valid here.",
+  "@pickupErrorNotRecognized": {
+    "description": "Spec key: pickup.error.notRecognized (12 §5.16) · Max: 60 · Notes: Pickup · unknown, revoked or foreign code (also a QR whose card was handed out)"
+  },
+  "pickupErrorNotOnline": "This is not a voucher bought online. A card is only handed out for online vouchers that ordered one.",
+  "@pickupErrorNotOnline": {
+    "description": "Spec key: pickup.error.notOnline (12 §5.16) · Max: 140 · Notes: Pickup · PRESENTMENT_METHOD_NOT_ALLOWED"
+  },
+  "pickupErrorNoCard": "No card was ordered with this voucher.",
+  "@pickupErrorNoCard": {
+    "description": "Spec key: pickup.error.noCard (12 §5.16) · Max: 64 · Notes: Pickup · no_card_ordered"
+  },
+  "pickupErrorPickedUp": "The card for this voucher was already handed out.",
+  "@pickupErrorPickedUp": {
+    "description": "Spec key: pickup.error.pickedUp (12 §5.16) · Max: 64 · Notes: Pickup · picked_up"
+  },
+  "pickupErrorTooEarly": "The card can be handed out from {date} (24 hours after the payment).",
+  "@pickupErrorTooEarly": {
+    "description": "Spec key: pickup.error.tooEarly (12 §5.16) · Max: 100 · Notes: Pickup · too_early; {date} = weekday, date, time",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "pickupErrorScanAgain": "Too much time passed. Please scan the QR code again.",
+  "@pickupErrorScanAgain": {
+    "description": "Spec key: pickup.error.scanAgain (12 §5.16) · Max: 80 · Notes: Pickup · the scan expired before the card"
+  },
+  "pickupErrorNotUsable": "This voucher is blocked or expired. Please get a manager.",
+  "@pickupErrorNotUsable": {
+    "description": "Spec key: pickup.error.notUsable (12 §5.16) · Max: 90 · Notes: Pickup · VOUCHER_BLOCKED, VOUCHER_EXPIRED"
   },
   "cardsFailed": "That did not work. Try again.",
   "@cardsFailed": {

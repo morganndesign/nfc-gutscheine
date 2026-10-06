@@ -6,6 +6,19 @@ use App\Crypto\Ntag424\OriginalitySignature;
 return [
     'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
 
+    'online' => [
+        // Largest voucher a shop may sell online, in cents (decision 2026-10-06: 250 €); a shop may set less.
+        'max_amount' => (int) env('ONLINE_MAX_AMOUNT', 25000),
+        // GiftCard Pro's fee per online sale, in basis points of the amount (0 = none; decision pending).
+        'application_fee_bps' => (int) env('ONLINE_APPLICATION_FEE_BPS', 0),
+        // A card is bound to an online voucher no sooner than this after the payment (stolen-card purchases).
+        'card_pickup_after_hours' => (int) env('ONLINE_CARD_PICKUP_AFTER_HOURS', 24),
+        // Orders a single buyer (e-mail) or address may start per hour.
+        'orders_per_hour' => (int) env('ONLINE_ORDERS_PER_HOUR', 5),
+        // How long the payment page stays open (the provider's minimum is 30 minutes).
+        'checkout_minutes' => 30,
+    ],
+
     'fraud' => [
         // Reads of a card between two verified taps above which the card is flagged (read elsewhere, skimming).
         'counter_gap' => (int) env('FRAUD_COUNTER_GAP', 50),

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Enums\VoucherStatus;
+use App\Models\OnlineOrder;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Support\Tenancy\TenantContext;
@@ -40,6 +41,8 @@ final class PresentedVoucherResource extends JsonResource
             'balance' => $voucher->balance,
             // Loyalty value may only be added to a loyalty voucher.
             'loyalty' => $voucher->is_loyalty,
+            // An online voucher whose gift card is picked up here: open, and from when (null: no card to pick up).
+            'card_pickup' => $voucher->sold_online ? OnlineOrder::pickupOf($voucher) : null,
             'expires_at' => $voucher->expires_at?->toIso8601String(),
             'is_expired' => $voucher->isExpiredByDate(),
             'blocked_reason' => $voucher->status === VoucherStatus::Blocked ? $voucher->blocked_reason : null,

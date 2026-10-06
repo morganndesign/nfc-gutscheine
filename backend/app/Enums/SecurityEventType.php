@@ -77,6 +77,14 @@ enum SecurityEventType: string
     /** A station step of personalising a chip (keys, SDM settings, QA). Refused: CARD_PERSONALIZATION_FAILED:… */
     case CardPersonalize = 'card.personalize';
 
+    // Online sales ---------------------------------------------------------------------------------------------
+    /** The restaurant's payment provider account connected, enabled, changed or disconnected. */
+    case OnlineAccount = 'online.account';
+    /** An online order paid (the voucher sold), expired or refunded. */
+    case OnlineOrder = 'online.order';
+    /** A card holder disputed an online payment: the voucher is blocked. */
+    case OnlineDispute = 'online.dispute';
+
     // Platform -------------------------------------------------------------------------------------------------
     case RestaurantSuspend = 'platform.restaurant_suspend';
     case RestaurantReactivate = 'platform.restaurant_reactivate';
@@ -120,6 +128,9 @@ enum SecurityEventType: string
             self::CardAuthenticate => ['card_number', 'purpose', 'counter', 'presentment_id', 'stage'],
             self::CardBatchStatus => ['batch_code', 'from_status', 'to_status', 'cards_moved'],
             self::CardPersonalize => ['card_number', 'batch_code', 'stage', 'detail'],
+            self::OnlineAccount => ['provider', 'status', 'charges_enabled'],
+            self::OnlineOrder => ['order_id', 'status', 'card_pickup'],
+            self::OnlineDispute => ['order_id', 'reason'],
             self::RestaurantSuspend, self::RestaurantReactivate => [],
         };
     }

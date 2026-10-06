@@ -21,6 +21,8 @@ export const keys = {
   cardBatches: ["card-batches"] as const,
   adminCardBatches: ["admin", "card-batches"] as const,
   cardOrders: ["card-orders"] as const,
+  onlineShop: ["online-shop"] as const,
+  onlineOrders: ["online-orders"] as const,
   adminCardOrders: ["admin", "card-orders"] as const,
   securityAlerts: ["admin", "security-alerts"] as const,
 }

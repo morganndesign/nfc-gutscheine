@@ -108,6 +108,10 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
       MAIL_MAILER: ${MAIL_MAILER:?is empty - set MAIL_MAILER=smtp and the MAIL_* settings in Coolify; sign-in codes need real e-mail}
+      # Online sales (optional until a restaurant sells online): the platform's Stripe key and the Connect webhook secret.
+      STRIPE_SECRET: ${STRIPE_SECRET:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      ONLINE_APPLICATION_FEE_BPS: ${ONLINE_APPLICATION_FEE_BPS:-0}
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
@@ -186,6 +190,10 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
       MAIL_MAILER: ${MAIL_MAILER:?is empty - set MAIL_MAILER=smtp and the MAIL_* settings in Coolify; sign-in codes need real e-mail}
+      # Online sales (optional until a restaurant sells online): the platform's Stripe key and the Connect webhook secret.
+      STRIPE_SECRET: ${STRIPE_SECRET:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      ONLINE_APPLICATION_FEE_BPS: ${ONLINE_APPLICATION_FEE_BPS:-0}
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}
@@ -265,6 +273,10 @@ services:
       SANCTUM_STATEFUL_DOMAINS: ${SANCTUM_STATEFUL_DOMAINS:-}
       SANCTUM_TOKEN_PREFIX: gcp_
       MAIL_MAILER: ${MAIL_MAILER:?is empty - set MAIL_MAILER=smtp and the MAIL_* settings in Coolify; sign-in codes need real e-mail}
+      # Online sales (optional until a restaurant sells online): the platform's Stripe key and the Connect webhook secret.
+      STRIPE_SECRET: ${STRIPE_SECRET:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      ONLINE_APPLICATION_FEE_BPS: ${ONLINE_APPLICATION_FEE_BPS:-0}
       MAIL_TIMEOUT: ${MAIL_TIMEOUT:-10}
       MAIL_SCHEME: ${MAIL_SCHEME:-}
       MAIL_HOST: ${MAIL_HOST:-}

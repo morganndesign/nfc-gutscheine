@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { AlertTriangle, Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -21,6 +22,9 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
   const [error, setError] = useState<string | null>(null)
   const [qrSvg, setQrSvg] = useState<string | null>(null)
   const [printed, setPrinted] = useState(false)
+  // Audit Q8: the new voucher also goes to the guest by e-mail (only with a guest e-mail on file).
+  const guestEmail = voucher.customer?.email ?? null
+  const [send, setSend] = useState(false)
   const { ready } = useVoucherLook()
   const mutation = useReissueQr()
 
@@ -43,6 +47,7 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
       setError(null)
       setQrSvg(null)
       setPrinted(false)
+      setSend(false)
     }
     onOpenChange(o)
   }
@@ -87,8 +92,10 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
               e.preventDefault()
               setError(null)
               try {
-                const result = await mutation.mutateAsync({ voucherId: voucher.id, reason: reason.trim() })
+                const result = await mutation.mutateAsync({ voucherId: voucher.id, reason: reason.trim(), send })
                 setQrSvg(result.printable.qr_svg)
+                // E-mailed: the guest has it even if nobody prints it now.
+                if (send) setPrinted(true)
               } catch (err) {
                 setError(errorMessage(err))
               }
@@ -104,6 +111,14 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
                 placeholder={t("vouchers.reissue.reasonPlaceholder")}
               />
             </div>
+            {guestEmail ? (
+              <label className="flex items-start gap-2 text-sm">
+                <Checkbox checked={send} onCheckedChange={(v) => setSend(v === true)} className="mt-0.5" />
+                <span>
+                  {t("online.reissue.send")} <span className="text-muted-foreground">({guestEmail})</span>
+                </span>
+              </label>
+            ) : null}
             {error ? <p className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{error}</p> : null}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => void close(false)}>

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, type ReactNode } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { usePathname } from "next/navigation"
 import { api, ApiError, prefetchCsrfCookie } from "@/lib/api/client"
 import { setRegional } from "@/lib/regional"
 import type { Permission, SessionUser } from "@/lib/api/types"
@@ -33,9 +34,12 @@ export const SESSION_QUERY_KEY = ["session"] as const
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
+  // A restaurant's public shop (/g/…) is for guests: no session is asked for there.
+  const publicShop = usePathname()?.startsWith("/g/") ?? false
 
   const { data, isLoading, error } = useQuery({
     queryKey: SESSION_QUERY_KEY,
+    enabled: !publicShop,
     queryFn: async () => {
       try {
         return (await api<{ data: SessionUser }>("/auth/me")).data

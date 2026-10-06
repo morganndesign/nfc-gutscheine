@@ -1272,6 +1272,9 @@ class AppLocalizationsBs extends AppLocalizations {
   String get menuCardsOrder => 'Naruči kartice';
 
   @override
+  String get menuCardsPickup => 'Izdaj online karticu';
+
+  @override
   String get cardsReceiveNone => 'Nema isporuke na čekanju.';
 
   @override
@@ -1469,6 +1472,65 @@ class AppLocalizationsBs extends AppLocalizations {
   @override
   String get cardsErrorUncertain =>
       'Nema odgovora servera. Ponovo potražite karticu da vidite je li uspjelo.';
+
+  @override
+  String get pickupScan =>
+      'Skenirajte QR kod iz gostovog maila. Zatim prislonite novu karticu sa zalihe uz telefon.';
+
+  @override
+  String get pickupScanAction => 'Skeniraj QR kod';
+
+  @override
+  String get pickupScanTitle => 'QR kod iz maila';
+
+  @override
+  String pickupVoucher(String balance) {
+    return 'Online vaučer · stanje $balance';
+  }
+
+  @override
+  String get pickupTap =>
+      'Prislonite novu karticu sa zalihe uz telefon. Ona preuzima stanje; QR kod iz maila tada prestaje važiti.';
+
+  @override
+  String get pickupTapAction => 'Izdaj karticu';
+
+  @override
+  String get pickupDoneTitle => 'Kartica izdana';
+
+  @override
+  String pickupDoneBody(String number, String balance) {
+    return 'Kartica $number je aktivna · stanje $balance. QR kod iz maila više ne važi.';
+  }
+
+  @override
+  String get pickupNext => 'Sljedeći vaučer';
+
+  @override
+  String get pickupErrorNotRecognized => 'Ovaj kôd ovdje ne važi.';
+
+  @override
+  String get pickupErrorNotOnline =>
+      'Ovo nije online kupljen vaučer. Kartica se izdaje samo za online vaučere uz koje je naručena.';
+
+  @override
+  String get pickupErrorNoCard => 'Uz ovaj vaučer nije naručena kartica.';
+
+  @override
+  String get pickupErrorPickedUp => 'Kartica za ovaj vaučer je već izdana.';
+
+  @override
+  String pickupErrorTooEarly(String date) {
+    return 'Kartica se može izdati od $date (24 sata poslije plaćanja).';
+  }
+
+  @override
+  String get pickupErrorScanAgain =>
+      'Prošlo je previše vremena. Ponovo skenirajte QR kod.';
+
+  @override
+  String get pickupErrorNotUsable =>
+      'Ovaj vaučer je blokiran ili istekao. Molimo pozovite menadžera.';
 
   @override
   String get cardsFailed => 'To nije uspjelo. Pokušajte ponovo.';

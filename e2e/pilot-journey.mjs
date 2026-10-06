@@ -177,6 +177,23 @@ for (const url of ['/dashboard', '/vouchers', '/vouchers/new', '/transactions'])
 }
 step(9, 'accessibility scan clean')
 
+// 10. Online sales: the owner sees the Stripe connection (no keys to enter); the guest page of a shop that is not
+// switched on says so, without a sign-in.
+await o.goto(`${BASE}/settings?tab=online`)
+await o.getByText('Payments with Stripe').waitFor()
+// Without the platform's Stripe key (this test server) the tab says so; with it, the owner connects with one button.
+await o.getByText(/Online sales are not set up on this server yet|Not connected yet/).waitFor()
+assert.equal(await o.locator('input[name*="secret" i], input[name*="key" i]').count(), 0, 'no Stripe key fields')
+const guest = await newPage(desktop, 'guest')
+await guest.goto(`${BASE}/g/pilot-${run}`)
+await guest.getByText('Vouchers are not available online right now').waitFor()
+assert.ok(!guest.url().includes('/login'), 'the shop page needs no sign-in')
+const shopCsp = (await guest.request.get(`${BASE}/g/pilot-${run}`)).headers()['content-security-policy'] ?? ''
+assert.match(shopCsp, /'nonce-/)
+const { violations: shopViolations } = await new AxeBuilder({ page: guest }).withTags(['wcag2a', 'wcag2aa']).analyze()
+assert.deepEqual(shopViolations.map((v) => v.id), [], 'axe violations on the shop page')
+step(10, 'online tab shows the Stripe connection; closed shop page public and clean')
+
 await browser.close()
 assert.deepEqual(errors, [], 'browser console errors')
 console.log('\nPilot journey passed.')

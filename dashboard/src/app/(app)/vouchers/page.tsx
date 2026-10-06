@@ -7,7 +7,7 @@ import { Download, Filter, Loader2, Plus, Search, Ticket } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { QueryError } from "@/components/common/query-error"
-import { LoyaltyBadge, StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabelKey } from "@/components/common/status-badge"
+import { LoyaltyBadge, OnlineBadge, StatusBadge, VOUCHER_STATUSES, displayStatus, statusLabelKey } from "@/components/common/status-badge"
 import { EmptyState } from "@/components/common/empty-state"
 import { PaginationBar } from "@/components/common/pagination-bar"
 import { RequirePermission } from "@/components/layout/auth-guard"
@@ -199,6 +199,7 @@ function VouchersContent() {
                       <span className="inline-flex items-center gap-1.5">
                         <StatusBadge status={displayStatus(voucher)} />
                         {voucher.loyalty ? <LoyaltyBadge /> : null}
+                        {voucher.online ? <OnlineBadge /> : null}
                       </span>
                     </TableCell>
                     <TableCell className="tabular pr-4 text-right sm:pr-2">

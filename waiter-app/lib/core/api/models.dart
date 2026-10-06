@@ -347,6 +347,7 @@ class PresentedVoucher {
     required this.maxDebitPerTransaction,
     required this.canRedeem,
     this.loyalty = false,
+    this.cardPickup,
   });
 
   factory PresentedVoucher.fromJson(Map<String, Object?> json) {
@@ -366,6 +367,9 @@ class PresentedVoucher {
       maxDebitPerTransaction: _intOrNull(json, 'max_debit_per_transaction'),
       canRedeem: actions is Map && actions['redeem'] == true,
       loyalty: _bool(json, 'loyalty'),
+      cardPickup: json['card_pickup'] is Map
+          ? CardPickup.fromJson((json['card_pickup']! as Map<Object?, Object?>).cast<String, Object?>())
+          : null,
     );
   }
 
@@ -393,6 +397,9 @@ class PresentedVoucher {
   /// Sold as loyalty: only such a voucher takes further loyalty value (a paid one never becomes loyalty).
   final bool loyalty;
 
+  /// An online voucher whose buyer ordered a gift card to pick up here (null: none ordered).
+  final CardPickup? cardPickup;
+
   String get last4 => voucherNumber.length <= 4 ? voucherNumber : voucherNumber.substring(voucherNumber.length - 4);
 
   PresentedVoucher copyWith({VoucherStatus? status, int? balance, bool? isExpired, bool? allowPartialRedemption}) =>
@@ -410,7 +417,49 @@ class PresentedVoucher {
         allowPartialRedemption: allowPartialRedemption ?? this.allowPartialRedemption,
         maxDebitPerTransaction: maxDebitPerTransaction,
         canRedeem: canRedeem,
+        loyalty: loyalty,
+        cardPickup: cardPickup,
       );
+}
+
+/// The gift card of an online voucher (decision 2026-10-06): still to hand out ([open]), not before [from].
+@immutable
+class CardPickup {
+  const CardPickup({required this.open, this.from});
+
+  factory CardPickup.fromJson(Map<String, Object?> json) =>
+      CardPickup(open: _bool(json, 'open'), from: _dateOrNull(json, 'from'));
+
+  final bool open;
+  final DateTime? from;
+}
+
+/// A gift card handed out for an online voucher: its inventory number and the balance it now carries.
+@immutable
+class PickedUpCard {
+  const PickedUpCard({required this.cardNumber, required this.balance, required this.currency});
+
+  factory PickedUpCard.fromJson(Map<String, Object?> json) {
+    final Map<String, Object?> data = _map(json['data'], 'data');
+    final Object? media = data['media'];
+    String? number;
+    if (media is List) {
+      for (final Object? m in media) {
+        if (m is Map && m['type'] == 'nfc_card' && m['status'] == 'active' && m['card_number'] is String) {
+          number = m['card_number']! as String;
+        }
+      }
+    }
+    return PickedUpCard(
+      cardNumber: number ?? '',
+      balance: _int(data, 'balance'),
+      currency: _stringOrNull(data, 'currency') ?? 'EUR',
+    );
+  }
+
+  final String cardNumber;
+  final int balance;
+  final String currency;
 }
 
 /// `POST /presentments` → 201: single use, valid for [expiresIn] from receipt,

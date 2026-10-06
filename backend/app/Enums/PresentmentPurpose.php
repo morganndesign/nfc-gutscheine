@@ -31,6 +31,12 @@ enum PresentmentPurpose: string
     /** Resume a suspended guest's card: only with the card tapped at the till (decision 2026-10-06, K4). */
     case Resume = 'resume';
 
+    /**
+     * The QR of an online voucher shown at the restaurant to pick up its card (decision 2026-10-06): consumed when
+     * a stock card is bound to the voucher; the QR stops working then.
+     */
+    case Pickup = 'pickup';
+
     /** Purposes whose presentment names the card's voucher when the card is active (consumed by an operation on it). */
     public function namesVoucher(): bool
     {
@@ -52,6 +58,8 @@ enum PresentmentPurpose: string
             self::Surrender => [CardState::Active, CardState::Suspended],
             self::Reload => [CardState::Active, CardState::Available],
             self::Resume => [CardState::Suspended],
+            // A QR, never a card.
+            self::Pickup => [],
         };
     }
 

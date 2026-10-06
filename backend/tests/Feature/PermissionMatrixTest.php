@@ -33,6 +33,13 @@ final class PermissionMatrixTest extends TestCase
         'POST api/v1/auth/token/code/resend',
         'POST api/v1/auth/forgot-password',
         'POST api/v1/auth/reset-password',
+        // Online sales (decision 2026-10-06): a restaurant's public shop, the buyer's order status (with its
+        // secret), and Stripe's signed webhook.
+        'GET api/v1/shop/{slug}',
+        'GET api/v1/shop/{slug}/logo',
+        'POST api/v1/shop/{slug}/orders',
+        'GET api/v1/shop/orders/{order}',
+        'POST api/v1/webhooks/stripe',
     ];
 
     /** Authenticated routes with no ability gate: any signed-in user of any role may call them. */

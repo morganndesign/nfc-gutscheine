@@ -17,7 +17,7 @@ final class PaymentRules
     {
         return [
             'payment' => ['required', 'array:method,reference,reason'],
-            'payment.method' => ['required', 'string', Rule::enum(PaymentMethod::class)],
+            'payment.method' => ['required', 'string', Rule::in(PaymentMethod::tillValues())],
             'payment.reference' => [
                 'nullable', 'string', 'max:120',
                 Rule::requiredIf(static fn (): bool => in_array(request()->input('payment.method'), [PaymentMethod::CardTerminal->value, PaymentMethod::BankTransfer->value], true)),

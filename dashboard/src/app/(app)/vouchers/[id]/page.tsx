@@ -4,7 +4,7 @@ import { use, useState } from "react"
 import Link from "next/link"
 import { ArrowDownLeft, ArrowLeft, Ban, CheckCircle2, Clock, Loader2, MoreHorizontal, Pencil, QrCode, RotateCcw, Undo2 } from "lucide-react"
 import { toast } from "sonner"
-import { LoyaltyBadge, StatusBadge, displayStatus } from "@/components/common/status-badge"
+import { LoyaltyBadge, OnlineBadge, StatusBadge, displayStatus } from "@/components/common/status-badge"
 import { useConfirm } from "@/components/common/confirm"
 import { PAYMENT_METHOD_LABELS } from "@/components/vouchers/payment-fields"
 import { ReasonDialog } from "@/components/common/reason-dialog"
@@ -142,6 +142,14 @@ function VoucherDetail({ voucher }: { voucher: Voucher }) {
             <h1 className="card-number text-xl font-semibold sm:text-2xl">{voucher.voucher_number_formatted}</h1>
             <StatusBadge status={displayStatus(voucher)} size="lg" />
             {voucher.loyalty ? <LoyaltyBadge /> : null}
+            {voucher.online ? <OnlineBadge /> : null}
+            {voucher.card_pickup ? (
+              <span className="text-muted-foreground text-sm">
+                {voucher.card_pickup.open
+                  ? t("online.voucher.pickupOpen", { date: voucher.card_pickup.from ? new Date(voucher.card_pickup.from).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" }) : "" })
+                  : t("online.voucher.pickupDone")}
+              </span>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             {canReload ? (

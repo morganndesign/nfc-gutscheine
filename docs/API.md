@@ -145,6 +145,8 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 | 409 | `TRANSACTION_NOT_REVERSIBLE` | Wrong type or already reversed; `context.reason` `own_reload`: a reload is reversed by someone other than the person who booked it (owners excepted) |
 | 403 | `CARD_NOT_PRESENTED` | A replacement without the old card's `surrender` presentment needs cards.replace_lost (owners) |
 | 409 | `IMMUTABLE_RECORD` | Attempt to change an append-only record |
+| 409 | `ONLINE_SHOP_UNAVAILABLE` | The restaurant's online shop is not open (`context.reason`: `not_configured` on this server, `not_connected`, `disabled`, …) |
+| 502 | `ONLINE_PAYMENT_FAILED` | The payment provider could not be reached or refused; nothing was booked, try again |
 | 409 | `RESTAURANT_NOT_DELETABLE`, `INVITATION_NOT_POSSIBLE` | Platform administration (see there) |
 | 419 | `CSRF_TOKEN_MISMATCH` | Fetch `/sanctum/csrf-cookie` again and retry |
 | 422 | `VALIDATION_FAILED` | `errors` holds the field messages (also every failed sign-in) |
@@ -175,6 +177,9 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 | `password-change` | 5/min per user | `PUT /auth/password` |
 | `exports` | 10/min per user | `/vouchers/export`, `/transactions/export`, `/reports/payments/export` |
 | `logo` | 10/min per user | `POST /settings/logo` |
+| `shop` | 120/min per IP | the public shop and order status |
+| `online-order` | 10/min per IP; plus 5/hour per buyer e-mail and per IP (`ONLINE_ORDERS_PER_HOUR`) → `429` | `POST /shop/{slug}/orders` |
+| `webhook` | 1200/min per IP | `POST /webhooks/stripe` |
 
 Failed presentments (the scanned text proves nothing) count separately: after `PRESENTMENT_FAILURE_LIMIT` (10)
 within `PRESENTMENT_FAILURE_DECAY` (300 s) per restaurant, user and device, `POST /presentments` answers
@@ -292,9 +297,10 @@ lockout as failed scans (`429 PRESENTMENT_THROTTLED`). A redemption refuses a ca
 | POST | `/vouchers/{id}/redemptions` | vouchers.redeem | **Idempotency-Key** · below |
 | GET | `/vouchers/{id}/redemptions/{idempotencyKey}` | vouchers.redeem | Outcome of one of the caller's own redemption attempts, below |
 | POST | `/vouchers/{id}/reloads` | vouchers.reload | **Idempotency-Key** · `{amount, payment: {method, reference?, reason?}, note?, presentment_id?}` → `201 {data: {voucher, transaction}, replayed}`. From the app (device token) `presentment_id` is required: a fresh `reload` card presentment of this voucher by the same user and device (`422 PRESENTMENT_INVALID` otherwise, also `card_not_active`); the dashboard reloads without one |
-| POST | `/vouchers/{id}/refund` | vouchers.refund (owners) | **Idempotency-Key** · `{payment: {method: cash\|card_terminal\|bank_transfer, reference?}, reason}` — pays back the paid-in money still on the voucher (spending uses complimentary value first, but complimentary value added after the paid money was spent is never paid out; it is forfeited), closes the voucher (`refunded`), revokes its QR and card → `201 {data: {voucher, transaction (type refund, payment.direction out)}, replayed}`; `422 VOUCHER_NOT_REFUNDABLE` when nothing was paid for. The voucher detail carries `refundable` for owners |
+| POST | `/vouchers/{id}/refund` | vouchers.refund (owners) | **Idempotency-Key** · `{payment: {method: cash\|card_terminal\|bank_transfer\|online, reference?}, reason}` — pays back the paid-in money still on the voucher (spending uses complimentary value first, but complimentary value added after the paid money was spent is never paid out; it is forfeited), closes the voucher (`refunded`), revokes its QR and card → `201 {data: {voucher, transaction (type refund, payment.direction out)}, replayed}`; `422 VOUCHER_NOT_REFUNDABLE` when nothing was paid for. The voucher detail carries `refundable` for owners. A voucher bought online (`online: true`) is refunded with `method: online`: the voucher is blocked first, Stripe pays the amount back to the buyer's card (same Idempotency-Key = same Stripe refund), then the refund is booked with Stripe's refund id; `422 INVALID_AMOUNT` when more than the online payment is on it (money loaded at the till goes back in cash or by transfer), `502 ONLINE_PAYMENT_FAILED` when Stripe refuses. Online sales are never cancelled (`409 INVALID_VOUCHER_STATE`, `context.reason` `online`) |
 | POST | `/vouchers/{id}/cancellation` | vouchers.cancel_sale (managers, owners) | **Idempotency-Key** · `{reason, reference?}` — cancels an unused sale of today: the voucher closes (`refunded`) and the money goes back by the sale's own method (`reference`: the terminal cancellation receipt or bank reference; a complimentary sale pays nothing). The seller alone only within 15 minutes; later another manager or the owner (`409 INVALID_VOUCHER_STATE`, `context.reason` `own_sale` / `not_cancellable`). An active gift card goes back to stock (`available`) for the next sale; a refund still takes the card out of service. `can_cancel_sale` on the voucher says whether this sign-in may cancel it now |
-| POST | `/vouchers/{id}/printable` | vouchers.reissue (managers, owners) | `{reason}` — a new printable QR for a lost or unprinted sheet of a digital voucher; the previous QR stops at once → `201 {data: Voucher, printable: {payload, qr_svg}}` (shown once, `no-store`) |
+| POST | `/vouchers/{id}/printable` | vouchers.reissue (managers, owners) | `{reason, send?}` — a new printable QR for a lost or unprinted sheet of a digital voucher; the previous QR stops at once → `201 {data: Voucher, printable: {payload, qr_svg}}` (shown once, `no-store`). `send: true` also e-mails the new voucher as a PDF to the guest (`422` on `send` when the voucher has no customer e-mail) |
+| POST | `/vouchers/{id}/card-pickup` | cards.bind (managers, owners) | `{qr_presentment_id, presentment_id}` — the gift card of an online voucher whose buyer ordered one: a `pickup` presentment of the e-mailed QR and a `bind` tap of a stock card (`available`). The card takes over the voucher and its balance (`kind` `card`), the QR is revoked → `200 {data: Voucher}`. `409 INVALID_VOUCHER_STATE` with `context.reason`: `no_card_ordered`, `picked_up`, `not_paid` (refunded, disputed), `too_early` (`context.from`: not within `ONLINE_CARD_PICKUP_AFTER_HOURS`, 24 h, of the payment), `has_card`. A `pickup` presentment's `voucher.card_pickup` is `{open, from}` or null |
 | GET | `/reports/cash-up?date=` | transactions.view | One local day (default today): `{methods: [{method, received, paid_out, net, payments}], staff: [{user, method, received, paid_out}], reversed_reloads, complimentary, total_received, total_paid_out, outstanding_end_of_day}`; reversed reloads are not counted as received |
 | GET | `/reports/payments/export?from=&to=` | transactions.export | CSV of every payment received or paid out (direction, method, amount, reference, voucher, staff, reversed) |
 | POST | `/vouchers/{id}/block` | vouchers.block | `{reason}` (3–500 characters) |
@@ -504,6 +510,36 @@ Guest e-mails confirm a sale or reload like a receipt: amount, restaurant, date 
 | GET | `/up` (outside `/api/v1`) | Health check: database and cache |
 
 There is no public voucher page and no public voucher lookup.
+
+### Online shop (public, decision 2026-10-06)
+
+Each restaurant sells vouchers on its own page `{FRONTEND_URL}/g/{slug}`. Payment is a Stripe Checkout page of the
+restaurant's **own** Stripe account (Stripe Connect, direct charges); GiftCard Pro stores only its `acct_…` id, never
+keys. Only Stripe's signed webhook turns a paid order into a voucher.
+
+| Method | Path | |
+|---|---|---|
+| GET | `/shop/{slug}` | The open shop: `{restaurant: {name, slug, locale, website}, currency, brand_color, logo_url, headline, intro, amounts[], custom_amount, min_amount, max_amount, card_pickup, validity_months, terms_url, imprint_url}`; `409 ONLINE_SHOP_UNAVAILABLE` when it is not open |
+| GET | `/shop/{slug}/logo` | The restaurant's logo PNG |
+| POST | `/shop/{slug}/orders` | `{amount, buyer_email, buyer_name?, recipient_name?, gift_message? (≤ 300), card_pickup?, locale? (de\|en\|bs), accept_terms: true}` (a filled honeypot `website` is refused) → `201 {data: {order_id, token, checkout_url}}`: send the buyer to `checkout_url`. `422 INVALID_AMOUNT` outside the shop's amounts or limits (never above the platform's online cap, `ONLINE_MAX_AMOUNT`), `429` for too many orders, `502 ONLINE_PAYMENT_FAILED` |
+| GET | `/shop/orders/{order}?token=` | The buyer's order status with the `token` from the order: `{status: pending\|paid\|expired\|refunded\|disputed, amount, currency, restaurant, card_pickup, email}`; `404` with a wrong token |
+| POST | `/webhooks/stripe` | Stripe Connect webhook (`Stripe-Signature`, 5-minute tolerance; `400` otherwise). Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.expired`, `checkout.session.async_payment_failed`, `charge.dispute.created`, `charge.refunded`, `account.updated`, `account.application.deauthorized`. Each event is handled once (by its id). A paid session sells the voucher (method `online`, the payment intent as reference, no staff member) only for the order's own account, amount and currency, and mails it as a PDF to the buyer whatever `send_customer_emails` says; when the shop's limits changed meanwhile, the payment is refunded at once. A dispute blocks the voucher and mails the owners; a refund made in Stripe's dashboard blocks it too |
+
+Orders still pending after the 30 minutes of the Stripe page expire (`online:expire-orders`, every 15 minutes); a late
+payment for an expired order still gives the voucher.
+
+### Online shop (restaurant)
+
+| Method | Path | Permission | |
+|---|---|---|---|
+| GET | `/online-shop` | settings.manage | `{configured, provider, account: {charges_enabled, payouts_enabled, details_submitted, enabled_at}\|null, shop: {enabled, amounts, custom_amount, max_amount, card_pickup, headline, intro, terms_url, imprint_url}, limits, url, qr_svg}` |
+| PUT | `/online-shop` | settings.manage | Any of `enabled`, `amounts[]` (1–6, sorted), `custom_amount`, `max_amount`, `card_pickup`, `headline` (≤ 120), `intro` (≤ 600), `terms_url`, `imprint_url` (https). `enabled: true` needs Stripe to allow charges and both URLs (`422` on `enabled`) |
+| POST | `/online-shop/connect` | settings.manage | Creates the restaurant's Stripe account (type standard) on first use and returns Stripe's onboarding link → `{data: {url}}`; Stripe sends the owner back to `/settings?tab=online&stripe=return` |
+| POST | `/online-shop/refresh` | settings.manage | Reads the account's state from Stripe → as GET |
+| DELETE | `/online-shop/connection` | settings.manage | Forgets the account and closes the shop → as GET |
+| GET | `/online-orders` | vouchers.view | `status?`, `pickup=open` (gift cards still to hand out) → `{data: [{id, status, amount, currency, buyer_email, buyer_name, recipient_name, card_pickup, card_pickup_from, card_picked_up_at, paid_at, created_at, voucher: {id, voucher_number, status, balance}\|null}]}` |
+
+A `Voucher` carries `online` (bought in the shop) and, for those, `card_pickup` (`{open, from}` or null).
 
 ### Platform administration `[platform.restaurants.manage]`
 

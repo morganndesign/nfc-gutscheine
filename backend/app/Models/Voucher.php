@@ -30,6 +30,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $customer_id
  * @property VoucherKind $kind
  * @property bool $is_loyalty Sold as loyalty (decision 2026-10-05); set at the sale only.
+ * @property bool $sold_online Sold in the restaurant's online shop (paid through the payment provider).
  * @property string $voucher_number Internal: staff and support only, never printed, never a credential.
  * @property VoucherStatus $status
  * @property string $currency
@@ -69,6 +70,7 @@ class Voucher extends Model
         return [
             'kind' => VoucherKind::class,
             'is_loyalty' => 'boolean',
+            'sold_online' => 'boolean',
             'status' => VoucherStatus::class,
             'initial_value' => 'integer',
             'balance' => 'integer',

@@ -20,11 +20,14 @@ use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\LogoController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
+use App\Http\Controllers\Api\V1\OnlineShopController;
 use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PresentmentController;
 use App\Http\Controllers\Api\V1\ReportController;
 use App\Http\Controllers\Api\V1\RoleController;
 use App\Http\Controllers\Api\V1\SettingsController;
+use App\Http\Controllers\Api\V1\ShopController;
+use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\VoucherActionController;
@@ -47,6 +50,16 @@ Route::prefix('v1')->group(function (): void {
     Route::get('app/config', AppConfigController::class)->middleware('throttle:app-config');
     // For the external uptime monitor: database, scheduler and queue worker alive (200 ok / 503 degraded).
     Route::get('health/operations', OperationsHealthController::class)->middleware('throttle:app-config');
+
+    // Online sales, public (decision 2026-10-06): a restaurant's shop, the buyer's order and its status, and the
+    // payment provider's signed events. No sign-in.
+    Route::prefix('shop')->controller(ShopController::class)->group(function (): void {
+        Route::get('orders/{order}', 'status')->middleware('throttle:shop');
+        Route::get('{slug}', 'show')->where('slug', '[a-z0-9-]{1,80}')->middleware('throttle:shop');
+        Route::get('{slug}/logo', 'logo')->where('slug', '[a-z0-9-]{1,80}')->middleware('throttle:shop');
+        Route::post('{slug}/orders', 'order')->where('slug', '[a-z0-9-]{1,80}')->middleware('throttle:online-order');
+    });
+    Route::post('webhooks/stripe', StripeWebhookController::class)->middleware('throttle:webhook');
 
     Route::prefix('auth')->group(function (): void {
         Route::post('login', [AuthController::class, 'login'])->middleware('throttle:login');
@@ -108,6 +121,7 @@ Route::prefix('v1')->group(function (): void {
                     ->where('idempotencyKey', '[A-Za-z0-9\-_.]{8,96}')
                     ->middleware(['can:vouchers.redeem', 'throttle:redemption-outcome']);
                 Route::post('printable', 'reissue')->middleware(['can:vouchers.reissue', 'throttle:voucher-operation']);
+                Route::post('card-pickup', 'pickUpCard')->middleware(['can:cards.bind', 'throttle:voucher-operation']);
                 Route::post('block', 'block')->middleware('can:vouchers.block');
                 Route::post('unblock', 'unblock')->middleware('can:vouchers.unblock');
                 Route::post('expire', 'expire')->middleware('can:vouchers.expire');
@@ -129,6 +143,16 @@ Route::prefix('v1')->group(function (): void {
             Route::get('card-batches', [CardController::class, 'batches'])->middleware('can:cards.view');
             Route::post('card-batches/{batch}/receipt', [CardController::class, 'receive'])->whereUuid('batch')->middleware(['can:cards.receive', 'throttle:voucher-operation']);
             // Ordering cards from the platform: whoever confirms deliveries (managers, owners).
+            // Online shop (owners) and its orders.
+            Route::prefix('online-shop')->controller(OnlineShopController::class)->middleware('can:settings.manage')->group(function (): void {
+                Route::get('/', 'show');
+                Route::put('/', 'update');
+                Route::post('connect', 'connect')->middleware('throttle:10,1,online-connect');
+                Route::post('refresh', 'refresh')->middleware('throttle:20,1,online-refresh');
+                Route::delete('connection', 'disconnect');
+            });
+            Route::get('online-orders', [OnlineShopController::class, 'orders'])->middleware('can:vouchers.view');
+
             Route::get('card-orders', [CardOrderController::class, 'index'])->middleware('can:cards.view');
             Route::post('card-orders', [CardOrderController::class, 'store'])->middleware(['can:cards.receive', 'throttle:voucher-operation', 'idempotent:optional']);
 

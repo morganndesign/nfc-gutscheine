@@ -103,11 +103,12 @@ class WaiterApi {
 
   /// Proves that the voucher's QR is here, now: a single-use presentment for
   /// the redemption that follows.
-  Future<Presentment> presentQr(String credential, {CancelToken? cancelToken}) async {
+  /// [purpose] `pickup`: the QR of an online voucher whose gift card is handed out here.
+  Future<Presentment> presentQr(String credential, {String purpose = 'spend', CancelToken? cancelToken}) async {
     final ApiResponse r = await _client.send(
       'POST',
       '/presentments',
-      body: <String, Object?>{'purpose': 'spend', 'method': 'printable_qr', 'credential': credential},
+      body: <String, Object?>{'purpose': purpose, 'method': 'printable_qr', 'credential': credential},
       timeout: ApiTimeouts.lookup,
       cancelToken: cancelToken,
     );
@@ -220,6 +221,17 @@ class WaiterApi {
     ),
     CardInfo.fromJson,
   );
+
+  /// Hands out the gift card of an online voucher: its QR (`pickup`) and a stock card (`bind`), both just presented.
+  Future<PickedUpCard> pickUpCard(String voucherId, {required String qrPresentmentId, required String cardPresentmentId}) async =>
+      _parse(
+        await _client.send(
+          'POST',
+          '/vouchers/$voucherId/card-pickup',
+          body: <String, Object?>{'qr_presentment_id': qrPresentmentId, 'presentment_id': cardPresentmentId},
+        ),
+        PickedUpCard.fromJson,
+      );
 
   /// Station: the batches waiting for personalisation.
   Future<List<StationBatch>> stationBatches() async {

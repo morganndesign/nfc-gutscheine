@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use App\Enums\Permission;
 use App\Enums\VoucherStatus;
 use App\Models\Medium;
+use App\Models\OnlineOrder;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Vouchers\VoucherService;
@@ -35,6 +36,9 @@ final class VoucherResource extends JsonResource
             'voucher_number_formatted' => VoucherNumber::format($voucher->voucher_number),
             'status' => $voucher->status->value,
             'loyalty' => $voucher->isLoyalty(),
+            // Bought in the restaurant's online shop; `card_pickup`: its gift card still waits at the restaurant.
+            'online' => $voucher->sold_online,
+            'card_pickup' => $this->when($voucher->sold_online, static fn (): ?array => OnlineOrder::pickupOf($voucher)),
             'currency' => $voucher->currency,
             'initial_value' => $voucher->initial_value,
             'balance' => $voucher->balance,

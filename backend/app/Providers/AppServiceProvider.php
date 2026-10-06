@@ -9,6 +9,8 @@ use App\Models\PersonalAccessToken;
 use App\Models\User;
 use App\Models\Voucher;
 use App\Services\Auth\DeviceTokenService;
+use App\Services\Online\PaymentProvider;
+use App\Services\Online\StripeProvider;
 use App\Services\Presentments\PresentmentService;
 use App\Services\Presentments\PresentmentVerifier;
 use App\Services\Presentments\PrintableQrVerifier;
@@ -38,6 +40,9 @@ final class AppServiceProvider extends ServiceProvider
         $this->app->when(PresentmentService::class)
             ->needs('$verifiers')
             ->giveTagged(PresentmentVerifier::class);
+
+        // Online sales: Stripe Connect (decision 2026-10-06); another provider implements the same contract.
+        $this->app->bind(PaymentProvider::class, StripeProvider::class);
     }
 
     public function boot(): void
@@ -126,6 +131,11 @@ final class AppServiceProvider extends ServiceProvider
         RateLimiter::for('tap', static fn (Request $request): Limit => Limit::perMinute(30)->by('tap:'.$request->ip()));
 
         RateLimiter::for('app-config', static fn (Request $request): Limit => Limit::perMinute(60)->by($request->ip()));
+        // Online shop, public: reading it, ordering from it (the order also limits per e-mail and address), and the
+        // payment provider's events.
+        RateLimiter::for('shop', static fn (Request $request): Limit => Limit::perMinute(120)->by('shop:'.$request->ip()));
+        RateLimiter::for('online-order', static fn (Request $request): Limit => Limit::perMinute(10)->by('online-order:'.$request->ip()));
+        RateLimiter::for('webhook', static fn (Request $request): Limit => Limit::perMinute(1200)->by('webhook:'.$request->ip()));
 
         // Per user *and* terminal: several phones may share one waiter login during a busy service.
         $perTerminal = static fn (Request $request): string => ($request->user()?->getAuthIdentifier() ?? $request->ip()).'|'.substr((string) $request->header('X-Device-Id'), 0, 64);

@@ -1280,6 +1280,9 @@ class AppLocalizationsDe extends AppLocalizations {
   String get menuCardsOrder => 'Karten bestellen';
 
   @override
+  String get menuCardsPickup => 'Online-Karte ausgeben';
+
+  @override
   String get cardsReceiveNone => 'Keine Lieferung offen.';
 
   @override
@@ -1475,6 +1478,67 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get cardsErrorUncertain =>
       'Keine Antwort vom Server. Karte neu suchen, um zu sehen, ob es geklappt hat.';
+
+  @override
+  String get pickupScan =>
+      'Den QR-Code aus der E-Mail des Gastes scannen. Danach eine neue Karte aus dem Lager ans Handy halten.';
+
+  @override
+  String get pickupScanAction => 'QR-Code scannen';
+
+  @override
+  String get pickupScanTitle => 'QR-Code aus der E-Mail';
+
+  @override
+  String pickupVoucher(String balance) {
+    return 'Online-Gutschein · Guthaben $balance';
+  }
+
+  @override
+  String get pickupTap =>
+      'Eine neue Karte aus dem Lager ans Handy halten. Sie übernimmt das Guthaben; der QR-Code aus der E-Mail gilt dann nicht mehr.';
+
+  @override
+  String get pickupTapAction => 'Karte ausgeben';
+
+  @override
+  String get pickupDoneTitle => 'Karte ausgegeben';
+
+  @override
+  String pickupDoneBody(String number, String balance) {
+    return 'Karte $number ist aktiv · Guthaben $balance. Der QR-Code aus der E-Mail gilt nicht mehr.';
+  }
+
+  @override
+  String get pickupNext => 'Nächster Gutschein';
+
+  @override
+  String get pickupErrorNotRecognized => 'Dieser Code gilt hier nicht.';
+
+  @override
+  String get pickupErrorNotOnline =>
+      'Das ist kein online gekaufter Gutschein. Eine Karte gibt es nur für Online-Gutscheine mit Kartenwunsch.';
+
+  @override
+  String get pickupErrorNoCard =>
+      'Zu diesem Gutschein wurde keine Karte bestellt.';
+
+  @override
+  String get pickupErrorPickedUp =>
+      'Die Karte zu diesem Gutschein wurde schon ausgegeben.';
+
+  @override
+  String pickupErrorTooEarly(String date) {
+    return 'Die Karte kann ab $date ausgegeben werden (24 Stunden nach der Zahlung).';
+  }
+
+  @override
+  String get pickupErrorScanAgain =>
+      'Zu lange gewartet. Bitte den QR-Code noch einmal scannen.';
+
+  @override
+  String get pickupErrorNotUsable =>
+      'Dieser Gutschein ist gesperrt oder abgelaufen. Bitte einen Manager holen.';
 
   @override
   String get cardsFailed => 'Das hat nicht geklappt. Erneut versuchen.';

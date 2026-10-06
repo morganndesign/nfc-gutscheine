@@ -168,6 +168,15 @@ final class SecurityMonitor
             // A delivery counted short at receipt: cards may have gone missing on the way (audit K8).
             ['name' => 'card.delivery_short', 'severity' => 'high', 'subject' => static fn (SecurityEvent $e): ?string => is_string($e->data['batch_code'] ?? null) ? 'batch:'.$e->data['batch_code'] : null,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::CardBatchStatus && ($e->data['to_status'] ?? null) === 'on_hold'],
+            // A disputed online payment (often a stolen card): the voucher is blocked; the platform looks at it.
+            ['name' => 'online.dispute', 'severity' => 'high', 'subject' => static fn (SecurityEvent $e): ?string => $e->subject_id !== null ? 'voucher:'.$e->subject_id : null,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::OnlineDispute],
+            // The account money is paid out to was connected again or disconnected.
+            ['name' => 'online.account_change', 'severity' => 'warning', 'subject' => $restaurant,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::OnlineAccount && in_array($e->data['status'] ?? null, ['reconnected', 'disconnected'], true)],
+            // Many online orders paid in an hour in one shop (card testing with stolen cards).
+            ['name' => 'online.order_burst', 'severity' => 'warning', 'subject' => $restaurant, 'threshold' => 10, 'window' => 60,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::OnlineOrder && ($e->data['status'] ?? null) === 'paid'],
             // One person giving away many vouchers in a day.
             ['name' => 'money.complimentary', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherIssue && $e->outcome === SecurityEventOutcome::Succeeded

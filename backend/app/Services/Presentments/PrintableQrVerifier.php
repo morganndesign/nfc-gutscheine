@@ -25,8 +25,9 @@ final class PrintableQrVerifier implements PresentmentVerifier
 
     public function supports(PresentmentPurpose $purpose): bool
     {
-        // A printable QR only ever pays; cards are received and bound with a live authentication.
-        return $purpose === PresentmentPurpose::Spend;
+        // A printable QR pays, and an online voucher's QR picks up its card; cards are received and bound with a
+        // live authentication.
+        return $purpose === PresentmentPurpose::Spend || $purpose === PresentmentPurpose::Pickup;
     }
 
     public function resolve(#[SensitiveParameter] string $credential, Restaurant $restaurant): ?Medium

@@ -10,6 +10,7 @@ use App\Mail\TemplatedMail;
 use App\Models\Medium;
 use App\Models\NotificationLog;
 use App\Models\NotificationTemplate;
+use App\Models\OnlineOrder;
 use App\Models\Payment;
 use App\Models\Voucher;
 use App\Models\VoucherTransaction;
@@ -29,25 +30,28 @@ use Throwable;
  */
 final class VoucherNotificationService
 {
-    /** @var array<'de'|'en'|'bs', array{no_expiry: string, valid_until: string, method: array<string, string>, attached: string}> */
+    /** @var array<'de'|'en'|'bs', array{no_expiry: string, valid_until: string, method: array<string, string>, attached: string, pickup: string}> */
     private const TEXT = [
         'de' => [
             'no_expiry' => 'unbefristet gültig',
             'valid_until' => 'gültig bis',
-            'method' => ['cash' => 'Bar', 'card_terminal' => 'Kartenzahlung', 'bank_transfer' => 'Überweisung', 'complimentary' => 'Loyalty'],
+            'method' => ['cash' => 'Bar', 'card_terminal' => 'Kartenzahlung', 'bank_transfer' => 'Überweisung', 'complimentary' => 'Loyalty', 'online' => 'Online'],
             'attached' => 'Ihr Gutschein ist als PDF angehängt. Bitte bewahren Sie ihn wie Bargeld auf.',
+            'pickup' => 'Ihre Geschenkkarte holen Sie im Lokal ab: Zeigen Sie dort diesen QR-Code. Bis dahin gilt der Gutschein im Anhang; mit der Karte wird er ungültig.',
         ],
         'en' => [
             'no_expiry' => 'valid without an expiry date',
             'valid_until' => 'valid until',
-            'method' => ['cash' => 'Cash', 'card_terminal' => 'Card payment', 'bank_transfer' => 'Bank transfer', 'complimentary' => 'Loyalty'],
+            'method' => ['cash' => 'Cash', 'card_terminal' => 'Card payment', 'bank_transfer' => 'Bank transfer', 'complimentary' => 'Loyalty', 'online' => 'Online'],
             'attached' => 'Your voucher is attached as a PDF. Please keep it safe like cash.',
+            'pickup' => 'Pick up your gift card at the restaurant: show this QR code there. Until then the attached voucher is valid; with the card it no longer works.',
         ],
         'bs' => [
             'no_expiry' => 'bez roka važenja',
             'valid_until' => 'vrijedi do',
-            'method' => ['cash' => 'Gotovina', 'card_terminal' => 'Plaćanje karticom', 'bank_transfer' => 'Bankovni transfer', 'complimentary' => 'Loyalty'],
+            'method' => ['cash' => 'Gotovina', 'card_terminal' => 'Plaćanje karticom', 'bank_transfer' => 'Bankovni transfer', 'complimentary' => 'Loyalty', 'online' => 'Online'],
             'attached' => 'Vaš vaučer je u prilogu kao PDF. Čuvajte ga kao gotovinu.',
+            'pickup' => 'Poklon karticu preuzimate u restoranu: tamo pokažite ovaj QR kod. Do tada vrijedi vaučer u prilogu; s karticom prestaje važiti.',
         ],
     ];
 
@@ -75,7 +79,8 @@ final class VoucherNotificationService
         $restaurant = $voucher->restaurant;
         $email = $voucher->customer?->email;
 
-        if ($email === null || ! $restaurant->settings->send_customer_emails || $voucher->customer?->anonymized_at !== null) {
+        // An online buyer always gets the voucher they paid for: the e-mail is the product, whatever the till setting.
+        if ($email === null || (! $restaurant->settings->send_customer_emails && ! $voucher->sold_online) || $voucher->customer?->anonymized_at !== null) {
             return false;
         }
 
@@ -144,7 +149,7 @@ final class VoucherNotificationService
                 $restaurant->settings->receipt_footer,
                 $language,
                 $voucherPdf,
-                $voucherPdf !== null ? self::TEXT[$language]['attached'] : null,
+                $voucherPdf !== null ? self::TEXT[$language]['attached'].($this->awaitsCardPickup($voucher) ? ' '.self::TEXT[$language]['pickup'] : '') : null,
             ));
             $log->update(['status' => 'sent', 'sent_at' => Carbon::now()]);
         } catch (Throwable $e) {
@@ -154,6 +159,13 @@ final class VoucherNotificationService
         }
 
         return true;
+    }
+
+    /** An online voucher whose buyer picks up a gift card at the restaurant. */
+    private function awaitsCardPickup(Voucher $voucher): bool
+    {
+        return $voucher->sold_online && OnlineOrder::query()->withoutGlobalScopes()
+            ->where('voucher_id', $voucher->getKey())->where('card_pickup', true)->whereNull('card_picked_up_at')->exists();
     }
 
     /**

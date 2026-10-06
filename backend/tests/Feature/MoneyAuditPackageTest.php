@@ -132,4 +132,22 @@ final class MoneyAuditPackageTest extends TestCase
         $vouchers = $this->get('/api/v1/vouchers/export')->assertOk()->streamedContent();
         $this->assertStringContainsString(';Loyalty;', $vouchers);
     }
+
+    /** Q8: a new QR for a lost voucher goes to the guest's e-mail as a PDF, the old one stops. */
+    public function test_a_new_qr_is_emailed_to_the_guest_on_request(): void
+    {
+        Mail::fake();
+        $this->actingAsStaff($this->restaurant(), RoleSlug::Manager);
+        $id = (string) $this->postJson('/api/v1/vouchers', ['value' => 3000, 'form' => 'printable', 'payment' => $this->cashPayment()], $this->idempotency())->json('data.id');
+        // Without the guest's e-mail there is nobody to send it to.
+        $this->postJson("/api/v1/vouchers/{$id}/printable", ['reason' => 'lost', 'send' => true])->assertUnprocessable()->assertJsonValidationErrors('send');
+
+        $withMail = (string) $this->postJson('/api/v1/vouchers', [
+            'value' => 3000, 'form' => 'printable', 'payment' => $this->cashPayment(), 'customer' => ['email' => 'guest@example.com'],
+        ], $this->idempotency())->json('data.id');
+        Mail::assertSentCount(1);
+        $this->postJson("/api/v1/vouchers/{$withMail}/printable", ['reason' => 'lost', 'send' => true])->assertCreated();
+        Mail::assertSentCount(2);
+        Mail::assertSent(TemplatedMail::class, static fn (TemplatedMail $mail): bool => $mail->hasTo('guest@example.com') && $mail->voucherPdf !== null);
+    }
 }

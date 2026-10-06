@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { PageHeader } from "@/components/common/page-header"
 import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
+import { OnlineShopSettings } from "@/components/online/online-shop-settings"
 import { ApiTokens } from "@/components/settings/api-tokens"
 import { VoucherDesignForm } from "@/components/settings/voucher-design-form"
 import { VoucherSettingsForm } from "@/components/settings/voucher-settings-form"
@@ -18,6 +20,8 @@ function SettingsContent() {
   const t = useT()
   const { can } = useAuth()
   const { data, error, refetch } = useRestaurantSettings()
+  // Back from Stripe's onboarding (/settings?tab=online&stripe=return), or a link to one tab.
+  const [initialTab] = useState(() => (typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("tab") : null) ?? "vouchers")
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -27,12 +31,13 @@ function SettingsContent() {
       ) : !data ? (
         <Skeleton className="h-96 w-full rounded-2xl" />
       ) : (
-        <Tabs defaultValue="vouchers" className="space-y-4">
+        <Tabs defaultValue={initialTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="vouchers">{t("settingsPage.tabVouchers")}</TabsTrigger>
             <TabsTrigger value="design">{t("design.tab")}</TabsTrigger>
             <TabsTrigger value="restaurant">{t("settingsPage.tabRestaurant")}</TabsTrigger>
             <TabsTrigger value="emails">{t("settingsPage.tabEmails")}</TabsTrigger>
+            <TabsTrigger value="online">{t("online.tab")}</TabsTrigger>
             {can("api_tokens.manage") ? <TabsTrigger value="api">{t("settingsPage.tabApi")}</TabsTrigger> : null}
           </TabsList>
           <TabsContent value="vouchers">{data.settings ? <VoucherSettingsForm settings={data.settings} /> : null}</TabsContent>
@@ -42,6 +47,9 @@ function SettingsContent() {
           </TabsContent>
           <TabsContent value="emails">
             <NotificationTemplates />
+          </TabsContent>
+          <TabsContent value="online">
+            <OnlineShopSettings />
           </TabsContent>
           {can("api_tokens.manage") ? (
             <TabsContent value="api">

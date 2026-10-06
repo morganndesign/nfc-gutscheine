@@ -17,6 +17,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, MessageKey> = {
   card_terminal: "payment.method.card_terminal",
   bank_transfer: "payment.method.bank_transfer",
   complimentary: "payment.method.complimentary",
+  online: "payment.method.online",
 }
 
 /**

@@ -1264,6 +1264,9 @@ class PseudoAppLocalizations extends AppLocalizations {
   String get menuCardsOrder => pseudoLocalize(base.menuCardsOrder);
 
   @override
+  String get menuCardsPickup => pseudoLocalize(base.menuCardsPickup);
+
+  @override
   String get cardsReceiveNone => pseudoLocalize(base.cardsReceiveNone);
 
   @override
@@ -1424,6 +1427,60 @@ class PseudoAppLocalizations extends AppLocalizations {
 
   @override
   String get cardsErrorUncertain => pseudoLocalize(base.cardsErrorUncertain);
+
+  @override
+  String get pickupScan => pseudoLocalize(base.pickupScan);
+
+  @override
+  String get pickupScanAction => pseudoLocalize(base.pickupScanAction);
+
+  @override
+  String get pickupScanTitle => pseudoLocalize(base.pickupScanTitle);
+
+  @override
+  String pickupVoucher(String balance) =>
+      pseudoLocalize(base.pickupVoucher(pseudoMarker(0)), <String>[balance]);
+
+  @override
+  String get pickupTap => pseudoLocalize(base.pickupTap);
+
+  @override
+  String get pickupTapAction => pseudoLocalize(base.pickupTapAction);
+
+  @override
+  String get pickupDoneTitle => pseudoLocalize(base.pickupDoneTitle);
+
+  @override
+  String pickupDoneBody(String number, String balance) => pseudoLocalize(
+    base.pickupDoneBody(pseudoMarker(0), pseudoMarker(1)),
+    <String>[number, balance],
+  );
+
+  @override
+  String get pickupNext => pseudoLocalize(base.pickupNext);
+
+  @override
+  String get pickupErrorNotRecognized =>
+      pseudoLocalize(base.pickupErrorNotRecognized);
+
+  @override
+  String get pickupErrorNotOnline => pseudoLocalize(base.pickupErrorNotOnline);
+
+  @override
+  String get pickupErrorNoCard => pseudoLocalize(base.pickupErrorNoCard);
+
+  @override
+  String get pickupErrorPickedUp => pseudoLocalize(base.pickupErrorPickedUp);
+
+  @override
+  String pickupErrorTooEarly(String date) =>
+      pseudoLocalize(base.pickupErrorTooEarly(pseudoMarker(0)), <String>[date]);
+
+  @override
+  String get pickupErrorScanAgain => pseudoLocalize(base.pickupErrorScanAgain);
+
+  @override
+  String get pickupErrorNotUsable => pseudoLocalize(base.pickupErrorNotUsable);
 
   @override
   String get cardsFailed => pseudoLocalize(base.cardsFailed);

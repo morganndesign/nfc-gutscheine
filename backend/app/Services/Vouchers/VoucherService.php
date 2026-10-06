@@ -164,6 +164,7 @@ final class VoucherService
                     'customer_id' => $data->customerId,
                     'kind' => $card !== null ? VoucherKind::Card : VoucherKind::Digital,
                     'is_loyalty' => $data->payment->method === PaymentMethod::Complimentary,
+                    'sold_online' => $data->payment->method === PaymentMethod::Online,
                     'voucher_number' => $this->numbers->generate($restaurant),
                     'status' => VoucherStatus::Active,
                     'currency' => $restaurant->currency,
@@ -684,6 +685,10 @@ final class VoucherService
         if ($sale === null) {
             return 'not_cancellable';
         }
+        // An online sale goes back through the payment provider: the owner refunds it (online).
+        if ($voucher->sold_online) {
+            return 'online';
+        }
         $untouched = ! VoucherTransaction::query()->where('voucher_id', $voucher->getKey())->whereKeyNot($sale->getKey())->exists();
         $timezone = $this->tenant->require()->timezone;
         if (! $untouched || $voucher->status !== VoucherStatus::Active || ! $sale->created_at->copy()->timezone($timezone)->isSameDay(Carbon::now($timezone))) {
@@ -706,6 +711,9 @@ final class VoucherService
         if ($refusal === 'own_sale') {
             $window = (int) config('giftcard.security.sale_replay_window_minutes', 15);
             throw new InvalidVoucherStateException('Your own sale is cancelled by another manager or the owner after '.$window.' minutes.', ['reason' => 'own_sale']);
+        }
+        if ($refusal === 'online') {
+            throw new InvalidVoucherStateException('An online sale is refunded by the owner, back to the guest\'s card.', ['reason' => 'online']);
         }
         if ($refusal !== null) {
             throw new InvalidVoucherStateException('Only an unused voucher sold today can be cancelled; later, the owner refunds it.', ['reason' => 'not_cancellable']);
@@ -753,6 +761,52 @@ final class VoucherService
         }
 
         return min($voucher->balance, $paid);
+    }
+
+    /**
+     * A card for a digital voucher (an online voucher whose buyer picks up its card, decision 2026-10-06): the
+     * voucher's QR (a `pickup` presentment) and a stock card (a `bind` tap) are both here. The card takes over the
+     * voucher and its balance; the QR stops at once, so there is never a QR and a card for one voucher. The caller
+     * checks the order; `$then` runs in the same transaction, after the voucher's lock (it records the pickup).
+     *
+     * @param  Closure(Voucher): void  $then
+     */
+    public function convertToCard(Actor $actor, Voucher $voucher, string $qrPresentmentId, string $cardPresentmentId, Closure $then): Voucher
+    {
+        $this->assertOwnedByTenant($voucher);
+
+        try {
+            return DB::transaction(function () use ($actor, $voucher, $qrPresentmentId, $cardPresentmentId, $then): Voucher {
+                // Lock order: presentments → card → voucher (architecture §10.6).
+                $qr = $this->presentments->lockForUse($qrPresentmentId);
+                $tap = $this->presentments->lockForUse($cardPresentmentId);
+                $card = $this->presentments->consumeCard($tap, $actor, [PresentmentPurpose::Bind], [CardState::Available]);
+                $locked = $this->lock($voucher);
+                $this->presentments->consume($qr, $actor, $locked, PresentmentPurpose::Pickup);
+                if ($locked->kind !== VoucherKind::Digital) {
+                    throw new InvalidVoucherStateException('This voucher already has a card.', ['reason' => 'has_card']);
+                }
+                $this->assertUsable($locked);
+
+                $this->printables->revoke($actor, $locked, 'card picked up');
+                $locked->kind = VoucherKind::Card;
+                $locked->save();
+                $this->cards->transition($card, CardState::Bound, 'picked up', $actor, $locked);
+                $this->cardMedia->attach($actor, $locked, $card, 'pickup');
+                $this->cards->transition($card, CardState::Active, 'voucher activated', $actor, $locked);
+
+                $this->audit->log('voucher.card_picked_up', $actor, $locked, ['kind' => VoucherKind::Digital], ['kind' => VoucherKind::Card], [
+                    'card_number' => $card->card_number,
+                ]);
+                $then($locked);
+
+                return $locked;
+            }, self::DB_ATTEMPTS);
+        } catch (PresentmentInvalidException $e) {
+            $this->presentments->recordRejection($actor, $voucher, $qrPresentmentId, $e);
+
+            throw $e;
+        }
     }
 
     // ---------------------------------------------------------------------
@@ -995,6 +1049,10 @@ final class VoucherService
             if ($payment->reason === null || mb_strlen(trim($payment->reason)) < 3) {
                 throw new InvalidAmountException('A complimentary voucher needs a reason.');
             }
+        }
+        // An online payment is booked by the provider's verified webhook only, never by a person.
+        if ($payment->method === PaymentMethod::Online && $actor->user !== null) {
+            throw new InvalidAmountException('Online payments are booked by the payment provider only.', ['method' => $payment->method->value]);
         }
         if ($payment->method->requiresReference() && $payment->reference === null) {
             throw new InvalidAmountException('This payment method needs a reference (terminal receipt or bank reference).', ['method' => $payment->method->value]);

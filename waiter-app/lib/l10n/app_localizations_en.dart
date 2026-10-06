@@ -1272,6 +1272,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get menuCardsOrder => 'Order cards';
 
   @override
+  String get menuCardsPickup => 'Hand out an online card';
+
+  @override
   String get cardsReceiveNone => 'No delivery waiting.';
 
   @override
@@ -1465,6 +1468,66 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cardsErrorUncertain =>
       'No answer from the server. Look the card up again to see whether it worked.';
+
+  @override
+  String get pickupScan =>
+      'Scan the QR code from the guest\'s e-mail. Then hold a new card from stock to the phone.';
+
+  @override
+  String get pickupScanAction => 'Scan QR code';
+
+  @override
+  String get pickupScanTitle => 'QR code from the e-mail';
+
+  @override
+  String pickupVoucher(String balance) {
+    return 'Online voucher · balance $balance';
+  }
+
+  @override
+  String get pickupTap =>
+      'Hold a new card from stock to the phone. It takes over the balance; the QR code from the e-mail then stops working.';
+
+  @override
+  String get pickupTapAction => 'Hand out card';
+
+  @override
+  String get pickupDoneTitle => 'Card handed out';
+
+  @override
+  String pickupDoneBody(String number, String balance) {
+    return 'Card $number is active · balance $balance. The QR code from the e-mail no longer works.';
+  }
+
+  @override
+  String get pickupNext => 'Next voucher';
+
+  @override
+  String get pickupErrorNotRecognized => 'This code is not valid here.';
+
+  @override
+  String get pickupErrorNotOnline =>
+      'This is not a voucher bought online. A card is only handed out for online vouchers that ordered one.';
+
+  @override
+  String get pickupErrorNoCard => 'No card was ordered with this voucher.';
+
+  @override
+  String get pickupErrorPickedUp =>
+      'The card for this voucher was already handed out.';
+
+  @override
+  String pickupErrorTooEarly(String date) {
+    return 'The card can be handed out from $date (24 hours after the payment).';
+  }
+
+  @override
+  String get pickupErrorScanAgain =>
+      'Too much time passed. Please scan the QR code again.';
+
+  @override
+  String get pickupErrorNotUsable =>
+      'This voucher is blocked or expired. Please get a manager.';
 
   @override
   String get cardsFailed => 'That did not work. Try again.';
