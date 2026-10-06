@@ -29,7 +29,7 @@ tests).
 | 2.2 | Marketing campaigns | 2 | ★★★★☆ | L |
 | 2.3 | Wallet push updates | 2 | ★★★★☆ | M |
 | 3.1 | Customer loyalty program | 3 | ★★★★☆ | XL |
-| 3.2 | Corporate gift cards | 3 | ★★★★★ | L |
+| 3.2 | Corporate gift cards ("Für Firmen", user: next candidate) | next | ★★★★★ | M–L |
 | 3.3 | Gift subscription | 3 | ★★★☆☆ | L |
 | 3.4 | Analytics | 3 | ★★★★★ | M |
 
@@ -168,19 +168,33 @@ tests).
 - **Priority:** ★★★★☆
 - **Suggested phase:** 3.
 
-### 3.2 Corporate gift cards
+### 3.2 Corporate gift cards ("Für Firmen" in the online shop)
 
-- **Purpose:** Bulk purchases for companies (employee gifts): CSV import of recipients, an invoice, and delivery to
-  every recipient.
-- **Business value:** Large orders per sale and recurring corporate customers (Christmas, anniversaries).
-- **Technical complexity:** L.
-  - One order creates many vouchers in one idempotent operation, with validation of the CSV (row errors reported,
-    nothing half-imported).
-  - The invoice must meet Austrian invoice requirements, and payment is by invoice: vouchers are activated only once
-    payment is recorded.
-  - Delivery reuses 1.3. Fits the existing per-sale limits or needs a separate corporate limit.
+> **User, 2026-10-06: "could be a good idea" — chosen as the next feature candidate after online sales phase 1.**
+
+- **Purpose:** A company buys vouchers of one restaurant in bulk — for its employees (Christmas, anniversaries) or
+  for its clients — in the restaurant's online shop (button "Für Firmen"): recipients (name, e-mail; or a CSV),
+  amount per person, the company's logo and a short message on the voucher ("Frohe Weihnachten von XY"), one payment
+  and one invoice addressed to the company. Every recipient gets their voucher by e-mail as a PDF (or the restaurant
+  prepares gift cards).
+- **Why companies buy (Austria):** employer gifts to employees are tax-free up to 186 € per employee and year
+  (vouchers that cannot be cashed count); gifts to clients are deductible when they have an advertising effect
+  (e.g. the company's logo). Source: USP "Geschenke zum Jahreswechsel". Confirm with a tax adviser before marketing it.
+- **Business value:** one order = many vouchers (e.g. 30 × 50 € = 1,500 € in one sale); new guests for the
+  restaurant; a strong pre-Christmas selling point for GiftCard Pro. Revenue: a small share per company order, or part
+  of a higher plan.
+- **Legal shape:** unchanged — every voucher is valid only at that one restaurant (no multi-merchant e-money).
+- **Technical complexity:** M–L (builds on online sales phase 1).
+  - One order creates many vouchers in one idempotent operation; CSV/list validation (row errors shown, nothing
+    half-created).
+  - Payment by Stripe (online shop) or by invoice/bank transfer: vouchers are activated only once payment is recorded.
+  - Invoice to the company meeting Austrian invoice requirements (company name, address, UID).
+  - Co-branded voucher PDF: the company's logo (upload, checked and re-encoded like the restaurant logo) next to the
+    restaurant's; e-mail sent in the restaurant's name.
+  - Delivery now or on a chosen date (reuses 1.3); the restaurant sees the order and each voucher under it.
+  - Per-order limits (number of recipients, total) and the online amount cap per voucher.
 - **Priority:** ★★★★★
-- **Suggested phase:** 3. It is high priority, but depends on 1.2 and 1.3.
+- **Suggested phase:** next after online sales phase 1 (1.2 personal message is already built).
 
 ### 3.3 Gift subscription
 
