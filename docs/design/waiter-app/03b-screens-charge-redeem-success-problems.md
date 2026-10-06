@@ -1114,7 +1114,7 @@ Existing brief keys used unchanged: `charge.redeem`, `charge.redeemFull`, `charg
 | charge.maxSingle | Max. {amount} pro Einlösung | Max. {amount} per redemption | Najviše {amount} po iskorištavanju |
 | charge.useMax | Maximum verwenden · {amount} | Use maximum · {amount} | Iskoristi maksimum · {amount} |
 | charge.velocity.title | Limit für diese Karte erreicht | Limit for this card reached | Dosegnut je limit za ovu karticu |
-| charge.velocity.bodyTime | Wieder möglich in {minutes} Min. Oder Betriebsleitung holen. | Possible again in {minutes} min. Or get a manager. | Ponovo moguće za {minutes} min. Ili pozovite menadžera. |
+| charge.velocity.bodyTime | Wieder möglich in {minutes} Min. Oder einen Manager holen. | Possible again in {minutes} min. Or get a manager. | Ponovo moguće za {minutes} min. Ili pozovite menadžera. |
 | charge.rateLimited | Zu viele Anfragen – wieder möglich in {seconds} s | Too many requests — possible again in {seconds} s | Previše zahtjeva – ponovo moguće za {seconds} s |
 | charge.switchCard.message | Andere Karte erkannt – wechseln? | Different card detected — Switch? | Prepoznata je druga kartica – zamijeniti? |
 | charge.switchCard.action | Wechseln | Switch | Zamijeni |
@@ -1122,8 +1122,8 @@ Existing brief keys used unchanged: `charge.redeem`, `charge.redeemFull`, `charg
 | lookup.stillLooking | Karte wird noch gesucht … | Still looking … | Još tražimo … |
 | card.empty.body | Diese Karte ist vollständig eingelöst. | This card has been fully used. | Ova kartica je potpuno iskorištena. |
 | card.blocked.reason | Grund: {reason} | Reason: {reason} | Razlog: {reason} |
-| card.expired.body | Abgelaufen am {date}. Die Betriebsleitung kann helfen. | Expired on {date}. A manager can help. | Istekla {date}. Menadžer može pomoći. |
-| card.inactive.body | Erst nach der Aktivierung einlösbar. Bitte Betriebsleitung holen. | It can be redeemed once activated. Please get a manager. | Može se iskoristiti tek nakon aktivacije. Molimo pozovite menadžera. |
+| card.expired.body | Abgelaufen am {date}. Ein Manager kann helfen. | Expired on {date}. A manager can help. | Istekla {date}. Menadžer može pomoći. |
+| card.inactive.body | Erst nach der Aktivierung einlösbar. Bitte einen Manager holen. | It can be redeemed once activated. Please get a manager. | Može se iskoristiti tek nakon aktivacije. Molimo pozovite menadžera. |
 | card.replaced.body | Das Guthaben ist auf der neuen Karte. Gast nach der neuen Karte fragen. | The balance is on the new card. Ask the guest for the new card. | Stanje je na novoj kartici. Zamolite gosta za novu karticu. |
 | redeem.slow | Verbindung langsam – neuer Versuch | Connection slow — retrying | Spora veza – ponovni pokušaj |
 | redeem.nothingBooked | Nichts gebucht. | Nothing was booked. | Ništa nije knjiženo. |
@@ -1140,7 +1140,7 @@ Existing brief keys used unchanged: `charge.redeem`, `charge.redeemFull`, `charg
 | problem.notFound.body | Diese Karte ist nicht im System. Karte prüfen oder nach einer anderen fragen. | This card is not in the system. Check the card or ask the guest for another one. | Ova kartica nije u sistemu. Provjerite karticu ili zamolite drugu. |
 | problem.notFound.bodyManual | Keine Karte mit dieser Nummer. Ziffern prüfen. | No card with this number. Check the digits. | Nema kartice s ovim brojem. Provjerite cifre. |
 | problem.foreign.body | Sie ist nur im ausstellenden Lokal einlösbar. | It can only be redeemed at the restaurant that issued it. | Može se iskoristiti samo u restoranu koji ju je izdao. |
-| problem.verify.body | Diese Karte bitte vorerst nicht annehmen. Die Betriebsleitung kann sie prüfen. | Please don't accept this card for now. A manager can check it. | Molimo, zasad ne prihvatajte ovu karticu. Menadžer je može provjeriti. |
+| problem.verify.body | Diese Karte bitte vorerst nicht annehmen. Ein Manager kann sie prüfen. | Please don't accept this card for now. A manager can check it. | Molimo, zasad ne prihvatajte ovu karticu. Menadžer je može provjeriti. |
 | problem.throttled.title | Zu viele Scans | Too many scans | Previše skeniranja |
 | problem.throttled.body | Scannen ist in Kürze wieder möglich. | Scanning is possible again shortly. | Skeniranje će uskoro ponovo biti moguće. |
 | problem.scanAgainIn | Erneut scannen · {time} | Scan again · {time} | Skeniraj ponovo · {time} |
@@ -1170,7 +1170,7 @@ Existing brief keys used unchanged: `charge.redeem`, `charge.redeemFull`, `charg
 | recent.detail.remaining | Restguthaben | Remaining balance | Preostalo stanje |
 | recent.detail.transaction | Buchung | Transaction | Transakcija |
 | recent.detail.supportCode | Support-Code | Support code | Kôd za podršku |
-| recent.detail.reverseHint | Falscher Betrag? Die Betriebsleitung kann ihn im Dashboard stornieren. | Wrong amount? A manager can reverse it in the dashboard. | Pogrešan iznos? Menadžer ga može stornirati u kontrolnoj ploči. |
+| recent.detail.reverseHint | Falscher Betrag? Ein Manager kann ihn im Dashboard stornieren. | Wrong amount? A manager can reverse it in the dashboard. | Pogrešan iznos? Menadžer ga može stornirati u kontrolnoj ploči. |
 | a11y.charge.close | Karte schließen | Close card | Zatvori karticu |
 | a11y.amount | Betrag {spokenAmount} | Amount {spokenAmount} | Iznos {spokenAmount} |
 | a11y.keypad.doubleZero | Doppelnull | Double zero | Dvije nule |

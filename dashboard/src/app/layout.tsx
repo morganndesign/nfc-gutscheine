@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next"
+import { headers } from "next/headers"
 import { GeistSans } from "geist/font/sans"
 import { GeistMono } from "geist/font/mono"
 import { Providers } from "@/app/providers"
@@ -23,11 +24,13 @@ export const viewport: Viewport = {
   ],
 }
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // The per-page script nonce (src/middleware.ts); reading it renders every page per request.
+  const nonce = (await headers()).get("x-nonce") ?? undefined
   return (
     <html lang="de" suppressHydrationWarning className={`${GeistSans.variable} ${GeistMono.variable}`}>
       <body className="bg-background text-foreground min-h-dvh font-sans antialiased">
-        <Providers>{children}</Providers>
+        <Providers nonce={nonce}>{children}</Providers>
       </body>
     </html>
   )

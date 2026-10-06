@@ -55,6 +55,19 @@ async function acceptInvitation(page, email, password) {
   await signIn(page, email, password)
 }
 
+// Audit S6: every page carries its own script nonce; no inline script runs without it.
+{
+  const policies = []
+  for (let i = 0; i < 2; i++) {
+    const res = await fetch(`${BASE}/login`, { redirect: 'manual' })
+    policies.push(res.headers.get('content-security-policy') ?? '')
+  }
+  const script = policies[0].split(';').map((d) => d.trim()).find((d) => d.startsWith('script-src')) ?? ''
+  assert.match(script, /'nonce-[A-Za-z0-9+/=]+' 'strict-dynamic'/, 'script-src with a nonce')
+  assert.doesNotMatch(script, /unsafe-inline/, 'no inline scripts without a nonce')
+  assert.notEqual(policies[0], policies[1], 'a new nonce per response')
+}
+
 const desktop = { viewport: { width: 1440, height: 900 } }
 const owner = { email: `owner-${run}@pilot.test`, password: `Owner-${run}-2026` }
 const waiter = { email: `waiter-${run}@pilot.test`, password: `Waiter-${run}-2026` }

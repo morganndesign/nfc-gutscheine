@@ -10,7 +10,7 @@ import { AuthProvider, SESSION_QUERY_KEY } from "@/lib/auth"
 import { ConfirmProvider } from "@/components/common/confirm"
 import { I18nProvider } from "@/lib/i18n"
 
-export function Providers({ children }: { children: ReactNode }) {
+export function Providers({ children, nonce }: { children: ReactNode; nonce?: string }) {
   const [client] = useState(() => {
     const onAuthError = (error: unknown) => {
       // Session expired while the app was open: drop the cached session so guards redirect to /login.
@@ -35,7 +35,7 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange nonce={nonce}>
         <TooltipProvider delayDuration={200}>
           <AuthProvider>
             <I18nProvider>

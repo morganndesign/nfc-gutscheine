@@ -333,7 +333,7 @@ New strings:
 | `signIn.submit` | Anmelden | Sign in | Prijavi se |
 | `signIn.error.emailFormat` | E-Mail-Adresse prüfen | Check the e-mail address | Provjerite e-mail adresu |
 | `signIn.error.invalid` | E-Mail oder Passwort stimmt nicht. Bitte prüfen und erneut versuchen. | E-mail or password is incorrect. Check both and try again. | E-mail ili lozinka nisu ispravni. Provjerite i pokušajte ponovo. |
-| `signIn.error.noPermission` | Dieses Konto kann keine Karten einlösen. Bitte Betriebsleitung holen. | This account can't redeem cards. Please get a manager. | Ovaj račun ne može iskorištavati kartice. Molimo pozovite menadžera. |
+| `signIn.error.noPermission` | Dieses Konto kann keine Karten einlösen. Bitte einen Manager holen. | This account can't redeem cards. Please get a manager. | Ovaj račun ne može iskorištavati kartice. Molimo pozovite menadžera. |
 | `signIn.error.throttled` | Zu viele Versuche. Erneut möglich in {time}. | Too many attempts. Try again in {time}. | Previše pokušaja. Ponovo za {time}. |
 | `signIn.error.server` | Anmelden gerade nicht möglich. Gleich noch einmal versuchen. | Can't sign in right now. Try again in a moment. | Prijava trenutno nije moguća. Pokušajte ponovo za trenutak. |
 | `signIn.offline.body` | Anmelden braucht eine Internetverbindung. | Signing in needs a connection. | Za prijavu je potrebna veza. |
@@ -1839,17 +1839,17 @@ New strings (S15):
 | `session.expired.body` | Zum Weitermachen erneut anmelden. | Sign in again to continue. | Prijavite se ponovo za nastavak. |
 | `session.expired.action` | Erneut anmelden | Sign in again | Ponovo se prijavi |
 | `deviceRevoked.title` | Gerät wurde entfernt | This device was removed | Uređaj je uklonjen |
-| `deviceRevoked.body` | Das Gerät ist nicht mehr für dieses Lokal freigegeben. Erneut anmelden oder Betriebsleitung fragen. | It's no longer allowed for this restaurant. Sign in again or ask a manager. | Uređaj više nije odobren za ovaj restoran. Prijavite se ponovo ili pitajte menadžera. |
+| `deviceRevoked.body` | Das Gerät ist nicht mehr für dieses Lokal freigegeben. Erneut anmelden oder Manager fragen. | It's no longer allowed for this restaurant. Sign in again or ask a manager. | Uređaj više nije odobren za ovaj restoran. Prijavite se ponovo ili pitajte menadžera. |
 | `deviceRevoked.action` | Anmelden | Sign in | Prijavi se |
 | `suspended.title` | Einlösen ist pausiert | Redeeming is paused | Iskorištavanje je pauzirano |
-| `suspended.body` | Das Konto des Lokals ist pausiert. Bitte Betriebsleitung holen. | The restaurant's account is paused. Please get a manager. | Račun restorana je pauziran. Molimo pozovite menadžera. |
+| `suspended.body` | Das Konto des Lokals ist pausiert. Bitte einen Manager holen. | The restaurant's account is paused. Please get a manager. | Račun restorana je pauziran. Molimo pozovite menadžera. |
 | `suspended.retry` | Erneut prüfen | Check again | Provjeri ponovo |
 | `locked.title` | Konto vorübergehend gesperrt | Account temporarily locked | Račun je privremeno zaključan |
 | `locked.body` | Zu viele Anmeldeversuche. Erneut möglich in {time}. | Too many sign-in attempts. Try again in {time}. | Previše pokušaja prijave. Ponovo za {time}. |
 | `locked.button` | Erneut in {time} | Try again in {time} | Ponovo za {time} |
 | `locked.over` (a11y) | Anmelden ist wieder möglich | You can sign in again | Prijava je ponovo moguća |
 | `deactivated.title` | Konto deaktiviert | Account deactivated | Račun je deaktiviran |
-| `deactivated.body` | Dieses Konto kann nicht mehr verwendet werden. Bitte Betriebsleitung holen. | This account can no longer be used. Please get a manager. | Ovaj račun se više ne može koristiti. Molimo pozovite menadžera. |
+| `deactivated.body` | Dieses Konto kann nicht mehr verwendet werden. Bitte einen Manager holen. | This account can no longer be used. Please get a manager. | Ovaj račun se više ne može koristiti. Molimo pozovite menadžera. |
 | `common.backToSignIn` | Zur Anmeldung | Back to sign in | Nazad na prijavu |
 | `update.title` | Update erforderlich | Update required | Potrebno ažuriranje |
 | `update.body` | Diese Version wird nicht mehr unterstützt. Zum Weiterarbeiten aktualisieren. | This version is no longer supported. Update to keep redeeming. | Ova verzija više nije podržana. Ažurirajte za nastavak rada. |
@@ -2144,7 +2144,7 @@ All keys introduced by this document, in order of first use. Existing brief keys
 | 9 | `signIn.submit` | S02 | Anmelden | Sign in | Prijavi se |
 | 10 | `signIn.error.emailFormat` | S02 | E-Mail-Adresse prüfen | Check the e-mail address | Provjerite e-mail adresu |
 | 11 | `signIn.error.invalid` | S02 | E-Mail oder Passwort stimmt nicht. Bitte prüfen und erneut versuchen. | E-mail or password is incorrect. Check both and try again. | E-mail ili lozinka nisu ispravni. Provjerite i pokušajte ponovo. |
-| 12 | `signIn.error.noPermission` | S02 | Dieses Konto kann keine Karten einlösen. Bitte Betriebsleitung holen. | This account can't redeem cards. Please get a manager. | Ovaj račun ne može iskorištavati kartice. Molimo pozovite menadžera. |
+| 12 | `signIn.error.noPermission` | S02 | Dieses Konto kann keine Karten einlösen. Bitte einen Manager holen. | This account can't redeem cards. Please get a manager. | Ovaj račun ne može iskorištavati kartice. Molimo pozovite menadžera. |
 | 13 | `signIn.error.throttled` | S02 | Zu viele Versuche. Erneut möglich in {time}. | Too many attempts. Try again in {time}. | Previše pokušaja. Ponovo za {time}. |
 | 14 | `signIn.error.server` | S02 | Anmelden gerade nicht möglich. Gleich noch einmal versuchen. | Can't sign in right now. Try again in a moment. | Prijava trenutno nije moguća. Pokušajte ponovo za trenutak. |
 | 15 | `signIn.offline.body` | S02 | Anmelden braucht eine Internetverbindung. | Signing in needs a connection. | Za prijavu je potrebna veza. |
@@ -2233,17 +2233,17 @@ All keys introduced by this document, in order of first use. Existing brief keys
 | 98 | `session.expired.body` | S15 | Zum Weitermachen erneut anmelden. | Sign in again to continue. | Prijavite se ponovo za nastavak. |
 | 99 | `session.expired.action` | S15 | Erneut anmelden | Sign in again | Ponovo se prijavi |
 | 100 | `deviceRevoked.title` | S15 | Gerät wurde entfernt | This device was removed | Uređaj je uklonjen |
-| 101 | `deviceRevoked.body` | S15 | Das Gerät ist nicht mehr für dieses Lokal freigegeben. Erneut anmelden oder Betriebsleitung fragen. | It's no longer allowed for this restaurant. Sign in again or ask a manager. | Uređaj više nije odobren za ovaj restoran. Prijavite se ponovo ili pitajte menadžera. |
+| 101 | `deviceRevoked.body` | S15 | Das Gerät ist nicht mehr für dieses Lokal freigegeben. Erneut anmelden oder Manager fragen. | It's no longer allowed for this restaurant. Sign in again or ask a manager. | Uređaj više nije odobren za ovaj restoran. Prijavite se ponovo ili pitajte menadžera. |
 | 102 | `deviceRevoked.action` | S15 | Anmelden | Sign in | Prijavi se |
 | 103 | `suspended.title` | S15 | Einlösen ist pausiert | Redeeming is paused | Iskorištavanje je pauzirano |
-| 104 | `suspended.body` | S15 | Das Konto des Lokals ist pausiert. Bitte Betriebsleitung holen. | The restaurant's account is paused. Please get a manager. | Račun restorana je pauziran. Molimo pozovite menadžera. |
+| 104 | `suspended.body` | S15 | Das Konto des Lokals ist pausiert. Bitte einen Manager holen. | The restaurant's account is paused. Please get a manager. | Račun restorana je pauziran. Molimo pozovite menadžera. |
 | 105 | `suspended.retry` | S15 | Erneut prüfen | Check again | Provjeri ponovo |
 | 106 | `locked.title` | S15 | Konto vorübergehend gesperrt | Account temporarily locked | Račun je privremeno zaključan |
 | 107 | `locked.body` | S15 | Zu viele Anmeldeversuche. Erneut möglich in {time}. | Too many sign-in attempts. Try again in {time}. | Previše pokušaja prijave. Ponovo za {time}. |
 | 108 | `locked.button` | S15 | Erneut in {time} | Try again in {time} | Ponovo za {time} |
 | 109 | `locked.over` (a11y) | S15 | Anmelden ist wieder möglich | You can sign in again | Prijava je ponovo moguća |
 | 110 | `deactivated.title` | S15 | Konto deaktiviert | Account deactivated | Račun je deaktiviran |
-| 111 | `deactivated.body` | S15 | Dieses Konto kann nicht mehr verwendet werden. Bitte Betriebsleitung holen. | This account can no longer be used. Please get a manager. | Ovaj račun se više ne može koristiti. Molimo pozovite menadžera. |
+| 111 | `deactivated.body` | S15 | Dieses Konto kann nicht mehr verwendet werden. Bitte einen Manager holen. | This account can no longer be used. Please get a manager. | Ovaj račun se više ne može koristiti. Molimo pozovite menadžera. |
 | 112 | `common.backToSignIn` | S15 | Zur Anmeldung | Back to sign in | Nazad na prijavu |
 | 113 | `update.title` | S15 | Update erforderlich | Update required | Potrebno ažuriranje |
 | 114 | `update.body` | S15 | Diese Version wird nicht mehr unterstützt. Zum Weiterarbeiten aktualisieren. | This version is no longer supported. Update to keep redeeming. | Ova verzija više nije podržana. Ažurirajte za nastavak rada. |

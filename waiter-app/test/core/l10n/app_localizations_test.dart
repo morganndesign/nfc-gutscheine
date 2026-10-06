@@ -105,7 +105,7 @@ void main() {
     );
     expect(
       de.chargeVelocityBodyTime(5),
-      'Wieder möglich in 5\u00A0min. Oder Betriebsleitung holen.',
+      'Wieder möglich in 5\u00A0min. Oder einen Manager holen.',
     );
     expect(de.chargeRedeem(nb('€ 24,90')), '${nb('€ 24,90')} einlösen');
   });

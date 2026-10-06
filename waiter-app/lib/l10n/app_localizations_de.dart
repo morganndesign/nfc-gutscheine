@@ -58,7 +58,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get redeemNothingBooked => 'Es wurde nichts gebucht.';
 
   @override
-  String get getManager => 'Bitte Betriebsleitung holen';
+  String get getManager => 'Bitte einen Manager holen';
 
   @override
   String get splashLoading => 'Wird geladen';
@@ -123,7 +123,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get startupConfigurationBody =>
-      'Diese App-Version hat keine gültige Server-Adresse. Bitte Betriebsleitung holen.';
+      'Diese App-Version hat keine gültige Server-Adresse. Bitte einen Manager holen.';
 
   @override
   String get startupStorageTitle => 'Geschützter Speicher gesperrt';
@@ -137,7 +137,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get startupUnknownBody =>
-      'Erneut versuchen. Passiert es wieder, bitte Betriebsleitung holen.';
+      'Erneut versuchen. Passiert es wieder, bitte einen Manager holen.';
 
   @override
   String startupServer(String url) {
@@ -241,7 +241,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get signInNoAccess =>
-      'Kein Zugang? Die Betriebsleitung legt ihn im Dashboard an.';
+      'Kein Zugang? Ein Manager legt ihn im Dashboard an.';
 
   @override
   String get signInErrorRequired => 'Pflichtfeld';
@@ -255,7 +255,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get signInErrorNoPermission =>
-      'Dieses Konto kann keine Gutscheine einlösen. Bitte Betriebsleitung holen.';
+      'Dieses Konto kann keine Gutscheine einlösen. Bitte einen Manager holen.';
 
   @override
   String signInErrorThrottled(String time) {
@@ -575,7 +575,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String chargeVelocityBodyTime(int minutes) {
-    return 'Wieder möglich in $minutes min. Oder Betriebsleitung holen.';
+    return 'Wieder möglich in $minutes min. Oder einen Manager holen.';
   }
 
   @override
@@ -645,7 +645,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String voucherExpiredBody(String date) {
-    return 'Abgelaufen am $date. Bitte Betriebsleitung holen.';
+    return 'Abgelaufen am $date. Bitte einen Manager holen.';
   }
 
   @override
@@ -727,7 +727,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get problemNotRecognizedBody =>
-      'Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder Betriebsleitung holen.';
+      'Dieser Code gilt hier nicht. Den Gast nach einem anderen Gutschein fragen oder einen Manager holen.';
 
   @override
   String get problemCardOnlyTitle => 'Gutschein auf einer Karte';
@@ -741,14 +741,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get problemCardNotRecognizedBody =>
-      'Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Bitte Betriebsleitung holen.';
+      'Diese Karte konnte nicht als Gutschein dieses Lokals bestätigt werden. Bitte einen Manager holen.';
 
   @override
   String get problemCardUnverifiedTitle => 'Karte nicht geprüft';
 
   @override
   String get problemCardUnverifiedBody =>
-      'Die Prüfung ist nicht gelungen. Die Karte ruhig ans Handy halten und erneut versuchen. Klappt es wieder nicht, bitte Betriebsleitung holen.';
+      'Die Prüfung ist nicht gelungen. Die Karte ruhig ans Handy halten und erneut versuchen. Klappt es wieder nicht, bitte einen Manager holen.';
 
   @override
   String get problemCardNotUsableTitle => 'Karte nicht verwendbar';
@@ -759,11 +759,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get problemCardNotUsableSuspended =>
-      'Die Karte ist vorübergehend gesperrt. Die Betriebsleitung kann helfen.';
+      'Die Karte ist vorübergehend gesperrt. Ein Manager kann helfen.';
 
   @override
   String get problemCardNotUsableInvalid =>
-      'Die Karte ist nicht mehr gültig. Die Betriebsleitung kann helfen.';
+      'Die Karte ist nicht mehr gültig. Ein Manager kann helfen.';
 
   @override
   String get problemCardNotUsableOtherRestaurant =>
@@ -905,7 +905,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get saleNotAllowedBody =>
-      'Dieses Konto kann auf diesem Handy keine Gutscheine verkaufen. Bitte Betriebsleitung holen.';
+      'Dieses Konto kann auf diesem Handy keine Gutscheine verkaufen. Bitte einen Manager holen.';
 
   @override
   String get saleDoneTitle => 'Gutschein verkauft';
@@ -1041,7 +1041,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reloadVoucherBlockedBody =>
-      'Der Gutschein dieser Karte ist gesperrt und kann nicht aufgeladen werden. Die Betriebsleitung kann helfen.';
+      'Der Gutschein dieser Karte ist gesperrt und kann nicht aufgeladen werden. Ein Manager kann helfen.';
 
   @override
   String get reloadVoucherExpiredTitle => 'Gutschein abgelaufen';
@@ -1071,7 +1071,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get reloadCardLost =>
-      'Diese Karte ist als verloren gemeldet. Die Betriebsleitung kann helfen.';
+      'Diese Karte ist als verloren gemeldet. Ein Manager kann helfen.';
 
   @override
   String get reloadCardNotInStock =>
@@ -1192,7 +1192,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recentDetailReverseHint =>
-      'Falscher Betrag? Die Betriebsleitung kann ihn im Dashboard stornieren.';
+      'Falscher Betrag? Ein Manager kann ihn im Dashboard stornieren.';
 
   @override
   String get menuClose => 'Menü schließen';
@@ -1493,14 +1493,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get forbiddenBody =>
-      'Dieses Konto kann keine Gutscheine mehr einlösen. Bitte Betriebsleitung holen.';
+      'Dieses Konto kann keine Gutscheine mehr einlösen. Bitte einen Manager holen.';
 
   @override
   String get deviceRevokedTitle => 'Gerät wurde entfernt';
 
   @override
   String get deviceRevokedBody =>
-      'Das Gerät ist nicht mehr für dieses Lokal freigegeben. Bitte Betriebsleitung holen.';
+      'Das Gerät ist nicht mehr für dieses Lokal freigegeben. Bitte einen Manager holen.';
 
   @override
   String get deviceRevokedAction => 'Anmelden';
@@ -1510,14 +1510,14 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get suspendedBody =>
-      'Das Konto des Lokals ist pausiert. Bitte Betriebsleitung holen.';
+      'Das Konto des Lokals ist pausiert. Bitte einen Manager holen.';
 
   @override
   String get deactivatedTitle => 'Konto deaktiviert';
 
   @override
   String get deactivatedBody =>
-      'Dieses Konto kann nicht mehr verwendet werden. Bitte Betriebsleitung holen.';
+      'Dieses Konto kann nicht mehr verwendet werden. Bitte einen Manager holen.';
 
   @override
   String get updateTitle => 'Update erforderlich';
@@ -1541,7 +1541,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get cameraRestrictedBody =>
-      'Die Kamera ist auf diesem Gerät gesperrt. Bitte Betriebsleitung holen.';
+      'Die Kamera ist auf diesem Gerät gesperrt. Bitte einen Manager holen.';
 
   @override
   String get cameraUnavailableTitle => 'Kamera nicht verfügbar';

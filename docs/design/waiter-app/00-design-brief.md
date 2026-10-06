@@ -307,7 +307,7 @@ confirm fallback), `Banner` (maintenance/offline), `EmptyState`, `ProblemScreen`
 | uncertain.title | Verbindung unterbrochen | Connection interrupted | Veza prekinuta |
 | uncertain.body | Wird geprüft … Es wird nie doppelt gebucht. | Checking … Nothing is ever booked twice. | Provjeravamo … Ništa se ne knjiži dvaput. |
 | session.expired | Sitzung abgelaufen | Session expired | Sesija je istekla |
-| getManager | Bitte Betriebsleitung holen | Please get a manager | Molimo pozovite menadžera |
+| getManager | Bitte einen Manager holen | Please get a manager | Molimo pozovite menadžera |
 
 ## 8. Backend prerequisites (to list in handoff, not to design)
 

@@ -125,7 +125,7 @@ Note: brief §7 lists "BHS 24,90 €" as the BHS money style; it applies only wh
 | Buttons | button width minus padding | centred |
 | Amounts | never constrained by measure; see shrink rules §3.7 | centred on S07/S09; leading on BalanceCard |
 
-German hyphenation: enabled for `type.body.l` and `type.body.m` in multi-line paragraphs (compounds like "Betriebsleitung" otherwise force ragged 2-word lines). Disabled for titles, buttons, labels, badges, and never inside amounts, card numbers or restaurant names.
+German hyphenation: enabled for `type.body.l` and `type.body.m` in multi-line paragraphs (compounds like "Gutscheinnummer" otherwise force ragged 2-word lines). Disabled for titles, buttons, labels, badges, and never inside amounts, card numbers or restaurant names.
 
 ### 3.6 Truncation and wrapping rules
 
