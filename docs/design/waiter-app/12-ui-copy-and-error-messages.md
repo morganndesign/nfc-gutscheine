@@ -771,6 +771,9 @@ Managers and owners (`vouchers.sell`), on Android and iPhone alike. The printed 
 | `loyalty.notAllowed.title` | Loyalty nicht erlaubt | Loyalty not allowed | Loyalty nije dozvoljen | 32 | Sale, reload · COMPLIMENTARY_NOT_ALLOWED / LOYALTY_VOUCHER_ONLY (L4); the permissions are reloaded at once |
 | `loyalty.notAllowed.body` | Diese Anmeldung darf kein Loyalty vergeben. Bitte eine andere Zahlungsart wählen. | This sign-in may not give Loyalty. Choose another payment method. | Ova prijava ne smije davati Loyalty. Odaberite drugi način plaćanja. | 120 | Sale, reload · COMPLIMENTARY_NOT_ALLOWED (the owner switched it off meanwhile) |
 | `loyalty.voucherOnly.body` | Loyalty nur auf einem Loyalty-Gutschein. Bitte eine andere Zahlungsart wählen. | Loyalty only on a Loyalty voucher. Choose another payment method. | Loyalty samo na Loyalty vaučeru. Odaberite drugi način plaćanja. | 120 | Reload · LOYALTY_VOUCHER_ONLY |
+| `reload.loyalty.note` | Loyalty-Karte: ohne Zahlung, kein Umsatz. Nur den Grund angeben. | Loyalty card: no payment, not revenue. Just give the reason. | Loyalty kartica: bez plaćanja, nije prihod. Samo upišite razlog. | 80 | Reload · a loyalty card is topped up with Loyalty only (decision 2026-10-06); shown instead of "Paid with" |
+| `reload.loyaltyOnly.title` | Loyalty-Karte | Loyalty card | Loyalty kartica | 32 | Reload · said right after the tap; LOYALTY_RELOAD_ONLY |
+| `reload.loyaltyOnly.body` | Diese Karte wird nur mit Loyalty aufgeladen, und das darf diese Anmeldung nicht. Der Inhaber kann es erlauben. | This card is topped up with Loyalty only, and this sign-in may not give Loyalty. The owner can allow it. | Ova kartica se dopunjava samo Loyalty-jem, a ova prijava ga ne smije davati. Vlasnik to može dozvoliti. | 120 | Reload · loyalty card without `vouchers.sell_complimentary` |
 | `reload.card.replaced` | Diese Karte wurde ersetzt. Die neue Karte des Gastes ans Handy halten. | This card was replaced. Hold the guest's new card to the phone. | Ova kartica je zamijenjena. Prislonite novu karticu gosta uz telefon. | 90 | Reload · CARD_NOT_USABLE state `replaced` (suspended, other restaurant: `problem.cardNotUsable.*`) |
 | `reload.card.revoked` | Diese Karte ist außer Betrieb und kann nicht aufgeladen werden. | This card is out of service and cannot be topped up. | Ova kartica je van upotrebe i ne može se dopuniti. | 90 | Reload · state `revoked`, `destroyed` |
 | `reload.card.lost` | Diese Karte ist als verloren gemeldet. Ein Manager kann helfen. | This card is reported lost. A manager can help. | Ova kartica je prijavljena kao izgubljena. Menadžer može pomoći. | 90 | Reload · state `lost` |
@@ -1013,7 +1016,7 @@ Delivered through the platforms' own localisation files (iOS `InfoPlist.strings`
 
 ### 5.22 Key count and alias register
 
-The table holds **479 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
+The table holds **482 keys** (§5.1–5.21) — the single list to implement. Aliases below exist in screen documents and resolve to the master key; they are not separate strings.
 
 | Alias (document) | Master key |
 |---|---|

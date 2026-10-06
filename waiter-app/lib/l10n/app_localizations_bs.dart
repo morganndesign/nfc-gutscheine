@@ -1055,6 +1055,17 @@ class AppLocalizationsBs extends AppLocalizations {
       'Loyalty samo na Loyalty vaučeru. Odaberite drugi način plaćanja.';
 
   @override
+  String get reloadLoyaltyNote =>
+      'Loyalty kartica: bez plaćanja, nije prihod. Samo upišite razlog.';
+
+  @override
+  String get reloadLoyaltyOnlyTitle => 'Loyalty kartica';
+
+  @override
+  String get reloadLoyaltyOnlyBody =>
+      'Ova kartica se dopunjava samo Loyalty-jem, a ova prijava ga ne smije davati. Vlasnik to može dozvoliti.';
+
+  @override
   String get reloadCardReplaced =>
       'Ova kartica je zamijenjena. Prislonite novu karticu gosta uz telefon.';
 

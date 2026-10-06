@@ -156,6 +156,7 @@ too. After `LOGIN_LOCKOUT_THRESHOLD` (10) consecutive failures the account is lo
 | 422 | `PRESENTMENT_INVALID` | The presentment cannot pay for this redemption; `context.reason`: `not_found`, `already_used`, `expired`, `wrong_purpose`, `wrong_voucher`, `other_user`, `other_device`, `method_not_allowed_for_kind`, `medium_revoked`, `card_not_active` |
 | 422 | `VOUCHER_BLOCKED`, `VOUCHER_EXPIRED`, `VOUCHER_NOT_REDEEMABLE` | Voucher status |
 | 422 | `INSUFFICIENT_BALANCE`, `INVALID_AMOUNT`, `BALANCE_LIMIT_EXCEEDED`, `RELOAD_NOT_ALLOWED` | Business rules |
+| 422 | `LOYALTY_VOUCHER_ONLY`, `LOYALTY_RELOAD_ONLY` | Loyalty value only onto a loyalty voucher; a loyalty voucher takes loyalty value only, never money |
 | 422 | `DEBIT_LIMIT_EXCEEDED` | `context.limit`: `per_transaction` or `per_voucher_per_day`, `context.max`, for the daily limit also `context.remaining` |
 | 422 | `INVITATION_NOT_DELIVERED`, `MAIL_NOT_DELIVERED`, `MAIL_RECIPIENT_REJECTED` | Platform administration (see there) |
 | 429 | `TOO_MANY_REQUESTS` | Rate limiter (`retry_after`) |

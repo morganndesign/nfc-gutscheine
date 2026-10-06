@@ -84,6 +84,17 @@ final class RefundTest extends TestCase
         $this->assertSame(0, $this->getJson('/api/v1/dashboard/stats')->json('data.monthly_revenue'), 'the payout is not revenue');
     }
 
+    /**
+     * A paid top-up of a loyalty voucher, as booked before a loyalty voucher took Loyalty only (decision 2026-10-06):
+     * such vouchers still exist, and their refund must still pay back exactly the money received.
+     */
+    private function paidReloadFromBefore(Voucher $voucher, int $amount): void
+    {
+        Voucher::query()->withoutGlobalScopes()->whereKey($voucher->id)->update(['is_loyalty' => false]);
+        $this->postJson("/api/v1/vouchers/{$voucher->id}/reloads", ['amount' => $amount, 'payment' => ['method' => 'cash']], $this->idempotency())->assertCreated();
+        Voucher::query()->withoutGlobalScopes()->whereKey($voucher->id)->update(['is_loyalty' => true]);
+    }
+
     public function test_only_money_actually_received_is_paid_back(): void
     {
         $owner = $this->staff($this->restaurant, RoleSlug::Owner);
@@ -98,7 +109,7 @@ final class RefundTest extends TestCase
         $this->refund($gift->voucher)->assertStatus(422)->assertJsonPath('code', 'VOUCHER_NOT_REFUNDABLE');
 
         // Paid reload of 2000, 1000 spent: of the 4000 left only the 2000 paid in go back; the rest is forfeited.
-        $this->postJson("/api/v1/vouchers/{$gift->voucher->id}/reloads", ['amount' => 2000, 'payment' => ['method' => 'cash']], $this->idempotency())->assertCreated();
+        $this->paidReloadFromBefore($gift->voucher, 2000);
         $this->redeemWithQr($gift->voucher, $gift->printable->payload, 1000)->assertCreated();
         $this->getJson("/api/v1/vouchers/{$gift->voucher->id}")->assertJsonPath('data.refundable', 2000);
         $this->refund($gift->voucher)->assertCreated()
@@ -117,7 +128,7 @@ final class RefundTest extends TestCase
             idempotencyKey: (string) Str::uuid(),
         )));
         $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
-        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 5000, 'payment' => ['method' => 'cash']], $this->idempotency())->assertCreated();
+        $this->paidReloadFromBefore($sale->voucher, 5000);
         $this->actingAsStaff($this->restaurant, RoleSlug::Waiter);
         $redemption = $this->redeemWithQr($sale->voucher, $sale->printable->payload, 6000)->assertCreated()->json('data.transaction.id');
         $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
@@ -128,7 +139,7 @@ final class RefundTest extends TestCase
         $this->refund($sale->voucher)->assertStatus(422)->assertJsonPath('code', 'VOUCHER_NOT_REFUNDABLE');
 
         // Money paid in later is refundable, and so is paid money whose spending was reversed.
-        $this->postJson("/api/v1/vouchers/{$sale->voucher->id}/reloads", ['amount' => 1000, 'payment' => ['method' => 'cash']], $this->idempotency())->assertCreated();
+        $this->paidReloadFromBefore($sale->voucher, 1000);
         $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 1000);
         $this->postJson("/api/v1/transactions/{$redemption}/reverse", ['reason' => 'Booked on the wrong voucher'])->assertCreated();
         $this->getJson("/api/v1/vouchers/{$sale->voucher->id}")->assertJsonPath('data.refundable', 6000);

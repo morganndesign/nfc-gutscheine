@@ -32,6 +32,7 @@ use App\Exceptions\Domain\IdempotencyConflictException;
 use App\Exceptions\Domain\InsufficientBalanceException;
 use App\Exceptions\Domain\InvalidAmountException;
 use App\Exceptions\Domain\InvalidVoucherStateException;
+use App\Exceptions\Domain\LoyaltyReloadOnlyException;
 use App\Exceptions\Domain\LoyaltyVoucherOnlyException;
 use App\Exceptions\Domain\PresentmentInvalidException;
 use App\Exceptions\Domain\ReloadNotAllowedException;
@@ -431,6 +432,10 @@ final class VoucherService
         // Loyalty value only onto a loyalty voucher: a paid voucher never becomes one.
         if ($payment->method === PaymentMethod::Complimentary && ! $locked->is_loyalty) {
             throw new LoyaltyVoucherOnlyException;
+        }
+        // And a loyalty voucher takes loyalty value only, never money (decision 2026-10-06).
+        if ($payment->method !== PaymentMethod::Complimentary && $locked->is_loyalty) {
+            throw new LoyaltyReloadOnlyException;
         }
         $settings = $this->settings();
         if (! $settings->allow_reload) {

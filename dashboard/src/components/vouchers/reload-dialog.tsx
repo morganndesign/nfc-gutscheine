@@ -29,16 +29,19 @@ export function ReloadDialog({
   balance: number
   maxBalance: number
   currency: string
-  /** A loyalty voucher: only then may loyalty value be added. */
+  /** A loyalty voucher: topped up with loyalty value only, never with money (decision 2026-10-06). */
   loyalty: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }) {
   const t = useT()
-  const { refresh } = useAuth()
+  const { refresh, can } = useAuth()
+  const initialPayment = (): PaymentInput => (loyalty ? { method: "complimentary" } : { method: "cash" })
+  // A loyalty voucher without the right to give Loyalty: nothing to book here.
+  const denied = loyalty && !can("vouchers.sell_complimentary")
   const [amount, setAmount] = useState("")
   const [note, setNote] = useState("")
-  const [payment, setPayment] = useState<PaymentInput>({ method: "cash" })
+  const [payment, setPayment] = useState<PaymentInput>(initialPayment)
   const [error, setError] = useState<string | null>(null)
   const [uncertain, setUncertain] = useState(false)
   const key = useRef(newIdempotencyKey())
@@ -47,13 +50,13 @@ export function ReloadDialog({
   // While the outcome is unknown the balance shown may already include this reload: only "Check and reload"
   // (the same request) finds out, so the limit check must not block it.
   const tooMuch = !uncertain && !!cents && balance + cents > maxBalance
-  const invalid = !cents || cents <= 0 || tooMuch || (!uncertain && !paymentComplete(payment))
+  const invalid = denied || !cents || cents <= 0 || tooMuch || (!uncertain && !paymentComplete(payment))
   const scope = `reload:${voucherId}:${cents ?? 0}:${payment.method}:${payment.reference ?? ""}`
 
   const reset = () => {
     setAmount("")
     setNote("")
-    setPayment({ method: "cash" })
+    setPayment(initialPayment())
     setError(null)
     setUncertain(false)
     key.current = newIdempotencyKey()
@@ -115,7 +118,11 @@ export function ReloadDialog({
             <MoneyInput id="amount" autoFocus disabled={uncertain} value={amount} onChange={(e) => setAmount(e.target.value)} className="h-12 text-xl" />
             {tooMuch ? <p className="text-destructive text-xs">{t("vouchers.reload.tooMuch", { max: formatMoney(maxBalance, currency) })}</p> : null}
           </div>
-          {!uncertain ? <PaymentFields value={payment} onChange={setPayment} loyalty={loyalty} /> : null}
+          {denied ? (
+            <p className="bg-destructive/10 text-destructive rounded-lg px-3 py-2 text-sm">{t("payment.loyaltyOnlyDenied")}</p>
+          ) : !uncertain ? (
+            <PaymentFields value={payment} onChange={setPayment} loyalty={loyalty} loyaltyOnly={loyalty} />
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="note">{t("vouchers.field.note")}</Label>
             <Input id="note" disabled={uncertain} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />

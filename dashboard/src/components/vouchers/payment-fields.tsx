@@ -22,33 +22,45 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, MessageKey> = {
 
 /**
  * Every sale and reload records how the money was received (decision 25). Loyalty is offered to those allowed to
- * give it, and on a top-up only for a loyalty voucher (`loyalty: false`): a paid voucher never becomes one.
+ * give it, and on a top-up never for a paid voucher (`loyalty: false`): a paid voucher never becomes one. A loyalty
+ * voucher is topped up with Loyalty only (`loyaltyOnly`, decision 2026-10-06): no payment to choose, only the reason.
  */
 export function PaymentFields({
   value,
   onChange,
   loyalty = true,
+  loyaltyOnly = false,
 }: {
   value: PaymentInput
   onChange: (value: PaymentInput) => void
   loyalty?: boolean
+  loyaltyOnly?: boolean
 }) {
   const { can } = useAuth()
   const t = useT()
-  const methods: PaymentMethod[] = ["cash", "card_terminal", "bank_transfer", ...(loyalty && can("vouchers.sell_complimentary") ? (["complimentary"] as const) : [])]
+  const methods: PaymentMethod[] = [
+    "cash",
+    "card_terminal",
+    "bank_transfer",
+    ...(loyalty && can("vouchers.sell_complimentary") ? (["complimentary"] as const) : []),
+  ]
 
   return (
     <div className="space-y-3">
-      <div className="space-y-2">
-        <Label>{t("payment.label")}</Label>
-        <Segmented
-          label={t("payment.methodAria")}
-          value={value.method}
-          onChange={(method) => onChange({ method, reference: null, reason: null })}
-          options={methods.map((m) => ({ value: m, label: t(PAYMENT_METHOD_LABELS[m]) }))}
-          className="w-full"
-        />
-      </div>
+      {loyaltyOnly ? (
+        <p className="bg-muted rounded-lg px-3 py-2 text-sm">{t("payment.loyaltyOnly")}</p>
+      ) : (
+        <div className="space-y-2">
+          <Label>{t("payment.label")}</Label>
+          <Segmented
+            label={t("payment.methodAria")}
+            value={value.method}
+            onChange={(method) => onChange({ method, reference: null, reason: null })}
+            options={methods.map((m) => ({ value: m, label: t(PAYMENT_METHOD_LABELS[m]) }))}
+            className="w-full"
+          />
+        </div>
+      )}
       {value.method === "card_terminal" || value.method === "bank_transfer" ? (
         <div className="space-y-2">
           <Label htmlFor="payment-reference">{value.method === "card_terminal" ? t("payment.terminalReceipt") : t("payment.bankReference")}</Label>
@@ -73,7 +85,7 @@ export function PaymentFields({
             value={value.reason ?? ""}
             onChange={(e) => onChange({ ...value, reason: e.target.value })}
           />
-          <p className="text-muted-foreground text-xs">{t("payment.complimentaryHint")}</p>
+          {loyaltyOnly ? null : <p className="text-muted-foreground text-xs">{t("payment.complimentaryHint")}</p>}
         </div>
       ) : null}
     </div>

@@ -1062,6 +1062,17 @@ class AppLocalizationsDe extends AppLocalizations {
       'Loyalty nur auf einem Loyalty-Gutschein. Bitte eine andere Zahlungsart wählen.';
 
   @override
+  String get reloadLoyaltyNote =>
+      'Loyalty-Karte: ohne Zahlung, kein Umsatz. Nur den Grund angeben.';
+
+  @override
+  String get reloadLoyaltyOnlyTitle => 'Loyalty-Karte';
+
+  @override
+  String get reloadLoyaltyOnlyBody =>
+      'Diese Karte wird nur mit Loyalty aufgeladen, und das darf diese Anmeldung nicht. Der Inhaber kann es erlauben.';
+
+  @override
   String get reloadCardReplaced =>
       'Diese Karte wurde ersetzt. Die neue Karte des Gastes ans Handy halten.';
 

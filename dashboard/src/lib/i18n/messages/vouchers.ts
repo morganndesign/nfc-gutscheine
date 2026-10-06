@@ -26,7 +26,9 @@ export const vouchers = defineMessages({
     "payment.bankReference": "Bank reference",
     "payment.complimentaryReason": "For whom, and why?",
     "payment.complimentaryPlaceholder": "e.g. regular guest, friend of the house, October",
-    "payment.complimentaryHint": "Only on a new voucher or a loyalty voucher. Loyalty value is not revenue, is never paid out and is listed separately in reports.",
+    "payment.complimentaryHint": "Only on a new voucher or a loyalty voucher (which takes Loyalty only). Loyalty value is not revenue, is never paid out and is listed separately in reports.",
+    "payment.loyaltyOnly": "Loyalty voucher: topped up with Loyalty only – no payment, not revenue. Just give the reason.",
+    "payment.loyaltyOnlyDenied": "This voucher is topped up with Loyalty only, and you may not give Loyalty. The owner can allow it.",
 
     "voucherVisual.digital": "Digital voucher",
     "voucherVisual.card": "Card voucher",
@@ -245,7 +247,9 @@ export const vouchers = defineMessages({
     "payment.bankReference": "Zahlungsreferenz",
     "payment.complimentaryReason": "Für wen und warum?",
     "payment.complimentaryPlaceholder": "z. B. Stammgast, Freund des Hauses, Oktober",
-    "payment.complimentaryHint": "Nur bei einem neuen Gutschein oder einem Loyalty-Gutschein. Loyalty-Guthaben ist kein Umsatz, wird nie ausbezahlt und in Berichten gesondert ausgewiesen.",
+    "payment.complimentaryHint": "Nur bei einem neuen Gutschein oder einem Loyalty-Gutschein (der nur mit Loyalty aufgeladen wird). Loyalty-Guthaben ist kein Umsatz, wird nie ausbezahlt und in Berichten gesondert ausgewiesen.",
+    "payment.loyaltyOnly": "Loyalty-Gutschein: nur mit Loyalty aufladen – ohne Zahlung, kein Umsatz. Nur den Grund angeben.",
+    "payment.loyaltyOnlyDenied": "Dieser Gutschein wird nur mit Loyalty aufgeladen, und Sie dürfen kein Loyalty vergeben. Der Inhaber kann es erlauben.",
 
     "voucherVisual.digital": "Digitaler Gutschein",
     "voucherVisual.card": "Kartengutschein",
@@ -468,7 +472,9 @@ export const vouchers = defineMessages({
     "payment.bankReference": "Referenca uplate",
     "payment.complimentaryReason": "Za koga i zašto?",
     "payment.complimentaryPlaceholder": "npr. stalni gost, prijatelj kuće, oktobar",
-    "payment.complimentaryHint": "Samo na novom vaučeru ili loyalty vaučeru. Loyalty vrijednost nije prihod, nikad se ne isplaćuje i u izvještajima se vodi odvojeno.",
+    "payment.complimentaryHint": "Samo na novom vaučeru ili loyalty vaučeru (koji se dopunjava samo Loyalty-jem). Loyalty vrijednost nije prihod, nikad se ne isplaćuje i u izvještajima se vodi odvojeno.",
+    "payment.loyaltyOnly": "Loyalty vaučer: dopuna samo Loyalty-jem – bez plaćanja, nije prihod. Samo upišite razlog.",
+    "payment.loyaltyOnlyDenied": "Ovaj vaučer se dopunjava samo Loyalty-jem, a vi ne smijete davati Loyalty. Vlasnik to može dozvoliti.",
 
     "voucherVisual.digital": "Digitalni vaučer",
     "voucherVisual.card": "Vaučer na kartici",

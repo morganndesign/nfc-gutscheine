@@ -1483,6 +1483,18 @@
   "@loyaltyVoucherOnlyBody": {
     "description": "Spec key: loyalty.voucherOnly.body (12 §5.13) · Max: 120 · Notes: Reload · LOYALTY_VOUCHER_ONLY"
   },
+  "reloadLoyaltyNote": "Loyalty card: no payment, not revenue. Just give the reason.",
+  "@reloadLoyaltyNote": {
+    "description": "Spec key: reload.loyalty.note (12 §5.13) · Max: 80 · Notes: Reload · a loyalty card is topped up with Loyalty only (decision 2026-10-06); shown instead of \"Paid with\""
+  },
+  "reloadLoyaltyOnlyTitle": "Loyalty card",
+  "@reloadLoyaltyOnlyTitle": {
+    "description": "Spec key: reload.loyaltyOnly.title (12 §5.13) · Max: 32 · Notes: Reload · said right after the tap; LOYALTY_RELOAD_ONLY"
+  },
+  "reloadLoyaltyOnlyBody": "This card is topped up with Loyalty only, and this sign-in may not give Loyalty. The owner can allow it.",
+  "@reloadLoyaltyOnlyBody": {
+    "description": "Spec key: reload.loyaltyOnly.body (12 §5.13) · Max: 120 · Notes: Reload · loyalty card without vouchers.sell_complimentary"
+  },
   "reloadCardReplaced": "This card was replaced. Hold the guest's new card to the phone.",
   "@reloadCardReplaced": {
     "description": "Spec key: reload.card.replaced (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE state replaced (suspended, other restaurant: problem.cardNotUsable.*)"

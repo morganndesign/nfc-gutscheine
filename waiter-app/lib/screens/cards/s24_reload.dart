@@ -275,18 +275,23 @@ class _ReloadScreenState extends State<ReloadScreen> {
                       children: <Widget>[
                         const SizedBox(height: Space.s4),
                         if (s.newCard) ...<Widget>[_newCard(l10n, s.card), const SizedBox(height: Space.s4)],
-                        Semantics(
-                          header: true,
-                          child: ScaledText(l10n.salePaymentLabel, type: TypeTokens.caption, color: c.fgSecondary),
-                        ),
-                        const SizedBox(height: Space.s2),
-                        for (final PaymentMethod m in _c.methodsFor(s.card))
-                          PaymentMethodRow(
-                            label: paymentMethodLabel(l10n, m),
-                            selected: m == s.method,
-                            enabled: !s.submitting,
-                            onSelected: () => _c.chooseMethod(m),
+                        // A loyalty card takes Loyalty only: no payment to choose, no receipt number, only the reason.
+                        if (s.card.voucher?.loyalty ?? false)
+                          StatusBanner(tone: BannerTone.info, title: l10n.reloadLoyaltyNote)
+                        else ...<Widget>[
+                          Semantics(
+                            header: true,
+                            child: ScaledText(l10n.salePaymentLabel, type: TypeTokens.caption, color: c.fgSecondary),
                           ),
+                          const SizedBox(height: Space.s2),
+                          for (final PaymentMethod m in _c.methodsFor(s.card))
+                            PaymentMethodRow(
+                              label: paymentMethodLabel(l10n, m),
+                              selected: m == s.method,
+                              enabled: !s.submitting,
+                              onSelected: () => _c.chooseMethod(m),
+                            ),
+                        ],
                         if (s.method.needsReference) ...<Widget>[
                           const SizedBox(height: Space.s4),
                           WaiterTextField(
@@ -379,6 +384,17 @@ class _ReloadScreenState extends State<ReloadScreen> {
         title: l10n.reloadUncertainTitle,
         body: l10n.reloadUncertainBody,
         primary: ProblemAction(l10n.commonTryAgain, () => unawaited(_c.submit())),
+        onClose: () => unawaited(_close()),
+        supportCode: hasCode ? code : null,
+        requestId: hasCode ? s.requestId : null,
+      ),
+      // A loyalty card, and this sign-in may not give Loyalty: nothing else to choose.
+      ReloadProblemKind.loyaltyOnly => ProblemScreen(
+        family: ProblemFamily.account,
+        title: l10n.reloadLoyaltyOnlyTitle,
+        body: l10n.reloadLoyaltyOnlyBody,
+        primary: ProblemAction(l10n.reloadAnother, _startOver),
+        secondary: close,
         onClose: () => unawaited(_close()),
         supportCode: hasCode ? code : null,
         requestId: hasCode ? s.requestId : null,

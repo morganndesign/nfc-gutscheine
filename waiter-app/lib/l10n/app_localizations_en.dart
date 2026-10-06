@@ -1056,6 +1056,17 @@ class AppLocalizationsEn extends AppLocalizations {
       'Loyalty only on a Loyalty voucher. Choose another payment method.';
 
   @override
+  String get reloadLoyaltyNote =>
+      'Loyalty card: no payment, not revenue. Just give the reason.';
+
+  @override
+  String get reloadLoyaltyOnlyTitle => 'Loyalty card';
+
+  @override
+  String get reloadLoyaltyOnlyBody =>
+      'This card is topped up with Loyalty only, and this sign-in may not give Loyalty. The owner can allow it.';
+
+  @override
   String get reloadCardReplaced =>
       'This card was replaced. Hold the guest\'s new card to the phone.';
 

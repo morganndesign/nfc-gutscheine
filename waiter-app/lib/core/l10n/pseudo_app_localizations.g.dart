@@ -1045,6 +1045,17 @@ class PseudoAppLocalizations extends AppLocalizations {
       pseudoLocalize(base.loyaltyVoucherOnlyBody);
 
   @override
+  String get reloadLoyaltyNote => pseudoLocalize(base.reloadLoyaltyNote);
+
+  @override
+  String get reloadLoyaltyOnlyTitle =>
+      pseudoLocalize(base.reloadLoyaltyOnlyTitle);
+
+  @override
+  String get reloadLoyaltyOnlyBody =>
+      pseudoLocalize(base.reloadLoyaltyOnlyBody);
+
+  @override
   String get reloadCardReplaced => pseudoLocalize(base.reloadCardReplaced);
 
   @override

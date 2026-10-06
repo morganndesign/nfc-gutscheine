@@ -1,7 +1,7 @@
 name: giftcard_waiter
 description: "GiftCard Waiter — scan a voucher, redeem its balance, sell vouchers."
 publish_to: 'none'
-version: 2.0.23+27
+version: 2.0.24+28
 
 environment:
   sdk: ^3.9.0

@@ -154,7 +154,7 @@ void main() {
   });
 
   // Decision 2026-10-05: loyalty (no payment, always with a reason) from owners and managers the owner allowed; only
-  // a loyalty card takes more loyalty, a paid card never becomes one.
+  // a loyalty card takes more loyalty, a paid card never becomes one. 2026-10-06: a loyalty card takes Loyalty only.
   final Map<String, Object?> owner = <String, Object?>{
     ...Payloads.reloadManager(),
     'permissions': <String>[...(Payloads.reloadManager()['permissions']! as List<String>), 'vouchers.sell_complimentary'],
@@ -173,9 +173,13 @@ void main() {
       await typeDigits(tester, '2000');
       await tester.tap(primary('Continue'));
       await settle(tester);
-      expect(en.salePaymentComplimentary, 'Loyalty');
-      await tester.tap(text(en.salePaymentComplimentary));
-      await settle(tester);
+      // No payment to choose and no receipt number: the note and the reason only.
+      expect(text(en.reloadLoyaltyNote), findsOneWidget);
+      expect(text(en.salePaymentLabel), findsNothing);
+      expect(text(en.salePaymentCash), findsNothing);
+      expect(text(en.salePaymentBankTransfer), findsNothing);
+      expect(text(en.saleReferenceLabel), findsNothing);
+      expect(text(en.saleReasonLabel), findsOneWidget);
       await tester.enterText(find.byType(TextField).last, 'Stammgast Oktober');
       await tester.pump();
       await tester.tap(primary('Top up'));
@@ -217,6 +221,19 @@ void main() {
       await finishApp(tester, fresh);
     });
   }
+
+  testWidgets('a manager without Loyalty is told at once that a loyalty card takes Loyalty only', (WidgetTester tester) async {
+    final TestApp app = await TestApp.create(user: Payloads.reloadManager(), nfc: FakeNfcRelay());
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000, loyalty: true)));
+    await pumpWaiterApp(tester, app);
+    await tester.tap(text(en.reloadReady));
+    await settle(tester, 20);
+    expect(text(en.reloadLoyaltyOnlyTitle), findsOneWidget);
+    expect(text(en.reloadLoyaltyOnlyBody), findsOneWidget);
+    await finishApp(tester, app);
+  });
 
   testWidgets('a manager is never offered loyalty', (WidgetTester tester) async {
     final TestApp app = await TestApp.create(user: Payloads.reloadManager(), nfc: FakeNfcRelay());

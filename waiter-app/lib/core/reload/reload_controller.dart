@@ -109,6 +109,10 @@ enum ReloadProblemKind {
 
   /// A new card from stock, and this sign-in may not sell cards: someone who may sell activates it.
   cannotSell,
+
+  /// A loyalty card is topped up with Loyalty only (decision 2026-10-06), and this sign-in may not give it:
+  /// said right after the tap (LOYALTY_RELOAD_ONLY).
+  loyaltyOnly,
 }
 
 final class ReloadProblem extends ReloadState {
@@ -188,15 +192,19 @@ class ReloadController extends ChangeNotifier {
   /// The currency of the amount: the voucher's, or the restaurant's for a new card.
   String currencyOf(CardPresented card) => card.voucher?.currency ?? _session.user?.restaurant?.currency ?? 'EUR';
 
-  /// How the guest pays for [card]. Loyalty only for those allowed to give it, and only on a new card or a loyalty
-  /// voucher: a paid voucher never becomes a loyalty one (the server refuses it as well).
-  List<PaymentMethod> methodsFor(CardPresented card) => <PaymentMethod>[
-    PaymentMethod.cash,
-    PaymentMethod.cardTerminal,
-    PaymentMethod.bankTransfer,
-    if ((_session.user?.canSellComplimentary ?? false) && (card.isNew || (card.voucher?.loyalty ?? false)))
-      PaymentMethod.complimentary,
-  ];
+  /// How the guest pays for [card]. A loyalty card takes Loyalty only, never money (decision 2026-10-06). Loyalty
+  /// only for those allowed to give it, and otherwise only on a new card: a paid voucher never becomes a loyalty one
+  /// (the server refuses both as well).
+  List<PaymentMethod> methodsFor(CardPresented card) => _loyaltyCard(card)
+      ? const <PaymentMethod>[PaymentMethod.complimentary]
+      : <PaymentMethod>[
+          PaymentMethod.cash,
+          PaymentMethod.cardTerminal,
+          PaymentMethod.bankTransfer,
+          if ((_session.user?.canSellComplimentary ?? false) && card.isNew) PaymentMethod.complimentary,
+        ];
+
+  static bool _loyaltyCard(CardPresented card) => card.voucher?.loyalty ?? false;
 
   // ------------------------------------------------------------------ tap
 
@@ -261,6 +269,7 @@ class ReloadController extends ChangeNotifier {
     if (!(_settings?.allowReload ?? true)) return ReloadProblemKind.off;
     if (voucher.status == VoucherStatus.blocked) return ReloadProblemKind.voucherBlocked;
     if (voucher.status == VoucherStatus.expired || voucher.isExpired) return ReloadProblemKind.voucherExpired;
+    if (voucher.loyalty && !(_session.user?.canSellComplimentary ?? false)) return ReloadProblemKind.loyaltyOnly;
     return null;
   }
 
@@ -310,7 +319,13 @@ class ReloadController extends ChangeNotifier {
         return;
       }
     }
-    _set(ReloadDetails(card: s.card, amount: s.amount));
+    _set(
+      ReloadDetails(
+        card: s.card,
+        amount: s.amount,
+        method: _loyaltyCard(s.card) ? PaymentMethod.complimentary : PaymentMethod.cash,
+      ),
+    );
   }
 
   void backToAmount() {
@@ -322,7 +337,8 @@ class ReloadController extends ChangeNotifier {
 
   void chooseMethod(PaymentMethod method) {
     final ReloadState s = _state;
-    if (s is ReloadDetails && !s.submitting) {
+    // Only what this card takes: a loyalty card stays on Loyalty.
+    if (s is ReloadDetails && !s.submitting && methodsFor(s.card).contains(method)) {
       _set(s.copyWith(method: method, referenceMissing: false, reasonMissing: false));
     }
   }
@@ -440,6 +456,10 @@ class ReloadController extends ChangeNotifier {
       _definitive(); // nothing was booked
       if (forbidden && voucher == null) {
         _set(ReloadProblem(ReloadProblemKind.cannotSell, details: back, requestId: e.requestId));
+      } else if (e.code == 'LOYALTY_RELOAD_ONLY' || (e.code == 'COMPLIMENTARY_NOT_ALLOWED' && _loyaltyCard(details.card))) {
+        // A loyalty card takes Loyalty only: without it there is nothing else to choose.
+        if (e.code == 'COMPLIMENTARY_NOT_ALLOWED') unawaited(_session.refreshUser());
+        _set(ReloadProblem(ReloadProblemKind.loyaltyOnly, requestId: e.requestId));
       } else if (e.code == 'COMPLIMENTARY_NOT_ALLOWED' || e.code == 'LOYALTY_VOUCHER_ONLY') {
         // The owner took Loyalty away meanwhile: the methods offered follow at once (L4).
         if (e.code == 'COMPLIMENTARY_NOT_ALLOWED') unawaited(_session.refreshUser());

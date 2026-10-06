@@ -1868,6 +1868,24 @@ abstract class AppLocalizations {
   /// **'Loyalty only on a Loyalty voucher. Choose another payment method.'**
   String get loyaltyVoucherOnlyBody;
 
+  /// Spec key: reload.loyalty.note (12 §5.13) · Max: 80 · Notes: Reload · a loyalty card is topped up with Loyalty only (decision 2026-10-06); shown instead of "Paid with"
+  ///
+  /// In en, this message translates to:
+  /// **'Loyalty card: no payment, not revenue. Just give the reason.'**
+  String get reloadLoyaltyNote;
+
+  /// Spec key: reload.loyaltyOnly.title (12 §5.13) · Max: 32 · Notes: Reload · said right after the tap; LOYALTY_RELOAD_ONLY
+  ///
+  /// In en, this message translates to:
+  /// **'Loyalty card'**
+  String get reloadLoyaltyOnlyTitle;
+
+  /// Spec key: reload.loyaltyOnly.body (12 §5.13) · Max: 120 · Notes: Reload · loyalty card without vouchers.sell_complimentary
+  ///
+  /// In en, this message translates to:
+  /// **'This card is topped up with Loyalty only, and this sign-in may not give Loyalty. The owner can allow it.'**
+  String get reloadLoyaltyOnlyBody;
+
   /// Spec key: reload.card.replaced (12 §5.13) · Max: 90 · Notes: Reload · CARD_NOT_USABLE state replaced (suspended, other restaurant: problem.cardNotUsable.*)
   ///
   /// In en, this message translates to:

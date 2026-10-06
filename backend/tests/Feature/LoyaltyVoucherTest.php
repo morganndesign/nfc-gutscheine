@@ -18,7 +18,7 @@ use Tests\TestCase;
 
 /**
  * Loyalty (decision 2026-10-05): a voucher is a loyalty voucher from its sale on — sold without payment, always with
- * a reason — and only a loyalty voucher takes further loyalty value. A paid voucher never becomes one. Owners give
+ * a reason — and only a loyalty voucher takes further loyalty value, and nothing else. A paid voucher never becomes one. Owners give
  * loyalty; a manager only when the owner allowed that manager.
  */
 final class LoyaltyVoucherTest extends TestCase
@@ -43,16 +43,20 @@ final class LoyaltyVoucherTest extends TestCase
         return ['method' => 'complimentary', 'reason' => 'Stammgast Oktober'];
     }
 
-    public function test_a_voucher_sold_as_loyalty_is_loyalty_and_takes_loyalty_and_paid_top_ups(): void
+    public function test_a_voucher_sold_as_loyalty_is_loyalty_and_takes_loyalty_top_ups_only(): void
     {
         $restaurant = $this->restaurant();
         $this->actingAsStaff($restaurant, RoleSlug::Owner);
         $id = (string) $this->sellLoyalty()->assertCreated()->assertJsonPath('data.loyalty', true)->json('data.id');
 
         $this->reload($id, 2500, $this->loyaltyPayment())->assertCreated();
-        $this->reload($id, 1000, $this->cashPayment())->assertCreated();
+        // Never money onto a loyalty voucher (decision 2026-10-06): no payment, no receipt number, only the reason.
+        foreach ([$this->cashPayment(), ['method' => 'card_terminal', 'reference' => 'T-1'], ['method' => 'bank_transfer', 'reference' => 'UE-1']] as $payment) {
+            $this->reload($id, 1000, $payment)->assertUnprocessable()->assertJsonPath('code', 'LOYALTY_RELOAD_ONLY');
+        }
+        $this->reload($id, 1000, ['method' => 'complimentary'])->assertUnprocessable()->assertJsonValidationErrors('payment.reason');
 
-        $this->getJson("/api/v1/vouchers/{$id}")->assertOk()->assertJsonPath('data.loyalty', true)->assertJsonPath('data.balance', 8500);
+        $this->getJson("/api/v1/vouchers/{$id}")->assertOk()->assertJsonPath('data.loyalty', true)->assertJsonPath('data.balance', 7500);
         $this->assertSame([$id], array_column($this->getJson('/api/v1/vouchers?loyalty=1')->assertOk()->json('data'), 'id'));
     }
 

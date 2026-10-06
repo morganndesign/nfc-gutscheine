@@ -510,7 +510,50 @@ void main() {
     await finish(tester);
   });
 
-  testWidgets('Loyalty taken away meanwhile: its own message, permissions reloaded, back with cash (L4)', (
+  // Decision 2026-10-06: a loyalty card is topped up with Loyalty only — no payment, no receipt number, the reason.
+  testWidgets('a loyalty card: Loyalty only, chosen already; nothing else is offered', (WidgetTester tester) async {
+    await started(tester, user: managerWith(loyalty: true));
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000, loyalty: true)))
+      ..on('POST', reloads, FakeReply(201, Payloads.reloaded()));
+    final ReloadController c = await toDetails(tester);
+    final ReloadDetails d = c.state as ReloadDetails;
+    expect(d.method, PaymentMethod.complimentary);
+    expect(c.methodsFor(d.card), <PaymentMethod>[PaymentMethod.complimentary]);
+    c.chooseMethod(PaymentMethod.cash);
+    // No reason yet: refused here, nothing sent.
+    unawaited(c.submit());
+    await settle(tester);
+    c.setReason('Stammgast Oktober');
+    unawaited(c.submit());
+    await settle(tester);
+    expect(c.state, isA<ReloadDone>());
+    expect(app.backend.to('POST', reloads).last.body!['payment'], <String, Object?>{
+      'method': 'complimentary',
+      'reason': 'Stammgast Oktober',
+    });
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('a loyalty card and no Loyalty for this sign-in: said right after the tap, no amount', (
+    WidgetTester tester,
+  ) async {
+    await started(tester);
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000, loyalty: true)));
+    final ReloadController c = controller();
+    unawaited(c.tap());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.loyaltyOnly);
+    expect(app.backend.to('POST', reloads), isEmpty);
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('Loyalty taken away meanwhile on a loyalty card: permissions reloaded, nothing else to choose (L4)', (
     WidgetTester tester,
   ) async {
     await started(tester, user: managerWith(loyalty: true));
@@ -520,20 +563,31 @@ void main() {
       ..on('POST', reloads, FakeReply(403, Payloads.error('COMPLIMENTARY_NOT_ALLOWED')))
       ..on('GET', '/auth/me', FakeReply(200, <String, Object?>{'data': managerWith()}));
     final ReloadController c = await toDetails(tester);
-    expect(c.methodsFor((c.state as ReloadDetails).card), contains(PaymentMethod.complimentary));
-    c.chooseMethod(PaymentMethod.complimentary);
     c.setReason('Stammgast');
     unawaited(c.submit());
     await settle(tester);
 
     final ReloadProblem p = c.state as ReloadProblem;
-    expect(p.kind, ReloadProblemKind.loyaltyNotAllowed);
+    expect(p.kind, ReloadProblemKind.loyaltyOnly);
+    expect(p.details, isNull, reason: 'no payment method to fall back to');
     expect(app.backend.to('GET', '/auth/me'), isNotEmpty);
     expect(app.session.user!.canSellComplimentary, isFalse);
-    c.back();
-    final ReloadDetails back = c.state as ReloadDetails;
-    expect(back.method, PaymentMethod.cash);
-    expect(c.methodsFor(back.card), isNot(contains(PaymentMethod.complimentary)));
+    c.dispose();
+    await finish(tester);
+  });
+
+  testWidgets('the server refuses money on a loyalty card (LOYALTY_RELOAD_ONLY): its own message', (
+    WidgetTester tester,
+  ) async {
+    await started(tester, user: managerWith(loyalty: true));
+    app.backend
+      ..on('POST', begin, FakeReply(200, Payloads.cardChallenge()))
+      ..on('POST', complete, FakeReply(200, Payloads.cardPresentment(balance: 2000)))
+      ..on('POST', reloads, FakeReply(422, Payloads.error('LOYALTY_RELOAD_ONLY')));
+    final ReloadController c = await toDetails(tester);
+    unawaited(c.submit());
+    await settle(tester);
+    expect((c.state as ReloadProblem).kind, ReloadProblemKind.loyaltyOnly);
     c.dispose();
     await finish(tester);
   });
