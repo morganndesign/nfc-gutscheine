@@ -205,3 +205,18 @@ tests).
   - No personal data leaves the aggregates.
 - **Priority:** ★★★★★
 - **Suggested phase:** 3. The parts that only read existing data (liability, inactive cards) can come earlier.
+
+## Open decisions
+
+### D.1 Tips from a loyalty card (raised 2026-10-06, not decided)
+
+- **Problem:** a guest pays a 45 € bill with a 50 € loyalty card and says "keep the rest". The rest stays on the card
+  (it only pays when the card is tapped again), but the waiter could book 50 € instead of 45 € and take 5 € in cash
+  from the till. The server cannot know the bill, so it cannot refuse the amount.
+- **Options (combinable):**
+  1. Rule: no tip from a loyalty card — book exactly the bill; tips only in cash or by card. The app says so when a
+     loyalty card is tapped.
+  2. Owner report "Loyalty redeemed per waiter" (cash-up / CSV) to compare with the POS bills.
+  3. Guest e-mail after every redemption ("50 € paid, 0 € left") when the guest left an address.
+  4. POS integration: the till books the exact bill through an API token; nobody types the amount.
+- **Suggestion:** 1 + 2 (small, gives the owner control). Decision pending with the user.
