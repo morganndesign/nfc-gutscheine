@@ -1241,13 +1241,7 @@ final class VoucherService
             ]);
         }
 
-        $dayStart = Carbon::now($this->tenant->require()->timezone)->startOfDay()->utc();
-        $today = (int) -VoucherTransaction::query()
-            ->where('voucher_id', $voucher->getKey())
-            ->ofType(TransactionType::Redemption)
-            ->notReversed()
-            ->where('created_at', '>=', $dayStart)
-            ->sum('amount');
+        $today = $this->debitedToday($voucher);
 
         if ($today + $amount > $settings->max_debit_per_voucher_per_day) {
             throw new DebitLimitExceededException('The amount exceeds what this voucher may pay today.', [
@@ -1256,6 +1250,45 @@ final class VoucherService
                 'remaining' => max(0, $settings->max_debit_per_voucher_per_day - $today),
             ]);
         }
+    }
+
+    private function debitedToday(Voucher $voucher): int
+    {
+        $dayStart = Carbon::now($this->tenant->require()->timezone)->startOfDay()->utc();
+
+        return (int) -VoucherTransaction::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->ofType(TransactionType::Redemption)
+            ->notReversed()
+            ->where('created_at', '>=', $dayStart)
+            ->sum('amount');
+    }
+
+    /**
+     * The most a redemption of this voucher would be accepted for right now (0: none): its balance within the
+     * restaurant's limits per redemption and per day, the hourly velocity limit, and – without partial redemption –
+     * only the whole balance. For tills that propose an amount (POS interface, audit L1).
+     */
+    public function payableNow(Voucher $voucher): int
+    {
+        if (! $voucher->isSpendable() || $voucher->balance <= 0) {
+            return 0;
+        }
+        $settings = $this->settings();
+        if ($settings->max_redemptions_per_voucher_per_hour > 0 && VoucherTransaction::query()
+            ->where('voucher_id', $voucher->getKey())
+            ->ofType(TransactionType::Redemption)
+            ->notReversed()
+            ->where('created_at', '>=', Carbon::now()->subHour())
+            ->count() >= $settings->max_redemptions_per_voucher_per_hour) {
+            return 0;
+        }
+        $cap = min($voucher->balance, (int) $settings->max_debit_per_transaction, max(0, (int) $settings->max_debit_per_voucher_per_day - $this->debitedToday($voucher)));
+        if (! $settings->allow_partial_redemption) {
+            return $voucher->balance <= $cap ? $voucher->balance : 0;
+        }
+
+        return $cap;
     }
 
     private function assertVelocity(Voucher $voucher, RestaurantSetting $settings): void

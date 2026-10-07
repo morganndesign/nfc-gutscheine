@@ -192,8 +192,8 @@ function TransactionsContent() {
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden max-w-40 truncate lg:table-cell">{tx.reference ?? tx.note ?? "—"}</TableCell>
                     <TableCell className="text-muted-foreground hidden md:table-cell">
-                      {tx.user?.name ?? t("ops.system")}
-                      {tx.device ? <span className="block text-xs">{tx.device.name}</span> : null}
+                      {actorName(tx) ?? t("ops.system")}
+                      {tx.device && actorName(tx) !== tx.device.name ? <span className="block text-xs">{tx.device.name}</span> : null}
                     </TableCell>
                     <TableCell className="text-muted-foreground hidden whitespace-nowrap sm:table-cell">{formatDateTime(tx.created_at)}</TableCell>
                     <TableCell className="pr-4">
@@ -250,4 +250,14 @@ export default function TransactionsPage() {
       <TransactionsContent />
     </RequirePermission>
   )
+}
+
+/**
+ * Who booked it: the person; for a POS till (no person) the staff name the till sent ("Kasse: Max") or else the till
+ * itself (audit H4 of the POS interface).
+ */
+function actorName(tx: { user?: { name: string } | null; device?: { name: string } | null; note?: string | null }): string | null {
+  if (tx.user) return tx.user.name
+  const staff = tx.note?.startsWith("Kasse: ") ? tx.note.slice("Kasse: ".length) : null
+  return staff ?? tx.device?.name ?? null
 }

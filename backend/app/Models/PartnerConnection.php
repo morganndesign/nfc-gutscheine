@@ -19,6 +19,8 @@ use Illuminate\Support\Carbon;
  * @property string $partner_id
  * @property string $restaurant_id
  * @property string $status active | revoked
+ * @property string|null $token_hash the restaurant's connection token (`gcpc_…`), hashed
+ * @property string|null $token_prefix
  * @property string|null $connected_by
  * @property Carbon $connected_at
  * @property string|null $revoked_by
@@ -33,7 +35,11 @@ class PartnerConnection extends Model
     use BelongsToRestaurant;
     use HasUuids;
 
+    public const TOKEN_PREFIX = 'gcpc_';
+
     protected $guarded = ['id'];
+
+    protected $hidden = ['token_hash'];
 
     protected function casts(): array
     {

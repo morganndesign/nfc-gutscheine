@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\QueueHeartbeat;
+use App\Models\PartnerLinkCode;
 use App\Support\Heartbeat;
 use App\Support\OpsAlert;
 use Illuminate\Console\Scheduling\Event;
@@ -63,6 +64,7 @@ Schedule::command('ops:check-backups')->hourlyAt(45)->withoutOverlapping(30)->on
 
 // Housekeeping.
 $alerting(Schedule::command('queue:prune-failed --hours=720')->dailyAt('03:30')->timezone($tz)->onOneServer(), 'queue:prune-failed');
+$alerting(Schedule::command('model:prune', ['--model' => [PartnerLinkCode::class]])->dailyAt('03:40')->timezone($tz)->onOneServer(), 'model:prune');
 $alerting(Schedule::command('auth:clear-resets')->everyFifteenMinutes()->onOneServer(), 'auth:clear-resets');
 $alerting(Schedule::command('queue:monitor redis:default,redis:notifications --max=500')->everyFiveMinutes()->onOneServer()
     ->when(static fn (): bool => config('queue.default') === 'redis'), 'queue:monitor');

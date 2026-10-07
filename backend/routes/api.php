@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\Admin\ApiTokenController as AdminApiTokenControl
 use App\Http\Controllers\Api\V1\Admin\CardBatchController as AdminCardBatchController;
 use App\Http\Controllers\Api\V1\Admin\CardOrderController as AdminCardOrderController;
 use App\Http\Controllers\Api\V1\Admin\CardStationController;
+use App\Http\Controllers\Api\V1\Admin\PartnerController as AdminPartnerController;
 use App\Http\Controllers\Api\V1\Admin\PlatformController;
 use App\Http\Controllers\Api\V1\Admin\RestaurantController;
 use App\Http\Controllers\Api\V1\Admin\SecurityAlertController;
@@ -158,6 +159,7 @@ Route::prefix('v1')->group(function (): void {
             Route::prefix('partner-connections')->controller(PartnerConnectionController::class)->middleware('can:settings.manage')->group(function (): void {
                 Route::get('/', 'index');
                 Route::post('code', 'code')->middleware('throttle:10,1,partner-code');
+                Route::delete('codes/{code}', 'revokeCode')->whereUuid('code');
                 Route::delete('{connection}', 'destroy')->whereUuid('connection');
             });
 
@@ -240,6 +242,14 @@ Route::prefix('v1')->group(function (): void {
             Route::get('system-settings', [PlatformController::class, 'settings'])->middleware('can:platform.settings.manage');
             Route::put('system-settings', [PlatformController::class, 'updateSettings'])->middleware('can:platform.settings.manage');
             Route::get('mail', [PlatformController::class, 'mailStatus'])->middleware('can:platform.settings.manage');
+            // POS partners (audit L4): the same as `php artisan partner:manage`.
+            Route::prefix('partners')->controller(AdminPartnerController::class)->middleware('can:platform.settings.manage')->group(function (): void {
+                Route::get('/', 'index');
+                Route::post('/', 'store')->middleware('throttle:10,1,admin-partner');
+                Route::post('{partner}/key', 'rotate')->whereUuid('partner')->middleware('throttle:10,1,admin-partner');
+                Route::post('{partner}/suspend', 'suspend')->whereUuid('partner');
+                Route::post('{partner}/activate', 'activate')->whereUuid('partner');
+            });
             Route::post('mail/test', [PlatformController::class, 'sendTestMail'])->middleware('can:platform.settings.manage');
         });
 
@@ -276,7 +286,8 @@ Route::prefix('v1')->group(function (): void {
 | POS partner API — /api/partner/v1 (decision 2026-10-07)
 |--------------------------------------------------------------------------
 | A till system redeems vouchers and gift cards of the restaurants that connected it, inside its own app.
-| Authorization: Bearer gcpp_… (the partner key); X-Connection-Id (a restaurant); X-Terminal-Id (the till).
+| Authorization: Bearer gcpp_… (the partner key: connect restaurants) or Bearer gcpc_… (one restaurant's
+| connection token, held by its tills); X-Terminal-Id (the till).
 | Documentation for POS companies: docs/partner/.
 */
 Route::prefix('partner/v1')->controller(PartnerApiController::class)->group(function (): void {
@@ -284,6 +295,7 @@ Route::prefix('partner/v1')->controller(PartnerApiController::class)->group(func
         Route::get('me', 'me');
         Route::get('connections', 'connections');
         Route::post('connections', 'connect')->middleware('throttle:partner-connect');
+        Route::post('connections/{connection}/token', 'rotateToken')->whereUuid('connection')->middleware('throttle:partner-connect');
     });
     Route::middleware(['partner.auth:connection', 'throttle:partner'])->group(function (): void {
         Route::get('connection', 'connection');
@@ -293,7 +305,7 @@ Route::prefix('partner/v1')->controller(PartnerApiController::class)->group(func
         Route::post('cards/authentications/{authentication}', 'completeCard')->where('authentication', '[A-Za-z0-9]{10,64}');
         Route::post('vouchers/scan', 'scan');
         Route::post('redemptions', 'redeem')->middleware('idempotent');
-        Route::get('redemptions/{idempotencyKey}', 'outcome')->where('idempotencyKey', '[A-Za-z0-9_-]{8,100}');
+        Route::get('redemptions/{idempotencyKey}', 'outcome')->where('idempotencyKey', '[A-Za-z0-9._-]{8,96}');
         Route::post('redemptions/{redemption}/cancellation', 'cancel')->whereUuid('redemption');
     });
 });

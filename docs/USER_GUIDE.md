@@ -108,8 +108,10 @@ dashboard.
   disputes the payment with their bank, the voucher is blocked at once and you get an e-mail.
 - **POS systems** (**Settings → POS systems**, owners): if your till system works with GiftCard Pro, waiters
   redeem vouchers and gift cards right in the till app (tap the card at the till, the balance comes off the bill).
-  **Create connection code** and give the code to your POS provider (valid 24 hours, once). Each till then appears
-  under **Devices**; revoke a lost one there. **Disconnect** stops all tills of that system at once.
+  **Create connection code** and give the code to your POS provider (valid 24 hours, once). You get an e-mail as soon
+  as a POS system is connected. Codes not used yet are listed there: **Revoke** one you gave to the wrong company.
+  Each till then appears under **Devices**; rename it or revoke a lost one there. **Disconnect** stops all tills of
+  that system at once. In the transactions the waiter's name from the till is shown, else the till.
 - **Cash-up**: "Korrigierte bezahlte Aufladungen" is a correction of a booking error, not a payout. Loyalty value
   is never counted as money (also not in the CSV exports, which show it in their own "Loyalty value" column).
 

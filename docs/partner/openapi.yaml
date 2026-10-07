@@ -3,26 +3,27 @@ info:
   license:
     name: Proprietary
   title: GiftCard Pro – Kassen-Schnittstelle (POS partner API)
-  version: "1.0"
+  version: "1.1"
   description: |
     Gutscheine und NFC-Geschenkkarten von GiftCard Pro direkt in der Kassen-App einlösen.
     Ausführliche Beschreibung: KASSEN-SCHNITTSTELLE.md. Beträge in Cent.
+    Einrichtung (/me, /connections…) mit dem Partner-Schlüssel `gcpp_…` (nur im Backend);
+    alles an der Kasse mit dem Kassen-Token `gcpc_…` des Restaurants.
 servers:
   - url: https://app.giftcardpro.at/api/partner/v1
 security:
-  - partnerKey: []
+  - tillToken: []
 components:
   securitySchemes:
     partnerKey:
       type: http
       scheme: bearer
-      description: Partner-Schlüssel `gcpp_…`
+      description: Partner-Schlüssel `gcpp_…` (nur im Backend des Kassenanbieters)
+    tillToken:
+      type: http
+      scheme: bearer
+      description: Kassen-Token `gcpc_…` eines Restaurants (aus POST /connections)
   parameters:
-    Connection:
-      name: X-Connection-Id
-      in: header
-      required: true
-      schema: { type: string, format: uuid }
     Terminal:
       name: X-Terminal-Id
       in: header
@@ -66,6 +67,13 @@ components:
             locale: { type: string, example: de-AT }
             timezone: { type: string, example: Europe/Vienna }
         rules: { $ref: '#/components/schemas/Rules' }
+    ConnectionWithToken:
+      allOf:
+        - $ref: '#/components/schemas/Connection'
+        - type: object
+          required: [token]
+          properties:
+            token: { type: string, example: gcpc_9fK2…, description: Kassen-Token – nur in dieser Antwort }
     Presentment:
       type: object
       properties:
@@ -82,6 +90,10 @@ components:
             currency: { type: string }
             expires_at: { type: string, format: date-time, nullable: true }
             redeemable: { type: boolean }
+            max_amount:
+              type: integer
+              example: 5000
+              description: Höchster Betrag, der jetzt angenommen wird (Guthaben, Limits, ganze Einlösung); 0 = nichts
         card:
           type: object
           nullable: true
@@ -111,6 +123,7 @@ paths:
     get:
       summary: Partner-Schlüssel prüfen
       operationId: getMe
+      security: [{ partnerKey: [] }]
       responses:
         '200':
           description: OK
@@ -129,6 +142,7 @@ paths:
     get:
       summary: Verbundene Restaurants
       operationId: listConnections
+      security: [{ partnerKey: [] }]
       responses:
         '200':
           description: OK
@@ -142,6 +156,7 @@ paths:
     post:
       summary: Restaurant mit Verbindungscode verbinden
       operationId: connectRestaurant
+      security: [{ partnerKey: [] }]
       requestBody:
         required: true
         content:
@@ -153,16 +168,30 @@ paths:
                 code: { type: string, example: K7QF-M2XP }
       responses:
         '201':
-          description: Verbunden
+          description: Verbunden (mit Kassen-Token)
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Connection' } } }
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/ConnectionWithToken' } } }
         '422': { $ref: '#/components/responses/Error' }
+  /connections/{id}/token:
+    post:
+      summary: Neuer Kassen-Token (der alte endet sofort)
+      operationId: rotateTillToken
+      security: [{ partnerKey: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '201':
+          description: Neuer Token
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/ConnectionWithToken' } } }
+        '401': { $ref: '#/components/responses/Error' }
+        '403': { $ref: '#/components/responses/Error' }
   /connection:
     get:
-      summary: Ein Restaurant und seine Regeln
+      summary: Das Restaurant des Kassen-Tokens und seine Regeln
       operationId: getConnection
-      parameters: [{ $ref: '#/components/parameters/Connection' }]
       responses:
         '200':
           description: OK
@@ -175,7 +204,6 @@ paths:
       summary: Geschenkkarte – Schritt 1
       operationId: beginCardAuthentication
       parameters:
-        - { $ref: '#/components/parameters/Connection' }
         - { $ref: '#/components/parameters/Terminal' }
         - { $ref: '#/components/parameters/TerminalName' }
         - { $ref: '#/components/parameters/Language' }
@@ -213,7 +241,6 @@ paths:
       operationId: completeCardAuthentication
       parameters:
         - { name: authentication, in: path, required: true, schema: { type: string } }
-        - { $ref: '#/components/parameters/Connection' }
         - { $ref: '#/components/parameters/Terminal' }
       requestBody:
         required: true
@@ -237,7 +264,6 @@ paths:
       summary: Gedruckter Gutschein (QR-Code)
       operationId: scanVoucher
       parameters:
-        - { $ref: '#/components/parameters/Connection' }
         - { $ref: '#/components/parameters/Terminal' }
       requestBody:
         required: true
@@ -260,7 +286,6 @@ paths:
       summary: Einlösen
       operationId: redeem
       parameters:
-        - { $ref: '#/components/parameters/Connection' }
         - { $ref: '#/components/parameters/Terminal' }
         - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
       requestBody:
@@ -294,8 +319,7 @@ paths:
       summary: Wurde gebucht?
       operationId: getRedemptionOutcome
       parameters:
-        - { name: idempotencyKey, in: path, required: true, schema: { type: string } }
-        - { $ref: '#/components/parameters/Connection' }
+        - { name: idempotencyKey, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9._-]{8,96}$' } }
         - { $ref: '#/components/parameters/Terminal' }
       responses:
         '200':
@@ -318,7 +342,6 @@ paths:
       operationId: cancelRedemption
       parameters:
         - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
-        - { $ref: '#/components/parameters/Connection' }
         - { $ref: '#/components/parameters/Terminal' }
       requestBody:
         required: true

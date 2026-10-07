@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Services\Partners;
 
 use App\Enums\DeviceStatus;
+use App\Enums\RoleSlug;
+use App\Enums\UserStatus;
 use App\Exceptions\Domain\DeviceRevokedException;
 use App\Exceptions\Domain\LinkCodeInvalidException;
 use App\Exceptions\Domain\RestaurantSuspendedException;
@@ -13,13 +15,17 @@ use App\Models\Partner;
 use App\Models\PartnerConnection;
 use App\Models\PartnerLinkCode;
 use App\Models\Restaurant;
+use App\Models\User;
+use App\Notifications\PartnerConnectedNotification;
 use App\Services\Audit\AuditLogger;
 use App\Support\Actor;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use SensitiveParameter;
+use Throwable;
 
 /**
  * POS partners (decision 2026-10-07): the till system of a POS company redeems vouchers and gift cards inside its own
@@ -35,10 +41,10 @@ final class PartnerService
 
     public function __construct(private readonly AuditLogger $audit) {}
 
-    // ------------------------------------------------------------------ platform
+    // ------------------------------------------------------------------ platform (console, or Admin › Kassen-Partner)
 
     /** @return array{Partner, string} The partner and its key (shown once). */
-    public function create(string $name, ?string $contactEmail): array
+    public function create(string $name, ?string $contactEmail, ?Actor $actor = null): array
     {
         $key = self::newKey();
         $partner = Partner::query()->create([
@@ -48,25 +54,25 @@ final class PartnerService
             'key_prefix' => substr($key, 0, 12),
             'status' => 'active',
         ]);
-        $this->audit->log('partner.created', Actor::system(), $partner, null, ['name' => $partner->name]);
+        $this->audit->log('partner.created', $actor ?? Actor::system(), $partner, null, ['name' => $partner->name]);
 
         return [$partner, $key];
     }
 
     /** A new key; the old one stops at once. */
-    public function rotateKey(Partner $partner): string
+    public function rotateKey(Partner $partner, ?Actor $actor = null): string
     {
         $key = self::newKey();
         $partner->forceFill(['key_hash' => Partner::hashKey($key), 'key_prefix' => substr($key, 0, 12)])->save();
-        $this->audit->log('partner.key_rotated', Actor::system(), $partner);
+        $this->audit->log('partner.key_rotated', $actor ?? Actor::system(), $partner);
 
         return $key;
     }
 
-    public function setActive(Partner $partner, bool $active): void
+    public function setActive(Partner $partner, bool $active, ?Actor $actor = null): void
     {
         $partner->forceFill(['status' => $active ? 'active' : 'suspended'])->save();
-        $this->audit->log($active ? 'partner.activated' : 'partner.suspended', Actor::system(), $partner);
+        $this->audit->log($active ? 'partner.activated' : 'partner.suspended', $actor ?? Actor::system(), $partner);
     }
 
     public function authenticate(#[SensitiveParameter] string $key): ?Partner
@@ -108,6 +114,15 @@ final class PartnerService
         return ['code' => substr($code, 0, 4).'-'.substr($code, 4), 'expires_at' => $expires];
     }
 
+    /** A code given to the wrong company, or no longer needed: it stops working at once. */
+    public function revokeLinkCode(Actor $actor, PartnerLinkCode $link): void
+    {
+        if ($link->used_at === null && $link->expires_at->isFuture()) {
+            $link->forceFill(['expires_at' => Carbon::now()->subSecond()])->save();
+            $this->audit->log('partner.code_revoked', $actor, $link);
+        }
+    }
+
     public function disconnect(Actor $actor, PartnerConnection $connection): PartnerConnection
     {
         if ($connection->isActive()) {
@@ -122,10 +137,15 @@ final class PartnerService
 
     // ------------------------------------------------------------------ partner
 
-    /** The POS company redeems a restaurant's code: the restaurant is connected (again). */
-    public function connect(Partner $partner, Actor $actor, #[SensitiveParameter] string $code): PartnerConnection
+    /**
+     * The POS company redeems a restaurant's code: the restaurant is connected (again) and gets a new connection
+     * token for its tills (shown once; an earlier token stops).
+     *
+     * @return array{PartnerConnection, string}
+     */
+    public function connect(Partner $partner, Actor $actor, #[SensitiveParameter] string $code): array
     {
-        return DB::transaction(function () use ($partner, $actor, $code): PartnerConnection {
+        return DB::transaction(function () use ($partner, $actor, $code): array {
             /** @var PartnerLinkCode|null $link */
             $link = PartnerLinkCode::query()->withoutGlobalScopes()->where('code_hash', self::hashCode($code))->lockForUpdate()->first();
             if ($link === null || $link->used_at !== null || $link->expires_at->isPast()) {
@@ -142,19 +162,48 @@ final class PartnerService
             $connection = PartnerConnection::query()->withoutGlobalScopes()
                 ->where('partner_id', $partner->getKey())->where('restaurant_id', $restaurant->getKey())->lockForUpdate()->first();
             $connection ??= new PartnerConnection;
+            $token = self::newToken();
             $connection->forceFill([
                 'partner_id' => $partner->getKey(),
                 'restaurant_id' => $restaurant->getKey(),
                 'status' => 'active',
+                'token_hash' => Partner::hashKey($token),
+                'token_prefix' => substr($token, 0, 12),
                 'connected_by' => $link->created_by,
                 'connected_at' => Carbon::now(),
                 'revoked_by' => null,
                 'revoked_at' => null,
             ])->save();
             $this->audit->log('partner.connected', $actor, $connection, null, ['partner' => $partner->name], restaurantId: (string) $restaurant->getKey());
+            self::mailOwners((string) $restaurant->getKey(), $restaurant->name, $partner->name);
 
-            return $connection->setRelation('restaurant', $restaurant)->setRelation('partner', $partner);
+            return [$connection->setRelation('restaurant', $restaurant)->setRelation('partner', $partner), $token];
         });
+    }
+
+    /** A new token for a connection's tills (lost or leaked); the old one stops at once. */
+    public function rotateToken(Partner $partner, Actor $actor, PartnerConnection $connection): string
+    {
+        $token = self::newToken();
+        $connection->forceFill(['token_hash' => Partner::hashKey($token), 'token_prefix' => substr($token, 0, 12)])->save();
+        $this->audit->log('partner.token_rotated', $actor, $connection, null, null, ['partner' => $partner->name], restaurantId: $connection->restaurant_id);
+
+        return $token;
+    }
+
+    /** The active connection a till's token belongs to (its partner active too), or null. */
+    public function authenticateConnection(#[SensitiveParameter] string $token): ?PartnerConnection
+    {
+        if (! str_starts_with($token, PartnerConnection::TOKEN_PREFIX) || strlen($token) > 100) {
+            return null;
+        }
+        /** @var PartnerConnection|null $connection */
+        $connection = PartnerConnection::query()->withoutGlobalScopes()->with('partner')->where('token_hash', Partner::hashKey($token))->first();
+        if ($connection === null || ! $connection->partner->isActive()) {
+            return null;
+        }
+
+        return $connection;
     }
 
     /** The partner's till in this restaurant, created on its first request; a revoked till is refused. */
@@ -203,6 +252,32 @@ final class PartnerService
     private static function newKey(): string
     {
         return Partner::KEY_PREFIX.Str::random(40);
+    }
+
+    /** The owners learn of every new connection (a code used by the wrong company is noticed), after the commit. */
+    private static function mailOwners(string $restaurantId, string $restaurantName, string $partnerName): void
+    {
+        DB::afterCommit(static function () use ($restaurantId, $restaurantName, $partnerName): void {
+            $owners = User::query()
+                ->where('restaurant_id', $restaurantId)
+                ->where('status', UserStatus::Active->value)
+                ->whereHas('role', static fn ($r) => $r->where('slug', RoleSlug::Owner->value))
+                ->get();
+            foreach ($owners as $user) {
+                /** @var User $user */
+                $language = in_array($user->locale, ['de', 'en', 'bs'], true) ? $user->locale : (string) config('giftcard.mail_locale');
+                try {
+                    $user->notify((new PartnerConnectedNotification($partnerName, $restaurantName))->locale($language));
+                } catch (Throwable $e) {
+                    Log::warning('Partner connection notice could not be e-mailed.', ['user_id' => $user->getKey(), 'error' => $e->getMessage()]);
+                }
+            }
+        });
+    }
+
+    private static function newToken(): string
+    {
+        return PartnerConnection::TOKEN_PREFIX.Str::random(40);
     }
 
     private static function hashCode(string $code): string

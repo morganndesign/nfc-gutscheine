@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\Partner;
 use App\Enums\PresentmentMethod;
 use App\Enums\PresentmentPurpose;
 use App\Enums\TransactionType;
+use App\Exceptions\Domain\ConnectionRevokedException;
 use App\Exceptions\Domain\PresentmentInvalidException;
 use App\Exceptions\Domain\TransactionNotReversibleException;
 use App\Http\Controllers\Controller;
@@ -59,9 +60,24 @@ final class PartnerApiController extends Controller
     public function connect(Request $request): JsonResponse
     {
         $data = $request->validate(['code' => ['required', 'string', 'min:8', 'max:16']]);
-        $connection = $this->partners->connect($this->partner($request), $this->actor($request), (string) $data['code']);
+        [$connection, $token] = $this->partners->connect($this->partner($request), $this->actor($request), (string) $data['code']);
 
-        return $this->json($this->connectionData($connection), 201);
+        // The token for this restaurant's tills, shown once.
+        return $this->json($this->connectionData($connection) + ['token' => $token], 201);
+    }
+
+    /** POST /connections/{connection}/token: a new token for the restaurant's tills; the old one stops at once. */
+    public function rotateToken(Request $request, string $connection): JsonResponse
+    {
+        $partner = $this->partner($request);
+        /** @var PartnerConnection|null $found */
+        $found = $partner->connections()->whereKey($connection)->with(['restaurant' => static fn ($q) => $q->with('settings')])->first();
+        if ($found === null || ! $found->isActive()) {
+            throw new ConnectionRevokedException;
+        }
+        $token = $this->partners->rotateToken($partner, $this->actor($request), $found);
+
+        return $this->json($this->connectionData($found) + ['token' => $token], 201);
     }
 
     /** GET /connections: the restaurants that connected this partner (active ones). */
@@ -73,7 +89,7 @@ final class PartnerApiController extends Controller
         return $this->json($connections->map(fn (PartnerConnection $c): array => $this->connectionData($c))->values()->all());
     }
 
-    /** GET /connection: the connection in X-Connection-Id, with the restaurant's redemption rules. */
+    /** GET /connection: the restaurant of this connection token, with its redemption rules. */
     public function connection(Request $request): JsonResponse
     {
         return $this->json($this->connectionData($this->connectionOf($request)));
@@ -238,6 +254,8 @@ final class PartnerApiController extends Controller
                 'currency' => $voucher->currency,
                 'expires_at' => $voucher->expires_at?->toIso8601String(),
                 'redeemable' => $voucher->isSpendable() && $voucher->balance > 0,
+                // The most a redemption is accepted for right now (limits, velocity, whole-voucher rule).
+                'max_amount' => app(VoucherService::class)->payableNow($voucher),
             ],
             'card' => $card !== null ? ['number' => $card->card_number] : null,
             'rules' => [

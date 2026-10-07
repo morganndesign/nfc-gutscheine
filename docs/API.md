@@ -515,20 +515,31 @@ There is no public voucher page and no public voucher lookup.
 ### POS partners (decision 2026-10-07)
 
 Till systems of POS companies redeem vouchers and gift cards inside their own app through a separate API,
-`/api/partner/v1`, authenticated with a partner key (`gcpp_…`, created by the platform with
-`php artisan partner:manage create "<name>"`) plus `X-Connection-Id` (a restaurant that connected the POS with a
-one-time code) and `X-Terminal-Id` (the till, a device of the restaurant, type `pos`). Full German documentation for
+`/api/partner/v1`. Two credentials: the partner key (`gcpp_…`, created by the platform under Admin › Kassen-Partner
+or with `php artisan partner:manage create "<name>"`) stays in the POS company's back office and only connects
+restaurants (`POST /connections` with the owner's one-time code → the restaurant's till token, shown once) and
+renews till tokens (`POST /connections/{id}/token`); the till token (`gcpc_…`, one per connected restaurant, only its
+hash is stored) plus `X-Terminal-Id` (the till, a device of the restaurant, type `pos`) is all a till holds. The owners
+are e-mailed on every new connection. Full German documentation for
 POS companies: [partner/KASSEN-SCHNITTSTELLE.md](partner/KASSEN-SCHNITTSTELLE.md), OpenAPI:
 [partner/openapi.yaml](partner/openapi.yaml), Android reference module: `integrations/android-pos/`.
 
 | Method | Path | Permission | |
 |---|---|---|---|
-| GET | `/partner-connections` | settings.manage | Connected POS systems with their tills `{id, partner: {name}, status, connected_at, terminals: [{id, name, status, last_seen_at}]}` |
+| GET | `/partner-connections` | settings.manage | Connected POS systems with their tills `{data: [{id, partner: {name}, status, connected_at, terminals: [{id, name, status, last_seen_at}]}], open_codes: [{id, created_at, created_by, expires_at}]}` (codes not used yet; the code itself is never shown again) |
 | POST | `/partner-connections/code` | settings.manage | A one-time connection code for the POS company → `201 {code: "K7QF-M2XP", expires_at}` (24 h, single use, shown once) |
+| DELETE | `/partner-connections/codes/{id}` | settings.manage | Revokes a code not used yet → `204` (codes are deleted a week after they expired, `model:prune` nightly) |
 | DELETE | `/partner-connections/{id}` | settings.manage | Disconnects the POS system: its tills stop at once (`403 CONNECTION_REVOKED`); a single till is revoked under Devices |
 
-Redemptions by a till carry no user, the till's device, `reference` (the POS bill number) and the note
-`Kasse: <staff>`; a till cancels its own redemption within `PARTNER_CANCEL_MINUTES` (60).
+Platform (Admin › Kassen-Partner, `platform.settings.manage`): `GET /admin/partners` (`{id, name, contact_email,
+status, key_prefix, last_used_at, created_at, restaurants: [{id, name, connected_at}]}`), `POST /admin/partners`
+`{name, contact_email?}` and `POST /admin/partners/{id}/key` (→ `201` with `key`, shown once, `no-store`; a new key
+stops the old one, the restaurants' till tokens keep working), `POST /admin/partners/{id}/suspend|activate`.
+
+Presentments tell the till `voucher.max_amount`, the most a redemption is accepted for right now (balance, limits per
+transaction and day, whole-voucher rule). Redemptions by a till carry no user, the till's device, `reference` (the POS bill number) and the note
+`Kasse: <staff>` (the dashboard shows the staff name, else the till); a till cancels its own redemption within
+`PARTNER_CANCEL_MINUTES` (60), and till cancellations count towards the `money.reversals` alert like staff ones.
 
 ### Online shop (public, decision 2026-10-06)
 

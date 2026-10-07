@@ -9,6 +9,7 @@ import org.junit.Test
 import java.io.IOException
 
 private const val KEY = "gcpp_testkey0123456789"
+private const val TOKEN = "gcpc_tilltoken0123456789"
 private const val CONNECTION = "0199a1b2-0000-7000-8000-000000000001"
 
 /** A card that answers the GiftCard Pro sequence like an NTAG 424 DNA (and records what it was sent). */
@@ -44,9 +45,9 @@ private class FakeHttp(private val answers: MutableList<(String, String, Map<Str
     }
 }
 
-private fun presentmentJson(balance: Long = 5000, redeemable: Boolean = true, partial: Boolean = true, method: String = "card") = """
+private fun presentmentJson(balance: Long = 5000, redeemable: Boolean = true, partial: Boolean = true, method: String = "card", max: Long = if (redeemable) balance else 0) = """
     {"data":{"presentment_id":"p-1","expires_at":"2026-10-07T12:01:00+02:00","method":"$method",
-     "voucher":{"id":"v-1","number":"1234 5678 9012 3456","status":"active","balance":$balance,"currency":"EUR","expires_at":null,"redeemable":$redeemable},
+     "voucher":{"id":"v-1","number":"1234 5678 9012 3456","status":"active","balance":$balance,"currency":"EUR","expires_at":null,"redeemable":$redeemable,"max_amount":$max},
      "card":${if (method == "card") "{\"number\":\"B-2026-0001-0042\"}" else "null"},
      "rules":{"allow_partial_redemption":$partial,"max_debit_per_transaction":null}}}
 """.trimIndent()
@@ -54,7 +55,7 @@ private fun presentmentJson(balance: Long = 5000, redeemable: Boolean = true, pa
 private val redemptionJson = """{"data":{"id":"t-1","amount":4500,"currency":"EUR","balance_after":500,"voucher_id":"v-1","voucher_number":"1234 5678 9012 3456","reference":"Bon 4711","created_at":"2026-10-07T12:00:30+02:00","replayed":false}}"""
 
 class ClientTest {
-    private fun client(http: HttpTransport) = GiftCardProClient(KEY, CONNECTION, "KASSE-01", "Theke", baseUrl = "https://example.test/", transport = http)
+    private fun client(http: HttpTransport) = GiftCardProClient(TOKEN, "KASSE-01", "Theke", baseUrl = "https://example.test/", transport = http)
 
     @Test
     fun `reads a card with the fixed sequence and relays the server's command`() {
@@ -74,8 +75,8 @@ class ClientTest {
         assertEquals("https://example.test/api/partner/v1/cards/authentications/01JABCDEF0123456789", http.calls[1].second)
         assertEquals("22".repeat(32) + "9100", JSONObject(http.bodies[1]).getString("response"))
         val headers = http.calls[0].third
-        assertEquals("Bearer $KEY", headers["Authorization"])
-        assertEquals(CONNECTION, headers["X-Connection-Id"])
+        assertEquals("Bearer $TOKEN", headers["Authorization"])
+        assertNull(headers["X-Connection-Id"])
         assertEquals("KASSE-01", headers["X-Terminal-Id"])
         assertEquals("Theke", headers["X-Terminal-Name"])
 
@@ -92,6 +93,39 @@ class ClientTest {
         assertEquals(0L, whole.payable(4500))
         assertEquals(5000L, whole.payable(6000))
         assertEquals(0L, client(http).scanQr("GCPV1.abc").payable(6000))
+    }
+
+    @Test
+    fun `the server's maximum caps what is offered (daily limit, per transaction)`() {
+        val http = FakeHttp(mutableListOf({ _, _, _, _ -> 201 to presentmentJson(max = 2000) }, { _, _, _, _ -> 201 to presentmentJson(partial = false, max = 0) }))
+        val partial = client(http).scanQr("GCPV1.abc")
+        assertEquals(2000L, partial.payable(4500))
+        assertEquals(1500L, partial.payable(1500))
+        assertEquals(0L, partial.payable(0))
+        assertEquals(0L, client(http).scanQr("GCPV1.abc").payable(9000))
+    }
+
+    @Test
+    fun `the partner key is refused on a till and the setup client returns the till token`() {
+        try {
+            GiftCardProClient(KEY, "KASSE-01")
+            fail()
+        } catch (e: IllegalArgumentException) {
+            assertTrue(e.message!!.contains("gcpc_"))
+        }
+        val access = """{"data":{"id":"$CONNECTION","status":"active","connected_at":"2026-10-07T12:00:00+02:00","restaurant":{"name":"Gasthaus","currency":"EUR","locale":"de","timezone":"Europe/Vienna"},"rules":{"allow_partial_redemption":true,"max_debit_per_transaction":null},"token":"$TOKEN"}}"""
+        val http = FakeHttp(mutableListOf(
+            { _, _, _, b -> assertEquals("ABCD2345", JSONObject(b).getString("code")); 201 to access },
+            { _, _, _, _ -> 200 to """{"data":[${access.substringAfter("{\"data\":").dropLast(1).replace(",\"token\":\"$TOKEN\"", "")}]}""" },
+            { _, url, _, _ -> assertTrue(url.endsWith("/connections/$CONNECTION/token")); 201 to access.replace(TOKEN, "gcpc_new") },
+        ))
+        val partner = GiftCardProPartner(KEY, baseUrl = "https://example.test", transport = http)
+        val connected = partner.connect("ABCD2345")
+        assertEquals(TOKEN, connected.token)
+        assertEquals("Gasthaus", connected.connection.restaurantName)
+        assertEquals(listOf(CONNECTION), partner.connections().map { it.id })
+        assertEquals("gcpc_new", partner.newToken(CONNECTION).token)
+        assertTrue(http.calls.all { it.third["Authorization"] == "Bearer $KEY" && it.third["X-Terminal-Id"] == null })
     }
 
     @Test
@@ -147,6 +181,54 @@ class ClientTest {
         assertEquals("t-1", client(http2).redeem("p-1", 4500).id)
         assertEquals(2, http2.calls.size)
         assertNull(client(FakeHttp(mutableListOf({ _, _, _, _ -> 200 to """{"data":{"status":"not_booked"}}""" }))).redemptionOutcome("k"))
+    }
+
+    @Test
+    fun `a server error is an unknown outcome too, and stays unknown until it is resolved`() {
+        // 502 from a proxy after the booking went through: the outcome says booked, nothing is sent twice.
+        val http = FakeHttp(mutableListOf(
+            { _, _, _, _ -> 502 to "<html>Bad Gateway</html>" },
+            { _, _, _, _ -> 200 to """{"data":{"status":"booked",${redemptionJson.substringAfter("{\"data\":{")}""" },
+        ))
+        assertEquals("t-1", client(http).redeem("p-1", 4500).id)
+        assertEquals(2, http.calls.size)
+
+        // Down on every attempt: the till learns that the outcome is open (and the key to ask with later).
+        val down = FakeHttp(MutableList(6) { { _: String, _: String, _: Map<String, String>, _: String? -> 503 to "" } })
+        try {
+            client(down).redeem("p-1", 4500, idempotencyKey = "key-12345678")
+            fail()
+        } catch (e: RedemptionOutcomeUnknownException) {
+            assertEquals("key-12345678", e.idempotencyKey)
+        }
+        assertEquals(6, down.calls.size)
+        assertTrue(down.calls.filter { it.first == "POST" }.all { it.third["Idempotency-Key"] == "key-12345678" })
+
+        // A refusal is final: no outcome check, no retry.
+        val refused = FakeHttp(mutableListOf({ _, _, _, _ -> 422 to """{"code":"PRESENTMENT_EXPIRED","message":"x"}""" }))
+        try {
+            client(refused).redeem("p-1", 4500)
+            fail()
+        } catch (e: GiftCardProException) {
+            assertEquals("PRESENTMENT_EXPIRED", e.code)
+        }
+        assertEquals(1, refused.calls.size)
+    }
+
+    @Test
+    fun `a card taken away mid-read is reported as tag_lost`() {
+        val http = FakeHttp(mutableListOf())
+        val gone = object : CardChannel {
+            override val uid = ByteArray(7)
+            override fun transceive(command: ByteArray): ByteArray = throw IOException("Tag was lost.")
+        }
+        try {
+            client(http).readCard(gone)
+            fail()
+        } catch (e: CardProtocolException) {
+            assertEquals("tag_lost", e.step)
+        }
+        assertTrue(http.calls.isEmpty())
     }
 
     @Test

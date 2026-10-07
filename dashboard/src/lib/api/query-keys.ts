@@ -24,6 +24,7 @@ export const keys = {
   onlineShop: ["online-shop"] as const,
   onlineOrders: ["online-orders"] as const,
   partnerConnections: ["partner-connections"] as const,
+  adminPartners: ["admin", "partners"] as const,
   adminCardOrders: ["admin", "card-orders"] as const,
   securityAlerts: ["admin", "security-alerts"] as const,
 }

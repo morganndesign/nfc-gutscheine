@@ -10,14 +10,15 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { errorMessage } from "@/lib/api/client"
-import { useCreatePartnerCode, useDisconnectPartner, usePartnerConnections } from "@/lib/api/hooks"
+import { useCreatePartnerCode, useDisconnectPartner, usePartnerConnections, useRevokePartnerCode } from "@/lib/api/hooks"
 import { formatDate, formatDateTime } from "@/lib/format"
 import { useT } from "@/lib/i18n"
 
 /**
  * Settings › Kassensysteme (owners, decision 2026-10-07): a POS system redeems vouchers and gift cards in its own
  * till app. The owner creates a one-time code for the POS provider, sees the connected systems and their tills, and
- * disconnects a system (a single till is revoked under Devices).
+ * disconnects a system (a single till is renamed or revoked under Devices). Codes not used yet are listed and can
+ * be revoked (the code itself is not shown again).
  */
 export function PosSystemsSettings() {
   const t = useT()
@@ -25,6 +26,7 @@ export function PosSystemsSettings() {
   const { data, error, refetch, isLoading } = usePartnerConnections()
   const createCode = useCreatePartnerCode()
   const disconnect = useDisconnectPartner()
+  const revokeCode = useRevokePartnerCode()
   const [code, setCode] = useState<{ code: string; expires_at: string } | null>(null)
   const [copied, setCopied] = useState(false)
 
@@ -76,14 +78,61 @@ export function PosSystemsSettings() {
         </CardFooter>
       </Card>
 
+      {data?.openCodes.length ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">{t("pos.openCodes")}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y rounded-xl border">
+              {data.openCodes.map((c) => (
+                <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground min-w-0">
+                    {t("pos.openCode", {
+                      date: formatDateTime(c.created_at),
+                      by: c.created_by ? t("pos.openCodeBy", { name: c.created_by }) : "",
+                      time: formatDateTime(c.expires_at),
+                    })}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={revokeCode.isPending}
+                    onClick={async () => {
+                      if (
+                        await confirm({
+                          title: t("pos.revokeCodeTitle"),
+                          description: t("pos.revokeCodeBody"),
+                          confirmLabel: t("pos.revokeCode"),
+                          destructive: true,
+                        })
+                      ) {
+                        try {
+                          await revokeCode.mutateAsync(c.id)
+                          toast.success(t("pos.codeRevoked"))
+                        } catch (e) {
+                          toast.error(errorMessage(e))
+                        }
+                      }
+                    }}
+                  >
+                    {t("pos.revokeCode")}
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {isLoading ? (
         <Skeleton className="h-32 w-full rounded-2xl" />
       ) : error && !data ? (
         <QueryError error={error} onRetry={() => void refetch()} />
-      ) : !data?.length ? (
+      ) : !data?.connections.length ? (
         <p className="text-muted-foreground px-1 text-sm">{t("pos.empty")}</p>
       ) : (
-        data.map((c) => (
+        data.connections.map((c) => (
           <Card key={c.id}>
             <CardHeader className="flex flex-row items-start gap-3 space-y-0">
               <div className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-xl">

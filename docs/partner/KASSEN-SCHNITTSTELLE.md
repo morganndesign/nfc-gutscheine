@@ -1,6 +1,6 @@
 # GiftCard Pro – Kassen-Schnittstelle (POS-API)
 
-**Version 1.0 · Oktober 2026** · für Kassenanbieter, die Gutscheine und Geschenkkarten von GiftCard Pro direkt in
+**Version 1.1 · Oktober 2026** · für Kassenanbieter, die Gutscheine und Geschenkkarten von GiftCard Pro direkt in
 ihrer Kassen-App einlösen.
 
 ---
@@ -16,7 +16,7 @@ Mit dieser Schnittstelle löst Ihre Kassen-App Gutscheine **ohne App-Wechsel** e
 1. Die Kellnerin tippt in Ihrer Kasse auf **„Gutschein / Geschenkkarte"**.
 2. Der Gast hält seine Karte an das Android-Gerät (oder die Kasse scannt den QR-Code des gedruckten Gutscheins).
 3. Ihre App zeigt sofort das **Guthaben** – z. B. „€ 50,00 verfügbar".
-4. Der Gast bestätigt, wie viel er verwenden möchte – vorgeschlagen wird `min(Guthaben, Rechnung)`.
+4. Der Gast bestätigt, wie viel er verwenden möchte – vorgeschlagen wird `min(max_amount, Rechnung)` (§4.7).
 5. GiftCard Pro bucht den Betrag ab, Ihre Kasse zieht ihn von der Rechnung ab; den Rest zahlt der Gast wie gewohnt.
 
 ```
@@ -38,14 +38,24 @@ eine Karte echt ist. Eine kopierte oder nachgebaute Karte scheitert am Server.
 
 ## 2. Einrichtung
 
+Es gibt **zwei Schlüssel** – einen für Ihre Firma, einen pro Restaurant:
+
+| Schlüssel | Beginnt mit | Wer hat ihn | Wofür |
+|---|---|---|---|
+| **Partner-Schlüssel** | `gcpp_` | nur Ihr Backend / Ihre Einrichtung | Restaurants verbinden (§2.2), Kassen-Token erneuern |
+| **Kassen-Token** | `gcpc_` | die Kassen **eines** Restaurants | alles an der Kasse: Karte, QR, Einlösung, Storno |
+
+So kann eine gestohlene Kasse höchstens ihr eigenes Restaurant erreichen – nie die anderen Restaurants Ihrer Kunden.
+
 ### 2.1 Partner-Schlüssel (einmal pro Kassenanbieter)
 
 GiftCard Pro stellt Ihnen einen **Partner-Schlüssel** aus (`gcpp_…`, 45 Zeichen). Er identifiziert Ihr
 Kassensystem bei allen Restaurants.
 
-- Speichern Sie ihn wie ein Passwort: im Backend Ihres Kassensystems oder verschlüsselt auf dem Gerät, **nie** im
+- Speichern Sie ihn wie ein Passwort, **nur im Backend** Ihres Kassensystems – **nie auf einer Kasse**, nie im
   Quellcode oder in Logs.
-- Bei Verdacht auf Missbrauch stellen wir sofort einen neuen aus; der alte gilt dann nicht mehr.
+- Bei Verdacht auf Missbrauch stellen wir sofort einen neuen aus; der alte gilt dann nicht mehr. Die Kassen der
+  Restaurants arbeiten mit ihren Kassen-Token weiter.
 
 ### 2.2 Verbindung pro Restaurant (Verbindungscode)
 
@@ -54,9 +64,15 @@ Jedes Restaurant entscheidet selbst, ob Ihr Kassensystem seine Gutscheine einlö
 1. Der Inhaber öffnet im GiftCard-Pro-Dashboard **Einstellungen › Kassensysteme** und klickt
    **„Verbindungscode erstellen"**. Er erhält einen Code wie `K7QF-M2XP` (24 Stunden gültig, einmal verwendbar).
 2. Er gibt den Code Ihnen oder trägt ihn selbst in Ihrer Kassen-Einrichtung ein.
-3. Ihre App ruft `POST /connections` mit dem Code auf und erhält eine **Verbindungs-ID** (UUID).
-4. Speichern Sie die Verbindungs-ID beim Restaurant in Ihrem System. Sie gilt, bis der Inhaber die Verbindung
-   trennt.
+3. Ihr Backend ruft `POST /connections` mit dem Code auf und erhält die **Verbindungs-ID** und den
+   **Kassen-Token** (`gcpc_…`) dieses Restaurants. Der Token wird **nur dieses eine Mal** angezeigt.
+4. Speichern Sie den Token wie ein Passwort beim Restaurant und geben Sie ihn den Kassen dieses Restaurants
+   (z. B. verschlüsselt im Android Keystore). Er gilt, bis der Inhaber die Verbindung trennt.
+5. Token verloren oder verdächtig? `POST /connections/{id}/token` gibt einen neuen; der alte gilt sofort nicht mehr
+   (§4.4).
+
+Der Inhaber erhält bei jeder neuen Verbindung eine E-Mail. Codes, die er nicht mehr braucht, widerruft er unter
+**Einstellungen › Kassensysteme**.
 
 ### 2.3 Kassen-ID (jedes Gerät)
 
@@ -65,6 +81,8 @@ Jedes Kassengerät sendet eine eigene, gleichbleibende **Kassen-ID** (`X-Termina
 
 - Jede Kasse erscheint beim Restaurant unter **Geräte** als „Ihr Kassensystem · Theke". Eine verlorene oder
   gestohlene Kasse sperrt der Inhaber dort sofort, ohne die anderen Kassen zu stören.
+- Der Name wird nur beim ersten Kontakt übernommen. Umbenennen kann der Inhaber die Kasse unter **Geräte**; ein
+  später geänderter `X-Terminal-Name` überschreibt das nicht.
 - Höchstens 50 Kassen pro Restaurant und Kassensystem.
 
 ## 3. Grundlagen
@@ -82,9 +100,8 @@ Jedes Kassengerät sendet eine eigene, gleichbleibende **Kassen-ID** (`X-Termina
 
 | Header | Wann | Inhalt |
 |---|---|---|
-| `Authorization` | immer | `Bearer gcpp_…` (Partner-Schlüssel) |
-| `X-Connection-Id` | alle Restaurant-Aufrufe | Verbindungs-ID aus `POST /connections` |
-| `X-Terminal-Id` | Karten, QR, Einlösungen | gleichbleibende Kassen-ID |
+| `Authorization` | immer | Einrichtung (§4.1–4.4): `Bearer gcpp_…` (Partner-Schlüssel) · Kasse (§4.5–4.11): `Bearer gcpc_…` (Kassen-Token) |
+| `X-Terminal-Id` | Karten, QR, Einlösungen, Storno | gleichbleibende Kassen-ID |
 | `X-Terminal-Name` | optional | Anzeigename der Kasse (max. 60 Zeichen) |
 | `Idempotency-Key` | `POST /redemptions` | eine neue UUID pro Einlösung (siehe §6) |
 
@@ -104,9 +121,12 @@ Werten Sie immer **`code`** aus (stabil); `message` ist ein Satz für Menschen u
 
 ## 4. Endpunkte
 
-### 4.1 `GET /me` – Schlüssel prüfen
+Mit dem **Partner-Schlüssel** (Ihr Backend): 4.1–4.4. Mit dem **Kassen-Token** (die Kasse): 4.5–4.11. Ein
+Schlüssel am falschen Endpunkt ergibt `401 UNAUTHENTICATED`.
 
-Nur `Authorization`.
+### 4.1 `GET /me` – Partner-Schlüssel prüfen
+
+Partner-Schlüssel.
 
 ```json
 { "data": { "partner": { "id": "0199…", "name": "Kassa Wien GmbH" }, "connections": 12 } }
@@ -114,7 +134,7 @@ Nur `Authorization`.
 
 ### 4.2 `POST /connections` – Restaurant verbinden
 
-Nur `Authorization`. Body: `{"code": "K7QF-M2XP"}` (Groß-/Kleinschreibung, Leerzeichen und Bindestrich egal).
+Partner-Schlüssel. Body: `{"code": "K7QF-M2XP"}` (Groß-/Kleinschreibung, Leerzeichen und Bindestrich egal).
 
 `201`:
 
@@ -125,30 +145,40 @@ Nur `Authorization`. Body: `{"code": "K7QF-M2XP"}` (Groß-/Kleinschreibung, Leer
     "status": "active",
     "connected_at": "2026-10-07T11:58:02+02:00",
     "restaurant": { "name": "Trattoria Bella Vista", "currency": "EUR", "locale": "de-AT", "timezone": "Europe/Vienna" },
-    "rules": { "allow_partial_redemption": true, "max_debit_per_transaction": 50000 }
+    "rules": { "allow_partial_redemption": true, "max_debit_per_transaction": 50000 },
+    "token": "gcpc_9fK2…"
   }
 }
 ```
 
-Fehler: `422 LINK_CODE_INVALID` (unbekannt, schon verwendet oder älter als 24 Stunden). Ein Restaurant, das schon
-verbunden war, wird mit einem neuen Code wieder verbunden (gleiche ID).
+`token` ist der Kassen-Token dieses Restaurants – **nur in dieser Antwort**, danach nie wieder.
+
+Fehler: `422 LINK_CODE_INVALID` (unbekannt, schon verwendet, widerrufen oder älter als 24 Stunden). Ein Restaurant,
+das schon verbunden war, wird mit einem neuen Code wieder verbunden (gleiche ID, **neuer** Token; der alte gilt
+nicht mehr).
 
 ### 4.3 `GET /connections` – alle verbundenen Restaurants
 
-Nur `Authorization`. `data` ist eine Liste wie in 4.2 (nur aktive Verbindungen).
+Partner-Schlüssel. `data` ist eine Liste wie in 4.2, ohne `token` (nur aktive Verbindungen).
 
-### 4.4 `GET /connection` – ein Restaurant und seine Regeln
+### 4.4 `POST /connections/{id}/token` – neuer Kassen-Token
 
-`Authorization` + `X-Connection-Id`. Antwort wie 4.2. Gut als Prüfung beim Start der Kasse.
+Partner-Schlüssel. Kein Body. `201` wie 4.2 mit neuem `token`; der alte Token gilt **sofort** nicht mehr. Für einen
+verlorenen oder verdächtigen Token – danach den neuen an alle Kassen des Restaurants verteilen. Getrennte oder fremde
+Verbindung: `403 CONNECTION_REVOKED`.
+
+### 4.5 `GET /connection` – das Restaurant der Kasse und seine Regeln
+
+Kassen-Token. Antwort wie 4.2 ohne `token`. Gut als Prüfung beim Start der Kasse.
 
 | Regel | Bedeutung |
 |---|---|
 | `allow_partial_redemption` | `false`: ein Gutschein wird nur **ganz** eingelöst (Betrag = Guthaben) |
 | `max_debit_per_transaction` | Höchstbetrag pro Einlösung in Cent (`null` = keiner) |
 
-### 4.5 `POST /cards/authentications` – Geschenkkarte, Schritt 1
+### 4.6 `POST /cards/authentications` – Geschenkkarte, Schritt 1
 
-`Authorization` + `X-Connection-Id` + `X-Terminal-Id`. Body (Werte aus dem Kartenlesen, §5):
+Kassen-Token + `X-Terminal-Id`. Body (Werte aus dem Kartenlesen, §5):
 
 ```json
 {
@@ -166,7 +196,7 @@ Nur `Authorization`. `data` ist eine Liste wie in 4.2 (nur aktive Verbindungen).
 
 Senden Sie `command` (Hex) **unverändert** an die Karte und deren Antwort in Schritt 2 – innerhalb von 30 Sekunden.
 
-### 4.6 `POST /cards/authentications/{authentication}` – Schritt 2
+### 4.7 `POST /cards/authentications/{authentication}` – Schritt 2
 
 Body: `{"response": "<Antwort der Karte als Hex, normal 68 Zeichen inkl. 9100>"}` – auch eine Ablehnung der Karte unverändert senden. `201` – die **Vorlage** (Presentment):
 
@@ -183,7 +213,8 @@ Body: `{"response": "<Antwort der Karte als Hex, normal 68 Zeichen inkl. 9100>"}
       "balance": 5000,
       "currency": "EUR",
       "expires_at": null,
-      "redeemable": true
+      "redeemable": true,
+      "max_amount": 5000
     },
     "card": { "number": "B-2026-0001-0042" },
     "rules": { "allow_partial_redemption": true, "max_debit_per_transaction": 50000 }
@@ -192,16 +223,19 @@ Body: `{"response": "<Antwort der Karte als Hex, normal 68 Zeichen inkl. 9100>"}
 ```
 
 - `redeemable: false` → Gutschein gesperrt, abgelaufen oder leer: zeigen Sie `status` an, bieten Sie nichts an.
+- `max_amount` → der **höchste Betrag, den GiftCard Pro jetzt annimmt**: Guthaben, Limit pro Einlösung und pro Tag
+  des Lokals; wo nur ganze Gutscheine eingelöst werden, das ganze Guthaben oder `0`. Schlagen Sie
+  `min(max_amount, Rechnung)` vor (bei ganzer Einlösung: `max_amount`, wenn ≤ Rechnung). `0` → nichts anbieten.
 - Die Vorlage gilt **60 Sekunden** und für **eine** Einlösung **an dieser Kasse**.
 
-### 4.7 `POST /vouchers/scan` – gedruckter Gutschein (QR-Code)
+### 4.8 `POST /vouchers/scan` – gedruckter Gutschein (QR-Code)
 
-Body: `{"code": "GCPV1.gdRf85597UUS3oen74yGTUZ1I_6zulhCW5gVjPJoniA"}` (der Text im QR-Code). `201` wie 4.6 mit
+Body: `{"code": "GCPV1.gdRf85597UUS3oen74yGTUZ1I_6zulhCW5gVjPJoniA"}` (der Text im QR-Code). `201` wie 4.7 mit
 `"method": "qr"` und `"card": null`.
 
 QR-Gutscheine beginnen immer mit `GCPV1.`. Andere QR-Codes müssen Sie nicht senden.
 
-### 4.8 `POST /redemptions` – einlösen
+### 4.9 `POST /redemptions` – einlösen
 
 Header zusätzlich `Idempotency-Key: <UUID>`. Body:
 
@@ -211,7 +245,7 @@ Header zusätzlich `Idempotency-Key: <UUID>`. Body:
 
 | Feld | Pflicht | |
 |---|---|---|
-| `presentment_id` | ja | aus 4.6 / 4.7 |
+| `presentment_id` | ja | aus 4.7 / 4.8 |
 | `amount` | ja | Cent, ≥ 1 |
 | `reference` | nein | Ihre Bon-/Rechnungsnummer (max. 64) – erscheint im Dashboard und Export des Restaurants |
 | `staff` | nein | Name der Bedienung (max. 60) |
@@ -236,17 +270,17 @@ Header zusätzlich `Idempotency-Key: <UUID>`. Body:
 
 Drucken Sie `balance_after` gern auf den Bon („Restguthaben € 5,00").
 
-### 4.9 `GET /redemptions/{Idempotency-Key}` – wurde gebucht?
+### 4.10 `GET /redemptions/{Idempotency-Key}` – wurde gebucht?
 
-Für den Fall, dass die Antwort auf 4.8 verloren ging:
+Für den Fall, dass die Antwort auf 4.9 verloren ging oder ein Serverfehler (5xx) kam:
 
 ```json
 { "data": { "status": "not_booked" } }
 ```
 
-oder `{"data": {"status": "booked", …Felder wie 4.8…}}`. Nur Einlösungen Ihrer Kassen in diesem Restaurant.
+oder `{"data": {"status": "booked", …Felder wie 4.9…}}`. Nur Einlösungen Ihrer Kassen in diesem Restaurant.
 
-### 4.10 `POST /redemptions/{id}/cancellation` – Storno
+### 4.11 `POST /redemptions/{id}/cancellation` – Storno
 
 Der Bon wurde storniert: Der Betrag kommt auf den Gutschein zurück. Body: `{"reason": "Bon storniert"}`.
 
@@ -286,11 +320,14 @@ Authentifizierung weiter.
 Netzwerke fallen aus, besonders im Gastgarten. So wird ein Gutschein trotzdem **nie doppelt** belastet:
 
 1. Erzeugen Sie für jede Einlösung **eine** UUID als `Idempotency-Key` und speichern Sie sie mit dem Bon.
-2. Kommt keine Antwort: `GET /redemptions/{Key}`.
+2. Kommt **keine Antwort** oder ein **Serverfehler (HTTP 5xx)**, ist offen, ob gebucht wurde: `GET /redemptions/{Key}`.
     - `booked` → fertig, das ist das Ergebnis.
     - `not_booked` → `POST /redemptions` **mit demselben Key** erneut senden (die Vorlage gilt 60 s; danach Karte
       erneut lesen).
-3. Derselbe Key mit anderem Inhalt → `409 IDEMPOTENCY_CONFLICT`.
+3. Bleibt es offen (Server nicht erreichbar), den Bon **nicht** als bezahlt oder unbezahlt abschließen: später mit
+   demselben Key erneut fragen.
+4. Eine Ablehnung (4xx, z. B. `INSUFFICIENT_BALANCE`) ist endgültig: es wurde nichts gebucht.
+5. Derselbe Key mit anderem Inhalt → `409 IDEMPOTENCY_CONFLICT`.
 
 Das Kotlin-Modul (§10) macht das automatisch.
 
@@ -298,8 +335,8 @@ Das Kotlin-Modul (§10) macht das automatisch.
 
 | HTTP | Code | Bedeutung | Vorschlag für die Kasse |
 |---|---|---|---|
-| 401 | `UNAUTHENTICATED` | Partner-Schlüssel fehlt, falsch oder gesperrt | Einrichtung prüfen |
-| 403 | `CONNECTION_REVOKED` | Restaurant hat die Verbindung getrennt / unbekannt | „GiftCard Pro ist für dieses Lokal nicht verbunden" |
+| 401 | `UNAUTHENTICATED` | Schlüssel/Token fehlt, falsch, erneuert, gesperrt – oder am falschen Endpunkt | Einrichtung prüfen |
+| 403 | `CONNECTION_REVOKED` | Restaurant hat die Verbindung getrennt | „GiftCard Pro ist für dieses Lokal nicht verbunden" |
 | 403 | `RESTAURANT_SUSPENDED` | Restaurant bei GiftCard Pro gesperrt | wie oben |
 | 403 | `DEVICE_REVOKED` | diese Kasse wurde unter Geräte gesperrt | „Diese Kasse ist gesperrt" |
 | 403 | `CARD_AUTHENTICATION_FAILED` | Karte nicht echt oder Antwort falsch | „Karte nicht erkannt" |
@@ -311,7 +348,7 @@ Das Kotlin-Modul (§10) macht das automatisch.
 | 422 | `VOUCHER_BLOCKED`, `VOUCHER_EXPIRED`, `VOUCHER_NOT_REDEEMABLE` | Gutschein-Status | Status anzeigen |
 | 422 | `INSUFFICIENT_BALANCE` | Betrag > Guthaben | Betrag korrigieren |
 | 422 | `INVALID_AMOUNT` | z. B. Teilbetrag, wo nur ganze Einlösung erlaubt ist | Betrag = Guthaben |
-| 422 | `DEBIT_LIMIT_EXCEEDED` | Limit pro Einlösung oder pro Tag (`context.limit`, `context.max`) | kleineren Betrag |
+| 422 | `DEBIT_LIMIT_EXCEEDED` | Limit pro Einlösung oder pro Tag (`context.limit`, `context.max`) | höchstens `max_amount` |
 | 422 | `LINK_CODE_INVALID` | Verbindungscode ungültig | neuen Code beim Inhaber |
 | 422 | `VALIDATION_FAILED` | Feld fehlt / falsch (`errors`) | Programmfehler |
 | 409 | `IDEMPOTENCY_CONFLICT` | Key mit anderem Inhalt | neue UUID |
@@ -319,15 +356,15 @@ Das Kotlin-Modul (§10) macht das automatisch.
 | 429 | `PRESENTMENT_THROTTLED` | zu viele fehlgeschlagene Lesungen an dieser Kasse | `context.retry_after` Sekunden warten |
 | 429 | `VELOCITY_LIMIT_EXCEEDED` | zu viele Einlösungen dieses Gutscheins pro Stunde | später |
 | 429 | `TOO_MANY_REQUESTS` | Ratenlimit | `Retry-After` beachten |
-| 5xx | – | Serverfehler | §6 (Outcome abfragen), dann erneut |
+| 5xx | – | Serverfehler – bei `POST /redemptions` ist offen, ob gebucht wurde | §6 (Ergebnis abfragen), dann erneut |
 
 ## 8. Regeln und Grenzen
 
 - Vorlage (Karte/QR): **60 s**, **eine** Einlösung, **dieselbe Kasse**.
 - Kartenauthentifizierung: Schritt 2 innerhalb **30 s** nach Schritt 1.
 - Storno: eigene Einlösungen, **60 min**.
-- Ratenlimits: 600 Anfragen/min pro Restaurant-Verbindung, 90/min pro Kasse für Karte/QR/Einlösung,
-  10/min für `POST /connections`.
+- Ratenlimits: 600 Anfragen/min pro Schlüssel bzw. Kassen-Token, 90/min pro Kasse für Karte/QR/Einlösung,
+  10/min für `POST /connections` und `POST /connections/{id}/token`.
 - Nach 10 fehlgeschlagenen Lesungen in 5 Minuten wird eine Kasse kurz gebremst (`PRESENTMENT_THROTTLED`).
 - Eine Karte oder ein QR-Code gehört genau einem Restaurant; in einem anderen wird sie nicht erkannt.
 
@@ -338,18 +375,32 @@ Das Kotlin-Modul (§10) macht das automatisch.
 - **Keine Schlüssel auf der Kasse:** Kartenschlüssel liegen nur im Server (verschlüsselter Schlüsselspeicher).
 - **Jede Buchung ist nachvollziehbar:** Kasse, Bon-Nummer, Bedienung, Zeit – im Dashboard und im unveränderlichen
   Journal des Restaurants.
-- **Partner-Schlüssel** nur serverseitig oder verschlüsselt speichern; nie in Logs, Crash-Reports oder Screenshots.
-- Das Restaurant kann jederzeit eine einzelne Kasse sperren oder Ihr ganzes Kassensystem trennen.
+- **Partner-Schlüssel nur im Backend**, nie auf einer Kasse. Auf den Kassen liegt nur der **Kassen-Token** ihres
+  Restaurants (verschlüsselt, z. B. Android Keystore) – eine gestohlene Kasse erreicht so nur dieses eine Restaurant.
+  Beide nie in Logs, Crash-Reports oder Screenshots.
+- Das Restaurant kann jederzeit eine einzelne Kasse sperren oder Ihr ganzes Kassensystem trennen; der Inhaber wird
+  bei jeder neuen Verbindung per E-Mail informiert.
+- Stornos Ihrer Kassen werden wie die des Personals überwacht: viele Stornos an einem Tag melden wir dem Restaurant.
 
 ## 10. Kotlin-Modul für Android
 
 Wir liefern eine fertige, getestete Implementierung (`integrations/android-pos/`), ohne Abhängigkeiten außer
 Android selbst:
 
+Einrichtung – **in Ihrem Backend**, mit dem Partner-Schlüssel:
+
+```kotlin
+val partner = GiftCardProPartner(partnerKey = secrets.giftCardProKey)   // gcpp_…
+val zugang = partner.connect(codeVomInhaber)        // einmal pro Restaurant
+restaurant.gcpToken = zugang.token                  // gcpc_… – wie ein Passwort speichern, an die Kassen verteilen
+// verloren/verdächtig:  restaurant.gcpToken = partner.newToken(zugang.connection.id).token
+```
+
+An der Kasse – mit dem Kassen-Token ihres Restaurants:
+
 ```kotlin
 val gcp = GiftCardProClient(
-    partnerKey = secrets.giftCardProKey,          // gcpp_…
-    connectionId = restaurant.giftCardProId,      // aus connect()
+    connectionToken = restaurant.gcpToken,        // gcpc_…
     terminalId = device.serialNumber,
     terminalName = "Theke",
     language = "de",
@@ -359,7 +410,7 @@ val gcp = GiftCardProClient(
 val vorlage = gcp.readCard(IsoDepCardChannel(isoDep))
 // oder gedruckter Gutschein:  val vorlage = gcp.scanQr(qrText)
 
-val betrag = vorlage.payable(rechnungInCent)      // berücksichtigt Guthaben und Regeln des Lokals
+val betrag = vorlage.payable(rechnungInCent)      // nutzt max_amount: Guthaben, Limits und Regeln des Lokals
 if (betrag > 0 && gastBestaetigt(betrag)) {
     val einloesung = gcp.redeem(vorlage.id, betrag, reference = bon.nummer, staff = kellner.name)
     bon.abziehen(einloesung.amount, restguthaben = einloesung.balanceAfter)
@@ -367,16 +418,21 @@ if (betrag > 0 && gastBestaetigt(betrag)) {
 ```
 
 - `readCard` führt die fünf NFC-Befehle aus und spricht mit dem Server (≈ 300 ms).
-- `redeem` erzeugt den Idempotency-Key und löst verlorene Antworten selbst auf (§6).
-- `cancelRedemption(id, grund)` storniert; `connect(code)` verbindet ein Restaurant.
-- Fehler: `GiftCardProException` mit `code`, `message` (in der gewählten Sprache) und `reason`;
-  `CardProtocolException`, wenn die Karte nicht antwortet.
+- `redeem` erzeugt den Idempotency-Key und löst verlorene Antworten und Serverfehler selbst auf (§6). Bleibt das
+  Ergebnis offen: `RedemptionOutcomeUnknownException` mit `idempotencyKey` – später `redemptionOutcome(key)` fragen.
+- `cancelRedemption(id, grund)` storniert.
+- Fehler: `GiftCardProException` mit `status`, `code`, `message` (in der gewählten Sprache) und `reason`;
+  `CardProtocolException`, wenn die Karte nicht mitmacht – `step = "tag_lost"`, wenn sie weggezogen wurde
+  („Karte erneut halten").
 
 ## 11. Testen und Go-live
 
 1. **Testzugang:** Sie erhalten einen Partner-Schlüssel und ein **Testrestaurant** mit Testgutscheinen und
-   einigen echten Test-Geschenkkarten (per Post).
-2. **Verbinden:** Wir senden Ihnen einen Verbindungscode des Testrestaurants.
+   einigen echten Test-Geschenkkarten (per Post). Es gibt keine eigene Test-URL: das Testrestaurant ist ein normales
+   Restaurant auf `https://app.giftcardpro.at`, nur mit Testgutscheinen ohne echten Wert. Einlösungen dort betreffen
+   nur diese Testgutscheine; stornieren Sie sie frei (§4.11).
+2. **Verbinden:** Wir senden Ihnen einen Verbindungscode des Testrestaurants; Ihr Backend erhält damit den
+   Kassen-Token für Ihre Testkassen.
 3. **Prüfliste vor dem Livegang:**
    - [ ] Karte lesen, Guthaben anzeigen, Teilbetrag einlösen, Restguthaben auf dem Bon
    - [ ] gedruckten Gutschein (QR) einlösen
@@ -385,6 +441,8 @@ if (betrag > 0 && gastBestaetigt(betrag)) {
    - [ ] Storno eines Bons innerhalb von 60 min
    - [ ] Karte zu früh wegziehen → „erneut halten"
    - [ ] getrennte Verbindung / gesperrte Kasse → verständliche Meldung
+   - [ ] Partner-Schlüssel liegt nur im Backend; die Kasse kennt nur den Kassen-Token
+   - [ ] Betrag über `max_amount` wird nicht angeboten
 4. **Livegang:** Restaurants verbinden sich selbst mit ihrem Code (§2.2).
 
 **OpenAPI:** `openapi.yaml` (diese Schnittstelle maschinenlesbar, z. B. für Postman oder Code-Generatoren).

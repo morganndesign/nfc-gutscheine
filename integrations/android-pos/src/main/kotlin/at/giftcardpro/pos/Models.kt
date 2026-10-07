@@ -12,6 +12,11 @@ data class Voucher(
     val expiresAt: String?,
     /** False when the voucher is blocked, expired or empty: show [status] instead of offering it. */
     val redeemable: Boolean,
+    /**
+     * The most a redemption is accepted for right now: balance, the restaurant's limits per transaction and day
+     * and, where only whole vouchers are taken, the full balance or nothing (0: nothing).
+     */
+    val maxAmount: Long,
 )
 
 data class Rules(val allowPartialRedemption: Boolean, val maxDebitPerTransaction: Long?)
@@ -26,12 +31,11 @@ data class Presentment(
     val cardNumber: String?,
     val rules: Rules,
 ) {
-    /** The most this voucher pays towards [billCents] under the restaurant's rules (0: nothing). */
+    /** The most this voucher pays towards [billCents] right now (0: nothing). */
     fun payable(billCents: Long): Long {
-        if (!voucher.redeemable) return 0
-        val cap = rules.maxDebitPerTransaction ?: Long.MAX_VALUE
-        return if (rules.allowPartialRedemption) minOf(voucher.balance, billCents, cap)
-        else if (voucher.balance <= billCents && voucher.balance <= cap) voucher.balance else 0
+        if (!voucher.redeemable || billCents <= 0) return 0
+        return if (rules.allowPartialRedemption) minOf(voucher.maxAmount, billCents)
+        else if (voucher.maxAmount <= billCents) voucher.maxAmount else 0
     }
 }
 
@@ -72,6 +76,7 @@ internal object Json {
                 currency = v.getString("currency"),
                 expiresAt = if (v.isNull("expires_at")) null else v.getString("expires_at"),
                 redeemable = v.getBoolean("redeemable"),
+                maxAmount = v.getLong("max_amount"),
             ),
             cardNumber = if (o.isNull("card")) null else o.getJSONObject("card").getString("number"),
             rules = rules(o.getJSONObject("rules")),
@@ -89,6 +94,8 @@ internal object Json {
         createdAt = o.getString("created_at"),
         replayed = o.optBoolean("replayed", false),
     )
+
+    fun tillAccess(o: JSONObject) = TillAccess(connection(o), o.getString("token"))
 
     fun connection(o: JSONObject): Connection {
         val r = o.getJSONObject("restaurant")

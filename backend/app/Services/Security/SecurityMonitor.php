@@ -111,6 +111,8 @@ final class SecurityMonitor
             && str_starts_with((string) $e->reason, $reasonPrefix);
         $card = static fn (SecurityEvent $e): ?string => is_string($e->data['card_number'] ?? null) ? 'card:'.$e->data['card_number'] : null;
         $user = static fn (SecurityEvent $e): ?string => $e->user_id !== null ? 'user:'.$e->user_id : null;
+        // A person, or a POS till (no person; audit H3 of the POS interface, 2026-10-07).
+        $userOrDevice = static fn (SecurityEvent $e): ?string => $e->user_id !== null ? 'user:'.$e->user_id : ($e->device_id !== null ? 'device:'.$e->device_id : null);
         $deviceOrUser = static fn (SecurityEvent $e): ?string => $e->device_id !== null ? 'device:'.$e->device_id : ($e->user_id !== null ? 'user:'.$e->user_id : null);
         $network = static fn (SecurityEvent $e): ?string => $e->ip_network !== null ? 'network:'.$e->ip_network : null;
         $restaurant = static fn (SecurityEvent $e): ?string => $e->restaurant_id !== null ? 'restaurant:'.$e->restaurant_id : null;
@@ -159,9 +161,9 @@ final class SecurityMonitor
             ['name' => 'card.replacements', 'severity' => 'warning', 'subject' => $user, 'threshold' => 3, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::CardTransition && $e->outcome === SecurityEventOutcome::Succeeded
                     && ($e->data['to_state'] ?? null) === 'replaced' && $user($e) !== null],
-            // One person correcting many bookings in a day.
-            ['name' => 'money.reversals', 'severity' => 'warning', 'subject' => $user, 'threshold' => 5, 'window' => 1440,
-                'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherReverse && $e->outcome === SecurityEventOutcome::Succeeded && $user($e) !== null],
+            // One person, or one POS till, correcting many bookings in a day.
+            ['name' => 'money.reversals', 'severity' => 'warning', 'subject' => $userOrDevice, 'threshold' => 5, 'window' => 1440,
+                'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherReverse && $e->outcome === SecurityEventOutcome::Succeeded && $userOrDevice($e) !== null],
             // One person paying out many refunds in a day.
             ['name' => 'money.refunds', 'severity' => 'warning', 'subject' => $user, 'threshold' => 3, 'window' => 1440,
                 'match' => static fn (SecurityEvent $e): bool => $e->type === T::VoucherRefund && $e->outcome === SecurityEventOutcome::Succeeded && $user($e) !== null],

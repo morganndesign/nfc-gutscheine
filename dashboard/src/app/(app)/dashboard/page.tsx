@@ -196,7 +196,7 @@ function DashboardContent() {
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{t(`ops.txType.${tx.type}` as MessageKey)}</p>
                         <p className="text-muted-foreground truncate text-xs">
-                          ••{tx.voucher?.voucher_number.slice(-4)} · {tx.user?.name ?? t("ops.system")} · {formatRelative(tx.created_at)}
+                          ••{tx.voucher?.voucher_number.slice(-4)} · {tx.user?.name ?? tx.device?.name ?? t("ops.system")} · {formatRelative(tx.created_at)}
                         </p>
                       </div>
                       <span

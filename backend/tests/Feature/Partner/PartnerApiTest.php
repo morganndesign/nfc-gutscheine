@@ -9,12 +9,17 @@ use App\Enums\RoleSlug;
 use App\Models\Device;
 use App\Models\Partner;
 use App\Models\PartnerConnection;
+use App\Models\PartnerLinkCode;
 use App\Models\Restaurant;
+use App\Models\User;
 use App\Models\Voucher;
+use App\Notifications\PartnerConnectedNotification;
 use App\Services\Partners\PartnerService;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Laravel\Sanctum\Sanctum;
 use Tests\Support\Ntag424Chip;
 use Tests\Support\WithCards;
 use Tests\TestCase;
@@ -36,6 +41,8 @@ final class PartnerApiTest extends TestCase
 
     private string $connectionId = '';
 
+    private string $token = '';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -49,15 +56,17 @@ final class PartnerApiTest extends TestCase
         parent::tearDown();
     }
 
-    /** The owner creates a code in the dashboard; the POS company redeems it. */
+    /** The owner creates a code in the dashboard; the POS company redeems it and gets the restaurant's till token. */
     private function connect(?Restaurant $restaurant = null): string
     {
         $restaurant ??= $this->restaurant;
         $this->actingAsStaff($restaurant, RoleSlug::Owner);
         $code = (string) $this->postJson('/api/v1/partner-connections/code')->assertCreated()->json('data.code');
         $this->app['auth']->forgetGuards();
+        $connected = $this->partnerCall('POST', 'connections', ['code' => $code])->assertCreated();
+        $this->token = (string) $connected->json('data.token');
 
-        return (string) $this->partnerCall('POST', 'connections', ['code' => $code])->assertCreated()->json('data.id');
+        return (string) $connected->json('data.id');
     }
 
     /** @param array<string, mixed> $body @param array<string, string> $headers */
@@ -69,7 +78,7 @@ final class PartnerApiTest extends TestCase
     /** @param array<string, mixed> $body @param array<string, string> $headers */
     private function till(string $method, string $path, array $body = [], string $terminal = 'KASSE-01', array $headers = []): TestResponse
     {
-        return $this->partnerCall($method, $path, $body, ['X-Connection-Id' => $this->connectionId, 'X-Terminal-Id' => $terminal, 'X-Terminal-Name' => 'Theke'] + $headers);
+        return $this->partnerCall($method, $path, $body, ['X-Terminal-Id' => $terminal, 'X-Terminal-Name' => 'Theke'] + $headers, $this->token);
     }
 
     /** What the POS app does with its NFC reader: NDEF URL, EV2 part 1, relay, answer. */
@@ -103,17 +112,31 @@ final class PartnerApiTest extends TestCase
         $this->app['auth']->forgetGuards();
 
         $this->partnerCall('POST', 'connections', ['code' => 'AAAA-BBBB'])->assertStatus(422)->assertJsonPath('code', 'LINK_CODE_INVALID');
-        $connection = $this->partnerCall('POST', 'connections', ['code' => strtolower(str_replace('-', ' ', $code))])->assertCreated()
+        $connected = $this->partnerCall('POST', 'connections', ['code' => strtolower(str_replace('-', ' ', $code))])->assertCreated()
             ->assertJsonPath('data.restaurant.name', 'Trattoria Bella Vista')->assertJsonPath('data.restaurant.currency', 'EUR')
-            ->assertJsonStructure(['data' => ['id', 'rules' => ['allow_partial_redemption', 'max_debit_per_transaction']]])->json('data.id');
+            ->assertJsonStructure(['data' => ['id', 'token', 'rules' => ['allow_partial_redemption', 'max_debit_per_transaction']]]);
+        $connection = (string) $connected->json('data.id');
+        $token = (string) $connected->json('data.token');
+        $this->assertStringStartsWith('gcpc_', $token);
         // Single use.
         $this->partnerCall('POST', 'connections', ['code' => $code])->assertStatus(422)->assertJsonPath('code', 'LINK_CODE_INVALID');
-        $this->partnerCall('GET', 'connections')->assertOk()->assertJsonCount(1, 'data');
-        $this->partnerCall('GET', 'connection', headers: ['X-Connection-Id' => (string) $connection])->assertOk()->assertJsonPath('data.id', $connection);
+        // The list never shows a token.
+        $this->partnerCall('GET', 'connections')->assertOk()->assertJsonCount(1, 'data')->assertJsonMissingPath('data.0.token');
+        // The tills use the restaurant's token; the partner key does not reach a restaurant, the token not the partner's list.
+        $this->partnerCall('GET', 'connection', key: $token)->assertOk()->assertJsonPath('data.id', $connection);
+        $this->partnerCall('GET', 'connection')->assertUnauthorized();
+        $this->partnerCall('GET', 'connections', key: $token)->assertUnauthorized();
+        $this->partnerCall('GET', 'connection', key: 'gcpc_wrong')->assertUnauthorized();
 
-        // Another partner cannot use this connection; an expired code connects nothing.
+        // A new token for this restaurant (a till was stolen): the old one stops, the new one works; another partner
+        // cannot do it.
         [, $otherKey] = app(PartnerService::class)->create('Andere Kasse', null);
-        $this->partnerCall('GET', 'connection', headers: ['X-Connection-Id' => (string) $connection], key: $otherKey)->assertForbidden()->assertJsonPath('code', 'CONNECTION_REVOKED');
+        $this->partnerCall('POST', "connections/{$connection}/token", key: $otherKey)->assertForbidden()->assertJsonPath('code', 'CONNECTION_REVOKED');
+        $fresh = (string) $this->partnerCall('POST', "connections/{$connection}/token")->assertCreated()->json('data.token');
+        $this->partnerCall('GET', 'connection', key: $token)->assertUnauthorized();
+        $this->partnerCall('GET', 'connection', key: $fresh)->assertOk();
+
+        // An expired code connects nothing.
         $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
         $late = (string) $this->postJson('/api/v1/partner-connections/code')->json('data.code');
         $this->app['auth']->forgetGuards();
@@ -169,7 +192,7 @@ final class PartnerApiTest extends TestCase
         $this->connectionId = $this->connect();
         $this->till('POST', 'vouchers/scan', ['code' => 'GCPV1.not-a-voucher'])->assertStatus(422)->assertJsonPath('code', 'MEDIUM_NOT_RECOGNIZED');
         $presentment = (string) $this->till('POST', 'vouchers/scan', ['code' => (string) $sale->printable->payload])->assertCreated()
-            ->assertJsonPath('data.method', 'qr')->assertJsonPath('data.voucher.balance', 3000)->json('data.presentment_id');
+            ->assertJsonPath('data.method', 'qr')->assertJsonPath('data.voucher.balance', 3000)->assertJsonPath('data.voucher.max_amount', 3000)->json('data.presentment_id');
 
         // Another till of the same POS cannot use this till's presentment.
         $this->till('POST', 'redemptions', ['presentment_id' => $presentment, 'amount' => 1000], 'KASSE-02', ['Idempotency-Key' => (string) Str::uuid()])
@@ -244,8 +267,11 @@ final class PartnerApiTest extends TestCase
         $this->till('POST', 'vouchers/scan', ['code' => (string) $sale->printable->payload], 'KASSE-02')->assertForbidden()->assertJsonPath('code', 'CONNECTION_REVOKED');
         $this->assertSame('revoked', PartnerConnection::query()->withoutGlobalScopes()->sole()->status);
 
-        // A new code connects it again; a suspended partner key stops everywhere.
+        // A new code connects it again, with a new token (the old one stays dead); a suspended partner stops everywhere.
+        $old = $this->token;
         $this->connectionId = $this->connect();
+        $this->assertNotSame($old, $this->token);
+        $this->partnerCall('GET', 'connection', key: $old)->assertUnauthorized();
         $this->till('GET', 'connection')->assertOk();
         app(PartnerService::class)->setActive($this->partner, false);
         $this->till('GET', 'connection')->assertUnauthorized();
@@ -260,11 +286,138 @@ final class PartnerApiTest extends TestCase
         $this->assertStringStartsWith('gcpp_', $partner->key_prefix);
         $this->artisan('partner:manage', ['action' => 'list'])->assertSuccessful();
 
+        $this->connectionId = $this->connect();
         $this->artisan('partner:manage', ['action' => 'rotate', 'name' => $this->partner->id])->assertSuccessful();
-        // The old key stops at once.
+        // The old key stops at once; the restaurants' tills keep working (their own tokens).
         $this->partnerCall('GET', 'me')->assertUnauthorized();
+        $this->till('GET', 'connection')->assertOk();
         $this->artisan('partner:manage', ['action' => 'suspend', 'name' => $partner->id])->assertSuccessful();
         $this->assertSame('suspended', $partner->refresh()->status);
         $this->artisan('partner:manage', ['action' => 'rotate', 'name' => 'nope'])->assertFailed();
+    }
+
+    public function test_a_till_cancelling_many_redemptions_in_a_day_raises_an_alert(): void
+    {
+        $sale = $this->sell($this->restaurant, 10000);
+        $this->connectionId = $this->connect();
+        for ($i = 0; $i < 5; $i++) {
+            $p = (string) $this->till('POST', 'vouchers/scan', ['code' => (string) $sale->printable->payload])->json('data.presentment_id');
+            $id = (string) $this->till('POST', 'redemptions', ['presentment_id' => $p, 'amount' => 100], headers: ['Idempotency-Key' => (string) Str::uuid()])->assertCreated()->json('data.id');
+            $this->till('POST', "redemptions/{$id}/cancellation", ['reason' => 'Bon storniert'])->assertCreated();
+        }
+        $this->artisan('giftcard:monitor-security-events')->assertSuccessful();
+        $this->assertDatabaseHas('security_alerts', ['rule' => 'money.reversals']);
+    }
+
+    public function test_the_till_is_told_the_most_it_may_debit_now(): void
+    {
+        $sale = $this->sell($this->restaurant, 30000);
+        $this->restaurant->settings->update(['max_debit_per_transaction' => 20000, 'max_debit_per_voucher_per_day' => 25000]);
+        $this->connectionId = $this->connect();
+        $scan = fn (): TestResponse => $this->till('POST', 'vouchers/scan', ['code' => (string) $sale->printable->payload])->assertCreated();
+
+        $p = (string) $scan()->assertJsonPath('data.voucher.max_amount', 20000)->json('data.presentment_id');
+        $this->till('POST', 'redemptions', ['presentment_id' => $p, 'amount' => 20000], headers: ['Idempotency-Key' => (string) Str::uuid()])->assertCreated();
+        // 25,000 a day: 5,000 left today, although 10,000 are on it.
+        $scan()->assertJsonPath('data.voucher.balance', 10000)->assertJsonPath('data.voucher.max_amount', 5000);
+        // Whole vouchers only: the whole balance or nothing.
+        $this->restaurant->settings->update(['allow_partial_redemption' => false, 'max_debit_per_transaction' => 50000, 'max_debit_per_voucher_per_day' => 50000]);
+        $scan()->assertJsonPath('data.voucher.max_amount', 10000);
+        $this->restaurant->settings->update(['max_debit_per_transaction' => 5000]);
+        $scan()->assertJsonPath('data.voucher.max_amount', 0);
+    }
+
+    public function test_the_owners_are_mailed_when_a_pos_system_connects(): void
+    {
+        Notification::fake();
+        $owner = $this->staff($this->restaurant, RoleSlug::Owner, ['locale' => 'bs']);
+        $manager = $this->staff($this->restaurant, RoleSlug::Manager);
+        $this->connect();
+
+        Notification::assertSentTo($owner, PartnerConnectedNotification::class, function (PartnerConnectedNotification $n) use ($owner): bool {
+            $mail = $n->toMail($owner);
+
+            return $n->locale === 'bs' && str_contains((string) $mail->subject, 'Kassa Wien GmbH')
+                && str_contains(implode(' ', $mail->introLines), 'Trattoria Bella Vista');
+        });
+        Notification::assertNotSentTo($manager, PartnerConnectedNotification::class);
+        // A code that does not work mails nobody.
+        Notification::fake();
+        $this->partnerCall('POST', 'connections', ['code' => 'ABCD-EFGH'])->assertStatus(422);
+        Notification::assertNothingSent();
+    }
+
+    public function test_the_owner_sees_and_revokes_codes_not_used_yet_and_old_codes_are_pruned(): void
+    {
+        $owner = $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
+        $code = (string) $this->postJson('/api/v1/partner-connections/code')->assertCreated()->json('data.code');
+        $this->postJson('/api/v1/partner-connections/code')->assertCreated();
+        $list = $this->getJson('/api/v1/partner-connections')->assertOk()->assertJsonCount(2, 'open_codes')
+            ->assertJsonPath('open_codes.0.created_by', $owner->name);
+        $this->assertStringNotContainsString(str_replace('-', '', $code), (string) $list->getContent());
+        $first = (string) $list->json('open_codes.0.id');
+
+        // Another restaurant's owner cannot revoke it.
+        $this->actingAsStaff($this->restaurant(), RoleSlug::Owner);
+        $this->deleteJson("/api/v1/partner-connections/codes/{$first}")->assertNotFound();
+        $this->actingAsStaff($this->restaurant, RoleSlug::Manager);
+        $this->deleteJson("/api/v1/partner-connections/codes/{$first}")->assertForbidden();
+
+        Sanctum::actingAs($owner, ['*']);
+        $this->deleteJson("/api/v1/partner-connections/codes/{$first}")->assertNoContent();
+        $this->getJson('/api/v1/partner-connections')->assertJsonCount(1, 'open_codes');
+        $this->assertDatabaseHas('audit_logs', ['action' => 'partner.code_revoked']);
+        $this->app['auth']->forgetGuards();
+        $this->partnerCall('POST', 'connections', ['code' => $code])->assertStatus(422);
+
+        // Used and expired codes leave the list; a week after expiry they are deleted.
+        $this->connect();
+        Sanctum::actingAs($owner, ['*']);
+        $this->getJson('/api/v1/partner-connections')->assertJsonCount(1, 'open_codes');
+        Carbon::setTestNow(now()->addDays(2));
+        $this->getJson('/api/v1/partner-connections')->assertJsonCount(0, 'open_codes');
+        $this->assertSame(3, PartnerLinkCode::query()->withoutGlobalScopes()->count());
+        Carbon::setTestNow(now()->addDays(7));
+        $this->artisan('model:prune', ['--model' => [PartnerLinkCode::class]])->assertSuccessful();
+        $this->assertSame(0, PartnerLinkCode::query()->withoutGlobalScopes()->count());
+        Carbon::setTestNow();
+    }
+
+    public function test_the_platform_manages_partners_in_the_admin_area(): void
+    {
+        $this->connect();
+        $admin = User::factory()->platformAdmin()->create();
+        Sanctum::actingAs($admin, ['*']);
+        $this->getJson('/api/v1/admin/partners')->assertOk()
+            ->assertJsonPath('data.0.name', 'Kassa Wien GmbH')
+            ->assertJsonPath('data.0.restaurants.0.name', 'Trattoria Bella Vista')
+            ->assertJsonMissingPath('data.0.key_hash');
+
+        $created = $this->postJson('/api/v1/admin/partners', ['name' => 'Gastro Kasse', 'contact_email' => 'it@gastro.example'])->assertCreated()
+            ->assertHeader('Cache-Control', 'no-store, private');
+        $key = (string) $created->json('data.key');
+        $id = (string) $created->json('data.id');
+        $this->assertStringStartsWith('gcpp_', $key);
+        $this->assertStringStartsWith(substr($key, 0, 12), (string) $created->json('data.key_prefix'));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'partner.created', 'user_id' => $admin->id]);
+        $this->getJson('/api/v1/admin/partners')->assertJsonCount(2, 'data')->assertJsonMissingPath('data.0.key');
+
+        $this->app['auth']->forgetGuards();
+        $this->partnerCall('GET', 'me', key: $key)->assertOk();
+        Sanctum::actingAs($admin, ['*']);
+        $rotated = (string) $this->postJson("/api/v1/admin/partners/{$id}/key")->assertCreated()->json('data.key');
+        $this->postJson("/api/v1/admin/partners/{$id}/suspend")->assertOk()->assertJsonPath('data.status', 'suspended');
+        $this->app['auth']->forgetGuards();
+        $this->partnerCall('GET', 'me', key: $key)->assertUnauthorized();
+        $this->partnerCall('GET', 'me', key: $rotated)->assertUnauthorized();
+        Sanctum::actingAs($admin, ['*']);
+        $this->postJson("/api/v1/admin/partners/{$id}/activate")->assertOk()->assertJsonPath('data.status', 'active');
+        $this->app['auth']->forgetGuards();
+        $this->partnerCall('GET', 'me', key: $rotated)->assertOk();
+
+        // Restaurant staff never reach it.
+        $this->actingAsStaff($this->restaurant, RoleSlug::Owner);
+        $this->getJson('/api/v1/admin/partners')->assertForbidden();
+        $this->postJson('/api/v1/admin/partners', ['name' => 'x y'])->assertForbidden();
     }
 }

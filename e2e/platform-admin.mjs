@@ -3,7 +3,8 @@
 //   onboard a restaurant (owner invited) → list shows owner / e-mail / status / invitation → edit →
 //   invite again with a corrected e-mail address → owner accepts → disable / enable → archive / restore →
 //   delete refused for a restaurant with vouchers → delete an empty restaurant with typed confirmation →
-//   audit log filtered by restaurant → accessibility scan of the admin screens.
+//   audit log filtered by restaurant → accessibility scan of the admin screens → a POS partner created (key shown
+//   once), suspended and reactivated.
 //
 // Requirements: as pilot-journey.mjs (API + web app, a platform admin). Works with every local mail setup: with
 // Mailpit (MAIL_MAILER=failover/smtp) invitations are delivered; with MAIL_MAILER=log the platform reports them as
@@ -193,6 +194,27 @@ for (const path of ['/admin', '/admin/settings', '/admin/audit']) {
   await axe(admin, path)
 }
 step(10, 'audit log filter and accessibility scan clean')
+
+// 11. POS partners: a new partner's key is shown once; suspend and reactivate.
+const partner = `E2E Kasse ${run}`
+await admin.goto(`${BASE}/admin/partners`)
+await admin.getByRole('button', { name: 'New partner' }).click()
+await admin.fill('#p-name', partner)
+await admin.getByRole('button', { name: 'Create partner' }).click()
+const keyDialog = admin.getByRole('dialog')
+await keyDialog.getByText(/^gcpp_/).waitFor()
+await axe(admin, '/admin/partners key dialog')
+await keyDialog.getByRole('button', { name: 'Done' }).click()
+const partnerRow = admin.getByRole('row').filter({ hasText: partner })
+await partnerRow.getByText('Active').waitFor()
+await partnerRow.getByRole('button', { name: 'Suspend' }).click()
+await admin.getByRole('alertdialog').getByRole('button', { name: 'Suspend' }).click()
+await partnerRow.getByText('Suspended').waitFor()
+await partnerRow.getByRole('button', { name: 'Reactivate' }).click()
+await partnerRow.getByText('Active').waitFor()
+await admin.waitForLoadState('networkidle')
+await axe(admin, '/admin/partners')
+step(11, 'POS partner created (key shown once), suspended and reactivated')
 
 await browser.close()
 assert.deepEqual(errors, [], 'browser console errors')

@@ -3,8 +3,11 @@ package at.giftcardpro.pos
 /** What the server needs to start a card's live authentication. */
 data class CardTap(val tapUrl: String, val rfUidHex: String, val challengeHex: String)
 
-/** The card answered a command with an unexpected status (not a GiftCard Pro card, moved away, damaged). */
-class CardProtocolException(val step: String) : Exception("Card refused: $step")
+/**
+ * The card did not take part: [step] is the command it refused (not a GiftCard Pro card, damaged), `NDEF`, or
+ * `tag_lost` when it was moved away from the reader. Ask the guest to hold it again.
+ */
+class CardProtocolException(val step: String, cause: Throwable? = null) : Exception("Card refused: $step", cause)
 
 /**
  * The fixed NTAG 424 DNA command sequence a till relays. It reads only what the card shows anyone (its NDEF URL)
@@ -32,7 +35,7 @@ object Ntag424 {
      * Relays the server's command (AuthenticateEV2First part 2) and returns the card's full answer as hex
      * (32 bytes and 91 00). A refusal by the card is returned as well: the server decides.
      */
-    fun answer(card: CardChannel, commandHex: String): String = toHex(card.transceive(hex(commandHex)))
+    fun answer(card: CardChannel, commandHex: String): String = toHex(send(card, hex(commandHex)))
 
     /** The URI of the first NDEF record of an NDEF file (2-byte NLEN, then the message). */
     fun parseNdefUri(file: ByteArray): String {
@@ -78,9 +81,16 @@ object Ntag424 {
     private fun additionalFrame(sw1: Int, sw2: Int) = sw1 == 0x91 && sw2 == 0xAF
 
     private fun expect(card: CardChannel, command: ByteArray, step: String, ok: (Int, Int) -> Boolean): ByteArray {
-        val answer = card.transceive(command)
+        val answer = send(card, command)
         if (answer.size < 2 || !ok(u(answer[answer.size - 2]), u(answer[answer.size - 1]))) throw CardProtocolException(step)
         return answer.copyOfRange(0, answer.size - 2)
+    }
+
+    /** Android reports a card taken away as TagLostException (an IOException). */
+    private fun send(card: CardChannel, command: ByteArray): ByteArray = try {
+        card.transceive(command)
+    } catch (e: java.io.IOException) {
+        throw CardProtocolException("tag_lost", e)
     }
 
     private fun u(b: Byte) = b.toInt() and 0xFF

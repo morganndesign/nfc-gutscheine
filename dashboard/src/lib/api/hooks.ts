@@ -6,6 +6,8 @@ import { VOUCHER_DATA_KEYS, keys } from "@/lib/api/query-keys"
 import type {
   ApiToken,
   PartnerConnection,
+  PartnerOpenCode,
+  AdminPartner,
   Card,
   CardBatch,
   CardBatchStatus,
@@ -957,13 +959,58 @@ export function useOnlineOrders(pickup = false) {
 export function usePartnerConnections() {
   return useQuery({
     queryKey: keys.partnerConnections,
-    queryFn: async () => (await api<{ data: PartnerConnection[] }>("/partner-connections")).data,
+    queryFn: async () => {
+      const r = await api<{ data: PartnerConnection[]; open_codes: PartnerOpenCode[] }>("/partner-connections")
+      return { connections: r.data, openCodes: r.open_codes }
+    },
   })
 }
 
 export function useCreatePartnerCode() {
+  const qc = useQueryClient()
   return useMutation({
     mutationFn: async () => (await api<{ data: { code: string; expires_at: string } }>("/partner-connections/code", { method: "POST" })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.partnerConnections }),
+  })
+}
+
+export function useRevokePartnerCode() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => api(`/partner-connections/codes/${id}`, { method: "DELETE" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.partnerConnections }),
+  })
+}
+
+// ---------------------------------------------------------------- POS partners (Admin › Kassen-Partner)
+
+export function useAdminPartners() {
+  return useQuery({
+    queryKey: keys.adminPartners,
+    queryFn: async () => (await api<{ data: AdminPartner[] }>("/admin/partners")).data,
+  })
+}
+
+/** Creates a partner or gives it a new key; the answer carries the key, shown once. */
+export function useAdminPartnerKey() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (input: { id: string } | { name: string; contact_email: string | null }) =>
+      (
+        await api<{ data: AdminPartner & { key: string } }>("id" in input ? `/admin/partners/${input.id}/key` : "/admin/partners", {
+          method: "POST",
+          body: "id" in input ? undefined : input,
+        })
+      ).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.adminPartners }),
+  })
+}
+
+export function useAdminPartnerStatus() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, active }: { id: string; active: boolean }) => api(`/admin/partners/${id}/${active ? "activate" : "suspend"}`, { method: "POST" }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.adminPartners }),
   })
 }
 

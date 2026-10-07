@@ -614,3 +614,23 @@ export interface PartnerConnection {
   connected_at: string
   terminals: { id: string; name: string; status: "active" | "revoked"; last_seen_at: string | null }[]
 }
+
+/** A connection code not used yet (the code itself is never shown again). */
+export interface PartnerOpenCode {
+  id: string
+  created_at: string
+  created_by: string | null
+  expires_at: string
+}
+
+/** Admin › Kassen-Partner: a POS company with a partner key. */
+export interface AdminPartner {
+  id: string
+  name: string
+  contact_email: string | null
+  status: "active" | "suspended"
+  key_prefix: string
+  last_used_at: string | null
+  created_at: string
+  restaurants: { id: string; name: string | null; connected_at: string }[]
+}

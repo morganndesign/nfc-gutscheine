@@ -11,6 +11,7 @@ import {
   Settings,
   ShieldCheck,
   Smartphone,
+  Plug,
   SlidersHorizontal,
   Users,
   UserSquare2,
@@ -52,5 +53,6 @@ export const PLATFORM_NAV: NavItem[] = [
   { href: "/admin/card-batches", label: "nav.cardBatches", icon: Package, permission: "platform.cards.manage", badge: "openCardOrders" },
   { href: "/admin/security", label: "nav.securityAlerts", icon: ShieldAlert, permission: "platform.audit.view" },
   { href: "/admin/audit", label: "nav.platformAudit", icon: ShieldCheck, permission: "platform.audit.view" },
+  { href: "/admin/partners", label: "nav.partners", icon: Plug, permission: "platform.settings.manage" },
   { href: "/admin/settings", label: "nav.systemSettings", icon: SlidersHorizontal, permission: "platform.settings.manage" },
 ]
