@@ -194,6 +194,15 @@ const { violations: shopViolations } = await new AxeBuilder({ page: guest }).wit
 assert.deepEqual(shopViolations.map((v) => v.id), [], 'axe violations on the shop page')
 step(10, 'online tab shows the Stripe connection; closed shop page public and clean')
 
+// 11. POS systems: the owner creates a one-time connection code for the POS provider.
+await o.goto(`${BASE}/settings?tab=pos`)
+await o.getByRole('button', { name: 'Create connection code' }).click()
+await o.getByText(/^[A-Z2-9]{4}-[A-Z2-9]{4}$/).waitFor()
+await o.getByText('No till system connected yet.').waitFor()
+const { violations: posViolations } = await new AxeBuilder({ page: o }).withTags(['wcag2a', 'wcag2aa']).analyze()
+assert.deepEqual(posViolations.map((v) => v.id), [], 'axe violations on the POS tab')
+step(11, 'POS tab creates a connection code')
+
 await browser.close()
 assert.deepEqual(errors, [], 'browser console errors')
 console.log('\nPilot journey passed.')

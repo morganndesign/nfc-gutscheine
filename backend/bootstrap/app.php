@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Exceptions\Domain\DomainException;
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\AuthenticatePartner;
 use App\Http\Middleware\BindRememberedSignIn;
 use App\Http\Middleware\EnforceDeviceToken;
 use App\Http\Middleware\RequireIdempotencyKey;
@@ -62,6 +63,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'device.token' => EnforceDeviceToken::class,
             'remembered' => BindRememberedSignIn::class,
             'idempotent' => RequireIdempotencyKey::class,
+            'partner.auth' => AuthenticatePartner::class,
         ]);
 
         // Order matters: authenticate → tenant → everything else.
@@ -73,6 +75,7 @@ return Application::configure(basePath: dirname(__DIR__))
             SetRequestLocale::class,
             BindRememberedSignIn::class,
             EnforceDeviceToken::class,
+            AuthenticatePartner::class,
             ResolveTenant::class,
             RequireTenant::class,
             ThrottleRequests::class,

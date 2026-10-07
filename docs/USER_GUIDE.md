@@ -106,6 +106,10 @@ dashboard.
   Online vouchers carry an **Online** badge. They are never cancelled at the till: **Refund** sends the money back
   to the guest's card through Stripe (money loaded later at the till goes back in cash or by transfer). If a guest
   disputes the payment with their bank, the voucher is blocked at once and you get an e-mail.
+- **POS systems** (**Settings → POS systems**, owners): if your till system works with GiftCard Pro, waiters
+  redeem vouchers and gift cards right in the till app (tap the card at the till, the balance comes off the bill).
+  **Create connection code** and give the code to your POS provider (valid 24 hours, once). Each till then appears
+  under **Devices**; revoke a lost one there. **Disconnect** stops all tills of that system at once.
 - **Cash-up**: "Korrigierte bezahlte Aufladungen" is a correction of a booking error, not a payout. Loyalty value
   is never counted as money (also not in the CSV exports, which show it in their own "Loyalty value" column).
 

@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property string $id
  * @property string|null $restaurant_id null for a platform device (personalisation station)
  * @property string|null $registered_by
+ * @property string|null $partner_connection_id a POS partner's till (type `pos`)
  * @property string $name
  * @property string $type
  * @property string $fingerprint

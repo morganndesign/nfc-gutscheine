@@ -1,0 +1,349 @@
+openapi: 3.0.3
+info:
+  license:
+    name: Proprietary
+  title: GiftCard Pro – Kassen-Schnittstelle (POS partner API)
+  version: "1.0"
+  description: |
+    Gutscheine und NFC-Geschenkkarten von GiftCard Pro direkt in der Kassen-App einlösen.
+    Ausführliche Beschreibung: KASSEN-SCHNITTSTELLE.md. Beträge in Cent.
+servers:
+  - url: https://app.giftcardpro.at/api/partner/v1
+security:
+  - partnerKey: []
+components:
+  securitySchemes:
+    partnerKey:
+      type: http
+      scheme: bearer
+      description: Partner-Schlüssel `gcpp_…`
+  parameters:
+    Connection:
+      name: X-Connection-Id
+      in: header
+      required: true
+      schema: { type: string, format: uuid }
+    Terminal:
+      name: X-Terminal-Id
+      in: header
+      required: true
+      schema: { type: string, pattern: '^[A-Za-z0-9._-]{4,64}$' }
+    TerminalName:
+      name: X-Terminal-Name
+      in: header
+      required: false
+      schema: { type: string, maxLength: 60 }
+    Language:
+      name: Accept-Language
+      in: header
+      required: false
+      schema: { type: string, enum: [de, en, bs] }
+  schemas:
+    Error:
+      type: object
+      required: [message, code]
+      properties:
+        message: { type: string }
+        code: { type: string, example: INSUFFICIENT_BALANCE }
+        context: { type: object, additionalProperties: true }
+        errors: { type: object, additionalProperties: true, description: nur bei VALIDATION_FAILED }
+    Rules:
+      type: object
+      properties:
+        allow_partial_redemption: { type: boolean }
+        max_debit_per_transaction: { type: integer, nullable: true }
+    Connection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [active, revoked] }
+        connected_at: { type: string, format: date-time }
+        restaurant:
+          type: object
+          properties:
+            name: { type: string }
+            currency: { type: string, example: EUR }
+            locale: { type: string, example: de-AT }
+            timezone: { type: string, example: Europe/Vienna }
+        rules: { $ref: '#/components/schemas/Rules' }
+    Presentment:
+      type: object
+      properties:
+        presentment_id: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+        method: { type: string, enum: [card, qr] }
+        voucher:
+          type: object
+          properties:
+            id: { type: string }
+            number: { type: string, example: '2351 5576 9132 5161' }
+            status: { type: string, enum: [active, blocked, expired, refunded] }
+            balance: { type: integer, example: 5000 }
+            currency: { type: string }
+            expires_at: { type: string, format: date-time, nullable: true }
+            redeemable: { type: boolean }
+        card:
+          type: object
+          nullable: true
+          properties:
+            number: { type: string, example: B-2026-0001-0042 }
+        rules: { $ref: '#/components/schemas/Rules' }
+    Redemption:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        amount: { type: integer, example: 4500 }
+        currency: { type: string }
+        balance_after: { type: integer, example: 500 }
+        voucher_id: { type: string }
+        voucher_number: { type: string }
+        reference: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        replayed: { type: boolean }
+  responses:
+    Error:
+      description: Fehler (siehe `code`)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+paths:
+  /me:
+    get:
+      summary: Partner-Schlüssel prüfen
+      operationId: getMe
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      partner: { type: object, properties: { id: { type: string }, name: { type: string } } }
+                      connections: { type: integer }
+        '401': { $ref: '#/components/responses/Error' }
+  /connections:
+    get:
+      summary: Verbundene Restaurants
+      operationId: listConnections
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Connection' } }
+        '401': { $ref: '#/components/responses/Error' }
+    post:
+      summary: Restaurant mit Verbindungscode verbinden
+      operationId: connectRestaurant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, example: K7QF-M2XP }
+      responses:
+        '201':
+          description: Verbunden
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Connection' } } }
+        '422': { $ref: '#/components/responses/Error' }
+  /connection:
+    get:
+      summary: Ein Restaurant und seine Regeln
+      operationId: getConnection
+      parameters: [{ $ref: '#/components/parameters/Connection' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Connection' } } }
+        '403': { $ref: '#/components/responses/Error' }
+  /cards/authentications:
+    post:
+      summary: Geschenkkarte – Schritt 1
+      operationId: beginCardAuthentication
+      parameters:
+        - { $ref: '#/components/parameters/Connection' }
+        - { $ref: '#/components/parameters/Terminal' }
+        - { $ref: '#/components/parameters/TerminalName' }
+        - { $ref: '#/components/parameters/Language' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tap_url, rf_uid, challenge]
+              properties:
+                tap_url: { type: string, maxLength: 500 }
+                rf_uid: { type: string, minLength: 14, maxLength: 14, description: 7-Byte-UID als Hex }
+                challenge: { type: string, minLength: 32, maxLength: 32, description: Antwort auf 9071000002030000 (16 Byte) }
+      responses:
+        '200':
+          description: Befehl für die Karte
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      authentication: { type: string }
+                      command: { type: string, description: 'APDU als Hex – unverändert an die Karte senden' }
+                      expires_in: { type: integer, example: 30 }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /cards/authentications/{authentication}:
+    post:
+      summary: Geschenkkarte – Schritt 2
+      operationId: completeCardAuthentication
+      parameters:
+        - { name: authentication, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/Connection' }
+        - { $ref: '#/components/parameters/Terminal' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [response]
+              properties:
+                response: { type: string, maxLength: 68, description: Antwort der Karte als Hex (normal 32 Byte + 9100) }
+      responses:
+        '201':
+          description: Vorlage (60 s gültig)
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Presentment' } } }
+        '403': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /vouchers/scan:
+    post:
+      summary: Gedruckter Gutschein (QR-Code)
+      operationId: scanVoucher
+      parameters:
+        - { $ref: '#/components/parameters/Connection' }
+        - { $ref: '#/components/parameters/Terminal' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, example: GCPV1.gdRf85597UUS3oen74yGTUZ1I_6zulhCW5gVjPJoniA }
+      responses:
+        '201':
+          description: Vorlage (60 s gültig)
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Presentment' } } }
+        '422': { $ref: '#/components/responses/Error' }
+  /redemptions:
+    post:
+      summary: Einlösen
+      operationId: redeem
+      parameters:
+        - { $ref: '#/components/parameters/Connection' }
+        - { $ref: '#/components/parameters/Terminal' }
+        - { name: Idempotency-Key, in: header, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [presentment_id, amount]
+              properties:
+                presentment_id: { type: string, format: uuid }
+                amount: { type: integer, minimum: 1 }
+                reference: { type: string, maxLength: 64 }
+                staff: { type: string, maxLength: 60 }
+      responses:
+        '201':
+          description: Gebucht
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Redemption' } } }
+        '200':
+          description: Wiederholung (bereits gebucht)
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Redemption' } } }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+        '429': { $ref: '#/components/responses/Error' }
+  /redemptions/{idempotencyKey}:
+    get:
+      summary: Wurde gebucht?
+      operationId: getRedemptionOutcome
+      parameters:
+        - { name: idempotencyKey, in: path, required: true, schema: { type: string } }
+        - { $ref: '#/components/parameters/Connection' }
+        - { $ref: '#/components/parameters/Terminal' }
+      responses:
+        '200':
+          description: booked (mit Feldern der Einlösung) oder not_booked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - type: object
+                        properties:
+                          status: { type: string, enum: [booked, not_booked] }
+                      - $ref: '#/components/schemas/Redemption'
+        '403': { $ref: '#/components/responses/Error' }
+  /redemptions/{id}/cancellation:
+    post:
+      summary: Storno (eigene Einlösung, 60 Minuten)
+      operationId: cancelRedemption
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { $ref: '#/components/parameters/Connection' }
+        - { $ref: '#/components/parameters/Terminal' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 200 }
+      responses:
+        '201':
+          description: Storniert
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      cancelled_redemption_id: { type: string }
+                      amount: { type: integer }
+                      currency: { type: string }
+                      balance_after: { type: integer }
+                      created_at: { type: string, format: date-time }
+        '409': { $ref: '#/components/responses/Error' }

@@ -6,6 +6,16 @@ use App\Crypto\Ntag424\OriginalitySignature;
 return [
     'frontend_url' => rtrim((string) env('FRONTEND_URL', 'http://localhost:3000'), '/'),
 
+    // POS partners (decision 2026-10-07): a till system redeems inside its own app.
+    'partner' => [
+        // A restaurant's one-time connection code is valid this long.
+        'link_code_hours' => (int) env('PARTNER_LINK_CODE_HOURS', 24),
+        // A till may cancel its own redemption (the bill was cancelled) within this many minutes.
+        'cancel_minutes' => (int) env('PARTNER_CANCEL_MINUTES', 60),
+        // Tills one POS system may register in one restaurant (each is a device with its own failure throttle).
+        'max_terminals' => (int) env('PARTNER_MAX_TERMINALS', 50),
+    ],
+
     'online' => [
         // Largest voucher a shop may sell online, in cents (decision 2026-10-06: 250 €); a shop may set less.
         'max_amount' => (int) env('ONLINE_MAX_AMOUNT', 25000),

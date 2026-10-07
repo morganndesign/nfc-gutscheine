@@ -101,6 +101,9 @@ A restaurant validity is at least 36 months (`min_validity_months`, fixed).
 | `ONLINE_MAX_AMOUNT` | `25000` | Largest online voucher in cents (decision 2026-10-06: 250 €); each shop may set less. |
 | `ONLINE_CARD_PICKUP_AFTER_HOURS` | `24` | A gift card ordered online is handed out at the restaurant no sooner than this after the payment (a stolen card is usually disputed by then). |
 | `ONLINE_ORDERS_PER_HOUR` | `5` | Orders per hour per buyer e-mail and per IP address. |
+| `PARTNER_LINK_CODE_HOURS` | `24` | How long a restaurant's POS connection code is valid. |
+| `PARTNER_CANCEL_MINUTES` | `60` | A POS till may cancel its own redemption within this time. |
+| `PARTNER_MAX_TERMINALS` | `50` | Tills one POS system may register per restaurant. |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_SCHEME`, `MAIL_USERNAME`, `MAIL_PASSWORD` | | SMTP server (`MAIL_SCHEME`: `smtp` = STARTTLS on 587, `smtps` = TLS on 465). |
 | `MAIL_FROM_ADDRESS`, `MAIL_FROM_NAME` | `no-reply@<domain>`, `GiftCard Pro` | Sender. |
 | `MAIL_TIMEOUT` | `10` | Seconds before a slow mail server is given up (the job is retried). |

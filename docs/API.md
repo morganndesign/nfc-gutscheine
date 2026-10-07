@@ -512,6 +512,24 @@ Guest e-mails confirm a sale or reload like a receipt: amount, restaurant, date 
 
 There is no public voucher page and no public voucher lookup.
 
+### POS partners (decision 2026-10-07)
+
+Till systems of POS companies redeem vouchers and gift cards inside their own app through a separate API,
+`/api/partner/v1`, authenticated with a partner key (`gcpp_…`, created by the platform with
+`php artisan partner:manage create "<name>"`) plus `X-Connection-Id` (a restaurant that connected the POS with a
+one-time code) and `X-Terminal-Id` (the till, a device of the restaurant, type `pos`). Full German documentation for
+POS companies: [partner/KASSEN-SCHNITTSTELLE.md](partner/KASSEN-SCHNITTSTELLE.md), OpenAPI:
+[partner/openapi.yaml](partner/openapi.yaml), Android reference module: `integrations/android-pos/`.
+
+| Method | Path | Permission | |
+|---|---|---|---|
+| GET | `/partner-connections` | settings.manage | Connected POS systems with their tills `{id, partner: {name}, status, connected_at, terminals: [{id, name, status, last_seen_at}]}` |
+| POST | `/partner-connections/code` | settings.manage | A one-time connection code for the POS company → `201 {code: "K7QF-M2XP", expires_at}` (24 h, single use, shown once) |
+| DELETE | `/partner-connections/{id}` | settings.manage | Disconnects the POS system: its tills stop at once (`403 CONNECTION_REVOKED`); a single till is revoked under Devices |
+
+Redemptions by a till carry no user, the till's device, `reference` (the POS bill number) and the note
+`Kasse: <staff>`; a till cancels its own redemption within `PARTNER_CANCEL_MINUTES` (60).
+
 ### Online shop (public, decision 2026-10-06)
 
 Each restaurant sells vouchers on its own page `{FRONTEND_URL}/g/{slug}`. Payment is a Stripe Checkout page of the

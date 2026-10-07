@@ -23,6 +23,7 @@ export const keys = {
   cardOrders: ["card-orders"] as const,
   onlineShop: ["online-shop"] as const,
   onlineOrders: ["online-orders"] as const,
+  partnerConnections: ["partner-connections"] as const,
   adminCardOrders: ["admin", "card-orders"] as const,
   securityAlerts: ["admin", "security-alerts"] as const,
 }

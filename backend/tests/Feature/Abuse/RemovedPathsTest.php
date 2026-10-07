@@ -55,7 +55,13 @@ final class RemovedPathsTest extends TestCase
             ->values()
             ->all();
 
-        $this->assertSame(['api/v1/vouchers/{voucher}/redemptions'], $debits);
+        // The till debit, and the POS partner debit (decision 2026-10-07) which consumes a presentment of the same till
+        // as well (PartnerApiTest); its cancellation credits the voucher back.
+        $this->assertSame([
+            'api/v1/vouchers/{voucher}/redemptions',
+            'api/partner/v1/redemptions',
+            'api/partner/v1/redemptions/{redemption}/cancellation',
+        ], $debits);
     }
 
     /** P0-01: no reference to the removed flows remains in the application code. */

@@ -136,6 +136,12 @@ final class AppServiceProvider extends ServiceProvider
         RateLimiter::for('shop', static fn (Request $request): Limit => Limit::perMinute(120)->by('shop:'.$request->ip()));
         RateLimiter::for('online-order', static fn (Request $request): Limit => Limit::perMinute(10)->by('online-order:'.$request->ip()));
         RateLimiter::for('webhook', static fn (Request $request): Limit => Limit::perMinute(1200)->by('webhook:'.$request->ip()));
+        // POS partners (decision 2026-10-07): per partner key and restaurant connection; per till for card and voucher
+        // operations; connecting (a one-time code) slowly.
+        $partnerKey = static fn (Request $request): string => substr(hash('sha256', (string) $request->bearerToken()), 0, 24);
+        RateLimiter::for('partner', static fn (Request $request): Limit => Limit::perMinute(600)->by('partner:'.$partnerKey($request).'|'.substr((string) $request->header('X-Connection-Id'), 0, 36)));
+        RateLimiter::for('partner-till', static fn (Request $request): Limit => Limit::perMinute(90)->by('partner-till:'.$partnerKey($request).'|'.substr((string) $request->header('X-Connection-Id'), 0, 36).'|'.substr((string) $request->header('X-Terminal-Id'), 0, 64)));
+        RateLimiter::for('partner-connect', static fn (Request $request): Limit => Limit::perMinute(10)->by('partner-connect:'.$partnerKey($request)));
 
         // Per user *and* terminal: several phones may share one waiter login during a busy service.
         $perTerminal = static fn (Request $request): string => ($request->user()?->getAuthIdentifier() ?? $request->ip()).'|'.substr((string) $request->header('X-Device-Id'), 0, 64);

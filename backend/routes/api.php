@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\Partner\PartnerApiController;
 use App\Http\Controllers\Api\V1\Admin\ApiTokenController as AdminApiTokenController;
 use App\Http\Controllers\Api\V1\Admin\CardBatchController as AdminCardBatchController;
 use App\Http\Controllers\Api\V1\Admin\CardOrderController as AdminCardOrderController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\LogoController;
 use App\Http\Controllers\Api\V1\NotificationTemplateController;
 use App\Http\Controllers\Api\V1\OnlineShopController;
+use App\Http\Controllers\Api\V1\PartnerConnectionController;
 use App\Http\Controllers\Api\V1\PasswordController;
 use App\Http\Controllers\Api\V1\PresentmentController;
 use App\Http\Controllers\Api\V1\ReportController;
@@ -152,6 +154,12 @@ Route::prefix('v1')->group(function (): void {
                 Route::delete('connection', 'disconnect');
             });
             Route::get('online-orders', [OnlineShopController::class, 'orders'])->middleware('can:vouchers.view');
+            // POS systems that redeem in their own till app (owners, decision 2026-10-07).
+            Route::prefix('partner-connections')->controller(PartnerConnectionController::class)->middleware('can:settings.manage')->group(function (): void {
+                Route::get('/', 'index');
+                Route::post('code', 'code')->middleware('throttle:10,1,partner-code');
+                Route::delete('{connection}', 'destroy')->whereUuid('connection');
+            });
 
             Route::get('card-orders', [CardOrderController::class, 'index'])->middleware('can:cards.view');
             Route::post('card-orders', [CardOrderController::class, 'store'])->middleware(['can:cards.receive', 'throttle:voucher-operation', 'idempotent:optional']);
@@ -260,5 +268,32 @@ Route::prefix('v1')->group(function (): void {
             Route::post('personalizations/{personalization}', [CardStationController::class, 'continue'])
                 ->where('personalization', '[0-9A-HJKMNP-TV-Z]{26}');
         });
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| POS partner API — /api/partner/v1 (decision 2026-10-07)
+|--------------------------------------------------------------------------
+| A till system redeems vouchers and gift cards of the restaurants that connected it, inside its own app.
+| Authorization: Bearer gcpp_… (the partner key); X-Connection-Id (a restaurant); X-Terminal-Id (the till).
+| Documentation for POS companies: docs/partner/.
+*/
+Route::prefix('partner/v1')->controller(PartnerApiController::class)->group(function (): void {
+    Route::middleware(['partner.auth', 'throttle:partner'])->group(function (): void {
+        Route::get('me', 'me');
+        Route::get('connections', 'connections');
+        Route::post('connections', 'connect')->middleware('throttle:partner-connect');
+    });
+    Route::middleware(['partner.auth:connection', 'throttle:partner'])->group(function (): void {
+        Route::get('connection', 'connection');
+    });
+    Route::middleware(['partner.auth:terminal', 'throttle:partner', 'throttle:partner-till'])->group(function (): void {
+        Route::post('cards/authentications', 'beginCard');
+        Route::post('cards/authentications/{authentication}', 'completeCard')->where('authentication', '[A-Za-z0-9]{10,64}');
+        Route::post('vouchers/scan', 'scan');
+        Route::post('redemptions', 'redeem')->middleware('idempotent');
+        Route::get('redemptions/{idempotencyKey}', 'outcome')->where('idempotencyKey', '[A-Za-z0-9_-]{8,100}');
+        Route::post('redemptions/{redemption}/cancellation', 'cancel')->whereUuid('redemption');
     });
 });

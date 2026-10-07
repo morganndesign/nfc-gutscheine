@@ -605,3 +605,12 @@ export interface PublicShop {
   imprint_url: string | null
   validity_months: number | null
 }
+
+/** Settings › Kassensysteme (decision 2026-10-07): a POS system connected to the restaurant and its tills. */
+export interface PartnerConnection {
+  id: string
+  partner: { name: string }
+  status: "active" | "revoked"
+  connected_at: string
+  terminals: { id: string; name: string; status: "active" | "revoked"; last_seen_at: string | null }[]
+}

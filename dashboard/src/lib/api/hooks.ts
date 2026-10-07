@@ -5,6 +5,7 @@ import { api, apiRaw } from "@/lib/api/client"
 import { VOUCHER_DATA_KEYS, keys } from "@/lib/api/query-keys"
 import type {
   ApiToken,
+  PartnerConnection,
   Card,
   CardBatch,
   CardBatchStatus,
@@ -948,5 +949,28 @@ export function useOnlineOrders(pickup = false) {
   return useQuery({
     queryKey: [...keys.onlineOrders, pickup],
     queryFn: async () => (await api<{ data: OnlineOrder[] }>("/online-orders", { query: pickup ? { pickup: "open" } : {} })).data,
+  })
+}
+
+// ---------------------------------------------------------------- POS systems (Settings › Kassensysteme)
+
+export function usePartnerConnections() {
+  return useQuery({
+    queryKey: keys.partnerConnections,
+    queryFn: async () => (await api<{ data: PartnerConnection[] }>("/partner-connections")).data,
+  })
+}
+
+export function useCreatePartnerCode() {
+  return useMutation({
+    mutationFn: async () => (await api<{ data: { code: string; expires_at: string } }>("/partner-connections/code", { method: "POST" })).data,
+  })
+}
+
+export function useDisconnectPartner() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => (await api<{ data: PartnerConnection }>(`/partner-connections/${id}`, { method: "DELETE" })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.partnerConnections }),
   })
 }

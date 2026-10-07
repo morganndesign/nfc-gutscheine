@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Ban, Loader2, Monitor, Pencil, RotateCcw, Smartphone, Tablet } from "lucide-react"
+import { Ban, Loader2, Monitor, Pencil, RotateCcw, Smartphone, Store, Tablet } from "lucide-react"
 import { toast } from "sonner"
 import { PageHeader } from "@/components/common/page-header"
 import { ReasonDialog } from "@/components/common/reason-dialog"
@@ -22,7 +22,7 @@ import { formatRelative } from "@/lib/format"
 import { useConfirm } from "@/components/common/confirm"
 import { useT } from "@/lib/i18n"
 
-const ICONS = { phone: Smartphone, tablet: Tablet } as Record<string, typeof Monitor>
+const ICONS = { phone: Smartphone, tablet: Tablet, pos: Store } as Record<string, typeof Monitor>
 
 function RenameDialog({ device, onClose }: { device: Device; onClose: () => void }) {
   const t = useT()

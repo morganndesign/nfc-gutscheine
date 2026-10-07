@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/common/page-header"
 import { QueryError } from "@/components/common/query-error"
 import { RequirePermission } from "@/components/layout/auth-guard"
 import { OnlineShopSettings } from "@/components/online/online-shop-settings"
+import { PosSystemsSettings } from "@/components/pos/pos-systems-settings"
 import { ApiTokens } from "@/components/settings/api-tokens"
 import { VoucherDesignForm } from "@/components/settings/voucher-design-form"
 import { VoucherSettingsForm } from "@/components/settings/voucher-settings-form"
@@ -32,12 +33,13 @@ function SettingsContent() {
         <Skeleton className="h-96 w-full rounded-2xl" />
       ) : (
         <Tabs defaultValue={initialTab} className="space-y-4">
-          <TabsList>
+          <TabsList className="max-w-full justify-start overflow-x-auto">
             <TabsTrigger value="vouchers">{t("settingsPage.tabVouchers")}</TabsTrigger>
             <TabsTrigger value="design">{t("design.tab")}</TabsTrigger>
             <TabsTrigger value="restaurant">{t("settingsPage.tabRestaurant")}</TabsTrigger>
             <TabsTrigger value="emails">{t("settingsPage.tabEmails")}</TabsTrigger>
             <TabsTrigger value="online">{t("online.tab")}</TabsTrigger>
+            <TabsTrigger value="pos">{t("pos.tab")}</TabsTrigger>
             {can("api_tokens.manage") ? <TabsTrigger value="api">{t("settingsPage.tabApi")}</TabsTrigger> : null}
           </TabsList>
           <TabsContent value="vouchers">{data.settings ? <VoucherSettingsForm settings={data.settings} /> : null}</TabsContent>
@@ -50,6 +52,9 @@ function SettingsContent() {
           </TabsContent>
           <TabsContent value="online">
             <OnlineShopSettings />
+          </TabsContent>
+          <TabsContent value="pos">
+            <PosSystemsSettings />
           </TabsContent>
           {can("api_tokens.manage") ? (
             <TabsContent value="api">
