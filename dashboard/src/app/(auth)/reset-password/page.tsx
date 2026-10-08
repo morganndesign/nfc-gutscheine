@@ -57,7 +57,7 @@ function ResetForm() {
   }
 
   return (
-    <form
+    <form method="post"
       className="bg-card space-y-4 rounded-2xl border p-6 shadow-sm sm:p-8"
       onSubmit={async (e) => {
         e.preventDefault()

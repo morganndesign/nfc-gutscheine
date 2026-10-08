@@ -27,7 +27,7 @@ export function EditVoucherDialog({ voucher, open, onOpenChange }: { voucher: Vo
         <DialogHeader>
           <DialogTitle>{t("vouchers.edit.title")}</DialogTitle>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

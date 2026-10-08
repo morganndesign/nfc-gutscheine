@@ -45,7 +45,7 @@ function CreateRestaurantDialog({ open, onOpenChange }: { open: boolean; onOpenC
           <DialogTitle>{t("admin.restaurants.onboard")}</DialogTitle>
           <DialogDescription>{t("admin.create.description")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

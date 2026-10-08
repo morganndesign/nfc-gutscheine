@@ -240,7 +240,7 @@ function SellVoucherContent() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6" noValidate>
+    <form method="post" onSubmit={onSubmit} className="mx-auto max-w-3xl space-y-6" noValidate>
       <div className="space-y-2">
         <Button variant="ghost" size="sm" asChild className="-ml-2">
           <Link href="/vouchers">

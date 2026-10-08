@@ -104,7 +104,7 @@ export function EditRestaurantDialog({ restaurant, open, onOpenChange }: { resta
           <DialogTitle>{t("admin.edit.title", { name: restaurant.name })}</DialogTitle>
           <DialogDescription>{t("admin.edit.description")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
@@ -233,7 +233,7 @@ export function InviteAgainDialog({
           <DialogDescription>{t("admin.invite.againDescription", { name: person.name })}</DialogDescription>
         </DialogHeader>
         {person.invitation ? <p className="bg-surface rounded-xl p-3 text-sm">{invitationDetail(person.invitation, t)}</p> : null}
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
@@ -316,7 +316,7 @@ export function DeleteRestaurantDialog({
           <DialogTitle>{t("admin.delete.title", { name: restaurant.name })}</DialogTitle>
           <DialogDescription>{t("admin.delete.description")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

@@ -33,7 +33,7 @@ function AcceptDialog({ order, onClose }: { order: CardOrder; onClose: () => voi
           </DialogTitle>
           <DialogDescription>{t("admin.orders.acceptDescription")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

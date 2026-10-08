@@ -50,7 +50,7 @@ export function RestaurantProfileForm({ restaurant }: { restaurant: Restaurant }
         <CardTitle>{t("restaurantProfile.title")}</CardTitle>
         <CardDescription>{t("restaurantProfile.description")}</CardDescription>
       </CardHeader>
-      <form
+      <form method="post"
         className="contents"
         onSubmit={async (e) => {
           e.preventDefault()

@@ -37,7 +37,7 @@ export function OrderCardsDialog({ onClose }: { onClose: () => void }) {
           <DialogTitle>{t("cards.order.title")}</DialogTitle>
           <DialogDescription>{t("cards.order.description")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

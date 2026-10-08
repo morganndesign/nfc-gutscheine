@@ -78,7 +78,7 @@ export function ReloadDialog({
             {t("vouchers.reload.description", { balance: formatMoney(balance, currency), max: formatMoney(maxBalance, currency) })}
           </DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

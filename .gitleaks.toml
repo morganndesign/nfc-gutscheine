@@ -1,0 +1,14 @@
+# Secret scan (security/README.md). The default rules, minus test fixtures and recorded evidence of local runs:
+# their "keys" are made-up test values (NXP sample keys, idempotency UUIDs, local test tokens).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test fixtures and local evidence, no real secrets"
+paths = [
+  '''backend/tests/''',
+  '''waiter-app/test/''',
+  '''integrations/android-pos/src/test/''',
+  '''docs/reports/evidence/''',
+  '''waiter-app/lib/l10n/''',
+]

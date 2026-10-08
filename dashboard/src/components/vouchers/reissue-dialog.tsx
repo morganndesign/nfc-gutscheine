@@ -86,7 +86,7 @@ export function ReissueDialog({ voucher, open, onOpenChange }: { voucher: Vouche
             </DialogFooter>
           </div>
         ) : (
-          <form
+          <form method="post"
             className="space-y-4"
             onSubmit={async (e) => {
               e.preventDefault()

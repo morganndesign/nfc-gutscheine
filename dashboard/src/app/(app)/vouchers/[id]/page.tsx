@@ -57,7 +57,7 @@ function ReinstateDialog({ voucher, open, onOpenChange }: { voucher: Voucher; op
           <DialogTitle>{t("vouchers.reinstate.title")}</DialogTitle>
           <DialogDescription>{t("vouchers.reinstate.description", { amount: formatMoney(voucher.balance, voucher.currency) })}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

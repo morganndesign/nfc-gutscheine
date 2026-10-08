@@ -1,0 +1,6 @@
+# Known vulnerabilities accepted for now (security/README.md). Each entry expires, so it is looked at again.
+
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+ignoreUntil = 2027-01-08T00:00:00Z
+reason = "braces: no fixed version yet. Only in the shadcn CLI (devDependency, adds components while developing); never shipped in the dashboard build or reached by user input."

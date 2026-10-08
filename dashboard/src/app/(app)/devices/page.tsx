@@ -35,7 +35,7 @@ function RenameDialog({ device, onClose }: { device: Device; onClose: () => void
         <DialogHeader>
           <DialogTitle>{t("devices.renameTitle")}</DialogTitle>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

@@ -51,7 +51,7 @@ function UserDialog({ user, open, onOpenChange }: { user?: StaffUser; open: bool
           <DialogTitle>{user ? t("team.dialog.editTitle") : t("team.dialog.inviteTitle")}</DialogTitle>
           {!user ? <DialogDescription>{t("team.dialog.inviteDescription")}</DialogDescription> : null}
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

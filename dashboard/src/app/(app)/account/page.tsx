@@ -35,7 +35,7 @@ export default function AccountPage() {
           <CardTitle>{t("account.profile")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <form
+          <form method="post"
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
             onSubmit={async (e) => {
               e.preventDefault()
@@ -102,7 +102,7 @@ export default function AccountPage() {
           <CardDescription>{t("account.passwordDescription")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form
+          <form method="post"
             className="space-y-4"
             onSubmit={async (e) => {
               e.preventDefault()

@@ -42,7 +42,7 @@ function OrderDialog({ onClose }: { onClose: () => void }) {
           <DialogTitle>{t("admin.batches.order")}</DialogTitle>
           <DialogDescription>{t("admin.batches.orderDescription")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
@@ -140,7 +140,7 @@ function SpecialStatusDialog({ batch, onClose }: { batch: CardBatch; onClose: ()
           </DialogTitle>
           <DialogDescription>{t("admin.batches.moreDescription")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()
@@ -206,7 +206,7 @@ function ShipDialog({ batch, onClose }: { batch: CardBatch; onClose: () => void 
             {t("admin.batches.shipDescription", { count: batch.counts.central_stock, restaurant: batch.restaurant?.name ?? "" })}
           </DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

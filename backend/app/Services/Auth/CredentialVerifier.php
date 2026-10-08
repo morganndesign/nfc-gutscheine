@@ -24,7 +24,8 @@ use Illuminate\Validation\ValidationException;
  */
 final class CredentialVerifier
 {
-    /** Pre-computed bcrypt hash used to keep timing identical for unknown e-mail addresses. */
+    /** Pre-computed bcrypt hash used to keep timing identical for unknown e-mail addresses (of no password). */
+    // nosemgrep: detected-bcrypt-hash
     private const DUMMY_HASH = '$2y$12$wW.0dFZ1Hc2SUFVfXc/am.LR/cZrHgVhSSlWEILLPHenurYNk9JTO';
 
     public function __construct(

@@ -69,7 +69,7 @@ export function RefundDialog({ voucher, open, onOpenChange }: { voucher: Voucher
             {t("vouchers.refund.forfeited", { amount: formatMoney(forfeited, voucher.currency) })}
           </p>
         ) : null}
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

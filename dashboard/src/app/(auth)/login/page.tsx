@@ -71,7 +71,7 @@ function LoginForm() {
         <h1 className="text-xl font-semibold tracking-tight">{t("login.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("login.subtitle")}</p>
       </div>
-      <form onSubmit={onSubmit} className="space-y-4" noValidate>
+      <form method="post" onSubmit={onSubmit} className="space-y-4" noValidate>
         <div className="space-y-2">
           <Label htmlFor="email">{t("manage.field.email")}</Label>
           <Input id="email" type="email" autoComplete="username" autoFocus className="h-10" aria-invalid={!!errors.email} {...form.register("email")} />
@@ -149,7 +149,7 @@ function CodeStep({ pending, onBack }: { pending: { login: string; email: string
         <h1 className="text-xl font-semibold tracking-tight">{t("login.code.title")}</h1>
         <p className="text-muted-foreground text-sm">{t("login.code.subtitle", { email: pending.email })}</p>
       </div>
-      <form
+      <form method="post"
         className="space-y-4"
         noValidate
         onSubmit={(e) => {

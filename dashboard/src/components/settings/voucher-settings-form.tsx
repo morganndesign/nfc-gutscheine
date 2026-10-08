@@ -53,7 +53,7 @@ export function VoucherSettingsForm({ settings }: { settings: RestaurantSettings
         <CardTitle>{t("voucherRules.title")}</CardTitle>
         <CardDescription>{t("voucherRules.description")}</CardDescription>
       </CardHeader>
-      <form
+      <form method="post"
         className="contents"
         onSubmit={async (e) => {
           e.preventDefault()

@@ -34,7 +34,7 @@ export function InviteOwnerDialog({ restaurantId, open, onOpenChange }: { restau
           <DialogTitle>{t("admin.inviteOwner.title")}</DialogTitle>
           <DialogDescription>{t("admin.inviteOwner.description")}</DialogDescription>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={async (e) => {
             e.preventDefault()

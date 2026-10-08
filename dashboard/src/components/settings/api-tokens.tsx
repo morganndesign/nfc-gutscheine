@@ -150,7 +150,7 @@ export function ApiTokens() {
               </DialogFooter>
             </>
           ) : (
-            <form
+            <form method="post"
               className="space-y-4"
               onSubmit={async (e) => {
                 e.preventDefault()

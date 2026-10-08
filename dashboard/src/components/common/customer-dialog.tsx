@@ -65,7 +65,7 @@ export function CustomerDialog({ customer, open, onOpenChange }: { customer?: Cu
         <DialogHeader>
           <DialogTitle>{customer ? t("customerDialog.editTitle") : t("customers.new")}</DialogTitle>
         </DialogHeader>
-        <form
+        <form method="post"
           className="space-y-4"
           onSubmit={form.handleSubmit(async (v) => {
             try {

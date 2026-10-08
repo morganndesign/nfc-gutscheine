@@ -161,7 +161,7 @@ function ShopForm({ state }: { state: OnlineShopState }) {
       <CardHeader>
         <CardTitle>{t("online.shop.title")}</CardTitle>
       </CardHeader>
-      <form
+      <form method="post"
         className="contents"
         onSubmit={async (e) => {
           e.preventDefault()

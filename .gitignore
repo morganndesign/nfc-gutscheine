@@ -18,3 +18,4 @@ e2e/node_modules/
 integrations/android-pos/build/
 integrations/android-pos/.gradle/
 integrations/android-pos/.kotlin/
+security/reports/

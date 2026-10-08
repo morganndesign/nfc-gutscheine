@@ -1,0 +1,5 @@
+# Reviewed false positives (fingerprint = commit:file:rule:line). Empty example values and a storage key name.
+3ade5b66b4d8ab5d575bf03660dbab51727e59cf:backend/.env.staging.example:generic-api-key:53
+3ade5b66b4d8ab5d575bf03660dbab51727e59cf:backend/.env.production.example:generic-api-key:52
+b1e727e9523f6e5a2f4084973561ddd083e8e83f:docs/partner/KASSEN-SCHNITTSTELLE.md:generic-api-key:164
+223469496a668f0e1041f64f13765d5c870c6c37:waiter-app/lib/core/storage/pending_redemptions.dart:generic-api-key:80

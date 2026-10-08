@@ -1,0 +1,100 @@
+name: Security
+
+# security/README.md. Secrets, vulnerable libraries and dangerous code patterns on every push; the read-only check
+# of production and the OWASP ZAP scans of a local stack every Monday and on demand. The security tests of the
+# backend run in ci.yml with the full suite.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secrets:
+    name: Secrets in git (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Whole history
+        run: docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.28.0 git --no-banner --redact --config /repo/.gitleaks.toml /repo
+
+  dependencies:
+    name: Vulnerable libraries (osv-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: composer.lock, package-lock.json, pubspec.lock
+        run: docker run --rm -v "$PWD:/src" ghcr.io/google/osv-scanner:v2.2.2 scan source -r --config /src/osv-scanner.toml /src
+
+  code:
+    name: Dangerous code patterns (semgrep)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PHP, TypeScript, Dart
+        run: >-
+          docker run --rm -v "$PWD:/src" -w /src semgrep/semgrep semgrep scan --metrics=off --error
+          --config p/php --config p/typescript --config p/react --config p/nextjs --config p/secrets
+          --config p/owasp-top-ten --config p/jwt
+          backend/app backend/routes backend/config backend/resources dashboard/src waiter-app/lib integrations
+
+  production:
+    name: Production, read-only
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node security/check-deployment.mjs
+        env:
+          BASE_URL: https://app.giftcardpro.at
+
+  zap:
+    name: OWASP ZAP (local stack)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: intl, pdo_sqlite, gd, zip, bcmath
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Backend
+        working-directory: backend
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          cp .env.example .env && php artisan key:generate
+          sed -i -e 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' -e '/^DB_DATABASE=/d' -e 's/^APP_DEBUG=.*/APP_DEBUG=false/' \
+            -e 's/^SESSION_DRIVER=.*/SESSION_DRIVER=file/' -e 's/^CACHE_STORE=.*/CACHE_STORE=file/' \
+            -e 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' -e 's/^MAIL_MAILER=.*/MAIL_MAILER=log/' .env
+          touch database/database.sqlite
+          php artisan migrate --force --seed
+          (php artisan serve --port=8000 > /tmp/api.log 2>&1 &)
+      - name: Dashboard
+        working-directory: dashboard
+        run: |
+          npm ci
+          BACKEND_INTERNAL_URL=http://127.0.0.1:8000 npm run build
+          echo "BACKEND_INTERNAL_URL=http://127.0.0.1:8000" > .env.local
+          (npx next start -p 3000 > /tmp/web.log 2>&1 &)
+          for i in $(seq 1 30); do curl -fsS -o /dev/null http://127.0.0.1:3000/login && break; sleep 2; done
+      - name: ZAP baseline and POS partner API scan
+        run: security/run.sh zap
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zap-reports
+          path: security/reports/

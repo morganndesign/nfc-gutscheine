@@ -1,0 +1,5 @@
+10038	IGNORE	(CSP header not set: only robots.txt and other plain-text files; pages are checked by check-deployment.mjs)
+10055	IGNORE	(CSP style-src 'unsafe-inline': accepted, React/Radix set inline styles; scripts need the per-page nonce)
+10109	IGNORE	(Modern web application: informational)
+10111	IGNORE	(Authentication request identified: informational)
+10202	IGNORE	(Anti-CSRF tokens in forms: forms are sent by JavaScript as JSON with the X-XSRF-TOKEN header; a form post without JavaScript reaches no API)
